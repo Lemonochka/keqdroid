@@ -29,7 +29,8 @@ class _Backend extends FakeTunnelBackend {
   }
 }
 
-const _config = 'vless://00000000-0000-4000-8000-000000000000@198.51.100.10:443'
+const _config =
+    'vless://00000000-0000-4000-8000-000000000000@198.51.100.10:443'
     '?type=tcp&security=none#test';
 
 final _fromSub = ServerItem(
@@ -45,29 +46,33 @@ final _manual = ServerItem(
 );
 
 const _mainRoutes = [
-  TrafficRoute(id: 'm', sites: 'main-direct.example', target: RouteTarget.direct),
+  TrafficRoute(
+    id: 'm',
+    sites: 'main-direct.example',
+    target: RouteTarget.direct,
+  ),
 ];
 
 RoutingProfile _games({bool enabled = true}) => RoutingProfile(
-      id: 'games',
-      name: 'Игры',
-      enabled: enabled,
-      subscriptionIds: const ['sub-games'],
-      finalOutbound: AppSettings.finalOutboundDirect,
-      routes: const [
-        TrafficRoute(
-          id: 'p',
-          sites: 'profile-block.example',
-          target: RouteTarget.block,
-        ),
-      ],
-    );
+  id: 'games',
+  name: 'Игры',
+  enabled: enabled,
+  subscriptionIds: const ['sub-games'],
+  finalOutbound: AppSettings.finalOutboundDirect,
+  routes: const [
+    TrafficRoute(
+      id: 'p',
+      sites: 'profile-block.example',
+      target: RouteTarget.block,
+    ),
+  ],
+);
 
 List<Map<String, dynamic>> _rules(String xray) => [
-      for (final r in ((jsonDecode(xray) as Map)['routing'] as Map)['rules']
-          as List)
-        (r as Map).cast<String, dynamic>(),
-    ];
+  for (final r
+      in ((jsonDecode(xray) as Map)['routing'] as Map)['rules'] as List)
+    (r as Map).cast<String, dynamic>(),
+];
 
 Future<({String xray, StorageService storage})> _connect(
   ServerItem server, {
@@ -99,20 +104,24 @@ String? _finalTag(String xray) =>
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('без профилей всё как раньше: маршруты и «Всё остальное» основные',
-      () async {
-    final r = await _connect(_fromSub);
-    expect(r.xray, contains('main-direct.example'));
-    expect(_finalTag(r.xray), 'proxy');
-  });
+  test(
+    'без профилей всё как раньше: маршруты и «Всё остальное» основные',
+    () async {
+      final r = await _connect(_fromSub);
+      expect(r.xray, contains('main-direct.example'));
+      expect(_finalTag(r.xray), 'proxy');
+    },
+  );
 
-  test('сервер подписки с профилем берёт его маршруты и «Всё остальное»',
-      () async {
-    final r = await _connect(_fromSub, profiles: [_games()]);
-    expect(r.xray, contains('profile-block.example'));
-    expect(r.xray, isNot(contains('main-direct.example')));
-    expect(_finalTag(r.xray), 'direct');
-  });
+  test(
+    'сервер подписки с профилем берёт его маршруты и «Всё остальное»',
+    () async {
+      final r = await _connect(_fromSub, profiles: [_games()]);
+      expect(r.xray, contains('profile-block.example'));
+      expect(r.xray, isNot(contains('main-direct.example')));
+      expect(_finalTag(r.xray), 'direct');
+    },
+  );
 
   test('«Всё остальное» профиля не попадает в сохранённые настройки', () async {
     final r = await _connect(_fromSub, profiles: [_games()]);

@@ -15,7 +15,10 @@ Future<HttpServer> _sessionProxy(String user, String pass) async {
     if (auth != expected) {
       req.response
         ..statusCode = HttpStatus.proxyAuthenticationRequired
-        ..headers.set(HttpHeaders.proxyAuthenticateHeader, 'Basic realm="proxy"');
+        ..headers.set(
+          HttpHeaders.proxyAuthenticateHeader,
+          'Basic realm="proxy"',
+        );
     } else {
       req.response.statusCode = HttpStatus.noContent;
     }

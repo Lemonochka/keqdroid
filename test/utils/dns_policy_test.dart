@@ -16,14 +16,13 @@ import 'package:keqdroid/utils/socks5_credentials.dart';
 const _vless =
     'vless://uuid@de.example.com:443?security=reality&pbk=pub&sid=aa&fp=chrome&sni=de.example.com&type=tcp#DE';
 
-AppSettings _withPolicy(String policy) => const AppSettings().copyWith(
-      xrayCore: XrayCoreSettings(dnsPolicy: policy),
-    );
+AppSettings _withPolicy(String policy) =>
+    const AppSettings().copyWith(xrayCore: XrayCoreSettings(dnsPolicy: policy));
 
 List<Map<String, dynamic>> _xrayServers(AppSettings settings) {
-  final config = jsonDecode(
-    ConfigGeneratorV2.generateConfig(_vless, settings),
-  ) as Map<String, dynamic>;
+  final config =
+      jsonDecode(ConfigGeneratorV2.generateConfig(_vless, settings))
+          as Map<String, dynamic>;
   return ((config['dns'] as Map<String, dynamic>)['servers'] as List)
       .cast<Map<String, dynamic>>();
 }
@@ -38,14 +37,15 @@ void main() {
       );
 
       expect(parsed.entries['home.lan'], ['192.168.1.1']);
-      expect(parsed.entries['work.example.com'],
-          ['https://9.9.9.9/dns-query']);
+      expect(parsed.entries['work.example.com'], ['https://9.9.9.9/dns-query']);
       expect(parsed.dropped, isEmpty);
     });
 
     test('адрес, который не поднимет ни одно ядро, не считается', () {
       // строка без единого годного адреса не должна выглядеть настроенной
-      final parsed = XrayCoreSettings.parseDnsPolicy('home.lan sdns://whatever');
+      final parsed = XrayCoreSettings.parseDnsPolicy(
+        'home.lan sdns://whatever',
+      );
 
       expect(parsed.entries, isEmpty);
       expect(parsed.dropped, ['home.lan sdns://whatever']);
@@ -76,8 +76,8 @@ void main() {
       // Раньше общих резолверов: ядро идёт по списку сверху вниз.
       final policyIndex = servers.indexOf(policy);
       final generalIndex = servers.indexWhere(
-        (s) => s['address'].toString().contains('1.1.1.1') &&
-            s['domains'] == null,
+        (s) =>
+            s['address'].toString().contains('1.1.1.1') && s['domains'] == null,
       );
       expect(policyIndex, lessThan(generalIndex));
     });
@@ -92,7 +92,9 @@ void main() {
     test('mihomo: nameserver-policy теми же масками', () {
       final config = MihomoConfigGen.build(
         _vless,
-        _withPolicy('home.lan 192.168.1.1\n*.work.example.com https://9.9.9.9/dns-query'),
+        _withPolicy(
+          'home.lan 192.168.1.1\n*.work.example.com https://9.9.9.9/dns-query',
+        ),
         socksPort: 2080,
       );
 
@@ -105,8 +107,9 @@ void main() {
     test('DoT: в nameserver-policy mihomo есть, в DNS xray нет', () {
       final settings = _withPolicy('corp.example tls://1.1.1.1');
       final config = MihomoConfigGen.build(_vless, settings, socksPort: 2080);
-      final policy = (config['dns'] as Map<String, dynamic>)['nameserver-policy']
-          as Map<String, dynamic>;
+      final policy =
+          (config['dns'] as Map<String, dynamic>)['nameserver-policy']
+              as Map<String, dynamic>;
 
       expect(policy['corp.example'], ['tls://1.1.1.1']);
       // у xray DoT нет: запись не попадает в его список, а не становится мёртвым UDP
@@ -126,12 +129,17 @@ void main() {
       );
 
       expect(
-        (config['dns'] as Map<String, dynamic>).containsKey('nameserver-policy'),
+        (config['dns'] as Map<String, dynamic>).containsKey(
+          'nameserver-policy',
+        ),
         isFalse,
       );
       expect(
-        _xrayServers(const AppSettings()).any((s) => s['skipFallback'] == true &&
-            (s['domains'] as List?)?.contains('full:home.lan') == true),
+        _xrayServers(const AppSettings()).any(
+          (s) =>
+              s['skipFallback'] == true &&
+              (s['domains'] as List?)?.contains('full:home.lan') == true,
+        ),
         isFalse,
       );
     });

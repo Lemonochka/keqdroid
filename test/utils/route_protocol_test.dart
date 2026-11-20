@@ -17,7 +17,8 @@ import '../helpers/mihomo_rules_sim.dart';
 import '../helpers/xray_rules_sim.dart';
 
 // протокол и порт у маршрута: условие к тому же правилу, ступень та же, что у маршрута без них
-const _xrayActive = 'vless://00000000-0000-4000-8000-000000000000@203.0.113.10:443'
+const _xrayActive =
+    'vless://00000000-0000-4000-8000-000000000000@203.0.113.10:443'
     '?type=tcp&security=tls&sni=nl.example#NL';
 const _mihomoActive = 'ss://YWVzLTI1Ni1nY206dGVzdHBhc3M@203.0.113.10:8388#nl';
 const _de = 'trojan://pw@198.51.100.7:443?security=tls&sni=de.example#DE';
@@ -37,7 +38,11 @@ const _quic = TrafficRoute(
   network: RouteNetwork.udp,
   ports: '443',
 );
-const _ru = TrafficRoute(id: 'ru', sites: 'ru, vk.com', target: RouteTarget.direct);
+const _ru = TrafficRoute(
+  id: 'ru',
+  sites: 'ru, vk.com',
+  target: RouteTarget.direct,
+);
 // весь UDP игр напрямую, но порт только их
 const _games = TrafficRoute(
   id: 'games',
@@ -58,7 +63,8 @@ const _tcpOnly = TrafficRoute(
   AppSettings settings,
   List<RouteServerOutbound> outbounds,
   List<RouteAppRules> apps,
-}) _prepare(List<TrafficRoute> routes, VpnBackend core) {
+})
+_prepare(List<TrafficRoute> routes, VpnBackend core) {
   final outbounds = routeServerOutbounds(
     routes: routes,
     servers: _servers,
@@ -78,13 +84,16 @@ const _tcpOnly = TrafficRoute(
 
 Map<String, dynamic> _xray(List<TrafficRoute> routes, {bool tun = false}) {
   final p = _prepare(routes, VpnBackend.xray);
-  return jsonDecode(ConfigGeneratorV2.generateConfig(
-    _xrayActive,
-    p.settings,
-    nativeTunInbound: tun,
-    routeServers: p.outbounds,
-    appRoutes: p.apps,
-  )) as Map<String, dynamic>;
+  return jsonDecode(
+        ConfigGeneratorV2.generateConfig(
+          _xrayActive,
+          p.settings,
+          nativeTunInbound: tun,
+          routeServers: p.outbounds,
+          appRoutes: p.apps,
+        ),
+      )
+      as Map<String, dynamic>;
 }
 
 Map<String, dynamic> _mihomo(
@@ -102,25 +111,54 @@ Map<String, dynamic> _mihomo(
   );
 }
 
-String? _x(Map<String, dynamic> c, String host, {String net = 'tcp', int port = 443}) =>
-    simulateXray(c, XrayConn(inbound: 'socks-in', host: host, network: net, port: port));
+String? _x(
+  Map<String, dynamic> c,
+  String host, {
+  String net = 'tcp',
+  int port = 443,
+}) => simulateXray(
+  c,
+  XrayConn(inbound: 'socks-in', host: host, network: net, port: port),
+);
 
-String _m(Map<String, dynamic> c, String host, {String net = 'TCP', int port = 443}) =>
-    simulateMihomo(c, SimConn(inType: 'SOCKS5', host: host, network: net, port: port));
+String _m(
+  Map<String, dynamic> c,
+  String host, {
+  String net = 'TCP',
+  int port = 443,
+}) => simulateMihomo(
+  c,
+  SimConn(inType: 'SOCKS5', host: host, network: net, port: port),
+);
 
 void main() {
   setUp(() => Socks5Credentials().init('u', 'p'));
 
   group('порты', () {
-    test('один, несколько и диапазон, через запятую, пробел или косую черту', () {
-      expect(routePortRanges(''), isEmpty);
-      expect(routePortRanges('443'), [(443, 443)]);
-      expect(routePortRanges('80, 443 27000-27050/8080'),
-          [(80, 80), (443, 443), (27000, 27050), (8080, 8080)]);
-    });
+    test(
+      'один, несколько и диапазон, через запятую, пробел или косую черту',
+      () {
+        expect(routePortRanges(''), isEmpty);
+        expect(routePortRanges('443'), [(443, 443)]);
+        expect(routePortRanges('80, 443 27000-27050/8080'), [
+          (80, 80),
+          (443, 443),
+          (27000, 27050),
+          (8080, 8080),
+        ]);
+      },
+    );
 
     test('не порт: ноль, больше 65535, перевёрнутый диапазон, буквы', () {
-      for (final bad in ['0', '65536', '50-10', 'https', '443-', '-443', '1.5']) {
+      for (final bad in [
+        '0',
+        '65536',
+        '50-10',
+        'https',
+        '443-',
+        '-443',
+        '1.5',
+      ]) {
         expect(routePortRanges(bad), isNull, reason: bad);
       }
     });
@@ -148,11 +186,14 @@ void main() {
       expect(routeHasProtocol(old), isFalse);
     });
 
-    test('в общие списки не сворачивается: там у правила нет ни сети, ни порта', () {
-      final folded = foldRoutes(_base, [_quic, _ru]);
-      expect(folded.blockedRules, isEmpty);
-      expect(folded.directRules, 'ru, vk.com');
-    });
+    test(
+      'в общие списки не сворачивается: там у правила нет ни сети, ни порта',
+      () {
+        final folded = foldRoutes(_base, [_quic, _ru]);
+        expect(folded.blockedRules, isEmpty);
+        expect(folded.directRules, 'ru, vk.com');
+      },
+    );
 
     test('неверные порты, выключенный и пустой маршрут в ядро не идут', () {
       final rules = routeProtocolRules(
@@ -176,9 +217,10 @@ void main() {
       expect(outbounds.single.serverId, 'de');
       expect(outbounds.single.entries, isEmpty);
       expect(
-        routeProtocolRules(routes: const [_tcpOnly], outbounds: outbounds)
-            .single
-            .serverTag,
+        routeProtocolRules(
+          routes: const [_tcpOnly],
+          outbounds: outbounds,
+        ).single.serverTag,
         outbounds.single.tag,
       );
     });
@@ -190,9 +232,9 @@ void main() {
         routes: const [_quic, _ru],
       );
       expect(share.skipped, 1);
-      final json = utf8.decode(base64.decode(
-        share.link.substring('keqdroid://routing/add/'.length),
-      ));
+      final json = utf8.decode(
+        base64.decode(share.link.substring('keqdroid://routing/add/'.length)),
+      );
       expect(json, isNot(contains('youtube.com')));
       expect(json, contains('vk.com'));
     });
@@ -241,21 +283,28 @@ void main() {
     ]) {
       final mode = tun == null ? 'прокси' : 'туннель';
 
-      test('QUIC к YouTube в блок, TCP к нему и UDP к остальным как раньше [$mode]', () {
-        final c = _mihomo(routes, tun: tun);
-        expect(unknownMihomoTargets(c), isEmpty);
-        expect(_m(c, 'www.youtube.com', net: 'UDP'), 'REJECT');
-        expect(_m(c, 'www.youtube.com'), MihomoConfigGen.proxyName);
-        expect(_m(c, 'www.youtube.com', net: 'UDP', port: 8443),
-            MihomoConfigGen.proxyName);
-      });
+      test(
+        'QUIC к YouTube в блок, TCP к нему и UDP к остальным как раньше [$mode]',
+        () {
+          final c = _mihomo(routes, tun: tun);
+          expect(unknownMihomoTargets(c), isEmpty);
+          expect(_m(c, 'www.youtube.com', net: 'UDP'), 'REJECT');
+          expect(_m(c, 'www.youtube.com'), MihomoConfigGen.proxyName);
+          expect(
+            _m(c, 'www.youtube.com', net: 'UDP', port: 8443),
+            MihomoConfigGen.proxyName,
+          );
+        },
+      );
 
       test('весь трафик с протоколом: только эта сеть и эти порты [$mode]', () {
         final c = _mihomo(routes, tun: tun);
         expect(_m(c, 'game.example', net: 'UDP', port: 27015), 'DIRECT');
         expect(_m(c, 'game.example', port: 27015), MihomoConfigGen.proxyName);
-        expect(_m(c, 'game.example', net: 'UDP', port: 3478),
-            MihomoConfigGen.proxyName);
+        expect(
+          _m(c, 'game.example', net: 'UDP', port: 3478),
+          MihomoConfigGen.proxyName,
+        );
       });
 
       test('сервер только по TCP [$mode]', () {
@@ -267,31 +316,36 @@ void main() {
     }
 
     test('порты через косую черту: запятая разрезала бы правило на поля', () {
-      final rules = (_mihomo([
-        _games.copyWith(ports: '27000-27050, 3478'),
-      ])['rules'] as List)
-          .cast<String>();
+      final rules =
+          (_mihomo([_games.copyWith(ports: '27000-27050, 3478')])['rules']
+                  as List)
+              .cast<String>();
       expect(
         rules,
         contains('AND,((NETWORK,UDP),(DST-PORT,27000-27050/3478)),DIRECT'),
       );
     });
 
-    test('больше 28 портов делятся на несколько DST-PORT: одним ядро роняет конфиг', () {
-      final ports = [for (var p = 10001; p <= 10030; p++) '$p'].join(', ');
-      final c = _mihomo([_games.copyWith(ports: ports)]);
-      final rule = (c['rules'] as List)
-          .cast<String>()
-          .firstWhere((r) => r.contains('DST-PORT'));
-      for (final m in RegExp(r'DST-PORT,([^)]*)').allMatches(rule)) {
-        expect('/'.allMatches(m.group(1)!).length + 1, lessThanOrEqualTo(28));
-      }
-      expect(rule, startsWith('AND,((NETWORK,UDP),(OR,((DST-PORT,'));
-      expect(_m(c, 'game.example', net: 'UDP', port: 10001), 'DIRECT');
-      expect(_m(c, 'game.example', net: 'UDP', port: 10030), 'DIRECT');
-      expect(_m(c, 'game.example', net: 'UDP', port: 10031),
-          MihomoConfigGen.proxyName);
-    });
+    test(
+      'больше 28 портов делятся на несколько DST-PORT: одним ядро роняет конфиг',
+      () {
+        final ports = [for (var p = 10001; p <= 10030; p++) '$p'].join(', ');
+        final c = _mihomo([_games.copyWith(ports: ports)]);
+        final rule = (c['rules'] as List).cast<String>().firstWhere(
+          (r) => r.contains('DST-PORT'),
+        );
+        for (final m in RegExp(r'DST-PORT,([^)]*)').allMatches(rule)) {
+          expect('/'.allMatches(m.group(1)!).length + 1, lessThanOrEqualTo(28));
+        }
+        expect(rule, startsWith('AND,((NETWORK,UDP),(OR,((DST-PORT,'));
+        expect(_m(c, 'game.example', net: 'UDP', port: 10001), 'DIRECT');
+        expect(_m(c, 'game.example', net: 'UDP', port: 10030), 'DIRECT');
+        expect(
+          _m(c, 'game.example', net: 'UDP', port: 10031),
+          MihomoConfigGen.proxyName,
+        );
+      },
+    );
 
     test('процесс ради такого маршрута ядро не ищет', () {
       final c = _mihomo(

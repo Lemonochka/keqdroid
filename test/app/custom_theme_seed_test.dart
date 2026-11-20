@@ -37,19 +37,23 @@ void main() {
 
   group('выбор темы', () {
     test('свой цвет применяется', () {
-      final preset = themePresetFor(const AppSettings(
-        themePresetId: kCustomThemePresetId,
-        customThemeSeed: '2EC4B6',
-      ));
+      final preset = themePresetFor(
+        const AppSettings(
+          themePresetId: kCustomThemePresetId,
+          customThemeSeed: '2EC4B6',
+        ),
+      );
       expect(preset.seed, const Color(0xFF2EC4B6));
     });
 
     test('пустой или испорченный цвет не роняет на чужой пресет', () {
       for (final broken in ['', 'нет']) {
-        final preset = themePresetFor(AppSettings(
-          themePresetId: kCustomThemePresetId,
-          customThemeSeed: broken,
-        ));
+        final preset = themePresetFor(
+          AppSettings(
+            themePresetId: kCustomThemePresetId,
+            customThemeSeed: broken,
+          ),
+        );
         expect(preset.seed, kCustomThemeDefaultSeed);
         expect(preset.id, startsWith(kCustomThemePresetId));
       }
@@ -63,10 +67,9 @@ void main() {
       // Цвет своей темы хранится всегда, в том числе пока выбран готовый
       // пресет: человек возвращается к своему оттенку, а не набирает заново.
       expect(
-        themePresetFor(const AppSettings(
-          themePresetId: 'sunset',
-          customThemeSeed: '2EC4B6',
-        )).id,
+        themePresetFor(
+          const AppSettings(themePresetId: 'sunset', customThemeSeed: '2EC4B6'),
+        ).id,
         'sunset',
       );
     });
@@ -76,17 +79,21 @@ void main() {
     // Схемы кешируются по id пресета, и у всех своих тем он был бы один и тот
     // же — первый выбранный цвет остался бы в кеше навсегда.
     final mint = buildPresetScheme(
-      themePresetFor(const AppSettings(
-        themePresetId: kCustomThemePresetId,
-        customThemeSeed: '2EC4B6',
-      )),
+      themePresetFor(
+        const AppSettings(
+          themePresetId: kCustomThemePresetId,
+          customThemeSeed: '2EC4B6',
+        ),
+      ),
       Brightness.dark,
     );
     final violet = buildPresetScheme(
-      themePresetFor(const AppSettings(
-        themePresetId: kCustomThemePresetId,
-        customThemeSeed: '7B2CBF',
-      )),
+      themePresetFor(
+        const AppSettings(
+          themePresetId: kCustomThemePresetId,
+          customThemeSeed: '7B2CBF',
+        ),
+      ),
       Brightness.dark,
     );
     expect(mint.primary, isNot(violet.primary));
@@ -105,19 +112,22 @@ void main() {
 
     test('умолчание настроек — прежняя спокойная палитра', () {
       expect(
-        themePresetFor(const AppSettings(themePresetId: kCustomThemePresetId))
-            .variant,
+        themePresetFor(
+          const AppSettings(themePresetId: kCustomThemePresetId),
+        ).variant,
         DynamicSchemeVariant.tonalSpot,
       );
     });
 
     test('выбранный вариант доезжает до пресета', () {
       expect(
-        themePresetFor(const AppSettings(
-          themePresetId: kCustomThemePresetId,
-          customThemeSeed: '2EC4B6',
-          customThemeVariant: 'fidelity',
-        )).variant,
+        themePresetFor(
+          const AppSettings(
+            themePresetId: kCustomThemePresetId,
+            customThemeSeed: '2EC4B6',
+            customThemeVariant: 'fidelity',
+          ),
+        ).variant,
         DynamicSchemeVariant.fidelity,
       );
     });
@@ -126,13 +136,15 @@ void main() {
       // Тот же капкан, что и со сменой цвета: схемы кешируются по id пресета,
       // и без варианта в id первый выбранный так и остался бы в кеше.
       ColorScheme schemeFor(String variant) => buildPresetScheme(
-            themePresetFor(AppSettings(
-              themePresetId: kCustomThemePresetId,
-              customThemeSeed: '2EC4B6',
-              customThemeVariant: variant,
-            )),
-            Brightness.dark,
-          );
+        themePresetFor(
+          AppSettings(
+            themePresetId: kCustomThemePresetId,
+            customThemeSeed: '2EC4B6',
+            customThemeVariant: variant,
+          ),
+        ),
+        Brightness.dark,
+      );
       // Схемы целиком, а не одна роль: где именно расходятся варианты,
       // зависит от цвета и яркости. У бирюзы в тёмной, например,
       // `primaryContainer` у спокойной и яркой совпадает до байта, а `primary`
@@ -156,20 +168,26 @@ void main() {
       }
 
       Color primaryFor(String variant, double saturation) => buildPresetScheme(
-            themePresetFor(AppSettings(
-              themePresetId: kCustomThemePresetId,
-              customThemeSeed: formatThemeSeed(
-                HSVColor.fromAHSV(1, 210, saturation, 0.9).toColor(),
-              ),
-              customThemeVariant: variant,
-            )),
-            Brightness.light,
-          ).primary;
+        themePresetFor(
+          AppSettings(
+            themePresetId: kCustomThemePresetId,
+            customThemeSeed: formatThemeSeed(
+              HSVColor.fromAHSV(1, 210, saturation, 0.9).toColor(),
+            ),
+            customThemeVariant: variant,
+          ),
+        ),
+        Brightness.light,
+      ).primary;
 
-      final calm = distance(primaryFor('tonalSpot', 0.9),
-          primaryFor('tonalSpot', 0.15));
-      final exact = distance(primaryFor('fidelity', 0.9),
-          primaryFor('fidelity', 0.15));
+      final calm = distance(
+        primaryFor('tonalSpot', 0.9),
+        primaryFor('tonalSpot', 0.15),
+      );
+      final exact = distance(
+        primaryFor('fidelity', 0.9),
+        primaryFor('fidelity', 0.15),
+      );
       // Числа из замера: 28 против 147 по сумме каналов (0..765).
       expect(calm, lessThan(40));
       expect(exact, greaterThan(100));
@@ -197,9 +215,6 @@ void main() {
       themePresetId: kCustomThemePresetId,
       customThemeSeed: '7B2CBF',
     );
-    expect(
-      AppSettings.fromJson(settings.toJson()).customThemeSeed,
-      '7B2CBF',
-    );
+    expect(AppSettings.fromJson(settings.toJson()).customThemeSeed, '7B2CBF');
   });
 }

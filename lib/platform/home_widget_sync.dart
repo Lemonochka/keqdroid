@@ -12,20 +12,20 @@ import 'vpn_native_bridge.dart';
 
 // виджет рабочего стола рисует лаунчер без Flutter: тему и сервер он знает только из того, что прислали отсюда
 Map<String, int> homeWidgetColors(ColorScheme s) => {
-      'surfaceContainer': s.surfaceContainer.toARGB32(),
-      'surfaceContainerHighest': s.surfaceContainerHighest.toARGB32(),
-      'onSurface': s.onSurface.toARGB32(),
-      'onSurfaceVariant': s.onSurfaceVariant.toARGB32(),
-      'primary': s.primary.toARGB32(),
-      'onPrimary': s.onPrimary.toARGB32(),
-      'primaryContainer': s.primaryContainer.toARGB32(),
-      'onPrimaryContainer': s.onPrimaryContainer.toARGB32(),
-      'secondaryContainer': s.secondaryContainer.toARGB32(),
-      'onSecondaryContainer': s.onSecondaryContainer.toARGB32(),
-      'error': s.error.toARGB32(),
-      'errorContainer': s.errorContainer.toARGB32(),
-      'onErrorContainer': s.onErrorContainer.toARGB32(),
-    };
+  'surfaceContainer': s.surfaceContainer.toARGB32(),
+  'surfaceContainerHighest': s.surfaceContainerHighest.toARGB32(),
+  'onSurface': s.onSurface.toARGB32(),
+  'onSurfaceVariant': s.onSurfaceVariant.toARGB32(),
+  'primary': s.primary.toARGB32(),
+  'onPrimary': s.onPrimary.toARGB32(),
+  'primaryContainer': s.primaryContainer.toARGB32(),
+  'onPrimaryContainer': s.onPrimaryContainer.toARGB32(),
+  'secondaryContainer': s.secondaryContainer.toARGB32(),
+  'onSecondaryContainer': s.onSecondaryContainer.toARGB32(),
+  'error': s.error.toARGB32(),
+  'errorContainer': s.errorContainer.toARGB32(),
+  'onErrorContainer': s.onErrorContainer.toARGB32(),
+};
 
 // в key лежит сырое имя, по нему нативная часть узнаёт сервер последней сессии
 typedef HomeWidgetServer = ({
@@ -61,11 +61,15 @@ final homeWidgetSyncProvider = Provider<void>((ref) {
   if (!Platform.isAndroid) return;
   ref.listen(homeWidgetServerProvider, (_, next) {
     if (next == null) return;
-    unawaited(VpnNativeBridge.updateHomeWidget(server: {
-      'key': next.key,
-      'name': next.name,
-      'flag': next.countryCode,
-      'ping': next.ping,
-    }));
+    unawaited(
+      VpnNativeBridge.updateHomeWidget(
+        server: {
+          'key': next.key,
+          'name': next.name,
+          'flag': next.countryCode,
+          'ping': next.ping,
+        },
+      ),
+    );
   }, fireImmediately: true);
 });

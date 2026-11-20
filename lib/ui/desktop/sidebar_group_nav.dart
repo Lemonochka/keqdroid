@@ -76,7 +76,13 @@ class _SidebarGroupNavState extends ConsumerState<SidebarGroupNav> {
   void _go(int i, {Duration duration = const Duration(milliseconds: 520)}) {
     _shown = i;
     _target = i;
-    unawaited(_carousel.animateToItem(i, duration: duration, curve: Curves.easeOutCubic));
+    unawaited(
+      _carousel.animateToItem(
+        i,
+        duration: duration,
+        curve: Curves.easeOutCubic,
+      ),
+    );
   }
 
   // moveCarousel: false, когда карусель уже едет туда сама (колесо, тяга)
@@ -100,7 +106,9 @@ class _SidebarGroupNavState extends ConsumerState<SidebarGroupNav> {
         _jumps--;
       }
       // прыжок перебили прокруткой списка: карусель встаёт туда, где он остановился
-      if (mounted && ServerGroupAnchors.instance.currentGroup.value != before) _follow();
+      if (mounted && ServerGroupAnchors.instance.currentGroup.value != before) {
+        _follow();
+      }
     });
     // на уже открытой вкладке кадр никто не просит, и после тяги список ждал движения мыши
     WidgetsBinding.instance.ensureVisualUpdate();
@@ -122,7 +130,10 @@ class _SidebarGroupNavState extends ConsumerState<SidebarGroupNav> {
       if (_wheel.sign != dy.sign) _wheel = 0;
       _wheel += dy;
       if (_wheel.abs() < 40) return;
-      final next = (_target + (_wheel > 0 ? 1 : -1)).clamp(0, _groups.length - 1);
+      final next = (_target + (_wheel > 0 ? 1 : -1)).clamp(
+        0,
+        _groups.length - 1,
+      );
       _wheel = 0;
       if (next == _target) return;
       _target = next;
@@ -135,12 +146,17 @@ class _SidebarGroupNavState extends ConsumerState<SidebarGroupNav> {
     });
   }
 
-  static final _wheelSpring =
-      SpringDescription.withDampingRatio(mass: 1, stiffness: 160, ratio: 1);
+  static final _wheelSpring = SpringDescription.withDampingRatio(
+    mass: 1,
+    stiffness: 160,
+    ratio: 1,
+  );
   _SpringActivity? _spring;
 
   double _unit(ScrollPosition position) =>
-      position.viewportDimension * _weights.first / _weights.reduce((a, b) => a + b);
+      position.viewportDimension *
+      _weights.first /
+      _weights.reduce((a, b) => a + b);
 
   // с каждым щелчком пружина подхватывает текущую скорость: animateToItem начинал с места,
   // и пролистанная обложка на торможении успевала вспухнуть и сжаться обратно
@@ -148,11 +164,18 @@ class _SidebarGroupNavState extends ConsumerState<SidebarGroupNav> {
     if (!_carousel.hasClients) return;
     final position = _carousel.position;
     if (position is! ScrollPositionWithSingleContext) return;
-    final target = (_unit(position) * index)
-        .clamp(position.minScrollExtent, position.maxScrollExtent);
+    final target = (_unit(position) * index).clamp(
+      position.minScrollExtent,
+      position.maxScrollExtent,
+    );
     final activity = _SpringActivity(
       position,
-      ScrollSpringSimulation(_wheelSpring, position.pixels, target, _spring?.velocity ?? 0),
+      ScrollSpringSimulation(
+        _wheelSpring,
+        position.pixels,
+        target,
+        _spring?.velocity ?? 0,
+      ),
       position.context.vsync,
       from: _spring?.frame,
       onDisposed: (a) {
@@ -183,7 +206,10 @@ class _SidebarGroupNavState extends ConsumerState<SidebarGroupNav> {
         final position = _carousel.position;
         if (position.isScrollingNotifier.value) return;
         _dragging = false;
-        final i = (position.pixels / _unit(position)).round().clamp(0, _groups.length - 1);
+        final i = (position.pixels / _unit(position)).round().clamp(
+          0,
+          _groups.length - 1,
+        );
         if (i != _shown) _open(i, moveCarousel: false);
       });
     }
@@ -222,11 +248,17 @@ class _SidebarGroupNavState extends ConsumerState<SidebarGroupNav> {
             animation: _carousel,
             builder: (context, child) {
               var shift = 0.0;
-              if (_carousel.hasClients && _carousel.position.hasContentDimensions) {
+              if (_carousel.hasClients &&
+                  _carousel.position.hasContentDimensions) {
                 final unit = _unit(_carousel.position);
-                shift = unit * (1 - (_carousel.position.pixels / unit).clamp(0.0, 1.0));
+                shift =
+                    unit *
+                    (1 - (_carousel.position.pixels / unit).clamp(0.0, 1.0));
               }
-              return Transform.translate(offset: Offset(0, shift), child: child);
+              return Transform.translate(
+                offset: Offset(0, shift),
+                child: child,
+              );
             },
             child: ClipRect(
               child: Align(
@@ -241,8 +273,8 @@ class _SidebarGroupNavState extends ConsumerState<SidebarGroupNav> {
                       maxLines: 1,
                       softWrap: false,
                       style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                            color: scheme.onSurfaceVariant,
-                          ),
+                        color: scheme.onSurfaceVariant,
+                      ),
                     ),
                   ),
                 ),
@@ -292,7 +324,9 @@ class _SidebarGroupNavState extends ConsumerState<SidebarGroupNav> {
                                 group: group,
                                 title: _titleFor(group, l10n),
                                 labels: labels,
-                                through: connected && group.servers.any((s) => s.id == activeId),
+                                through:
+                                    connected &&
+                                    group.servers.any((s) => s.id == activeId),
                               ),
                             ),
                         ],
@@ -339,9 +373,10 @@ class _SidebarGroupNavState extends ConsumerState<SidebarGroupNav> {
       switch (group.kind) {
         ServerGroupKind.chains => l10n.chainGroupTitle,
         ServerGroupKind.manual => l10n.serversManualGroup,
-        ServerGroupKind.subscription => group.subscriptionName.isEmpty
-            ? l10n.serversManualGroup
-            : group.subscriptionName,
+        ServerGroupKind.subscription =>
+          group.subscriptionName.isEmpty
+              ? l10n.serversManualGroup
+              : group.subscriptionName,
       };
 }
 
@@ -369,8 +404,11 @@ class _GroupCover extends StatelessWidget {
     final colors = _coverColors(scheme, group);
     final onCover = picture ? Colors.white : colors.on;
     final count = group.servers.length;
-    final titleStyle = textTheme.emphasized(textTheme.titleSmall)?.copyWith(color: onCover);
-    final line = MediaQuery.textScalerOf(context).scale(titleStyle?.fontSize ?? 14) *
+    final titleStyle = textTheme
+        .emphasized(textTheme.titleSmall)
+        ?.copyWith(color: onCover);
+    final line =
+        MediaQuery.textScalerOf(context).scale(titleStyle?.fontSize ?? 14) *
         (titleStyle?.height ?? 20 / 14);
 
     return Semantics(
@@ -446,7 +484,9 @@ class _GroupCover extends StatelessWidget {
                             maxLines: 1,
                             softWrap: false,
                             overflow: TextOverflow.fade,
-                            style: titleStyle?.copyWith(color: onCover.withValues(alpha: text)),
+                            style: titleStyle?.copyWith(
+                              color: onCover.withValues(alpha: text),
+                            ),
                           ),
                         ),
                       ),
@@ -484,10 +524,12 @@ class _UnsnappedCover extends SingleChildRenderObjectWidget {
       _RenderUnsnappedCover(motion, MediaQuery.devicePixelRatioOf(context));
 
   @override
-  void updateRenderObject(BuildContext context, _RenderUnsnappedCover renderObject) =>
-      renderObject
-        ..motion = motion
-        ..devicePixelRatio = MediaQuery.devicePixelRatioOf(context);
+  void updateRenderObject(
+    BuildContext context,
+    _RenderUnsnappedCover renderObject,
+  ) => renderObject
+    ..motion = motion
+    ..devicePixelRatio = MediaQuery.devicePixelRatioOf(context);
 }
 
 class _RenderUnsnappedCover extends RenderProxyBox {
@@ -535,8 +577,19 @@ class _RenderUnsnappedCover extends RenderProxyBox {
       layerOwner = layerOwner.parent!;
     }
     final m = layerOwner.getTransformTo(null).storage;
-    final scaleTranslate = m[1] == 0 && m[2] == 0 && m[3] == 0 && m[4] == 0 && m[6] == 0 &&
-        m[7] == 0 && m[8] == 0 && m[9] == 0 && m[11] == 0 && m[15] == 1 && m[0] != 0 && m[5] != 0;
+    final scaleTranslate =
+        m[1] == 0 &&
+        m[2] == 0 &&
+        m[3] == 0 &&
+        m[4] == 0 &&
+        m[6] == 0 &&
+        m[7] == 0 &&
+        m[8] == 0 &&
+        m[9] == 0 &&
+        m[11] == 0 &&
+        m[15] == 1 &&
+        m[0] != 0 &&
+        m[5] != 0;
     var shift = Offset.zero;
     if (scaleTranslate) {
       final dpr = _devicePixelRatio;
@@ -561,13 +614,26 @@ typedef _CoverColors = ({Color background, Color shape, Color on});
 
 _CoverColors _coverColors(ColorScheme cs, ServerGroupRef group) {
   final subscriptions = <_CoverColors>[
-    (background: cs.primaryContainer, shape: cs.primary, on: cs.onPrimaryContainer),
-    (background: cs.tertiaryContainer, shape: cs.tertiary, on: cs.onTertiaryContainer),
+    (
+      background: cs.primaryContainer,
+      shape: cs.primary,
+      on: cs.onPrimaryContainer,
+    ),
+    (
+      background: cs.tertiaryContainer,
+      shape: cs.tertiary,
+      on: cs.onTertiaryContainer,
+    ),
   ];
   // свои серверы и цепочки нейтральные, чтобы не путались с подписками
   return switch (group.kind) {
-    ServerGroupKind.subscription => subscriptions[_stableHash(group.key) % subscriptions.length],
-    _ => (background: cs.secondaryContainer, shape: cs.secondary, on: cs.onSecondaryContainer),
+    ServerGroupKind.subscription =>
+      subscriptions[_stableHash(group.key) % subscriptions.length],
+    _ => (
+      background: cs.secondaryContainer,
+      shape: cs.secondary,
+      on: cs.onSecondaryContainer,
+    ),
   };
 }
 
@@ -593,13 +659,24 @@ final _shapePaths = <RoundedPolygon, Path>{};
 // обложка группы без картинки: крупная мягкая форма M3 срезана краем, маленькая острая с другой стороны,
 // не касаясь её; по спецификации M3E абстрактные формы уместны в декоративной графике
 class _DefaultCoverPainter extends CustomPainter {
-  _DefaultCoverPainter({required this.seed, required this.kind, required this.colors});
+  _DefaultCoverPainter({
+    required this.seed,
+    required this.kind,
+    required this.colors,
+  });
 
   final int seed;
   final ServerGroupKind kind;
   final _CoverColors colors;
 
-  void _shape(Canvas canvas, RoundedPolygon polygon, Offset center, double side, double turns, Color color) {
+  void _shape(
+    Canvas canvas,
+    RoundedPolygon polygon,
+    Offset center,
+    double side,
+    double turns,
+    Color color,
+  ) {
     final path = _shapePaths.putIfAbsent(polygon, polygon.toPath);
     final bounds = path.getBounds();
     final scale = side / math.max(bounds.width, bounds.height);
@@ -620,12 +697,14 @@ class _DefaultCoverPainter extends CustomPainter {
     final soft = switch (kind) {
       ServerGroupKind.manual => MaterialShapes.puffy,
       ServerGroupKind.chains => MaterialShapes.clover8Leaf,
-      ServerGroupKind.subscription => _softShapes[(seed ~/ 3) % _softShapes.length],
+      ServerGroupKind.subscription =>
+        _softShapes[(seed ~/ 3) % _softShapes.length],
     };
     final sharp = switch (kind) {
       ServerGroupKind.manual => MaterialShapes.slanted,
       ServerGroupKind.chains => MaterialShapes.gem,
-      ServerGroupKind.subscription => _sharpShapes[(seed ~/ 21) % _sharpShapes.length],
+      ServerGroupKind.subscription =>
+        _sharpShapes[(seed ~/ 21) % _sharpShapes.length],
     };
     final flip = (seed ~/ 7).isOdd;
     _shape(
@@ -661,8 +740,11 @@ class _CoverController extends CarouselController {
     ScrollPhysics physics,
     ScrollContext context,
     ScrollPosition? oldPosition,
-  ) =>
-      super.createScrollPosition(_CoverDragPhysics(parent: physics), context, oldPosition);
+  ) => super.createScrollPosition(
+    _CoverDragPhysics(parent: physics),
+    context,
+    oldPosition,
+  );
 }
 
 class _CoverDragPhysics extends ScrollPhysics {
@@ -677,8 +759,10 @@ class _CoverDragPhysics extends ScrollPhysics {
       super.applyPhysicsToUserOffset(position, offset) / 6;
 
   @override
-  Simulation? createBallisticSimulation(ScrollMetrics position, double velocity) =>
-      super.createBallisticSimulation(position, velocity / 6);
+  Simulation? createBallisticSimulation(
+    ScrollMetrics position,
+    double velocity,
+  ) => super.createBallisticSimulation(position, velocity / 6);
 }
 
 // SliverMultiBoxAdaptorElement на каждой пересборке ставит первому элементу смещение 0, а у карусели над

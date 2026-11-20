@@ -21,9 +21,9 @@ import '../helpers/test_storage.dart';
 
 // подписка как у Moondrop: в главной группе Trial и Public, внутри Public группы автовыбора из proxy-providers
 
-final _body =
-    File('test/fixtures/subscription_payloads/clash-template-main-groups.txt')
-        .readAsStringSync();
+final _body = File(
+  'test/fixtures/subscription_payloads/clash-template-main-groups.txt',
+).readAsStringSync();
 
 final _servers = [
   for (final c in SubscriptionService.parseBodyForTest(_body))
@@ -86,19 +86,21 @@ Future<ProviderContainer> _pump(
   tester.view.physicalSize = const Size(412, 1400);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
-  final storage = await tester.runAsync(() => buildStorageService(
-        initialValues: {
-          'keqdis_subscriptions': jsonEncode([
-            {
-              'id': 's1',
-              'name': 'Moondrop',
-              'url': 'https://example.com/s1',
-              'groupChoices': choices,
-            },
-          ]),
-          'keqdis_clash_template_s1': ClashTemplate.fromBody(_body)!.encode(),
-        },
-      ));
+  final storage = await tester.runAsync(
+    () => buildStorageService(
+      initialValues: {
+        'keqdis_subscriptions': jsonEncode([
+          {
+            'id': 's1',
+            'name': 'Moondrop',
+            'url': 'https://example.com/s1',
+            'groupChoices': choices,
+          },
+        ]),
+        'keqdis_clash_template_s1': ClashTemplate.fromBody(_body)!.encode(),
+      },
+    ),
+  );
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -113,8 +115,9 @@ Future<ProviderContainer> _pump(
           VpnEngine.withBackend(FakeTunnelBackend()),
         ),
         liveTemplateGroupsProvider.overrideWith((ref, id) async => live),
-        liveTemplateDelaysProvider
-            .overrideWith((ref, id) async => {_nl: 41, _de: 95}),
+        liveTemplateDelaysProvider.overrideWith(
+          (ref, id) async => {_nl: 41, _de: 95},
+        ),
       ],
       child: MaterialApp(
         locale: const Locale('ru'),
@@ -147,75 +150,96 @@ Map<String, String> _choices(ProviderContainer container) =>
     container.read(subscriptionsProvider).value!.single.groupChoices;
 
 void main() {
-  testWidgets('главная группа первой строкой, флаги стран не печатаются буквами',
-      (tester) async {
-    await _pump(tester);
-    await tester.tap(find.text('Группы · 2'));
-    await _settle(tester);
-    expect(find.text(_main), findsOneWidget);
-    expect(find.text(_public), findsOneWidget);
+  testWidgets(
+    'главная группа первой строкой, флаги стран не печатаются буквами',
+    (tester) async {
+      await _pump(tester);
+      await tester.tap(find.text('Группы · 2'));
+      await _settle(tester);
+      expect(find.text(_main), findsOneWidget);
+      expect(find.text(_public), findsOneWidget);
 
-    await tester.tap(find.text(_public));
-    await _settle(tester);
-    expect(find.text('Germany | Netherlands'), findsOneWidget);
-    expect(find.textContaining('🇩🇪'), findsNothing,
-        reason: 'на Windows эмодзи-флаг рисуется буквами DE');
-    expect(find.text('Действует, когда выбрана в 🌙 Main'), findsOneWidget,
-        reason: 'правил на Public нет, без выбора в главной она не действует');
-  });
+      await tester.tap(find.text(_public));
+      await _settle(tester);
+      expect(find.text('Germany | Netherlands'), findsOneWidget);
+      expect(
+        find.textContaining('🇩🇪'),
+        findsNothing,
+        reason: 'на Windows эмодзи-флаг рисуется буквами DE',
+      );
+      expect(
+        find.text('Действует, когда выбрана в 🌙 Main'),
+        findsOneWidget,
+        reason: 'правил на Public нет, без выбора в главной она не действует',
+      );
+    },
+  );
 
-  testWidgets('Public, выбранная в главной, сохраняется, а нажатый сервер забирает главную назад',
-      (tester) async {
-    final container = await _pump(tester);
-    await tester.tap(find.text('Группы · 2'));
-    await _settle(tester);
-    await tester.tap(find.text(_main));
-    await _settle(tester);
-    expect(find.text('Сюда идёт всё, что не ушло в другие группы'), findsOneWidget);
+  testWidgets(
+    'Public, выбранная в главной, сохраняется, а нажатый сервер забирает главную назад',
+    (tester) async {
+      final container = await _pump(tester);
+      await tester.tap(find.text('Группы · 2'));
+      await _settle(tester);
+      await tester.tap(find.text(_main));
+      await _settle(tester);
+      expect(
+        find.text('Сюда идёт всё, что не ушло в другие группы'),
+        findsOneWidget,
+      );
 
-    await tester.tap(find.text(_public).last);
-    await _flushStorage(tester);
-    expect(_choices(container), {_main: _public});
-    final saved =
-        (await container.read(storageProvider).getSubscriptions()).single;
-    expect(saved.groupChoices, {_main: _public});
+      await tester.tap(find.text(_public).last);
+      await _flushStorage(tester);
+      expect(_choices(container), {_main: _public});
+      final saved =
+          (await container.read(storageProvider).getSubscriptions()).single;
+      expect(saved.groupChoices, {_main: _public});
 
-    await tester.tap(find.text('Серверы'));
-    await _settle(tester);
-    await tester.tap(find.text('Netherlands #1'));
-    await _flushStorage(tester);
-    await _flushStorage(tester);
-    expect(_choices(container), isEmpty);
-    expect(container.read(serversProvider).activeServer?.id, _servers[1].id);
-  });
+      await tester.tap(find.text('Серверы'));
+      await _settle(tester);
+      await tester.tap(find.text('Netherlands #1'));
+      await _flushStorage(tester);
+      await _flushStorage(tester);
+      expect(_choices(container), isEmpty);
+      expect(container.read(serversProvider).activeServer?.id, _servers[1].id);
+    },
+  );
 
-  testWidgets('серверы внутри группы автовыбора: быстрые сверху, выбор закрепляет и выбирает группу',
-      (tester) async {
-    final container = await _pump(tester, live: _live);
-    await tester.tap(find.text('Группы · 2'));
-    await _settle(tester);
-    await tester.tap(find.text(_public));
-    await _settle(tester);
-    await tester.tap(find.text('Germany | Netherlands'));
-    await _settle(tester);
+  testWidgets(
+    'серверы внутри группы автовыбора: быстрые сверху, выбор закрепляет и выбирает группу',
+    (tester) async {
+      final container = await _pump(tester, live: _live);
+      await tester.tap(find.text('Группы · 2'));
+      await _settle(tester);
+      await tester.tap(find.text(_public));
+      await _settle(tester);
+      await tester.tap(find.text('Germany | Netherlands'));
+      await _settle(tester);
 
-    expect(find.text('Автоматически'), findsOneWidget);
-    expect(find.text('сейчас DE • Scan #1'), findsWidgets,
-        reason: 'то же видно и в шторке Public под этой');
-    expect(
-      tester.getTopLeft(find.text('NL • Scan #2')).dy,
-      lessThan(tester.getTopLeft(find.text('DE • Scan #1')).dy),
-      reason: '41 мс выше 95 мс',
-    );
+      expect(find.text('Автоматически'), findsOneWidget);
+      expect(
+        find.text('сейчас DE • Scan #1'),
+        findsWidgets,
+        reason: 'то же видно и в шторке Public под этой',
+      );
+      expect(
+        tester.getTopLeft(find.text('NL • Scan #2')).dy,
+        lessThan(tester.getTopLeft(find.text('DE • Scan #1')).dy),
+        reason: '41 мс выше 95 мс',
+      );
 
-    await tester.tap(find.text('NL • Scan #2'));
-    await _flushStorage(tester);
-    expect(_choices(container), {_public: _denl, _denl: _nl});
-  });
+      await tester.tap(find.text('NL • Scan #2'));
+      await _flushStorage(tester);
+      expect(_choices(container), {_public: _denl, _denl: _nl});
+    },
+  );
 
   testWidgets('«Автоматически» снимает закрепление', (tester) async {
-    final container =
-        await _pump(tester, live: _live, choices: {_public: _denl, _denl: _nl});
+    final container = await _pump(
+      tester,
+      live: _live,
+      choices: {_public: _denl, _denl: _nl},
+    );
     await tester.tap(find.text('Группы · 2'));
     await _settle(tester);
     await tester.tap(find.text(_public));
@@ -227,7 +251,9 @@ void main() {
     expect(_choices(container), {_public: _denl});
   });
 
-  testWidgets('без подключения закреплённый сервер виден в подписи группы', (tester) async {
+  testWidgets('без подключения закреплённый сервер виден в подписи группы', (
+    tester,
+  ) async {
     await _pump(tester, choices: {_public: _denl, _denl: _nl});
     await tester.tap(find.text('Группы · 2'));
     await _settle(tester);

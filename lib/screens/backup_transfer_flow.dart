@@ -55,11 +55,11 @@ Future<Set<BackupSection>?> showBackupRestorePicker(
         }
 
         Set<BackupSection> current() => {
-              if (split) BackupSection.splitTunneling,
-              if (subs) BackupSection.subscriptions,
-              if (servers) BackupSection.servers,
-              if (settings) BackupSection.appSettings,
-            };
+          if (split) BackupSection.splitTunneling,
+          if (subs) BackupSection.subscriptions,
+          if (servers) BackupSection.servers,
+          if (settings) BackupSection.appSettings,
+        };
 
         return SafeArea(
           child: SingleChildScrollView(
@@ -70,18 +70,16 @@ Future<Set<BackupSection>?> showBackupRestorePicker(
               children: [
                 Text(
                   l10n.settingsImportBackup,
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleMedium
-                      ?.copyWith(color: AppTheme.text(context)),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: AppTheme.text(context),
+                  ),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   l10n.settingsChooseWhatToImport,
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodySmall
-                      ?.copyWith(color: AppTheme.textLight(context)),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppTheme.textLight(context),
+                  ),
                 ),
                 const SizedBox(height: 10),
                 checkbox(
@@ -116,8 +114,9 @@ Future<Set<BackupSection>?> showBackupRestorePicker(
                       backgroundColor: AppTheme.accentContainer(context),
                       foregroundColor: AppTheme.onAccentContainer(context),
                       shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(ExpressiveShape.medium),
+                        borderRadius: BorderRadius.circular(
+                          ExpressiveShape.medium,
+                        ),
                       ),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
@@ -165,15 +164,16 @@ Future<int?> restoreBackupInteractive(
 }
 
 String backupErrorText(AppLocalizations l10n, Object error) => switch (error) {
-      BackupKeyUnavailable() => l10n.backupFromReleaseBuild,
-      BackupTransferException(failure: BackupTransferFailure.unreachable) =>
-        l10n.backupTransferUnreachable,
-      BackupTransferException(failure: BackupTransferFailure.expired) =>
-        l10n.backupTransferExpired,
-      BackupTransferException(:final detail) =>
-        l10n.backupTransferRejected(detail ?? ''),
-      _ => '$error',
-    };
+  BackupKeyUnavailable() => l10n.backupFromReleaseBuild,
+  BackupTransferException(failure: BackupTransferFailure.unreachable) =>
+    l10n.backupTransferUnreachable,
+  BackupTransferException(failure: BackupTransferFailure.expired) =>
+    l10n.backupTransferExpired,
+  BackupTransferException(:final detail) => l10n.backupTransferRejected(
+    detail ?? '',
+  ),
+  _ => '$error',
+};
 
 Future<void> scanBackupCode(BuildContext context, WidgetRef ref) async {
   final raw = await QrScanScreen.scan(context);
@@ -283,14 +283,17 @@ class _BackupSendDialogState extends State<_BackupSendDialog> {
         children: [
           Text(
             l10n.backupTransferSendMessage(widget.link.host),
-            style: textTheme.bodyMedium
-                ?.copyWith(color: AppTheme.textLight(context)),
+            style: textTheme.bodyMedium?.copyWith(
+              color: AppTheme.textLight(context),
+            ),
           ),
           if (_error != null) ...[
             const SizedBox(height: 8),
             Text(
               _error!,
-              style: textTheme.bodySmall?.copyWith(color: AppTheme.red(context)),
+              style: textTheme.bodySmall?.copyWith(
+                color: AppTheme.red(context),
+              ),
             ),
           ],
         ],
@@ -340,7 +343,9 @@ class _BackupFetchDialogState extends State<_BackupFetchDialog> {
       if (mounted) Navigator.pop(context, backup);
     } catch (e) {
       if (!mounted) return;
-      setState(() => _error = backupErrorText(AppLocalizations.of(context)!, e));
+      setState(
+        () => _error = backupErrorText(AppLocalizations.of(context)!, e),
+      );
     }
   }
 
@@ -354,20 +359,26 @@ class _BackupFetchDialogState extends State<_BackupFetchDialog> {
       content: error == null
           ? Row(
               children: [
-                ShapeLoadingIndicator(size: 24, color: AppTheme.accent(context)),
+                ShapeLoadingIndicator(
+                  size: 24,
+                  color: AppTheme.accent(context),
+                ),
                 const SizedBox(width: 16),
                 Flexible(
                   child: Text(
                     l10n.backupTransferFetching(widget.link.host),
-                    style: textTheme.bodyMedium
-                        ?.copyWith(color: AppTheme.textLight(context)),
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: AppTheme.textLight(context),
+                    ),
                   ),
                 ),
               ],
             )
           : Text(
               error,
-              style: textTheme.bodyMedium?.copyWith(color: AppTheme.red(context)),
+              style: textTheme.bodyMedium?.copyWith(
+                color: AppTheme.red(context),
+              ),
             ),
       actions: [
         TextButton(

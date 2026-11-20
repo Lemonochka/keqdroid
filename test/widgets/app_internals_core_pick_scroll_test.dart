@@ -72,8 +72,9 @@ ScrollPosition _page(WidgetTester tester) => tester
     .position;
 
 void main() {
-  testWidgets('прокрутка остаётся на месте, пока сведения собираются заново',
-      (tester) async {
+  testWidgets('прокрутка остаётся на месте, пока сведения собираются заново', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(420, 760);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -81,9 +82,9 @@ void main() {
     final StorageService storage = (await tester.runAsync(
       () => buildStorageService(
         initialValues: {
-          'keqdis_settings':
-              const AppSettings(vpnCore: AppSettings.vpnCoreXray)
-                  .toJsonString(),
+          'keqdis_settings': const AppSettings(
+            vpnCore: AppSettings.vpnCoreXray,
+          ).toJsonString(),
         },
       ),
     ))!;
@@ -95,8 +96,9 @@ void main() {
       ProviderScope(
         overrides: [
           storageProvider.overrideWithValue(storage),
-          vpnEngineProvider
-              .overrideWithValue(VpnEngine.withBackend(FakeTunnelBackend())),
+          vpnEngineProvider.overrideWithValue(
+            VpnEngine.withBackend(FakeTunnelBackend()),
+          ),
           appInternalsProviderForTest.overrideWith((ref) async {
             await ref.watch(settingsNotifierProvider.future);
             builds++;
@@ -142,8 +144,9 @@ void main() {
     await tester.tap(mihomo);
     await _frames(tester);
 
-    final container =
-        ProviderScope.containerOf(tester.element(find.byType(MaterialApp)));
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(MaterialApp)),
+    );
     expect(
       container.read(settingsNotifierProvider).value?.vpnCore,
       AppSettings.vpnCoreMihomo,

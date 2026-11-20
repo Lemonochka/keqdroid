@@ -7,11 +7,11 @@ import 'package:keqdroid/utils/xray_session_log.dart';
 /// сервера xray 26.x пишет только там. Лог при этом должен остаться ровно
 /// таким, какой заказан в настройках.
 String _config(String? level) => jsonEncode({
-      if (level != null) 'log': {'loglevel': level, 'access': 'none'},
-      'outbounds': [
-        {'protocol': 'vless', 'tag': 'proxy'},
-      ],
-    });
+  if (level != null) 'log': {'loglevel': level, 'access': 'none'},
+  'outbounds': [
+    {'protocol': 'vless', 'tag': 'proxy'},
+  ],
+});
 
 String? _levelOf(String config) =>
     ((jsonDecode(config) as Map)['log'] as Map?)?['loglevel'] as String?;
@@ -63,7 +63,8 @@ void main() {
   });
 
   group('фильтр строк', () {
-    const info = '2026/09/23 02:09:14.123456 [Info] [1] app/dispatcher: '
+    const info =
+        '2026/09/23 02:09:14.123456 [Info] [1] app/dispatcher: '
         'taking detour [proxy] for [tcp:x:443]';
     const warning = '2026/09/23 02:09:14.123456 [Warning] core: Xray started';
     const error = '2026/09/23 02:09:14.123456 [Error] app/dns: failed';

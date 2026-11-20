@@ -234,8 +234,8 @@ String tunStartFailureMessage({
   final body = hint == null
       ? fallback
       : hint.id == 'wintun-refused'
-          ? hint.message
-          : '${hint.message}\n\n$fallback';
+      ? hint.message
+      : '${hint.message}\n\n$fallback';
   final logTail = (tail ?? '').trim();
   return logTail.isEmpty ? body : '$body\n$logTail';
 }

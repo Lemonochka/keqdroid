@@ -5,7 +5,9 @@ void main() {
   group('socks-ссылка', () {
     test('base64(user:pass)@host:port, как отдаёт v2rayN', () {
       // dXNlcjpwYXNz = user:pass
-      final link = SocksLink.tryParse('socks://dXNlcjpwYXNz@1.2.3.4:1080#My%20Proxy')!;
+      final link = SocksLink.tryParse(
+        'socks://dXNlcjpwYXNz@1.2.3.4:1080#My%20Proxy',
+      )!;
       expect(link.host, '1.2.3.4');
       expect(link.port, 1080);
       expect(link.username, 'user');
@@ -14,14 +16,18 @@ void main() {
     });
 
     test('логин и пароль открытым текстом раскодируются', () {
-      final link = SocksLink.tryParse('socks5://us%40er:p%3Ass@proxy.example:1080')!;
+      final link = SocksLink.tryParse(
+        'socks5://us%40er:p%3Ass@proxy.example:1080',
+      )!;
       expect(link.username, 'us@er');
       expect(link.password, 'p:ss');
     });
 
     test('старый вид: base64 всей части до имени', () {
       // dXNlcjpwYXNzQDEuMi4zLjQ6MTA4MA = user:pass@1.2.3.4:1080
-      final link = SocksLink.tryParse('socks://dXNlcjpwYXNzQDEuMi4zLjQ6MTA4MA#old')!;
+      final link = SocksLink.tryParse(
+        'socks://dXNlcjpwYXNzQDEuMi4zLjQ6MTA4MA#old',
+      )!;
       expect(link.host, '1.2.3.4');
       expect(link.port, 1080);
       expect(link.username, 'user');

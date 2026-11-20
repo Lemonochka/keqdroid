@@ -32,10 +32,10 @@ class LiquidLevels {
   final bool inDp;
 
   double target(LiquidPhase phase, double load) => switch (phase) {
-        LiquidPhase.idle => idle,
-        LiquidPhase.busy => busy,
-        LiquidPhase.active => quiet + (loud - quiet) * load,
-      };
+    LiquidPhase.idle => idle,
+    LiquidPhase.busy => busy,
+    LiquidPhase.active => quiet + (loud - quiet) * load,
+  };
 }
 
 class _LiquidLayer {
@@ -151,7 +151,7 @@ class LiquidWaveSim {
     for (var i = 0; i < n; i++) {
       _restSpeed +=
           (omega * omega * (target - _rest) - 2 * zeta * omega * _restSpeed) *
-              h;
+          h;
       _rest += _restSpeed * h;
       level = _rest + _lift;
       _historyClock += h;
@@ -295,8 +295,9 @@ class LiquidWave extends StatefulWidget {
 
   static Future<void> _load() async {
     try {
-      _reflection =
-          await ui.FragmentProgram.fromAsset('shaders/reflection.frag');
+      _reflection = await ui.FragmentProgram.fromAsset(
+        'shaders/reflection.frag',
+      );
     } catch (e) {
       AppLogger.instance.warn('Reflection shader not loaded', error: e);
     }
@@ -443,15 +444,11 @@ class LiquidWaveState extends State<LiquidWave>
   }
 
   Path _pathFor(LiquidShapeSpot spot) => _paths.putIfAbsent(
-        spot,
-        () => RoundedPolygonBorder(polygon: spot.polygon).getOuterPath(
-          Rect.fromCenter(
-            center: Offset.zero,
-            width: spot.size,
-            height: spot.size,
-          ),
-        ),
-      );
+    spot,
+    () => RoundedPolygonBorder(polygon: spot.polygon).getOuterPath(
+      Rect.fromCenter(center: Offset.zero, width: spot.size, height: spot.size),
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -540,8 +537,10 @@ class _LiquidPainter extends CustomPainter {
     for (var i = 0; i < spots.length; i++) {
       final spot = spots[i];
       final next = spots[(i + 1) % spots.length];
-      final morph = state._morphs
-          .putIfAbsent(spot, () => Morph(spot.polygon, next.polygon));
+      final morph = state._morphs.putIfAbsent(
+        spot,
+        () => Morph(spot.polygon, next.polygon),
+      );
       // на остановке доходит до целой формы, а не замирает на полпути
       final p = LiquidWaveState.morphAt(t, i);
       final whole = p.roundToDouble();
@@ -556,7 +555,9 @@ class _LiquidPainter extends CustomPainter {
       final x = (rtl ? w - dx : dx) + sin(t * 0.25 + i * 1.7) * 10;
       final y = dy + cos(t * 0.21 + i) * 7 + sunk * _sinkDepth;
       final s = spot.size * 1.15;
-      Path shape() => morph.toPath(progress: progress).transform(
+      Path shape() => morph
+          .toPath(progress: progress)
+          .transform(
             (Matrix4.identity()
                   ..translateByDouble(-s / 2, -s / 2, 0, 1)
                   ..scaleByDouble(s, s, 1, 1))
@@ -601,6 +602,7 @@ class _LiquidPainter extends CustomPainter {
           (inDp ? level : level * headerBottom) -
           sim.displacement(x);
     }
+
     final water = Path()..moveTo(0, h);
     for (double x = 0; x < w; x += 4) {
       water.lineTo(x, surface(x));
@@ -685,6 +687,7 @@ class _LiquidPainter extends CustomPainter {
           lift -
           sim.displacement(x, back: back);
     }
+
     final path = Path()..moveTo(0, h);
     for (double x = 0; x < w; x += 4) {
       path.lineTo(x, surface(x));
@@ -726,53 +729,171 @@ class _LiquidPainter extends CustomPainter {
 // по пять, у воды по две, с метриками остаётся три
 final panelLiquidShapes = [
   [
-    LiquidShapeSpot(MaterialShapes.sunny,
-        anchor: LiquidShapeAnchor.top, x: 0.40, y: 14, size: 26, degrees: 17),
-    LiquidShapeSpot(MaterialShapes.flower,
-        anchor: LiquidShapeAnchor.top, x: 0.08, y: 16, size: 22, degrees: -11),
-    LiquidShapeSpot(MaterialShapes.clover4Leaf,
-        anchor: LiquidShapeAnchor.side, x: 16, y: 52, size: 16, degrees: 29),
-    LiquidShapeSpot(MaterialShapes.cookie7Sided,
-        anchor: LiquidShapeAnchor.low, x: 0.50, y: 56, size: 20, degrees: 15),
-    LiquidShapeSpot(MaterialShapes.gem,
-        anchor: LiquidShapeAnchor.low, x: 0.30, y: 62, size: 14, degrees: 24),
+    LiquidShapeSpot(
+      MaterialShapes.sunny,
+      anchor: LiquidShapeAnchor.top,
+      x: 0.40,
+      y: 14,
+      size: 26,
+      degrees: 17,
+    ),
+    LiquidShapeSpot(
+      MaterialShapes.flower,
+      anchor: LiquidShapeAnchor.top,
+      x: 0.08,
+      y: 16,
+      size: 22,
+      degrees: -11,
+    ),
+    LiquidShapeSpot(
+      MaterialShapes.clover4Leaf,
+      anchor: LiquidShapeAnchor.side,
+      x: 16,
+      y: 52,
+      size: 16,
+      degrees: 29,
+    ),
+    LiquidShapeSpot(
+      MaterialShapes.cookie7Sided,
+      anchor: LiquidShapeAnchor.low,
+      x: 0.50,
+      y: 56,
+      size: 20,
+      degrees: 15,
+    ),
+    LiquidShapeSpot(
+      MaterialShapes.gem,
+      anchor: LiquidShapeAnchor.low,
+      x: 0.30,
+      y: 62,
+      size: 14,
+      degrees: 24,
+    ),
   ],
   [
-    LiquidShapeSpot(MaterialShapes.cookie9Sided,
-        anchor: LiquidShapeAnchor.top, x: 0.30, y: 14, size: 24, degrees: 10),
-    LiquidShapeSpot(MaterialShapes.gem,
-        anchor: LiquidShapeAnchor.top, x: 0.56, y: 18, size: 16, degrees: 20),
-    LiquidShapeSpot(MaterialShapes.softBurst,
-        anchor: LiquidShapeAnchor.side, x: 16, y: 118, size: 18),
-    LiquidShapeSpot(MaterialShapes.puffy,
-        anchor: LiquidShapeAnchor.low, x: 0.42, y: 56, size: 24, degrees: -15),
-    LiquidShapeSpot(MaterialShapes.clover4Leaf,
-        anchor: LiquidShapeAnchor.low, x: 0.22, y: 60, size: 14, degrees: -20),
+    LiquidShapeSpot(
+      MaterialShapes.cookie9Sided,
+      anchor: LiquidShapeAnchor.top,
+      x: 0.30,
+      y: 14,
+      size: 24,
+      degrees: 10,
+    ),
+    LiquidShapeSpot(
+      MaterialShapes.gem,
+      anchor: LiquidShapeAnchor.top,
+      x: 0.56,
+      y: 18,
+      size: 16,
+      degrees: 20,
+    ),
+    LiquidShapeSpot(
+      MaterialShapes.softBurst,
+      anchor: LiquidShapeAnchor.side,
+      x: 16,
+      y: 118,
+      size: 18,
+    ),
+    LiquidShapeSpot(
+      MaterialShapes.puffy,
+      anchor: LiquidShapeAnchor.low,
+      x: 0.42,
+      y: 56,
+      size: 24,
+      degrees: -15,
+    ),
+    LiquidShapeSpot(
+      MaterialShapes.clover4Leaf,
+      anchor: LiquidShapeAnchor.low,
+      x: 0.22,
+      y: 60,
+      size: 14,
+      degrees: -20,
+    ),
   ],
   [
-    LiquidShapeSpot(MaterialShapes.flower,
-        anchor: LiquidShapeAnchor.top, x: 0.20, y: 15, size: 24),
-    LiquidShapeSpot(MaterialShapes.clover4Leaf,
-        anchor: LiquidShapeAnchor.top, x: 0.52, y: 13, size: 18, degrees: 35),
-    LiquidShapeSpot(MaterialShapes.pill,
-        anchor: LiquidShapeAnchor.side, x: 16, y: 86, size: 18, degrees: 46),
-    LiquidShapeSpot(MaterialShapes.sunny,
-        anchor: LiquidShapeAnchor.low, x: 0.56, y: 56, size: 22, degrees: -10),
-    LiquidShapeSpot(MaterialShapes.cookie9Sided,
-        anchor: LiquidShapeAnchor.low, x: 0.36, y: 62, size: 15, degrees: 8),
+    LiquidShapeSpot(
+      MaterialShapes.flower,
+      anchor: LiquidShapeAnchor.top,
+      x: 0.20,
+      y: 15,
+      size: 24,
+    ),
+    LiquidShapeSpot(
+      MaterialShapes.clover4Leaf,
+      anchor: LiquidShapeAnchor.top,
+      x: 0.52,
+      y: 13,
+      size: 18,
+      degrees: 35,
+    ),
+    LiquidShapeSpot(
+      MaterialShapes.pill,
+      anchor: LiquidShapeAnchor.side,
+      x: 16,
+      y: 86,
+      size: 18,
+      degrees: 46,
+    ),
+    LiquidShapeSpot(
+      MaterialShapes.sunny,
+      anchor: LiquidShapeAnchor.low,
+      x: 0.56,
+      y: 56,
+      size: 22,
+      degrees: -10,
+    ),
+    LiquidShapeSpot(
+      MaterialShapes.cookie9Sided,
+      anchor: LiquidShapeAnchor.low,
+      x: 0.36,
+      y: 62,
+      size: 15,
+      degrees: 8,
+    ),
   ],
 ];
 
 // Легаси: по бокам от кнопки в центре, три с одной стороны и две с другой
 final legacyLiquidShapes = [
-  LiquidShapeSpot(MaterialShapes.sunny,
-      anchor: LiquidShapeAnchor.top, x: 0.14, y: 8, size: 26, degrees: 17),
-  LiquidShapeSpot(MaterialShapes.clover4Leaf,
-      anchor: LiquidShapeAnchor.top, x: 0.27, y: 66, size: 16, degrees: 29),
-  LiquidShapeSpot(MaterialShapes.puffy,
-      anchor: LiquidShapeAnchor.top, x: 0.10, y: 116, size: 22, degrees: -15),
-  LiquidShapeSpot(MaterialShapes.flower,
-      anchor: LiquidShapeAnchor.top, x: 0.84, y: 28, size: 24, degrees: -11),
-  LiquidShapeSpot(MaterialShapes.cookie7Sided,
-      anchor: LiquidShapeAnchor.top, x: 0.76, y: 106, size: 18, degrees: 15),
+  LiquidShapeSpot(
+    MaterialShapes.sunny,
+    anchor: LiquidShapeAnchor.top,
+    x: 0.14,
+    y: 8,
+    size: 26,
+    degrees: 17,
+  ),
+  LiquidShapeSpot(
+    MaterialShapes.clover4Leaf,
+    anchor: LiquidShapeAnchor.top,
+    x: 0.27,
+    y: 66,
+    size: 16,
+    degrees: 29,
+  ),
+  LiquidShapeSpot(
+    MaterialShapes.puffy,
+    anchor: LiquidShapeAnchor.top,
+    x: 0.10,
+    y: 116,
+    size: 22,
+    degrees: -15,
+  ),
+  LiquidShapeSpot(
+    MaterialShapes.flower,
+    anchor: LiquidShapeAnchor.top,
+    x: 0.84,
+    y: 28,
+    size: 24,
+    degrees: -11,
+  ),
+  LiquidShapeSpot(
+    MaterialShapes.cookie7Sided,
+    anchor: LiquidShapeAnchor.top,
+    x: 0.76,
+    y: 106,
+    size: 18,
+    degrees: 15,
+  ),
 ];

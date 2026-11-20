@@ -10,11 +10,11 @@ class NotificationService {
   static final NotificationService _instance = NotificationService._();
   static NotificationService get instance => _instance;
 
-  static const _channelId   = 'keqdis_vpn_control';
+  static const _channelId = 'keqdis_vpn_control';
   static const _channelName = 'VPN Control';
-  static const _notifId     = 1338;
+  static const _notifId = 1338;
 
-  static const _subsChannelId   = 'keqdis_subscriptions';
+  static const _subsChannelId = 'keqdis_subscriptions';
   static const _subsChannelName = 'Subscriptions';
   static const _subsNotifIdBase = 2400;
 
@@ -26,8 +26,9 @@ class NotificationService {
     if (ns._initialized) return;
 
     final plugin = FlutterLocalNotificationsPlugin();
-    const androidInit =
-        AndroidInitializationSettings('@drawable/ic_notification');
+    const androidInit = AndroidInitializationSettings(
+      '@drawable/ic_notification',
+    );
     await plugin.initialize(
       settings: const InitializationSettings(android: androidInit),
       onDidReceiveNotificationResponse: _onNotificationTap,
@@ -36,8 +37,10 @@ class NotificationService {
     ns._plugin = plugin;
     ns._initialized = true;
 
-    final android = plugin.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
+    final android = plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
     await android?.requestNotificationsPermission();
   }
 
@@ -103,8 +106,9 @@ class NotificationService {
     required String body,
   }) async {
     final plugin = FlutterLocalNotificationsPlugin();
-    const androidInit =
-        AndroidInitializationSettings('@drawable/ic_notification');
+    const androidInit = AndroidInitializationSettings(
+      '@drawable/ic_notification',
+    );
     await plugin.initialize(
       settings: const InitializationSettings(android: androidInit),
     );
@@ -178,11 +182,7 @@ class NotificationService {
         state.errorMessage ?? 'Connection failed',
         false,
       ),
-      VpnStatus.disconnected => (
-        'VPN Disconnected',
-        'Tap to connect',
-        false,
-      ),
+      VpnStatus.disconnected => ('VPN Disconnected', 'Tap to connect', false),
     };
   }
 
@@ -214,14 +214,17 @@ class NotificationService {
 
   static String _formatSpeed(int bytesPerSec) {
     if (bytesPerSec < 1024) return '$bytesPerSec B/s';
-    if (bytesPerSec < 1024 * 1024) return '${(bytesPerSec / 1024).toStringAsFixed(1)} KB/s';
+    if (bytesPerSec < 1024 * 1024) {
+      return '${(bytesPerSec / 1024).toStringAsFixed(1)} KB/s';
+    }
     return '${(bytesPerSec / (1024 * 1024)).toStringAsFixed(1)} MB/s';
   }
 
   static List<AndroidNotificationAction> _buildActions(VpnState state) {
     final isConnected = state.status == VpnStatus.connected;
-    final isConnecting = state.status == VpnStatus.connecting ||
-                         state.status == VpnStatus.disconnecting;
+    final isConnecting =
+        state.status == VpnStatus.connecting ||
+        state.status == VpnStatus.disconnecting;
 
     if (isConnecting) {
       return [];
@@ -267,7 +270,11 @@ class NotificationService {
       await channel.invokeMethod('toggleVpn');
       AppLogger.instance.debug('VPN connect action from notification');
     } catch (e, st) {
-      AppLogger.instance.error('Failed to handle connect action', error: e, stackTrace: st);
+      AppLogger.instance.error(
+        'Failed to handle connect action',
+        error: e,
+        stackTrace: st,
+      );
     }
   }
 
@@ -277,7 +284,11 @@ class NotificationService {
       await channel.invokeMethod('stopVpn');
       AppLogger.instance.debug('VPN disconnect action from notification');
     } catch (e, st) {
-      AppLogger.instance.error('Failed to handle disconnect action', error: e, stackTrace: st);
+      AppLogger.instance.error(
+        'Failed to handle disconnect action',
+        error: e,
+        stackTrace: st,
+      );
     }
   }
 }

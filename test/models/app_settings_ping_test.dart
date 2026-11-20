@@ -31,7 +31,10 @@ void main() {
       expect(AppSettings.fromJson(const {'pingType': 'http'}).pingType, 'url');
       expect(AppSettings.fromJson(const {'pingType': 'proxy'}).pingType, 'url');
       expect(AppSettings.fromJson(const {'pingType': 'ping'}).pingType, 'icmp');
-      expect(AppSettings.fromJson(const {'pingType': 'что-то'}).pingType, 'url');
+      expect(
+        AppSettings.fromJson(const {'pingType': 'что-то'}).pingType,
+        'url',
+      );
     });
   });
 

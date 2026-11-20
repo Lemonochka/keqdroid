@@ -58,8 +58,9 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
     HardwareKeyboard.instance.addHandler(_onGlobalKey);
     if (Platform.isLinux) {
       LinuxBackgroundService.instance.onQuit = _disconnectForQuit;
-      LinuxBackgroundService.instance.uiVisible
-          .addListener(_onLinuxWindowVisibility);
+      LinuxBackgroundService.instance.uiVisible.addListener(
+        _onLinuxWindowVisibility,
+      );
     }
     VpnNativeBridge.registerAutostartHandler(
       () => _maybeAutostartConnect(force: true),
@@ -67,9 +68,11 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
     VpnNativeBridge.registerWindowVisibilityHandler(_onWindowVisibility);
     if (Platform.isWindows) {
       // при автозапуске в трей окно не показывалось, и сказать об этом раннер мог только до подписки
-      unawaited(WindowsDesktopService.isHiddenInTray().then((hidden) {
-        if (hidden) _onWindowVisibility(false);
-      }));
+      unawaited(
+        WindowsDesktopService.isHiddenInTray().then((hidden) {
+          if (hidden) _onWindowVisibility(false);
+        }),
+      );
     }
     HotkeyService.onPressed = _onHotkeyAction;
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -89,10 +92,12 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
     super.didChangeDependencies();
     final l10n = AppLocalizations.of(context);
     if (Platform.isLinux && l10n != null) {
-      unawaited(LinuxBackgroundService.instance.setTrayLabels(
-        show: l10n.trayOpenApp,
-        quit: l10n.trayExit,
-      ));
+      unawaited(
+        LinuxBackgroundService.instance.setTrayLabels(
+          show: l10n.trayOpenApp,
+          quit: l10n.trayExit,
+        ),
+      );
     }
   }
 
@@ -125,9 +130,9 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
     final labels = failedActionIds
         .map((id) => HotkeyBinding.fromToken(hotkeys[id])?.label ?? id)
         .join(', ');
-    AppSnack.of(context).showSnackBar(
-      SnackBar(content: Text(l10n.hotkeyConflictTaken(labels))),
-    );
+    AppSnack.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(l10n.hotkeyConflictTaken(labels))));
   }
 
   Future<void> _onHotkeyAction(HotkeyAction action) async {
@@ -192,7 +197,12 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
       await WindowsDesktopService.restoreMainWindow();
     }
     if (!mounted) return;
-    await applyDesktopConnectionMode(context, DesktopModeDeps.of(ref), settings, next);
+    await applyDesktopConnectionMode(
+      context,
+      DesktopModeDeps.of(ref),
+      settings,
+      next,
+    );
   }
 
   Future<void> _hotkeyBestPingServer() async {
@@ -225,9 +235,7 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
     if (!mounted) return;
     final l10n = AppLocalizations.of(context);
     if (l10n == null) return;
-    AppSnack.of(context).showSnackBar(
-      SnackBar(content: Text(message(l10n))),
-    );
+    AppSnack.of(context).showSnackBar(SnackBar(content: Text(message(l10n))));
   }
 
   Future<void> _runWindowsStartupTasks() async {
@@ -251,7 +259,9 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
       if (!retired || !mounted) return;
       final current = await ref.read(settingsNotifierProvider.future);
       if (!mounted) return;
-      await ref.read(settingsNotifierProvider.notifier).save(
+      await ref
+          .read(settingsNotifierProvider.notifier)
+          .save(
             current.copyWith(
               launchAtStartup: true,
               launchAtStartupElevated: false,
@@ -366,8 +376,9 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
     HardwareKeyboard.instance.removeHandler(_onGlobalKey);
     if (Platform.isLinux) {
       LinuxBackgroundService.instance.onQuit = null;
-      LinuxBackgroundService.instance.uiVisible
-          .removeListener(_onLinuxWindowVisibility);
+      LinuxBackgroundService.instance.uiVisible.removeListener(
+        _onLinuxWindowVisibility,
+      );
     }
     HotkeyService.onPressed = null;
     VpnNativeBridge.registerAutostartHandler(null);
@@ -407,12 +418,12 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
       if (nextHotkeys == null) return;
       if (prevHotkeys != null && mapEquals(prevHotkeys, nextHotkeys)) return;
       unawaited(
-        HotkeyService.apply(HotkeyService.parseBindings(nextHotkeys)).then(
-          (failed) {
-            if (failed.isEmpty || !mounted) return;
-            _showHotkeyConflictSnack(failed, nextHotkeys);
-          },
-        ),
+        HotkeyService.apply(HotkeyService.parseBindings(nextHotkeys)).then((
+          failed,
+        ) {
+          if (failed.isEmpty || !mounted) return;
+          _showHotkeyConflictSnack(failed, nextHotkeys);
+        }),
       );
     });
 
@@ -432,7 +443,8 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
       if (info == null) return;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        final days = ref.read(settingsNotifierProvider).value?.updatePromptDays ??
+        final days =
+            ref.read(settingsNotifierProvider).value?.updatePromptDays ??
             const AppSettings().updatePromptDays;
         unawaited(autoPromptForUpdate(context, info, days: days));
       });
@@ -483,7 +495,8 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
       unawaited(LinuxBackgroundService.instance.quit());
       return true;
     }
-    final mod = HardwareKeyboard.instance.isControlPressed ||
+    final mod =
+        HardwareKeyboard.instance.isControlPressed ||
         HardwareKeyboard.instance.isMetaPressed;
     if (!mod || event.physicalKey != PhysicalKeyboardKey.keyV) return false;
     // поверх вкладки что-то открыто, Ctrl+V принадлежит ему: иначе подписка добавлялась мимо открытой формы
@@ -530,8 +543,8 @@ class _DesktopTabHost extends StatelessWidget {
 
 // подписи для окна портала на Wayland: там пользователь видит, что подтверждает
 Map<HotkeyAction, String> hotkeyDescriptions(AppLocalizations l10n) => {
-      HotkeyAction.toggleConnection: l10n.hotkeyActionToggleConnection,
-      HotkeyAction.toggleTunMode: l10n.hotkeyActionToggleTun,
-      HotkeyAction.bestPingServer: l10n.hotkeyActionBestPing,
-      HotkeyAction.toggleWindow: l10n.hotkeyActionToggleWindow,
-    };
+  HotkeyAction.toggleConnection: l10n.hotkeyActionToggleConnection,
+  HotkeyAction.toggleTunMode: l10n.hotkeyActionToggleTun,
+  HotkeyAction.bestPingServer: l10n.hotkeyActionBestPing,
+  HotkeyAction.toggleWindow: l10n.hotkeyActionToggleWindow,
+};

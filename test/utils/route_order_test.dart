@@ -16,7 +16,8 @@ import '../helpers/mihomo_rules_sim.dart';
 import '../helpers/xray_rules_sim.dart';
 
 // порядок раздела всех приложений: по цели, пока маршруты не перетаскивали
-const _xrayActive = 'vless://00000000-0000-4000-8000-000000000000@203.0.113.10:443'
+const _xrayActive =
+    'vless://00000000-0000-4000-8000-000000000000@203.0.113.10:443'
     '?type=tcp&security=tls&sni=nl.example#NL';
 const _mihomoActive = 'ss://YWVzLTI1Ni1nY206dGVzdHBhc3M@203.0.113.10:8388#nl';
 const _de = 'trojan://pw@198.51.100.7:443?security=tls&sni=de.example#DE';
@@ -47,7 +48,8 @@ const _mediaDe = TrafficRoute(
   AppSettings settings,
   List<RouteServerOutbound> outbounds,
   List<RouteAppRules> apps,
-}) _prepare(List<TrafficRoute> routes, VpnBackend core) {
+})
+_prepare(List<TrafficRoute> routes, VpnBackend core) {
   final outbounds = routeServerOutbounds(
     routes: routes,
     servers: _servers,
@@ -69,16 +71,15 @@ const _mediaDe = TrafficRoute(
 List<RouteAppRules> _withLists(
   List<RouteAppRules> apps,
   Map<String, List<String>> lists,
-) =>
-    [
-      for (final r in apps)
-        r.copyWith(
-          listDomains: [
-            for (final e in lists.entries)
-              if (r.entries.contains(e.key)) ...e.value,
-          ],
-        ),
-    ];
+) => [
+  for (final r in apps)
+    r.copyWith(
+      listDomains: [
+        for (final e in lists.entries)
+          if (r.entries.contains(e.key)) ...e.value,
+      ],
+    ),
+];
 
 String _xrayText(
   List<TrafficRoute> routes, {
@@ -123,17 +124,16 @@ String? _x(
   String ip = '',
   String resolvesTo = '',
   String net = 'tcp',
-}) =>
-    simulateXray(
-      c,
-      XrayConn(
-        inbound: 'socks-in',
-        host: host,
-        ip: ip,
-        resolvesTo: resolvesTo,
-        network: net,
-      ),
-    );
+}) => simulateXray(
+  c,
+  XrayConn(
+    inbound: 'socks-in',
+    host: host,
+    ip: ip,
+    resolvesTo: resolvesTo,
+    network: net,
+  ),
+);
 
 String _m(
   Map<String, dynamic> c, {
@@ -141,33 +141,34 @@ String _m(
   String ip = '',
   String resolvesTo = '',
   String net = 'TCP',
-}) =>
-    simulateMihomo(
-      c,
-      SimConn(
-        inType: 'SOCKS5',
-        host: host,
-        ip: ip,
-        resolvesTo: resolvesTo,
-        network: net,
-      ),
-    );
+}) => simulateMihomo(
+  c,
+  SimConn(
+    inType: 'SOCKS5',
+    host: host,
+    ip: ip,
+    resolvesTo: resolvesTo,
+    network: net,
+  ),
+);
 
 // как перетаскивание на экране: маршруты встают в названном порядке
 List<TrafficRoute> _placed(List<TrafficRoute> shown) {
   var routes = shown;
   for (var to = 0; to < shown.length; to++) {
-    final from = routesIn(RouteSection.allApps, routes)
-        .indexWhere((r) => r.id == shown[to].id);
+    final from = routesIn(
+      RouteSection.allApps,
+      routes,
+    ).indexWhere((r) => r.id == shown[to].id);
     routes = withAllAppsMoved(routes, from, to);
   }
   return routes;
 }
 
 List<Map<String, dynamic>> _xrayRules(Map<String, dynamic> c) => [
-      for (final r in (c['routing'] as Map)['rules'] as List)
-        (r as Map).cast<String, dynamic>(),
-    ];
+  for (final r in (c['routing'] as Map)['rules'] as List)
+    (r as Map).cast<String, dynamic>(),
+];
 
 List<List<T>> _permutations<T>(List<T> items) {
   if (items.length <= 1) return [items];
@@ -187,8 +188,11 @@ void main() {
     test('xray: напрямую раньше сервера и VPN, как ни записаны маршруты', () {
       final expected = _xrayText(all);
       for (final routes in _permutations(all)) {
-        expect(_xrayText(routes), expected,
-            reason: routes.map((r) => r.id).join(', '));
+        expect(
+          _xrayText(routes),
+          expected,
+          reason: routes.map((r) => r.id).join(', '),
+        );
       }
       final c = _xray(all);
       expect(_x(c, host: 'example.ru'), 'direct');
@@ -199,8 +203,11 @@ void main() {
     test('mihomo: напрямую раньше сервера и VPN, как ни записаны маршруты', () {
       final expected = jsonEncode(_mihomo(all));
       for (final routes in _permutations(all)) {
-        expect(jsonEncode(_mihomo(routes)), expected,
-            reason: routes.map((r) => r.id).join(', '));
+        expect(
+          jsonEncode(_mihomo(routes)),
+          expected,
+          reason: routes.map((r) => r.id).join(', '),
+        );
       }
       final c = _mihomo(all);
       expect(unknownMihomoTargets(c), isEmpty);
@@ -226,21 +233,35 @@ void main() {
   });
 
   group('место маршрута', () {
-    const block = TrafficRoute(id: 'ads', sites: 'ads.example', target: RouteTarget.block);
+    const block = TrafficRoute(
+      id: 'ads',
+      sites: 'ads.example',
+      target: RouteTarget.block,
+    );
     const app = TrafficRoute(id: 'app', apps: ['chrome'], sites: 'yt.example');
 
     test('перетаскивание нумерует весь раздел и не трогает остальные', () {
-      final routes = withAllAppsMoved([block, _ruDirect, app, _mediaDe, _oneVpn], 2, 0);
-      expect(
-        routesIn(RouteSection.allApps, routes).map((r) => r.id),
-        ['one', 'ru', 'media'],
+      final routes = withAllAppsMoved(
+        [block, _ruDirect, app, _mediaDe, _oneVpn],
+        2,
+        0,
       );
+      expect(routesIn(RouteSection.allApps, routes).map((r) => r.id), [
+        'one',
+        'ru',
+        'media',
+      ]);
       expect(
         {for (final r in routes) r.id: r.order},
         {'ads': null, 'ru': 1, 'app': null, 'media': 2, 'one': 0},
       );
-      expect(orderedRoutes(routes).map((r) => r.id),
-          ['ads', 'app', 'one', 'ru', 'media']);
+      expect(orderedRoutes(routes).map((r) => r.id), [
+        'ads',
+        'app',
+        'one',
+        'ru',
+        'media',
+      ]);
       expect(routesHaveOwnOrder(routes), isTrue);
     });
 
@@ -255,12 +276,20 @@ void main() {
     test('новый маршрут в перетащенном разделе встаёт по цели', () {
       final routes = _placed([_oneVpn, _ruDirect]);
       List<String> shown(TrafficRoute added) => [
-            for (final r in routesIn(RouteSection.allApps, [...routes, added]))
-              r.id,
-          ];
-      const direct = TrafficRoute(id: 'new', sites: 'n.example', target: RouteTarget.direct);
+        for (final r in routesIn(RouteSection.allApps, [...routes, added]))
+          r.id,
+      ];
+      const direct = TrafficRoute(
+        id: 'new',
+        sites: 'n.example',
+        target: RouteTarget.direct,
+      );
       expect(shown(direct), ['one', 'ru', 'new']);
-      expect(shown(direct.copyWith(target: RouteTarget.vpn)), ['one', 'ru', 'new']);
+      expect(shown(direct.copyWith(target: RouteTarget.vpn)), [
+        'one',
+        'ru',
+        'new',
+      ]);
       expect(
         shown(direct.copyWith(target: RouteTarget.server, serverId: 'de')),
         ['one', 'ru', 'new'],
@@ -268,10 +297,10 @@ void main() {
       // обхода в разделе нет: напрямую встаёт первым, как раньше
       expect(
         [
-          for (final r in routesIn(
-            RouteSection.allApps,
-            [..._placed([_oneVpn, _mediaDe]), direct],
-          ))
+          for (final r in routesIn(RouteSection.allApps, [
+            ..._placed([_oneVpn, _mediaDe]),
+            direct,
+          ]))
             r.id,
         ],
         ['new', 'one', 'media'],
@@ -286,13 +315,18 @@ void main() {
     });
 
     test('правка маршрута место не сбрасывает', () {
-      final moved = _placed([_oneVpn, _ruDirect])
-          .firstWhere((r) => r.id == 'one');
+      final moved = _placed([
+        _oneVpn,
+        _ruDirect,
+      ]).firstWhere((r) => r.id == 'one');
       expect(moved.copyWith(sites: 'other.ru').order, moved.order);
     });
 
     test('в три списка сворачивается только блокировка', () {
-      final folded = foldRoutes(const AppSettings(), [block, ..._placed([_oneVpn, _ruDirect])]);
+      final folded = foldRoutes(const AppSettings(), [
+        block,
+        ..._placed([_oneVpn, _ruDirect]),
+      ]);
       expect(folded.blockedRules, 'ads.example');
       expect(folded.directRules, isEmpty);
       expect(folded.proxyRules, isEmpty);
@@ -332,14 +366,20 @@ void main() {
       expect(_x(x, host: 'cdn.example', resolvesTo: '198.18.5.5'), 'proxy');
       expect(_x(x, host: 'cdn.example', resolvesTo: '198.18.9.9'), 'direct');
       final m = _mihomo(lifted);
-      expect(_m(m, host: 'cdn.example', resolvesTo: '198.18.5.5'),
-          MihomoConfigGen.proxyName);
+      expect(
+        _m(m, host: 'cdn.example', resolvesTo: '198.18.5.5'),
+        MihomoConfigGen.proxyName,
+      );
       expect(_m(m, host: 'cdn.example', resolvesTo: '198.18.9.9'), 'DIRECT');
     });
 
     // жалоба, с которой всё началось: один сайт через VPN при всей стране напрямую
     test('сайт через VPN стоит выше geoip страны напрямую', () {
-      const country = TrafficRoute(id: 'geo', sites: 'geoip:ru', target: RouteTarget.direct);
+      const country = TrafficRoute(
+        id: 'geo',
+        sites: 'geoip:ru',
+        target: RouteTarget.direct,
+      );
       const site = TrafficRoute(id: 'site', sites: 'example.ru');
       final routes = _placed([site, country]);
 
@@ -355,50 +395,65 @@ void main() {
       );
 
       // без перетаскивания страна выше: так было и остаётся
-      final before = [for (final r in _xrayRules(_xray([site, country]))) jsonEncode(r)];
+      final before = [
+        for (final r in _xrayRules(_xray([site, country]))) jsonEncode(r),
+      ];
       expect(
         before.indexWhere((r) => r.contains('geoip:ru')),
         lessThan(before.indexWhere((r) => r.contains('example.ru'))),
       );
     });
 
-    test('перетащили обратно по цели: соединения идут как до перетаскивания', () {
-      final all = [_ruDirect, _mediaDe, _oneVpn];
-      final back = _placed(all);
-      expect(routesHaveOwnOrder(back), isTrue);
-      final de = _prepare(all, VpnBackend.xray).outbounds.single.tag;
-      for (final (host, ip) in [
-        ('example.ru', ''),
-        ('media.example.ru', ''),
-        ('other.example', ''),
-        ('', '198.18.5.5'),
-        ('', '10.0.0.7'),
-      ]) {
-        expect(
-          _x(_xray(back), host: host, ip: ip),
-          _x(_xray(all), host: host, ip: ip),
-          reason: 'xray $host$ip',
-        );
-        expect(
-          _m(_mihomo(back), host: host, ip: ip),
-          _m(_mihomo(all), host: host, ip: ip),
-          reason: 'mihomo $host$ip',
-        );
-      }
-      expect(de, isNotEmpty);
-    });
+    test(
+      'перетащили обратно по цели: соединения идут как до перетаскивания',
+      () {
+        final all = [_ruDirect, _mediaDe, _oneVpn];
+        final back = _placed(all);
+        expect(routesHaveOwnOrder(back), isTrue);
+        final de = _prepare(all, VpnBackend.xray).outbounds.single.tag;
+        for (final (host, ip) in [
+          ('example.ru', ''),
+          ('media.example.ru', ''),
+          ('other.example', ''),
+          ('', '198.18.5.5'),
+          ('', '10.0.0.7'),
+        ]) {
+          expect(
+            _x(_xray(back), host: host, ip: ip),
+            _x(_xray(all), host: host, ip: ip),
+            reason: 'xray $host$ip',
+          );
+          expect(
+            _m(_mihomo(back), host: host, ip: ip),
+            _m(_mihomo(all), host: host, ip: ip),
+            reason: 'mihomo $host$ip',
+          );
+        }
+        expect(de, isNotEmpty);
+      },
+    );
 
-    test('локальная сеть напрямую, даже если маршрут через VPN поднят наверх', () {
-      const lan = TrafficRoute(id: 'lan', sites: '192.168.1.5, nas.example');
-      final routes = _placed([lan, _ruDirect]);
-      expect(_x(_xray(routes), ip: '192.168.1.5'), 'direct');
-      expect(_m(_mihomo(routes), ip: '192.168.1.5'), 'DIRECT');
-      expect(_x(_xray(routes), host: 'nas.example'), 'proxy');
-    });
+    test(
+      'локальная сеть напрямую, даже если маршрут через VPN поднят наверх',
+      () {
+        const lan = TrafficRoute(id: 'lan', sites: '192.168.1.5, nas.example');
+        final routes = _placed([lan, _ruDirect]);
+        expect(_x(_xray(routes), ip: '192.168.1.5'), 'direct');
+        expect(_m(_mihomo(routes), ip: '192.168.1.5'), 'DIRECT');
+        expect(_x(_xray(routes), host: 'nas.example'), 'proxy');
+      },
+    );
 
     test('блокировка по-прежнему раньше всех', () {
-      const ads = TrafficRoute(id: 'ads', sites: 'ads.example.ru', target: RouteTarget.block);
-      final routes = [ads, ..._placed([_oneVpn, _ruDirect])];
+      const ads = TrafficRoute(
+        id: 'ads',
+        sites: 'ads.example.ru',
+        target: RouteTarget.block,
+      );
+      final routes = [
+        ads,
+        ..._placed([_oneVpn, _ruDirect]),
+      ];
       expect(_x(_xray(routes), host: 'ads.example.ru'), 'block');
       expect(_m(_mihomo(routes), host: 'ads.example.ru'), 'REJECT');
     });
@@ -412,7 +467,10 @@ void main() {
       );
       final routes = _placed([gone, _ruDirect]);
       expect(_x(_xray(routes), host: 'example.ru'), 'proxy');
-      expect(_m(_mihomo(routes), host: 'example.ru'), MihomoConfigGen.proxyName);
+      expect(
+        _m(_mihomo(routes), host: 'example.ru'),
+        MihomoConfigGen.proxyName,
+      );
     });
 
     test('маршрут с протоколом стоит на своём месте, а не на ступени цели', () {
@@ -423,7 +481,11 @@ void main() {
         serverId: 'de',
         network: RouteNetwork.tcp,
       );
-      const direct = TrafficRoute(id: 'org', sites: 'example.org', target: RouteTarget.direct);
+      const direct = TrafficRoute(
+        id: 'org',
+        sites: 'example.org',
+        target: RouteTarget.direct,
+      );
       final above = _placed([tcpDe, direct]);
       final below = _placed([direct, tcpDe]);
       final xDe = _prepare(above, VpnBackend.xray).outbounds.single.tag;
@@ -439,11 +501,17 @@ void main() {
     });
 
     test('mihomo: список по ссылке у перетащенного маршрута своим набором', () {
-      const listed = TrafficRoute(id: 'l', sites: 'https://lists.example/a.txt');
+      const listed = TrafficRoute(
+        id: 'l',
+        sites: 'https://lists.example/a.txt',
+      );
       final routes = _placed([listed, _ruDirect]);
-      final c = _mihomo(routes, lists: {
-        'lists.example': ['listed.ru'],
-      });
+      final c = _mihomo(
+        routes,
+        lists: {
+          'lists.example': ['listed.ru'],
+        },
+      );
       expect(unknownMihomoTargets(c), isEmpty);
       expect(_m(c, host: 'www.listed.ru'), MihomoConfigGen.proxyName);
       expect(_m(c, host: 'vk.ru'), 'DIRECT');
@@ -452,7 +520,8 @@ void main() {
     });
 
     test('xray: метки правил не повторяются', () {
-      const vision = 'vless://00000000-0000-4000-8000-000000000000@203.0.113.10:443'
+      const vision =
+          'vless://00000000-0000-4000-8000-000000000000@203.0.113.10:443'
           '?type=tcp&security=reality&sni=decoy.example&pbk=publickey&sid=aabb'
           '&fp=chrome&flow=xtls-rprx-vision#v';
       final tags = [
@@ -463,7 +532,8 @@ void main() {
     });
 
     test('xray: QUIC к VLESS Vision режется и у поднятого маршрута', () {
-      const vision = 'vless://00000000-0000-4000-8000-000000000000@203.0.113.10:443'
+      const vision =
+          'vless://00000000-0000-4000-8000-000000000000@203.0.113.10:443'
           '?type=tcp&security=reality&sni=decoy.example&pbk=publickey&sid=aabb'
           '&fp=chrome&flow=xtls-rprx-vision#v';
       final c = _xray(_placed([_oneVpn, _ruDirect]), active: vision);
@@ -479,9 +549,9 @@ void main() {
 
     test('xray: DNS поднятого сайта идёт раньше резолвера обхода', () {
       List<Map<Object?, Object?>> servers(List<TrafficRoute> routes) => [
-            for (final s in (_xray(routes)['dns'] as Map)['servers'] as List)
-              if (s is Map) s,
-          ];
+        for (final s in (_xray(routes)['dns'] as Map)['servers'] as List)
+          if (s is Map) s,
+      ];
       bool has(Map<Object?, Object?> s, String domain) =>
           (s['domains'] as List?)?.contains(domain) ?? false;
 
@@ -509,7 +579,10 @@ void main() {
     });
 
     test('xray: сайты из списков по ссылке DNS берёт с того же места', () {
-      const vpnList = TrafficRoute(id: 'vl', sites: 'https://lists.example/vpn.txt');
+      const vpnList = TrafficRoute(
+        id: 'vl',
+        sites: 'https://lists.example/vpn.txt',
+      );
       const directList = TrafficRoute(
         id: 'dl',
         sites: 'https://lists.example/direct.txt',
@@ -528,8 +601,8 @@ void main() {
           if (s is Map) s,
       ];
       int first(String domain) => servers.indexWhere(
-            (s) => (s['domains'] as List?)?.contains('domain:$domain') ?? false,
-          );
+        (s) => (s['domains'] as List?)?.contains('domain:$domain') ?? false,
+      );
       expect(first('bank.example'), isNot(-1));
       expect(servers[first('bank.example')]['address'], 'localhost');
       expect(first('blocked.example'), isNot(-1));
@@ -537,25 +610,28 @@ void main() {
       expect(servers[first('blocked.example')]['address'], isNot('localhost'));
     });
 
-    test('приватные сети из прежнего пресета резолв по правилам не включают', () {
-      const preset = TrafficRoute(
-        id: 'p',
-        sites: 'ru, 10.0.0.0/8, 192.168.0.0/16',
-        target: RouteTarget.direct,
-      );
-      const site = TrafficRoute(id: 's', sites: 'example.ru');
-      for (final routes in [
-        [preset, site],
-        _placed([site, preset]),
-      ]) {
-        expect((_xray(routes)['routing'] as Map)['domainStrategy'], 'AsIs');
-        final rules = (_mihomo(routes)['rules'] as List).cast<String>();
-        expect(
-          rules.where((r) => r.startsWith('IP-CIDR,10.0.0.0/8,DIRECT')),
-          everyElement(endsWith(',no-resolve')),
+    test(
+      'приватные сети из прежнего пресета резолв по правилам не включают',
+      () {
+        const preset = TrafficRoute(
+          id: 'p',
+          sites: 'ru, 10.0.0.0/8, 192.168.0.0/16',
+          target: RouteTarget.direct,
         );
-      }
-    });
+        const site = TrafficRoute(id: 's', sites: 'example.ru');
+        for (final routes in [
+          [preset, site],
+          _placed([site, preset]),
+        ]) {
+          expect((_xray(routes)['routing'] as Map)['domainStrategy'], 'AsIs');
+          final rules = (_mihomo(routes)['rules'] as List).cast<String>();
+          expect(
+            rules.where((r) => r.startsWith('IP-CIDR,10.0.0.0/8,DIRECT')),
+            everyElement(endsWith(',no-resolve')),
+          );
+        }
+      },
+    );
   });
 
   group('готовый конфиг провайдера', () {
@@ -581,7 +657,11 @@ void main() {
         for (final o in c['outbounds'] as List) (o as Map)['tag'],
       };
       for (final r in _xrayRules(c)) {
-        expect(outbounds, contains(r['outboundTag']), reason: '${r['ruleTag']}');
+        expect(
+          outbounds,
+          contains(r['outboundTag']),
+          reason: '${r['ruleTag']}',
+        );
       }
       expect(_x(c, host: 'author.example'), 'my-direct');
       expect(_x(c, host: 'example.ru'), 'my-proxy');

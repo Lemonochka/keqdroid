@@ -19,21 +19,27 @@ void main() {
   setUp(() => Socks5Credentials().init('u', 'p'));
 
   test('every routing rule carries a unique ruleTag', () {
-    final rules = _rules(ConfigGeneratorV2.generateConfig(
-      _server,
-      const AppSettings(
-        directRules: 'vk.com, geoip:ru, 10.8.0.0/24',
-        proxyRules: 'youtube.com, geoip:telegram, 1.1.1.1',
-        blockedRules: 'doubleclick.net, geoip:cn, 5.5.5.0/24',
+    final rules = _rules(
+      ConfigGeneratorV2.generateConfig(
+        _server,
+        const AppSettings(
+          directRules: 'vk.com, geoip:ru, 10.8.0.0/24',
+          proxyRules: 'youtube.com, geoip:telegram, 1.1.1.1',
+          blockedRules: 'doubleclick.net, geoip:cn, 5.5.5.0/24',
+        ),
       ),
-    ));
+    );
 
     final tags = <String>[];
     for (final rule in rules) {
       expect(rule['ruleTag'], isA<String>(), reason: 'untagged rule: $rule');
       tags.add(rule['ruleTag'] as String);
     }
-    expect(tags.toSet().length, tags.length, reason: 'duplicate ruleTag: $tags');
+    expect(
+      tags.toSet().length,
+      tags.length,
+      reason: 'duplicate ruleTag: $tags',
+    );
     expect(
       tags,
       containsAll([
@@ -52,12 +58,13 @@ void main() {
   });
 
   test('tagging does not disturb the rule bodies', () {
-    final rules = _rules(ConfigGeneratorV2.generateConfig(
-      _server,
-      const AppSettings(proxyRules: 'youtube.com'),
-    ));
-    final proxyRule =
-        rules.firstWhere((r) => r['ruleTag'] == 'proxy-domains');
+    final rules = _rules(
+      ConfigGeneratorV2.generateConfig(
+        _server,
+        const AppSettings(proxyRules: 'youtube.com'),
+      ),
+    );
+    final proxyRule = rules.firstWhere((r) => r['ruleTag'] == 'proxy-domains');
     expect(proxyRule['type'], 'field');
     expect(proxyRule['outboundTag'], 'proxy');
     expect(proxyRule['domain'], ['domain:youtube.com']);
@@ -78,7 +85,10 @@ void main() {
     // Каждый DNS-запрос устройства = отдельное TCP до сервера. Пачка из
     // семи запросов выносила лимит новых соединений на стороне сервера.
     test('порт 53 уходит в dns-аутбаунд, а не в туннель', () {
-      final config = ConfigGeneratorV2.generateConfig(_server, const AppSettings());
+      final config = ConfigGeneratorV2.generateConfig(
+        _server,
+        const AppSettings(),
+      );
       final dns = _rules(config).firstWhere((r) => r['ruleTag'] == 'dns-out');
       expect(dns['port'], '53');
       expect(dns['network'], 'tcp,udp');
@@ -100,10 +110,12 @@ void main() {
     // Инбаунд LAN-прокси слушает 0.0.0.0: перехвати мы DNS раньше `lan-deny` —
     // получили бы резолвер, открытый в интернет.
     test('перехват стоит ПОСЛЕ запрета входа в LAN-инбаунды', () {
-      final rules = _rules(ConfigGeneratorV2.generateConfig(
-        _server,
-        const AppSettings(lanSharing: true),
-      ));
+      final rules = _rules(
+        ConfigGeneratorV2.generateConfig(
+          _server,
+          const AppSettings(lanSharing: true),
+        ),
+      );
       expect(
         rules.indexWhere((r) => r['ruleTag'] == 'lan-deny'),
         lessThan(rules.indexWhere((r) => r['ruleTag'] == 'dns-out')),
@@ -115,25 +127,30 @@ void main() {
     // UDP-53: голый 53-й у части провайдеров подменяется, и домены узлов, к
     // которым подключается пользователь, уходили бы провайдеру открытым текстом.
     test('адрес сервера резолвится локально, DoH уходит в туннель', () {
-      final dns = dnsBlock(ConfigGeneratorV2.generateConfig(
-        'vless://uuid@vpn.example.net:443?type=tcp&security=none#demo',
-        const AppSettings(),
-      ));
+      final dns = dnsBlock(
+        ConfigGeneratorV2.generateConfig(
+          'vless://uuid@vpn.example.net:443?type=tcp&security=none#demo',
+          const AppSettings(),
+        ),
+      );
       final servers = (dns['servers'] as List).cast<Map<String, dynamic>>();
       final bootstrap = servers
-          .where((s) =>
-              (s['domains'] as List?)?.contains('full:vpn.example.net') ??
-              false)
+          .where(
+            (s) =>
+                (s['domains'] as List?)?.contains('full:vpn.example.net') ??
+                false,
+          )
           .toList();
 
-      expect(
-        bootstrap.map((s) => s['address']),
-        ['https+local://1.1.1.1/dns-query', 'localhost'],
-      );
+      expect(bootstrap.map((s) => s['address']), [
+        'https+local://1.1.1.1/dns-query',
+        'localhost',
+      ]);
       expect(bootstrap.every((s) => s['skipFallback'] == true), isTrue);
       expect(
         bootstrap.every(
-            (s) => (s['domains'] as List).single == 'full:vpn.example.net'),
+          (s) => (s['domains'] as List).single == 'full:vpn.example.net',
+        ),
         isTrue,
       );
       // Системный резолвер — последний и обрывающий: без `finalQuery` промах по
@@ -147,14 +164,17 @@ void main() {
     });
 
     test('сервер по IP не плодит bootstrap-запись — резолвить нечего', () {
-      final dns = dnsBlock(ConfigGeneratorV2.generateConfig(
-        'vless://uuid@203.0.113.9:443?type=tcp&security=none#demo',
-        const AppSettings(),
-      ));
+      final dns = dnsBlock(
+        ConfigGeneratorV2.generateConfig(
+          'vless://uuid@203.0.113.9:443?type=tcp&security=none#demo',
+          const AppSettings(),
+        ),
+      );
       final servers = (dns['servers'] as List).cast<Map<String, dynamic>>();
       expect(
-        servers.where((s) =>
-            (s['domains'] as List?)?.contains('full:203.0.113.9') ?? false),
+        servers.where(
+          (s) => (s['domains'] as List?)?.contains('full:203.0.113.9') ?? false,
+        ),
         isEmpty,
       );
     });
@@ -166,13 +186,16 @@ void main() {
         AppSettings.finalOutboundDirect,
         AppSettings.finalOutboundBlock,
       ]) {
-        final dns = dnsBlock(ConfigGeneratorV2.generateConfig(
-          _server,
-          AppSettings(finalOutbound: mode),
-        ));
+        final dns = dnsBlock(
+          ConfigGeneratorV2.generateConfig(
+            _server,
+            AppSettings(finalOutbound: mode),
+          ),
+        );
         expect(
-          (dns['servers'] as List).cast<Map<String, dynamic>>()
-              .map((s) => s['address']),
+          (dns['servers'] as List).cast<Map<String, dynamic>>().map(
+            (s) => s['address'],
+          ),
           contains('https+local://1.1.1.1/dns-query'),
           reason: 'finalOutbound=$mode',
         );
@@ -186,10 +209,7 @@ void main() {
         socksPort: 28150,
       );
       expect(outbounds(config).any((o) => o['tag'] == 'dns-out'), isFalse);
-      expect(
-        _rules(config).any((r) => r['outboundTag'] == 'dns-out'),
-        isFalse,
-      );
+      expect(_rules(config).any((r) => r['outboundTag'] == 'dns-out'), isFalse);
     });
   });
 
@@ -202,10 +222,12 @@ void main() {
         '&fp=chrome&flow=xtls-rprx-vision#demo';
 
     test('vision + глобал-прокси: QUIC уходит в block до proxy-правил', () {
-      final rules = _rules(ConfigGeneratorV2.generateConfig(
-        vision,
-        const AppSettings(proxyRules: 'youtube.com'),
-      ));
+      final rules = _rules(
+        ConfigGeneratorV2.generateConfig(
+          vision,
+          const AppSettings(proxyRules: 'youtube.com'),
+        ),
+      );
       final quic = rules.firstWhere((r) => r['ruleTag'] == 'block-quic');
       expect(quic['network'], 'udp');
       expect(quic['port'], '443');
@@ -217,36 +239,41 @@ void main() {
     });
 
     test('без vision правило не появляется — QUIC там работает', () {
-      final rules = _rules(ConfigGeneratorV2.generateConfig(
-        _server,
-        const AppSettings(),
-      ));
+      final rules = _rules(
+        ConfigGeneratorV2.generateConfig(_server, const AppSettings()),
+      );
       expect(rules.any((r) => r['ruleTag'] == 'block-quic'), isFalse);
     });
 
     test('флоу -udp443 умеет UDP/443 сам, его не режем', () {
-      final rules = _rules(ConfigGeneratorV2.generateConfig(
-        vision.replaceAll('xtls-rprx-vision', 'xtls-rprx-vision-udp443'),
-        const AppSettings(),
-      ));
+      final rules = _rules(
+        ConfigGeneratorV2.generateConfig(
+          vision.replaceAll('xtls-rprx-vision', 'xtls-rprx-vision-udp443'),
+          const AppSettings(),
+        ),
+      );
       expect(rules.any((r) => r['ruleTag'] == 'block-quic'), isFalse);
     });
 
     test('«остальное — direct»: чужой QUIC не наше дело', () {
-      final rules = _rules(ConfigGeneratorV2.generateConfig(
-        vision,
-        const AppSettings(finalOutbound: AppSettings.finalOutboundDirect),
-      ));
+      final rules = _rules(
+        ConfigGeneratorV2.generateConfig(
+          vision,
+          const AppSettings(finalOutbound: AppSettings.finalOutboundDirect),
+        ),
+      );
       expect(rules.any((r) => r['ruleTag'] == 'block-quic'), isFalse);
     });
   });
 
   test('ping config stays untagged (log level none, nothing reads it)', () {
-    final rules = _rules(ConfigGeneratorV2.generatePingConfig(
-      _server,
-      const AppSettings(proxyRules: 'youtube.com'),
-      socksPort: 28150,
-    ));
+    final rules = _rules(
+      ConfigGeneratorV2.generatePingConfig(
+        _server,
+        const AppSettings(proxyRules: 'youtube.com'),
+        socksPort: 28150,
+      ),
+    );
     expect(rules.every((r) => !r.containsKey('ruleTag')), isTrue);
   });
 }

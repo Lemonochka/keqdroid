@@ -103,10 +103,9 @@ void _showSubscriptionDeleteDialog(
           const SizedBox(width: 12),
           Text(
             l10n.subscriptionsDeleteSubscription,
-            style: Theme.of(ctx)
-                .textTheme
-                .titleLarge
-                ?.copyWith(color: textColor),
+            style: Theme.of(
+              ctx,
+            ).textTheme.titleLarge?.copyWith(color: textColor),
           ),
         ],
       ),

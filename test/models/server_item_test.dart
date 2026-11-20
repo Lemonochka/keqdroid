@@ -8,12 +8,12 @@ void main() {
       'vless://uuid-1@1.2.3.4:443?security=tls&sni=x.com#🇩🇪 Germany Fast';
 
   ServerItem makeServer({String? customName, DateTime? pinnedAt}) => ServerItem(
-        id: 'id-1',
-        config: vlessConfig,
-        type: ServerItemType.manual,
-        customName: customName,
-        pinnedAt: pinnedAt,
-      );
+    id: 'id-1',
+    config: vlessConfig,
+    type: ServerItemType.manual,
+    customName: customName,
+    pinnedAt: pinnedAt,
+  );
 
   group('customName', () {
     test('overrides displayName; derivedName keeps the config name', () {
@@ -87,13 +87,17 @@ void main() {
 
   group('vmess derived name', () {
     test('uses ps from the payload', () {
-      final payload = base64.encode(utf8.encode(jsonEncode({
-        'v': '2',
-        'ps': 'My VMess',
-        'add': 'h.com',
-        'port': '443',
-        'id': 'uuid',
-      })));
+      final payload = base64.encode(
+        utf8.encode(
+          jsonEncode({
+            'v': '2',
+            'ps': 'My VMess',
+            'add': 'h.com',
+            'port': '443',
+            'id': 'uuid',
+          }),
+        ),
+      );
       final s = ServerItem(
         id: 'id-4',
         config: 'vmess://$payload',
@@ -108,7 +112,8 @@ void main() {
   test('у SSR адрес и порт достаются из base64', () {
     String b64(String value) =>
         base64Url.encode(utf8.encode(value)).replaceAll('=', '');
-    final payload = 'ssr.example:8388:origin:aes-256-cfb:plain:${b64('pw')}/?'
+    final payload =
+        'ssr.example:8388:origin:aes-256-cfb:plain:${b64('pw')}/?'
         'remarks=${b64('SSR Node')}';
     final server = ServerItem.fromRaw('ssr://${b64(payload)}');
 

@@ -27,8 +27,8 @@ TextDirection contentDirection(String text, {required TextDirection fallback}) {
 
 TextAlign uiStartAlign(BuildContext context) =>
     Directionality.of(context) == TextDirection.rtl
-        ? TextAlign.right
-        : TextAlign.left;
+    ? TextAlign.right
+    : TextAlign.left;
 
 // ltrIsolate не поможет, когда значение собрано из нескольких Text в Row, потому что Row зеркалится сам;
 // невидимых символов не добавляет, поэтому годится и для копируемого текста
@@ -38,8 +38,6 @@ class LtrBlock extends StatelessWidget {
   const LtrBlock({super.key, required this.child});
 
   @override
-  Widget build(BuildContext context) => Directionality(
-        textDirection: TextDirection.ltr,
-        child: child,
-      );
+  Widget build(BuildContext context) =>
+      Directionality(textDirection: TextDirection.ltr, child: child);
 }

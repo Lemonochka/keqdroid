@@ -36,8 +36,14 @@ void main() {
     });
 
     test('blocks localhost and metadata urls', () {
-      expect(SubscriptionService.isSafeUrl('http://localhost:8080/test'), isFalse);
-      expect(SubscriptionService.isSafeUrl('http://169.254.169.254/latest'), isFalse);
+      expect(
+        SubscriptionService.isSafeUrl('http://localhost:8080/test'),
+        isFalse,
+      );
+      expect(
+        SubscriptionService.isSafeUrl('http://169.254.169.254/latest'),
+        isFalse,
+      );
     });
 
     test('blocks private and loopback literal ips', () {
@@ -48,11 +54,14 @@ void main() {
       expect(SubscriptionService.isSafeUrl('http://[::1]/sub'), isFalse);
     });
 
-    test('blocks numeric-shorthand loopback that bypasses dotted-quad checks', () {
-      // 2130706433 == 0x7f000001 == 127.0.0.1
-      expect(SubscriptionService.isSafeUrl('http://2130706433/sub'), isFalse);
-      expect(SubscriptionService.isSafeUrl('http://0x7f000001/sub'), isFalse);
-    });
+    test(
+      'blocks numeric-shorthand loopback that bypasses dotted-quad checks',
+      () {
+        // 2130706433 == 0x7f000001 == 127.0.0.1
+        expect(SubscriptionService.isSafeUrl('http://2130706433/sub'), isFalse);
+        expect(SubscriptionService.isSafeUrl('http://0x7f000001/sub'), isFalse);
+      },
+    );
 
     test('still allows a public literal ip', () {
       expect(SubscriptionService.isSafeUrl('https://1.1.1.1/sub'), isTrue);
@@ -67,41 +76,46 @@ void main() {
   group('SubscriptionService.getDueForUpdate', () {
     test('uses default interval when updateIntervalHours is 0', () async {
       final now = DateTime.now();
-      when(() => storage.getSubscriptions()).thenAnswer((_) async => [
-            Subscription(
-              id: '1',
-              name: 'A',
-              url: 'https://a',
-              autoUpdate: true,
-              updateIntervalHours: 0,
-              lastUpdatedAt: now.subtract(const Duration(hours: 2)),
-            ),
-          ]);
+      when(() => storage.getSubscriptions()).thenAnswer(
+        (_) async => [
+          Subscription(
+            id: '1',
+            name: 'A',
+            url: 'https://a',
+            autoUpdate: true,
+            updateIntervalHours: 0,
+            lastUpdatedAt: now.subtract(const Duration(hours: 2)),
+          ),
+        ],
+      );
 
-      final due =
-          await service.getDueForUpdate(defaultInterval: const Duration(hours: 1));
+      final due = await service.getDueForUpdate(
+        defaultInterval: const Duration(hours: 1),
+      );
       expect(due.length, 1);
     });
 
     test('skips autoUpdate=false and fresh updates', () async {
       final now = DateTime.now();
-      when(() => storage.getSubscriptions()).thenAnswer((_) async => [
-            Subscription(
-              id: '1',
-              name: 'A',
-              url: 'https://a',
-              autoUpdate: false,
-              lastUpdatedAt: now.subtract(const Duration(hours: 5)),
-            ),
-            Subscription(
-              id: '2',
-              name: 'B',
-              url: 'https://b',
-              autoUpdate: true,
-              updateIntervalHours: 12,
-              lastUpdatedAt: now.subtract(const Duration(hours: 1)),
-            ),
-          ]);
+      when(() => storage.getSubscriptions()).thenAnswer(
+        (_) async => [
+          Subscription(
+            id: '1',
+            name: 'A',
+            url: 'https://a',
+            autoUpdate: false,
+            lastUpdatedAt: now.subtract(const Duration(hours: 5)),
+          ),
+          Subscription(
+            id: '2',
+            name: 'B',
+            url: 'https://b',
+            autoUpdate: true,
+            updateIntervalHours: 12,
+            lastUpdatedAt: now.subtract(const Duration(hours: 1)),
+          ),
+        ],
+      );
 
       final due = await service.getDueForUpdate();
       expect(due, isEmpty);
@@ -110,11 +124,25 @@ void main() {
 
   group('SubscriptionService.updateAll', () {
     test('returns results only for autoUpdate subscriptions', () async {
-      when(() => storage.getSubscriptions()).thenAnswer((_) async => [
-            Subscription(id: '1', name: 'A', url: 'http://localhost/a', autoUpdate: true),
-            Subscription(id: '2', name: 'B', url: 'http://localhost/b', autoUpdate: false),
-          ]);
-      when(() => storage.getSettings()).thenAnswer((_) async => const AppSettings());
+      when(() => storage.getSubscriptions()).thenAnswer(
+        (_) async => [
+          Subscription(
+            id: '1',
+            name: 'A',
+            url: 'http://localhost/a',
+            autoUpdate: true,
+          ),
+          Subscription(
+            id: '2',
+            name: 'B',
+            url: 'http://localhost/b',
+            autoUpdate: false,
+          ),
+        ],
+      );
+      when(
+        () => storage.getSettings(),
+      ).thenAnswer((_) async => const AppSettings());
       when(() => storage.getHwid()).thenReturn(null);
       when(() => storage.getServers()).thenAnswer((_) async => <ServerItem>[]);
       when(() => storage.getActiveServerId()).thenReturn(null);
@@ -135,11 +163,15 @@ void main() {
       dio.httpClientAdapter = _FakeAdapter(
         statusCode: 200,
         body: payload,
-        headers: {'content-type': ['text/plain; charset=utf-8']},
+        headers: {
+          'content-type': ['text/plain; charset=utf-8'],
+        },
       );
       service = SubscriptionService(storage, dio: dio);
 
-      when(() => storage.getSettings()).thenAnswer((_) async => const AppSettings());
+      when(
+        () => storage.getSettings(),
+      ).thenAnswer((_) async => const AppSettings());
       when(() => storage.getHwid()).thenReturn(null);
       when(() => storage.setHwid(any())).thenAnswer((_) async {});
       when(() => storage.getServers()).thenAnswer((_) async => <ServerItem>[]);
@@ -147,7 +179,11 @@ void main() {
 
       expect(
         service.updateSubscription(
-          const Subscription(id: 's1', name: 'S', url: 'https://example.com/sub'),
+          const Subscription(
+            id: 's1',
+            name: 'S',
+            url: 'https://example.com/sub',
+          ),
         ),
         completion(
           isA<UpdateResult>().having(
@@ -169,71 +205,88 @@ void main() {
     // сервис с UA-зависимым фейк-адаптером; базовый браузерный UA как в
     // проде (_buildDio) — per-request UA обязан его переопределять
     SubscriptionService buildService(bool Function(String ua) isAllowed) {
-      final dio = Dio(BaseOptions(headers: {
-        'User-Agent': SubscriptionService.browserUserAgent,
-      }));
+      final dio = Dio(
+        BaseOptions(
+          headers: {'User-Agent': SubscriptionService.browserUserAgent},
+        ),
+      );
       adapter = _UaGateAdapter(isAllowed: isAllowed);
       dio.httpClientAdapter = adapter;
       return SubscriptionService(storage, dio: dio);
     }
 
     setUp(() {
-      when(() => storage.getSettings()).thenAnswer((_) async => const AppSettings());
+      when(
+        () => storage.getSettings(),
+      ).thenAnswer((_) async => const AppSettings());
       when(() => storage.getHwid()).thenReturn(null);
       when(() => storage.setHwid(any())).thenAnswer((_) async {});
       when(() => storage.getServers()).thenAnswer((_) async => <ServerItem>[]);
       when(() => storage.getActiveServerId()).thenReturn(null);
-      when(() => storage.replaceServersBySubscription(any(), any()))
-          .thenAnswer((_) async {});
+      when(
+        () => storage.replaceServersBySubscription(any(), any()),
+      ).thenAnswer((_) async {});
       when(() => storage.upsertSubscription(any())).thenAnswer((_) async {});
     });
 
-    test('first request goes with app UA and it is persisted on success',
-        () async {
-      service = buildService((ua) => ua.startsWith(appUaPrefix));
+    test(
+      'first request goes with app UA and it is persisted on success',
+      () async {
+        service = buildService((ua) => ua.startsWith(appUaPrefix));
 
-      final result = await service.updateSubscription(
-        const Subscription(id: 's1', name: 'S', url: 'https://example.com/sub'),
-      );
+        final result = await service.updateSubscription(
+          const Subscription(
+            id: 's1',
+            name: 'S',
+            url: 'https://example.com/sub',
+          ),
+        );
 
-      expect(result.error, isNull);
-      expect(result.success, isTrue);
-      expect(result.serverCount, 1);
-      // ровно один запрос, ушёл с UA приложения (не с базовым браузерным)
-      expect(adapter.requestedUserAgents, hasLength(1));
-      expect(adapter.requestedUserAgents.single, startsWith(appUaPrefix));
-      expect(result.subscription.userAgent, startsWith(appUaPrefix));
-    });
+        expect(result.error, isNull);
+        expect(result.success, isTrue);
+        expect(result.serverCount, 1);
+        // ровно один запрос, ушёл с UA приложения (не с базовым браузерным)
+        expect(adapter.requestedUserAgents, hasLength(1));
+        expect(adapter.requestedUserAgents.single, startsWith(appUaPrefix));
+        expect(result.subscription.userAgent, startsWith(appUaPrefix));
+      },
+    );
 
-    test('falls back to client UA list when panel rejects app UA with 502',
-        () async {
-      // Regression: панели, маршрутизирующие по UA, отдают неизвестным UA
-      // html-страницу подписки (её бэкенд может лежать → 502), а известным
-      // клиентским — payload. UA-ретрай обязан жить и в error-ветке: dio
-      // кидает на 502 до того, как успешная ветка (200+html) до него дойдёт.
-      service = buildService((ua) => ua == 'v2rayNG/2.2.6');
+    test(
+      'falls back to client UA list when panel rejects app UA with 502',
+      () async {
+        // Regression: панели, маршрутизирующие по UA, отдают неизвестным UA
+        // html-страницу подписки (её бэкенд может лежать → 502), а известным
+        // клиентским — payload. UA-ретрай обязан жить и в error-ветке: dio
+        // кидает на 502 до того, как успешная ветка (200+html) до него дойдёт.
+        service = buildService((ua) => ua == 'v2rayNG/2.2.6');
 
-      final result = await service.updateSubscription(
-        const Subscription(id: 's1', name: 'S', url: 'https://example.com/sub'),
-      );
+        final result = await service.updateSubscription(
+          const Subscription(
+            id: 's1',
+            name: 'S',
+            url: 'https://example.com/sub',
+          ),
+        );
 
-      expect(result.error, isNull);
-      expect(result.success, isTrue);
-      expect(result.serverCount, 1);
-      // userinfo берётся из ответа под сработавшим UA
-      expect(result.subscription.usedBytes, 300);
-      expect(result.subscription.totalBytes, 1024);
-      // первым шёл UA приложения, повторно в переборе он не участвует
-      expect(adapter.requestedUserAgents.first, startsWith(appUaPrefix));
-      expect(
-        adapter.requestedUserAgents
-            .where((ua) => ua.startsWith(appUaPrefix))
-            .length,
-        1,
-      );
-      // сработавший UA сохранился в подписке
-      expect(result.subscription.userAgent, 'v2rayNG/2.2.6');
-    });
+        expect(result.error, isNull);
+        expect(result.success, isTrue);
+        expect(result.serverCount, 1);
+        // userinfo берётся из ответа под сработавшим UA
+        expect(result.subscription.usedBytes, 300);
+        expect(result.subscription.totalBytes, 1024);
+        // первым шёл UA приложения, повторно в переборе он не участвует
+        expect(adapter.requestedUserAgents.first, startsWith(appUaPrefix));
+        expect(
+          adapter.requestedUserAgents
+              .where((ua) => ua.startsWith(appUaPrefix))
+              .length,
+          1,
+        );
+        // сработавший UA сохранился в подписке
+        expect(result.subscription.userAgent, 'v2rayNG/2.2.6');
+      },
+    );
 
     test('saved UA is used for the first request without iteration', () async {
       service = buildService((ua) => ua == 'NekoBox/1.4.2');
@@ -261,7 +314,8 @@ void main() {
           id: 's1',
           name: 'S',
           url: 'https://example.com/sub',
-          userAgent: 'NekoBox/1.4.2', // сохранённый UA, который панель перестала принимать
+          userAgent:
+              'NekoBox/1.4.2', // сохранённый UA, который панель перестала принимать
         ),
       );
 
@@ -277,27 +331,29 @@ void main() {
       expect(result.subscription.userAgent, 'v2rayNG/2.2.6');
     });
 
-    test('saved own UA of an older version is replaced by the current one',
-        () async {
-      // Regression: подписка, добавленная на 0.8.7, после обновлений
-      // продолжала слать панели keqdroid/0.8.7
-      final current = await SubscriptionService.appUserAgent();
-      service = buildService((ua) => ua.startsWith(appUaPrefix));
+    test(
+      'saved own UA of an older version is replaced by the current one',
+      () async {
+        // Regression: подписка, добавленная на 0.8.7, после обновлений
+        // продолжала слать панели keqdroid/0.8.7
+        final current = await SubscriptionService.appUserAgent();
+        service = buildService((ua) => ua.startsWith(appUaPrefix));
 
-      final result = await service.updateSubscription(
-        const Subscription(
-          id: 's1',
-          name: 'S',
-          url: 'https://example.com/sub',
-          userAgent: 'keqdroid/0.8.7',
-        ),
-      );
+        final result = await service.updateSubscription(
+          const Subscription(
+            id: 's1',
+            name: 'S',
+            url: 'https://example.com/sub',
+            userAgent: 'keqdroid/0.8.7',
+          ),
+        );
 
-      expect(result.error, isNull);
-      expect(result.success, isTrue);
-      expect(adapter.requestedUserAgents, [current]);
-      expect(result.subscription.userAgent, current);
-    });
+        expect(result.error, isNull);
+        expect(result.success, isTrue);
+        expect(adapter.requestedUserAgents, [current]);
+        expect(result.subscription.userAgent, current);
+      },
+    );
   });
 
   group('SubscriptionService._parseBody name extraction', () {
@@ -324,9 +380,11 @@ void main() {
     // Ключ сопоставления серверов при обновлении подписки. Ошибка здесь не
     // видна сразу: сервер просто теряет пинг, избранное и «активный».
     test('vmess-ссылка AEAD опознаётся по uuid, а не по одному адресу', () {
-      const first = 'vmess://aaaaaaaa-1111-2222-3333-444444444444'
+      const first =
+          'vmess://aaaaaaaa-1111-2222-3333-444444444444'
           '@1.2.3.4:443?type=tcp#one';
-      const second = 'vmess://bbbbbbbb-1111-2222-3333-444444444444'
+      const second =
+          'vmess://bbbbbbbb-1111-2222-3333-444444444444'
           '@1.2.3.4:443?type=tcp#two';
 
       final keyOne = SubscriptionService.stableKeyForTest(first);
@@ -344,84 +402,92 @@ void main() {
 
     // Решение хозяйки: первую версию Hysteria не поддерживаем. В списке она
     // выглядела рабочим сервером и молчала после подключения.
-    test('Hysteria v1 в список не попадает, вторая под той же схемой попадает',
-        () {
-      const body = 'hysteria://1.2.3.4:443?auth=x&upmbps=100&downmbps=200#v1\n'
-          'hysteria://pwd@5.6.7.8:443?sni=node.example&obfs=salamander'
-          '&obfs-password=abc#v2';
+    test(
+      'Hysteria v1 в список не попадает, вторая под той же схемой попадает',
+      () {
+        const body =
+            'hysteria://1.2.3.4:443?auth=x&upmbps=100&downmbps=200#v1\n'
+            'hysteria://pwd@5.6.7.8:443?sni=node.example&obfs=salamander'
+            '&obfs-password=abc#v2';
 
-      final configs = SubscriptionService.parseBodyForTest(body);
-      expect(configs.length, 1);
-      expect(configs.single, contains('obfs=salamander'));
-    });
+        final configs = SubscriptionService.parseBodyForTest(body);
+        expect(configs.length, 1);
+        expect(configs.single, contains('obfs=salamander'));
+      },
+    );
 
     // Geodema 15.11.2026: Happ получал 100 конфигов Xray JSON на 1,09 МБ, у нас тело
     // длиннее 1 МиБ выпадало из разбора целиком и подписка не обновлялась.
     // Пробелы между элементами JSON смысла не меняют: серверы обязаны совпасть с малым телом
-    test('a JSON subscription over a megabyte gives the same servers as a small one',
-        () {
-      final configs = [
-        for (var i = 0; i < 100; i++)
-          jsonEncode({
-            'remarks': 'Node $i',
-            'outbounds': [
-              {
-                'tag': 'proxy',
-                'protocol': 'vless',
-                'settings': {
-                  'vnext': [
-                    {
-                      'address': 'node$i.example.com',
-                      'port': 443,
-                      'users': [
-                        {
-                          'id': 'a9bbfa43-59fb-4db1-bd4a-${'$i'.padLeft(12, '0')}',
-                          'encryption': 'none',
-                        },
-                      ],
-                    },
-                  ],
+    test(
+      'a JSON subscription over a megabyte gives the same servers as a small one',
+      () {
+        final configs = [
+          for (var i = 0; i < 100; i++)
+            jsonEncode({
+              'remarks': 'Node $i',
+              'outbounds': [
+                {
+                  'tag': 'proxy',
+                  'protocol': 'vless',
+                  'settings': {
+                    'vnext': [
+                      {
+                        'address': 'node$i.example.com',
+                        'port': 443,
+                        'users': [
+                          {
+                            'id':
+                                'a9bbfa43-59fb-4db1-bd4a-${'$i'.padLeft(12, '0')}',
+                            'encryption': 'none',
+                          },
+                        ],
+                      },
+                    ],
+                  },
+                  'streamSettings': {'network': 'tcp', 'security': 'tls'},
                 },
-                'streamSettings': {'network': 'tcp', 'security': 'tls'},
-              },
-              {'tag': 'direct', 'protocol': 'freedom'},
-            ],
-          }),
-      ];
-      final small = '[${configs.join(',')}]';
-      final large = '[${configs.join(',${' ' * 12000}')}]';
-      expect(small.length, lessThan(1024 * 1024));
-      expect(large.length, greaterThan(1024 * 1024));
+                {'tag': 'direct', 'protocol': 'freedom'},
+              ],
+            }),
+        ];
+        final small = '[${configs.join(',')}]';
+        final large = '[${configs.join(',${' ' * 12000}')}]';
+        expect(small.length, lessThan(1024 * 1024));
+        expect(large.length, greaterThan(1024 * 1024));
 
-      final expected = SubscriptionService.parseBodyForTest(small);
-      expect(expected, hasLength(100));
-      expect(SubscriptionService.parseBodyForTest(large), expected);
-    });
+        final expected = SubscriptionService.parseBodyForTest(small);
+        expect(expected, hasLength(100));
+        expect(SubscriptionService.parseBodyForTest(large), expected);
+      },
+    );
 
-    test('a Clash profile over a megabyte gives the same nodes as a small one',
-        () {
-      final yaml = StringBuffer('proxies:\n');
-      for (var i = 0; i < 50; i++) {
-        yaml
-          ..writeln('  - name: node $i')
-          ..writeln('    type: trojan')
-          ..writeln('    server: node$i.example.com')
-          ..writeln('    port: 443')
-          ..writeln('    password: secret$i');
-      }
-      yaml.writeln('rules:');
-      yaml.writeln('  - MATCH,DIRECT');
-      final small = yaml.toString();
-      for (var r = 0; r < 30000; r++) {
-        yaml.writeln('# DOMAIN-SUFFIX,site$r.example.org,DIRECT');
-      }
-      final large = yaml.toString();
-      expect(large.length, greaterThan(1024 * 1024));
+    test(
+      'a Clash profile over a megabyte gives the same nodes as a small one',
+      () {
+        final yaml = StringBuffer('proxies:\n');
+        for (var i = 0; i < 50; i++) {
+          yaml
+            ..writeln('  - name: node $i')
+            ..writeln('    type: trojan')
+            ..writeln('    server: node$i.example.com')
+            ..writeln('    port: 443')
+            ..writeln('    password: secret$i');
+        }
+        yaml.writeln('rules:');
+        yaml.writeln('  - MATCH,DIRECT');
+        final small = yaml.toString();
+        for (var r = 0; r < 30000; r++) {
+          yaml.writeln('# DOMAIN-SUFFIX,site$r.example.org,DIRECT');
+        }
+        final large = yaml.toString();
+        expect(large.length, greaterThan(1024 * 1024));
 
-      final expected = SubscriptionService.parseBodyForTest(small);
-      expect(expected, hasLength(50));
-      expect(SubscriptionService.parseBodyForTest(large), expected);
-    });
+        final expected = SubscriptionService.parseBodyForTest(small);
+        expect(expected, hasLength(50));
+        expect(SubscriptionService.parseBodyForTest(large), expected);
+      },
+    );
 
     test('splits two URIs that share one line instead of merging them', () {
       const body =
@@ -430,7 +496,9 @@ void main() {
 
       final configs = SubscriptionService.parseBodyForTest(body);
       expect(configs.length, 2);
-      final names = configs.map((c) => ServerItem.fromRaw(c).displayName).toSet();
+      final names = configs
+          .map((c) => ServerItem.fromRaw(c).displayName)
+          .toSet();
       expect(names, containsAll(<String>['name one', 'name two']));
     });
   });
@@ -483,11 +551,13 @@ rules:
       expect(uri.queryParameters['type'], 'tcp');
     });
 
-    test('узел type: hysteria уходит в mihomo первой версией, hysteria2 рядом переводится', () {
-      // `type: hysteria` у Clash — всегда первая версия. Раньше ему
-      // приписывался `version=2`, и он уезжал в ядро как hysteria2: конфиг не
-      // того протокола и сервер, который не отвечает.
-      const mixed = '''
+    test(
+      'узел type: hysteria уходит в mihomo первой версией, hysteria2 рядом переводится',
+      () {
+        // `type: hysteria` у Clash — всегда первая версия. Раньше ему
+        // приписывался `version=2`, и он уезжал в ядро как hysteria2: конфиг не
+        // того протокола и сервер, который не отвечает.
+        const mixed = '''
 proxies:
   - name: "old"
     type: hysteria
@@ -509,14 +579,15 @@ proxy-groups:
 rules:
   - MATCH,Proxy
 ''';
-      final configs = SubscriptionService.parseBodyForTest(mixed);
-      expect(configs, hasLength(2));
-      final old = ServerItem.fromRaw(configs[0]);
-      expect(old.protocol, 'clash');
-      expect(old.clashConfig!.proxies.single['type'], 'hysteria');
-      expect(old.clashConfig!.proxies.single['auth_str'], 'secret');
-      expect(Uri.parse(configs[1]).host, 'v2.example');
-    });
+        final configs = SubscriptionService.parseBodyForTest(mixed);
+        expect(configs, hasLength(2));
+        final old = ServerItem.fromRaw(configs[0]);
+        expect(old.protocol, 'clash');
+        expect(old.clashConfig!.proxies.single['type'], 'hysteria');
+        expect(old.clashConfig!.proxies.single['auth_str'], 'secret');
+        expect(Uri.parse(configs[1]).host, 'v2.example');
+      },
+    );
 
     // Стадия 2: узлы этих типов у Clash молча выпадали — `_proxyMapToUri`
     // отвечал на них null, и в списке их просто не было.
@@ -661,17 +732,25 @@ rules:
       // пишется `net: tcp` + `type: http`, а `net: http` оба генератора читают
       // как HTTP/2 — узел собирался не тем транспортом. Host у http-opts —
       // заголовок, а не поле.
-      final masq = jsonDecode(utf8.decode(base64.decode(base64.normalize(
-        configs[1].substring('vmess://'.length),
-      )))) as Map<String, dynamic>;
+      final masq =
+          jsonDecode(
+                utf8.decode(
+                  base64.decode(
+                    base64.normalize(configs[1].substring('vmess://'.length)),
+                  ),
+                ),
+              )
+              as Map<String, dynamic>;
       expect(masq['net'], 'tcp');
       expect(masq['type'], 'http');
       expect(masq['path'], '/masq');
       expect(masq['host'], 'masq.example');
 
       final ss = Uri.parse(configs[2]);
-      expect(ss.queryParameters['plugin'],
-          'obfs-local;obfs=http;obfs-host=cdn.example');
+      expect(
+        ss.queryParameters['plugin'],
+        'obfs-local;obfs=http;obfs-host=cdn.example',
+      );
 
       final hop = Uri.parse(configs[3]);
       expect(hop.queryParameters['mport'], '20000-20050');
@@ -724,9 +803,15 @@ rules:
 ''';
       final configs = SubscriptionService.parseBodyForTest(profile);
       expect(configs, hasLength(2));
-      Map<String, dynamic> json(String link) => jsonDecode(utf8.decode(
-            base64.decode(base64.normalize(link.substring('vmess://'.length))),
-          )) as Map<String, dynamic>;
+      Map<String, dynamic> json(String link) =>
+          jsonDecode(
+                utf8.decode(
+                  base64.decode(
+                    base64.normalize(link.substring('vmess://'.length)),
+                  ),
+                ),
+              )
+              as Map<String, dynamic>;
 
       final grpc = json(configs[0]);
       expect(grpc['net'], 'grpc');
@@ -743,12 +828,15 @@ rules:
 
       // И до ядра: имя сервиса доезжает до grpc-opts mihomo.
       Socks5Credentials().init('u', 'p');
-      final proxy = (MihomoConfigGen.build(
-        configs[0],
-        const AppSettings(),
-        socksPort: 2080,
-      )['proxies'] as List)
-          .first as Map;
+      final proxy =
+          (MihomoConfigGen.build(
+                        configs[0],
+                        const AppSettings(),
+                        socksPort: 2080,
+                      )['proxies']
+                      as List)
+                  .first
+              as Map;
       expect((proxy['grpc-opts'] as Map)['grpc-service-name'], 'svc');
       expect(proxy['servername'], 'sni.example');
     });
@@ -797,7 +885,9 @@ proxy-groups:
 rules:
   - MATCH,Proxy
 ''';
-      final uri = Uri.parse(SubscriptionService.parseBodyForTest(profile).single);
+      final uri = Uri.parse(
+        SubscriptionService.parseBodyForTest(profile).single,
+      );
       expect(uri.queryParameters['pbk'], isNotEmpty);
       expect(uri.queryParameters.containsKey('spx'), isFalse);
     });
@@ -838,10 +928,12 @@ rules:
   - MATCH,Proxy
 ''';
       expect(SubscriptionService.parseBodyForTest(profile), hasLength(1));
-      expect(
-        SubscriptionService.unsupportedClashNodes(profile),
-        {'tailscale': 2, 'brook': 1, 'direct': 1, 'dns': 1},
-      );
+      expect(SubscriptionService.unsupportedClashNodes(profile), {
+        'tailscale': 2,
+        'brook': 1,
+        'direct': 1,
+        'dns': 1,
+      });
     });
 
     // Узлы без своей ссылки (snell, wireguard, masque) выпадали молча, а
@@ -900,7 +992,8 @@ rules:
     test('строчный разбор битого YAML не отдаёт ядру узел без ссылки', () {
       // табы YAML не пускает, узлы достаёт строчный разбор: вложенные карты
       // он теряет, и wireguard без amnezia-wg-option молча не подключился бы
-      const broken = 'proxies:\n'
+      const broken =
+          'proxies:\n'
           '\t- name: "ok"\n'
           '\t\ttype: vless\n'
           '\t\tserver: ok.example\n'
@@ -913,10 +1006,9 @@ rules:
       final configs = SubscriptionService.parseBodyForTest(broken);
       expect(configs, hasLength(1));
       expect(configs.single, startsWith('vless://'));
-      expect(
-        SubscriptionService.unsupportedClashNodes(broken),
-        {'wireguard': 1},
-      );
+      expect(SubscriptionService.unsupportedClashNodes(broken), {
+        'wireguard': 1,
+      });
     });
 
     test('когда всё разобралось, пропущенных нет', () {
@@ -1011,11 +1103,13 @@ proxy-providers:
 ''';
       expect(
         () => SubscriptionService.parseBodyForTest(noGroups),
-        throwsA(isA<FormatException>().having(
-          (e) => e.message,
-          'message',
-          allOf(contains('proxy-groups'), isNot(contains('Unsupported'))),
-        )),
+        throwsA(
+          isA<FormatException>().having(
+            (e) => e.message,
+            'message',
+            allOf(contains('proxy-groups'), isNot(contains('Unsupported'))),
+          ),
+        ),
       );
     });
 
@@ -1027,11 +1121,13 @@ proxies:
 ''';
       expect(
         () => SubscriptionService.parseBodyForTest(broken),
-        throwsA(isA<FormatException>().having(
-          (e) => e.message,
-          'message',
-          allOf(contains('Clash subscription'), contains('YAML')),
-        )),
+        throwsA(
+          isA<FormatException>().having(
+            (e) => e.message,
+            'message',
+            allOf(contains('Clash subscription'), contains('YAML')),
+          ),
+        ),
       );
     });
   });
@@ -1039,7 +1135,8 @@ proxies:
   group('SubscriptionService._parseBody with ready-made core configs', () {
     // Провайдеры отдают не только списки ссылок, но и «сервера с готовым
     // роутингом» — конфиг xray целиком, имя в корневом `remarks` (v2rayNG).
-    const custom = '{"remarks": "🇳🇱 Обход - Нидерланды", '
+    const custom =
+        '{"remarks": "🇳🇱 Обход - Нидерланды", '
         '"routing": {"rules": [{"type": "field", "protocol": ["bittorrent"], '
         '"outboundTag": "direct"}]}, '
         '"outbounds": [{"tag": "proxy", "protocol": "vless", "settings": '
@@ -1077,8 +1174,9 @@ proxies:
 
       final configs = SubscriptionService.parseBodyForTest(body);
       expect(configs.length, 2);
-      final protocols =
-          configs.map((c) => ServerItem.fromRaw(c).protocol).toSet();
+      final protocols = configs
+          .map((c) => ServerItem.fromRaw(c).protocol)
+          .toSet();
       expect(protocols, containsAll(<String>['vless', 'custom']));
     });
 
@@ -1086,7 +1184,8 @@ proxies:
       // Панель отдаёт валидный конфиг ядра без сервера (истёкшая подписка,
       // непривязанный HWID). Такой «сервер» подключался бы молча мимо туннеля,
       // поэтому обновление должно падать, и падать понятно.
-      const stub = '{"remarks": "Subscription", "outbounds": '
+      const stub =
+          '{"remarks": "Subscription", "outbounds": '
           '[{"tag": "direct", "protocol": "freedom"}]}';
       expect(
         () => SubscriptionService.parseBodyForTest(stub),
@@ -1101,7 +1200,8 @@ proxies:
     });
 
     test('an outbound with an empty vnext is a stub too', () {
-      const stub = '{"outbounds": [{"tag": "proxy", "protocol": "vless", '
+      const stub =
+          '{"outbounds": [{"tag": "proxy", "protocol": "vless", '
           '"settings": {"vnext": []}}]}';
       expect(
         () => SubscriptionService.parseBodyForTest(stub),
@@ -1110,7 +1210,8 @@ proxies:
     });
 
     test('takes a sing-box config apart into the servers it holds', () {
-      const singbox = '{"inbounds": [{"type": "tun"}], "outbounds": ['
+      const singbox =
+          '{"inbounds": [{"type": "tun"}], "outbounds": ['
           '{"type": "vless", "tag": "nl", "server": "nl1.example.com", '
           '"server_port": 443, "uuid": "00000000-0000-4000-8000-000000000000"}, '
           '{"type": "direct", "tag": "direct"}]}';
@@ -1122,7 +1223,8 @@ proxies:
     // Раньше отказ был на весь формат, теперь — только когда брать нечего, и
     // тогда в тексте видно, каких узлов мы не умеем.
     test('a sing-box config with nothing to run says what it held', () {
-      const singbox = '{"inbounds": [{"type": "tun"}], "outbounds": ['
+      const singbox =
+          '{"inbounds": [{"type": "tun"}], "outbounds": ['
           '{"type": "vless", "server": "nl1.example.com", "server_port": 443}, '
           '{"type": "ssh", "tag": "s", "server": "nl2.example.com", '
           '"server_port": 22}]}';
@@ -1138,40 +1240,53 @@ proxies:
       );
     });
 
-    test('digs a json config out of a subscription served as an HTML page',
-        () async {
-      // Часть панелей отдаёт подписку страницей, а payload лежит в <pre>. Из
-      // html доставались только ссылки, и конфиг целиком терялся.
-      const custom = '{"remarks": "NL page", "outbounds": [{"tag": "proxy", '
-          '"protocol": "vless", "settings": {"vnext": [{"address": '
-          '"nl1.example.com", "port": 443}]}}]}';
-      final dio = Dio();
-      dio.httpClientAdapter = _FakeAdapter(
-        statusCode: 200,
-        body: '<html><body><h1>Subscription</h1><pre>$custom</pre></body></html>',
-        headers: {'content-type': ['text/html; charset=utf-8']},
-      );
-      service = SubscriptionService(storage, dio: dio);
+    test(
+      'digs a json config out of a subscription served as an HTML page',
+      () async {
+        // Часть панелей отдаёт подписку страницей, а payload лежит в <pre>. Из
+        // html доставались только ссылки, и конфиг целиком терялся.
+        const custom =
+            '{"remarks": "NL page", "outbounds": [{"tag": "proxy", '
+            '"protocol": "vless", "settings": {"vnext": [{"address": '
+            '"nl1.example.com", "port": 443}]}}]}';
+        final dio = Dio();
+        dio.httpClientAdapter = _FakeAdapter(
+          statusCode: 200,
+          body:
+              '<html><body><h1>Subscription</h1><pre>$custom</pre></body></html>',
+          headers: {
+            'content-type': ['text/html; charset=utf-8'],
+          },
+        );
+        service = SubscriptionService(storage, dio: dio);
 
-      when(() => storage.getSettings()).thenAnswer((_) async => const AppSettings());
-      when(() => storage.getHwid()).thenReturn(null);
-      when(() => storage.setHwid(any())).thenAnswer((_) async {});
+        when(
+          () => storage.getSettings(),
+        ).thenAnswer((_) async => const AppSettings());
+        when(() => storage.getHwid()).thenReturn(null);
+        when(() => storage.setHwid(any())).thenAnswer((_) async {});
 
-      final result = await service.fetchRaw('https://example.com/sub');
-      expect(result.configs.length, 1);
+        final result = await service.fetchRaw('https://example.com/sub');
+        expect(result.configs.length, 1);
 
-      final server = ServerItem.fromRaw(result.configs.single);
-      expect(server.protocol, 'custom');
-      expect(server.displayName, 'NL page');
-      expect(server.address, 'nl1.example.com');
-    });
+        final server = ServerItem.fromRaw(result.configs.single);
+        expect(server.protocol, 'custom');
+        expect(server.displayName, 'NL page');
+        expect(server.address, 'nl1.example.com');
+      },
+    );
   });
 
   group('обновление подписки узнаёт свои серверы и не теряет их пинг', () {
     const uuid = '11111111-1111-1111-1111-111111111111';
-    String vless(String host, String name, {String id = uuid, int port = 443}) =>
-        'vless://$id@$host:$port?security=reality&type=tcp#$name';
-    String auto(String host) => '{"remarks": "Auto", "outbounds": ['
+    String vless(
+      String host,
+      String name, {
+      String id = uuid,
+      int port = 443,
+    }) => 'vless://$id@$host:$port?security=reality&type=tcp#$name';
+    String auto(String host) =>
+        '{"remarks": "Auto", "outbounds": ['
         '{"tag": "proxy", "protocol": "vless", "settings": {"vnext": '
         '[{"address": "$host", "port": 443}]}}]}';
 
@@ -1191,22 +1306,28 @@ proxies:
       List<String> body,
     ) async {
       var saved = <ServerItem>[];
-      when(() => storage.getSettings())
-          .thenAnswer((_) async => const AppSettings());
+      when(
+        () => storage.getSettings(),
+      ).thenAnswer((_) async => const AppSettings());
       when(() => storage.getHwid()).thenReturn(null);
       when(() => storage.setHwid(any())).thenAnswer((_) async {});
       when(() => storage.getServers()).thenAnswer((_) async => old);
       when(() => storage.getActiveServerId()).thenReturn(null);
-      when(() => storage.replaceServersBySubscription(any(), any()))
-          .thenAnswer((inv) async {
-        saved = inv.positionalArguments[1] as List<ServerItem>;
-      });
+      when(() => storage.replaceServersBySubscription(any(), any())).thenAnswer(
+        (inv) async {
+          saved = inv.positionalArguments[1] as List<ServerItem>;
+        },
+      );
       when(() => storage.upsertSubscription(any())).thenAnswer((_) async {});
       final dio = Dio()..httpClientAdapter = _BodyAdapter(body.join('\n'));
       final result = await SubscriptionService(storage, dio: dio)
           .updateSubscription(
-        const Subscription(id: 's1', name: 'S', url: 'https://example.com/sub'),
-      );
+            const Subscription(
+              id: 's1',
+              name: 'S',
+              url: 'https://example.com/sub',
+            ),
+          );
       expect(result.error, isNull);
       return saved;
     }
@@ -1218,15 +1339,18 @@ proxies:
       expect(saved.single.pingMs, 50);
     });
 
-    test('переименованный на том же адресе: тот же сервер, новое имя', () async {
-      final saved = await update(
-        [was(vless('1.1.1.1', 'Alpha'), 'a')],
-        [vless('1.1.1.1', 'Alpha%20new')],
-      );
-      expect(saved.single.id, 'a');
-      expect(saved.single.pingMs, 50);
-      expect(saved.single.displayName, 'Alpha new');
-    });
+    test(
+      'переименованный на том же адресе: тот же сервер, новое имя',
+      () async {
+        final saved = await update(
+          [was(vless('1.1.1.1', 'Alpha'), 'a')],
+          [vless('1.1.1.1', 'Alpha%20new')],
+        );
+        expect(saved.single.id, 'a');
+        expect(saved.single.pingMs, 50);
+        expect(saved.single.displayName, 'Alpha new');
+      },
+    );
 
     test('новый сервер приходит без пинга, пропавший уходит', () async {
       final saved = await update(
@@ -1246,9 +1370,17 @@ proxies:
 
     test('сервер с новым адресом и тем же именем остаётся собой', () async {
       final saved = await update(
-        [was(vless('1.1.1.1', 'Alpha'), 'a'), was(vless('2.2.2.2', 'Beta'), 'b')],
         [
-          vless('1.1.1.9', 'Alpha', id: '22222222-2222-2222-2222-222222222222', port: 8443),
+          was(vless('1.1.1.1', 'Alpha'), 'a'),
+          was(vless('2.2.2.2', 'Beta'), 'b'),
+        ],
+        [
+          vless(
+            '1.1.1.9',
+            'Alpha',
+            id: '22222222-2222-2222-2222-222222222222',
+            port: 8443,
+          ),
           vless('2.2.2.2', 'Beta'),
         ],
       );
@@ -1257,23 +1389,32 @@ proxies:
       expect(saved.first.address, '1.1.1.9');
     });
 
-    test('json-сервер, у которого провайдер сменил выход, остаётся собой', () async {
-      final saved = await update(
-        [was(auto('nl1.example.com'), 'a')],
-        [auto('de2.example.com')],
-      );
-      expect(saved.single.id, 'a');
-      expect(saved.single.pingMs, 50);
-      expect(saved.single.address, 'de2.example.com');
-    });
+    test(
+      'json-сервер, у которого провайдер сменил выход, остаётся собой',
+      () async {
+        final saved = await update(
+          [was(auto('nl1.example.com'), 'a')],
+          [auto('de2.example.com')],
+        );
+        expect(saved.single.id, 'a');
+        expect(saved.single.pingMs, 50);
+        expect(saved.single.address, 'de2.example.com');
+      },
+    );
 
-    test('одинаковые имена по имени не сводятся: не угадать, кто есть кто', () async {
-      final saved = await update(
-        [was(vless('5.5.5.1', 'Dup'), 'a'), was(vless('5.5.5.2', 'Dup'), 'b')],
-        [vless('5.5.5.3', 'Dup'), vless('5.5.5.4', 'Dup')],
-      );
-      expect(saved.map((s) => s.id), everyElement(isNot(anyOf('a', 'b'))));
-    });
+    test(
+      'одинаковые имена по имени не сводятся: не угадать, кто есть кто',
+      () async {
+        final saved = await update(
+          [
+            was(vless('5.5.5.1', 'Dup'), 'a'),
+            was(vless('5.5.5.2', 'Dup'), 'b'),
+          ],
+          [vless('5.5.5.3', 'Dup'), vless('5.5.5.4', 'Dup')],
+        );
+        expect(saved.map((s) => s.id), everyElement(isNot(anyOf('a', 'b'))));
+      },
+    );
 
     test('другой протокол под тем же именем это другой сервер', () async {
       final saved = await update(
@@ -1298,14 +1439,13 @@ class _BodyAdapter implements HttpClientAdapter {
     RequestOptions options,
     Stream<List<int>>? requestStream,
     Future<void>? cancelFuture,
-  ) async =>
-      ResponseBody.fromString(
-        body,
-        200,
-        headers: {
-          'content-type': ['text/plain; charset=utf-8'],
-        },
-      );
+  ) async => ResponseBody.fromString(
+    body,
+    200,
+    headers: {
+      'content-type': ['text/plain; charset=utf-8'],
+    },
+  );
 }
 
 /// payload — только UA, прошедшим [isAllowed]; остальным 502 (nginx-заглушка).
@@ -1347,7 +1487,9 @@ class _UaGateAdapter implements HttpClientAdapter {
       200,
       headers: {
         'content-type': ['text/plain; charset=utf-8'],
-        'subscription-userinfo': ['upload=100; download=200; total=1024; expire=1788520373'],
+        'subscription-userinfo': [
+          'upload=100; download=200; total=1024; expire=1788520373',
+        ],
       },
     );
   }
@@ -1373,11 +1515,6 @@ class _FakeAdapter implements HttpClientAdapter {
     Stream<List<int>>? requestStream,
     Future<void>? cancelFuture,
   ) async {
-    return ResponseBody.fromString(
-      body,
-      statusCode,
-      headers: headers,
-    );
+    return ResponseBody.fromString(body, statusCode, headers: headers);
   }
 }
-

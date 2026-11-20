@@ -30,4 +30,3 @@ void main() {
     expect(selected, 1);
   });
 }
-

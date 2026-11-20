@@ -17,10 +17,7 @@ void main() {
         pingTestTarget: PingTestConfig.targetCustom,
         pingTestUrlCustom: 'example.com/ping',
       );
-      expect(
-        PingTestConfig.resolveTestUrl(s),
-        'https://example.com/ping',
-      );
+      expect(PingTestConfig.resolveTestUrl(s), 'https://example.com/ping');
     });
 
     test('upgrades http custom URL to https for Android cleartext policy', () {
@@ -28,10 +25,7 @@ void main() {
         pingTestTarget: PingTestConfig.targetCustom,
         pingTestUrlCustom: 'http://example.com/ping',
       );
-      expect(
-        PingTestConfig.resolveTestUrl(s),
-        'https://example.com/ping',
-      );
+      expect(PingTestConfig.resolveTestUrl(s), 'https://example.com/ping');
     });
 
     test('preset URLs use https', () {

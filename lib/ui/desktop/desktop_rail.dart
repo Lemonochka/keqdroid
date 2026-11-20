@@ -33,23 +33,46 @@ class DesktopRail extends ConsumerStatefulWidget {
 }
 
 const _count = 3;
-const _pop = SpringDescription(mass: 1, stiffness: 420, damping: 0.62 * 2 * 20.49);
-const _soft = SpringDescription(mass: 1, stiffness: 260, damping: 0.85 * 2 * 16.12);
-const _bounce = SpringDescription(mass: 1, stiffness: 380, damping: 0.42 * 2 * 19.49);
+const _pop = SpringDescription(
+  mass: 1,
+  stiffness: 420,
+  damping: 0.62 * 2 * 20.49,
+);
+const _soft = SpringDescription(
+  mass: 1,
+  stiffness: 260,
+  damping: 0.85 * 2 * 16.12,
+);
+const _bounce = SpringDescription(
+  mass: 1,
+  stiffness: 380,
+  damping: 0.42 * 2 * 19.49,
+);
 
 double _lerp(double a, double b, double t) => a + (b - a) * t;
 
-class _DesktopRailState extends ConsumerState<DesktopRail> with TickerProviderStateMixin {
+class _DesktopRailState extends ConsumerState<DesktopRail>
+    with TickerProviderStateMixin {
   late final _indicator = [
     for (var i = 0; i < _count; i++)
-      AnimationController.unbounded(vsync: this, value: i == widget.index ? 1 : 0),
+      AnimationController.unbounded(
+        vsync: this,
+        value: i == widget.index ? 1 : 0,
+      ),
   ];
   late final _square = [
     for (var i = 0; i < _count; i++)
-      AnimationController.unbounded(vsync: this, value: i == widget.index ? 1 : 0),
+      AnimationController.unbounded(
+        vsync: this,
+        value: i == widget.index ? 1 : 0,
+      ),
   ];
-  late final _press = [for (var i = 0; i < _count; i++) AnimationController.unbounded(vsync: this)];
-  late final _hover = [for (var i = 0; i < _count; i++) AnimationController.unbounded(vsync: this)];
+  late final _press = [
+    for (var i = 0; i < _count; i++) AnimationController.unbounded(vsync: this),
+  ];
+  late final _hover = [
+    for (var i = 0; i < _count; i++) AnimationController.unbounded(vsync: this),
+  ];
   late final _expand = AnimationController.unbounded(vsync: this);
   late final _menu = AnimationController.unbounded(vsync: this);
   bool? _expanded;
@@ -60,7 +83,10 @@ class _DesktopRailState extends ConsumerState<DesktopRail> with TickerProviderSt
     super.didUpdateWidget(old);
     if (old.index == widget.index) return;
     // по спеке подложка раскрывается из центра значка
-    _indicator[old.index].animateTo(0, duration: const Duration(milliseconds: 120));
+    _indicator[old.index].animateTo(
+      0,
+      duration: const Duration(milliseconds: 120),
+    );
     _indicator[widget.index].value = 0;
     ExpressiveMotion.springTo(_indicator[widget.index], 1, spring: _pop);
     ExpressiveMotion.springTo(_square[widget.index], 1, spring: _soft);
@@ -69,7 +95,14 @@ class _DesktopRailState extends ConsumerState<DesktopRail> with TickerProviderSt
 
   @override
   void dispose() {
-    for (final c in [..._indicator, ..._square, ..._press, ..._hover, _expand, _menu]) {
+    for (final c in [
+      ..._indicator,
+      ..._square,
+      ..._press,
+      ..._hover,
+      _expand,
+      _menu,
+    ]) {
       c.dispose();
     }
     super.dispose();
@@ -83,13 +116,20 @@ class _DesktopRailState extends ConsumerState<DesktopRail> with TickerProviderSt
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        ExpressiveMotion.springTo(controller, now ? 1 : 0, spring: _soft, snapToEnd: true);
+        ExpressiveMotion.springTo(
+          controller,
+          now ? 1 : 0,
+          spring: _soft,
+          snapToEnd: true,
+        );
       }
     });
   }
 
   void _toggle(AppSettings settings) {
-    ref.read(settingsNotifierProvider.notifier).save(
+    ref
+        .read(settingsNotifierProvider.notifier)
+        .save(
           settings.copyWith(desktopRailExpanded: !settings.desktopRailExpanded),
         );
   }
@@ -125,7 +165,8 @@ class _DesktopRailState extends ConsumerState<DesktopRail> with TickerProviderSt
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final settings = ref.watch(settingsNotifierProvider).value ?? const AppSettings();
+    final settings =
+        ref.watch(settingsNotifierProvider).value ?? const AppSettings();
     final roomy = MediaQuery.sizeOf(context).width >= DesktopRail.expandFrom;
     final expanded = roomy && settings.desktopRailExpanded;
     _sync(_expand, _expanded, expanded);
@@ -135,19 +176,36 @@ class _DesktopRailState extends ConsumerState<DesktopRail> with TickerProviderSt
     final hasMode = Platform.isWindows || Platform.isLinux;
     final destinations = [
       (Icons.dns_outlined, Icons.dns_rounded, l10n.navServers),
-      (Icons.subscriptions_outlined, Icons.subscriptions_rounded, l10n.navSubscriptions),
+      (
+        Icons.subscriptions_outlined,
+        Icons.subscriptions_rounded,
+        l10n.navSubscriptions,
+      ),
       (Icons.settings_outlined, Icons.settings_rounded, l10n.navSettings),
     ];
 
     return AnimatedBuilder(
-      animation: Listenable.merge([..._indicator, ..._square, ..._press, ..._hover, _expand, _menu]),
+      animation: Listenable.merge([
+        ..._indicator,
+        ..._square,
+        ..._press,
+        ..._hover,
+        _expand,
+        _menu,
+      ]),
       builder: (context, _) {
         final ec = _expand.value.clamp(0.0, 1.0);
         final menu = _menu.value.clamp(0.0, 1.0);
         // без перелёта пружины: он на 1 dp сужал список, и на пограничной ширине окна плитки
         // серверов мигали компактными
-        final width = _lerp(DesktopRail.collapsedWidth, DesktopRail.expandedWidth, ec);
-        final menuTooltip = ec > 0.5 ? l10n.desktopRailCollapse : l10n.desktopRailExpand;
+        final width = _lerp(
+          DesktopRail.collapsedWidth,
+          DesktopRail.expandedWidth,
+          ec,
+        );
+        final menuTooltip = ec > 0.5
+            ? l10n.desktopRailCollapse
+            : l10n.desktopRailExpand;
         return ClipRect(
           child: SizedBox(
             width: width,
@@ -165,18 +223,24 @@ class _DesktopRailState extends ConsumerState<DesktopRail> with TickerProviderSt
                         child: IgnorePointer(
                           ignoring: !roomy,
                           child: Padding(
-                            padding: EdgeInsets.only(bottom: hasMode ? _lerp(12, 16, ec) : 0),
+                            padding: EdgeInsets.only(
+                              bottom: hasMode ? _lerp(12, 16, ec) : 0,
+                            ),
                             child: SizedBox(
                               height: 48,
                               child: Align(
                                 alignment: AlignmentDirectional.centerStart,
                                 child: Padding(
-                                  padding: const EdgeInsetsDirectional.only(start: 24),
+                                  padding: const EdgeInsetsDirectional.only(
+                                    start: 24,
+                                  ),
                                   child: IconButton(
                                     tooltip: menuTooltip,
                                     onPressed: () => _toggle(settings),
                                     icon: Icon(
-                                      ec > 0.5 ? Icons.menu_open_rounded : Icons.menu_rounded,
+                                      ec > 0.5
+                                          ? Icons.menu_open_rounded
+                                          : Icons.menu_rounded,
                                     ),
                                   ),
                                 ),
@@ -298,7 +362,9 @@ class _Destinations extends StatelessWidget {
     }
 
     // раскладка слева направо, в RTL зеркалим
-    Rect place(Rect r) => rtl ? Rect.fromLTRB(width - r.right, r.top, width - r.left, r.bottom) : r;
+    Rect place(Rect r) => rtl
+        ? Rect.fromLTRB(width - r.right, r.top, width - r.left, r.bottom)
+        : r;
 
     Rect container(int i, double grow) {
       final top = topOf(i);
@@ -313,12 +379,14 @@ class _Destinations extends StatelessWidget {
       final g = grow.clamp(0.0, 1.2);
       final center = Offset(48, _lerp(top + 20, top + h / 2, ec));
       // вширь без перелёта: иначе подложка вылезает за край панели
-      return place(Rect.fromLTRB(
-        _lerp(center.dx, full.left, math.min(g, 1.0)),
-        _lerp(center.dy, full.top, g),
-        _lerp(center.dx, full.right, math.min(g, 1.0)),
-        _lerp(center.dy, full.bottom, g),
-      ));
+      return place(
+        Rect.fromLTRB(
+          _lerp(center.dx, full.left, math.min(g, 1.0)),
+          _lerp(center.dy, full.top, g),
+          _lerp(center.dx, full.right, math.min(g, 1.0)),
+          _lerp(center.dy, full.bottom, g),
+        ),
+      );
     }
 
     final labelStyle = tt.labelLarge;
@@ -333,30 +401,34 @@ class _Destinations extends StatelessWidget {
                 rect: container(i, 1),
                 child: DecoratedBox(
                   decoration: ShapeDecoration(
-                    color: cs.onSurface.withValues(alpha: 0.08 * hover[i].value.clamp(0.0, 1.0)),
+                    color: cs.onSurface.withValues(
+                      alpha: 0.08 * hover[i].value.clamp(0.0, 1.0),
+                    ),
                     shape: const StadiumBorder(),
                   ),
                 ),
               ),
             if (indicator[i].value > 0.01)
-              Builder(builder: (context) {
-                final r = container(i, indicator[i].value);
-                final round = math.min(r.width, r.height) / 2;
-                final q = square[i].value.clamp(0.0, 1.1);
-                return Positioned.fromRect(
-                  rect: r,
-                  child: DecoratedBox(
-                    decoration: ShapeDecoration(
-                      color: cs.secondaryContainer,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(
-                          math.max(4.0, _lerp(round, _lerp(10, 16, ec), q)),
+              Builder(
+                builder: (context) {
+                  final r = container(i, indicator[i].value);
+                  final round = math.min(r.width, r.height) / 2;
+                  final q = square[i].value.clamp(0.0, 1.1);
+                  return Positioned.fromRect(
+                    rect: r,
+                    child: DecoratedBox(
+                      decoration: ShapeDecoration(
+                        color: cs.secondaryContainer,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(
+                            math.max(4.0, _lerp(round, _lerp(10, 16, ec), q)),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                );
-              }),
+                  );
+                },
+              ),
             Positioned(
               left: 0,
               width: width,
@@ -373,7 +445,11 @@ class _Destinations extends StatelessWidget {
                 onTap: () => onSelect(i),
                 onTapDown: () => onPressDown(i),
                 onTapUp: onPressUp,
-                onHover: (v) => ExpressiveMotion.springTo(hover[i], v ? 1 : 0, spring: _soft),
+                onHover: (v) => ExpressiveMotion.springTo(
+                  hover[i],
+                  v ? 1 : 0,
+                  spring: _soft,
+                ),
               ),
             ),
           ],
@@ -455,7 +531,9 @@ class _Destination extends StatelessWidget {
               child: Align(
                 alignment: Alignment.lerp(
                   Alignment.topCenter,
-                  AlignmentDirectional.topStart.resolve(Directionality.of(context)),
+                  AlignmentDirectional.topStart.resolve(
+                    Directionality.of(context),
+                  ),
                   ec,
                 )!,
                 child: Text(
@@ -489,8 +567,12 @@ class _ConnectionModeMenuButton extends ConsumerWidget {
         mode == ConnectionMode.tun ? Icons.vpn_lock_rounded : Icons.lan_rounded,
         size: 22,
       ),
-      onSelected: (next) =>
-          applyDesktopConnectionMode(context, DesktopModeDeps.of(ref), settings, next),
+      onSelected: (next) => applyDesktopConnectionMode(
+        context,
+        DesktopModeDeps.of(ref),
+        settings,
+        next,
+      ),
       itemBuilder: (context) => [
         CheckedPopupMenuItem(
           value: ConnectionMode.proxy,
@@ -542,8 +624,12 @@ class _ConnectionModeChip extends ConsumerWidget {
             ),
           ],
           selected: mode,
-          onChanged: (next) =>
-              applyDesktopConnectionMode(context, DesktopModeDeps.of(ref), settings, next),
+          onChanged: (next) => applyDesktopConnectionMode(
+            context,
+            DesktopModeDeps.of(ref),
+            settings,
+            next,
+          ),
         ),
       ],
     );

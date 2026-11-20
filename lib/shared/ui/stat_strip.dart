@@ -37,11 +37,11 @@ class StatMetric {
     required String label,
     required String value,
     required String template,
-  })  : tag = '',
-        label = label,
-        lines = [
-          StatLine(icon: icon, label: label, value: value, template: template),
-        ];
+  }) : tag = '',
+       label = label,
+       lines = [
+         StatLine(icon: icon, label: label, value: value, template: template),
+       ];
 
   const StatMetric.channel({
     required this.tag,
@@ -63,7 +63,6 @@ class StatStrip extends StatelessWidget {
 
   static const double _cellPadding = ExpressiveSpacing.medium;
   static const double _gap = 6;
-
 
   static const double _divider = 1;
 
@@ -95,7 +94,9 @@ class StatStrip extends StatelessWidget {
 
         final rows = <List<int>>[];
         for (var i = 0; i < metrics.length; i += columns) {
-          rows.add([for (var j = i; j < min(i + columns, metrics.length); j++) j]);
+          rows.add([
+            for (var j = i; j < min(i + columns, metrics.length); j++) j,
+          ]);
         }
         final table = Column(
           mainAxisSize: MainAxisSize.min,
@@ -145,14 +146,9 @@ class StatStrip extends StatelessWidget {
               color: scheme.outlineVariant,
             ),
           if (fill)
-            Expanded(
-              child: i < row.length ? cell(i) : const SizedBox.shrink(),
-            )
+            Expanded(child: i < row.length ? cell(i) : const SizedBox.shrink())
           else
-            SizedBox(
-              width: cellWidth,
-              child: i < row.length ? cell(i) : null,
-            ),
+            SizedBox(width: cellWidth, child: i < row.length ? cell(i) : null),
         ],
       ],
     );
@@ -184,17 +180,14 @@ class StatStrip extends StatelessWidget {
           vertical: 10,
         ),
         child: Row(
-          mainAxisAlignment:
-              fill ? MainAxisAlignment.start : MainAxisAlignment.center,
+          mainAxisAlignment: fill
+              ? MainAxisAlignment.start
+              : MainAxisAlignment.center,
           children: [
             if (tagWidth > 0) ...[
               SizedBox(
                 width: tagWidth,
-                child: Text(
-                  metric.tag,
-                  style: _tagStyle(theme),
-                  maxLines: 1,
-                ),
+                child: Text(metric.tag, style: _tagStyle(theme), maxLines: 1),
               ),
               const SizedBox(width: _gap),
             ],
@@ -245,19 +238,16 @@ class StatStrip extends StatelessWidget {
         fontFeatures: const [FontFeature.tabularFigures()],
       );
 
-  static TextStyle? _tagStyle(ThemeData theme) =>
-      theme.textTheme.labelSmall?.copyWith(
-        color: theme.colorScheme.onSurfaceVariant,
-      );
+  static TextStyle? _tagStyle(ThemeData theme) => theme.textTheme.labelSmall
+      ?.copyWith(color: theme.colorScheme.onSurfaceVariant);
 
   static double _tagWidth(
     BuildContext context,
     StatMetric metric,
     TextStyle? style,
-  ) =>
-      metric.tag.isEmpty
-          ? 0
-          : _measureFixed(context, metric.tag, style).ceilToDouble();
+  ) => metric.tag.isEmpty
+      ? 0
+      : _measureFixed(context, metric.tag, style).ceilToDouble();
 
   static double _slotWidth(
     BuildContext context,
@@ -267,7 +257,10 @@ class StatStrip extends StatelessWidget {
     var width = 0.0;
     for (final line in metric.lines) {
       // образец в той же обёртке: изоляторы для движка обычные символы со своей шириной
-      width = max(width, _measureFixed(context, ltrIsolate(line.template), style));
+      width = max(
+        width,
+        _measureFixed(context, ltrIsolate(line.template), style),
+      );
       width = max(width, _measure(context, ltrIsolate(line.value), style));
     }
     return width.ceilToDouble();
@@ -278,7 +271,11 @@ class StatStrip extends StatelessWidget {
   static var _watchingFonts = false;
 
   // образцы и метки не меняются, а меряются на каждом тике, и на A55 такой замер занимает заметную долю кадра
-  static double _measureFixed(BuildContext context, String text, TextStyle? style) {
+  static double _measureFixed(
+    BuildContext context,
+    String text,
+    TextStyle? style,
+  ) {
     if (!_watchingFonts) {
       _watchingFonts = true;
       PaintingBinding.instance.systemFonts.addListener(_fixedWidths.clear);

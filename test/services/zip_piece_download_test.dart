@@ -61,18 +61,15 @@ void main() {
   final engine = randomBytes(200000, 2);
   final model = randomBytes(150000, 3);
 
-  Uint8List release(Uint8List code, {Uint8List? geo}) => buildZip(
-        [
-          FixtureEntry('AndroidManifest.xml', textBytes(3000, code.length)),
-          FixtureEntry('classes.dex', code),
-          FixtureEntry('lib/arm64-v8a/libmihomo.so', core),
-          FixtureEntry('lib/arm64-v8a/libflutter.so', engine),
-          FixtureEntry('assets/model.tflite', model, method: 0),
-          FixtureEntry('assets/geosite.dat', geo ?? randomBytes(100000, 4)),
-          FixtureEntry('lib/arm64-v8a/libapp.so', code),
-        ],
-        beforeDirectory: randomBytes(4096, code.length),
-      );
+  Uint8List release(Uint8List code, {Uint8List? geo}) => buildZip([
+    FixtureEntry('AndroidManifest.xml', textBytes(3000, code.length)),
+    FixtureEntry('classes.dex', code),
+    FixtureEntry('lib/arm64-v8a/libmihomo.so', core),
+    FixtureEntry('lib/arm64-v8a/libflutter.so', engine),
+    FixtureEntry('assets/model.tflite', model, method: 0),
+    FixtureEntry('assets/geosite.dat', geo ?? randomBytes(100000, 4)),
+    FixtureEntry('lib/arm64-v8a/libapp.so', code),
+  ], beforeDirectory: randomBytes(4096, code.length));
 
   Future<File> installed(Uint8List bytes) async =>
       File('${dir.path}/base.apk')..writeAsBytesSync(bytes);
@@ -160,8 +157,9 @@ void main() {
     server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
     server.listen((request) async {
       final body = files['/file.apk']!;
-      final m = RegExp(r'^bytes=(\d+)-(\d+)$')
-          .firstMatch(request.headers.value('range')!)!;
+      final m = RegExp(
+        r'^bytes=(\d+)-(\d+)$',
+      ).firstMatch(request.headers.value('range')!)!;
       var start = int.parse(m[1]!);
       var end = int.parse(m[2]!);
       // зонд и хвост с оглавлением честные, остальные куски со сдвигом на байт

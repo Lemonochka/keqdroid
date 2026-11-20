@@ -14,12 +14,12 @@ String _vless(String host, String name) =>
     '?security=reality&type=tcp#$name';
 
 Subscription _sub(String id, {bool auto = false}) => Subscription(
-      id: id,
-      name: id,
-      url: 'https://$id.example/sub',
-      autoSelectVisible: true,
-      autoSelect: auto,
-    );
+  id: id,
+  name: id,
+  url: 'https://$id.example/sub',
+  autoSelectVisible: true,
+  autoSelect: auto,
+);
 
 ServerItem _server(String subId, String host, String name, {int? ping}) =>
     ServerItem.fromRaw(_vless(host, name), subscriptionId: subId).copyWith(
@@ -117,30 +117,35 @@ void main() {
 
   // жалоба: в режиме авто после каждого обновления подписки приходилось выбирать сервер руками
   group('авто', () {
-    test('выбранный пропал: берётся лучший по замерам из той же подписки',
-        () async {
-      final gone = _server('a', '198.51.100.10', 'Old', ping: 60);
-      final storage = await _seed(
-        subs: [_sub('a', auto: true)],
-        servers: [
-          gone,
-          _server('a', '198.51.100.30', 'Slow', ping: 150),
-          _server('a', '198.51.100.20', 'Fast', ping: 80),
-        ],
-        activeId: gone.id,
-      );
+    test(
+      'выбранный пропал: берётся лучший по замерам из той же подписки',
+      () async {
+        final gone = _server('a', '198.51.100.10', 'Old', ping: 60);
+        final storage = await _seed(
+          subs: [_sub('a', auto: true)],
+          servers: [
+            gone,
+            _server('a', '198.51.100.30', 'Slow', ping: 150),
+            _server('a', '198.51.100.20', 'Fast', ping: 80),
+          ],
+          activeId: gone.id,
+        );
 
-      await _update(storage, _sub('a', auto: true), [
-        _vless('198.51.100.11', 'Renamed'),
-        _vless('198.51.100.30', 'Slow'),
-        _vless('198.51.100.20', 'Fast'),
-      ]);
+        await _update(storage, _sub('a', auto: true), [
+          _vless('198.51.100.11', 'Renamed'),
+          _vless('198.51.100.30', 'Slow'),
+          _vless('198.51.100.20', 'Fast'),
+        ]);
 
-      final active = await _active(storage);
-      expect(active?.displayName, 'Fast');
-      expect(await AutoSelectFollowStore.take(), active?.id,
-          reason: 'туннель, поднятый на пропавшем, должен узнать, куда ехать');
-    });
+        final active = await _active(storage);
+        expect(active?.displayName, 'Fast');
+        expect(
+          await AutoSelectFollowStore.take(),
+          active?.id,
+          reason: 'туннель, поднятый на пропавшем, должен узнать, куда ехать',
+        );
+      },
+    );
 
     test('замеров нет ни у кого: первый в списке', () async {
       final gone = _server('a', '198.51.100.10', 'Old');
@@ -182,19 +187,21 @@ void main() {
       expect(waiting?.pickedId, active?.id);
     });
 
-    test('авто включено, но сервер соседней выбран не им: выбор пуст',
-        () async {
-      final picked = _server('b', '203.0.113.10', 'Tray pick');
-      final storage = await _seed(
-        subs: [_sub('a', auto: true), _sub('b')],
-        servers: [_server('a', '198.51.100.10', 'Home'), picked],
-        activeId: picked.id,
-      );
+    test(
+      'авто включено, но сервер соседней выбран не им: выбор пуст',
+      () async {
+        final picked = _server('b', '203.0.113.10', 'Tray pick');
+        final storage = await _seed(
+          subs: [_sub('a', auto: true), _sub('b')],
+          servers: [_server('a', '198.51.100.10', 'Home'), picked],
+          activeId: picked.id,
+        );
 
-      await _update(storage, _sub('b'), [_vless('203.0.113.11', 'New')]);
+        await _update(storage, _sub('b'), [_vless('203.0.113.11', 'New')]);
 
-      expect(storage.getActiveServerId(), isNull);
-    });
+        expect(storage.getActiveServerId(), isNull);
+      },
+    );
 
     test('выбранный пропал: отмеченный мимо Авто не подставляется, '
         'даже самый быстрый', () async {
@@ -203,8 +210,12 @@ void main() {
         subs: [_sub('a', auto: true)],
         servers: [
           gone,
-          _server('a', '198.51.100.20', 'Fast', ping: 30)
-              .copyWith(autoSkip: true),
+          _server(
+            'a',
+            '198.51.100.20',
+            'Fast',
+            ping: 30,
+          ).copyWith(autoSkip: true),
           _server('a', '198.51.100.30', 'Slow', ping: 150),
         ],
         activeId: gone.id,
@@ -222,8 +233,11 @@ void main() {
 
   test('пометка мимо Авто переживает обновление подписки', () async {
     final same = _server('a', '198.51.100.20', 'Same').copyWith(autoSkip: true);
-    final renamed =
-        _server('a', '198.51.100.30', 'Before').copyWith(autoSkip: true);
+    final renamed = _server(
+      'a',
+      '198.51.100.30',
+      'Before',
+    ).copyWith(autoSkip: true);
     final storage = await _seed(
       subs: [_sub('a')],
       servers: [same, renamed, _server('a', '198.51.100.40', 'Plain')],
@@ -256,12 +270,11 @@ class _Body implements HttpClientAdapter {
     RequestOptions options,
     Stream<List<int>>? requestStream,
     Future<void>? cancelFuture,
-  ) async =>
-      ResponseBody.fromString(
-        body,
-        200,
-        headers: {
-          'content-type': ['text/plain; charset=utf-8'],
-        },
-      );
+  ) async => ResponseBody.fromString(
+    body,
+    200,
+    headers: {
+      'content-type': ['text/plain; charset=utf-8'],
+    },
+  );
 }

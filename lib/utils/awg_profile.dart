@@ -48,7 +48,9 @@ class AwgProfile {
   static bool isAwgConfig(String raw) {
     for (final rawLine in const LineSplitter().convert(raw)) {
       final line = rawLine.trim();
-      if (line.isEmpty || line.startsWith('#') || line.startsWith(';')) continue;
+      if (line.isEmpty || line.startsWith('#') || line.startsWith(';')) {
+        continue;
+      }
       return line.toLowerCase().startsWith('[interface]');
     }
     return false;
@@ -57,7 +59,9 @@ class AwgProfile {
   static AwgProfile parse(String raw, {String? fileName}) {
     final trimmed = raw.trim();
     if (!isAwgConfig(trimmed)) {
-      throw ArgumentError('Not an AmneziaWG/WireGuard config (expected [Interface])');
+      throw ArgumentError(
+        'Not an AmneziaWG/WireGuard config (expected [Interface])',
+      );
     }
 
     String? leadingRemark;
@@ -141,7 +145,8 @@ class AwgProfile {
     }).toList();
 
     return AwgProfile(
-      remark: leadingRemark ?? (fileName != null ? _stripConfExt(fileName) : null),
+      remark:
+          leadingRemark ?? (fileName != null ? _stripConfExt(fileName) : null),
       iface: iface,
       peers: parsedPeers,
       rawConf: trimmed,
@@ -238,7 +243,10 @@ class AwgProfile {
 
   static String? _extractRemark(String commentLine) {
     var s = commentLine.replaceFirst(RegExp(r'^[#;]+'), '').trim();
-    final m = RegExp(r'^name\s*[:=]\s*(.+)$', caseSensitive: false).firstMatch(s);
+    final m = RegExp(
+      r'^name\s*[:=]\s*(.+)$',
+      caseSensitive: false,
+    ).firstMatch(s);
     if (m != null) s = m.group(1)!.trim();
     return s.isEmpty ? null : s;
   }
@@ -264,7 +272,9 @@ class AwgProfile {
       if (close > 0) {
         final host = ep.substring(1, close);
         final rest = ep.substring(close + 1);
-        final port = rest.startsWith(':') ? int.tryParse(rest.substring(1)) : null;
+        final port = rest.startsWith(':')
+            ? int.tryParse(rest.substring(1))
+            : null;
         return (host, port ?? 51820);
       }
     }

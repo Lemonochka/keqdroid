@@ -42,8 +42,7 @@ class ZipEntry {
   bool get hasDataDescriptor => flags & 0x08 != 0;
 
   // одинаковые метод, CRC и оба размера: те же сжатые байты у одного и того же упаковщика
-  String get contentKey =>
-      '$method:$crc32:$compressedSize:$uncompressedSize';
+  String get contentKey => '$method:$crc32:$compressedSize:$uncompressedSize';
 }
 
 class ZipEnd {
@@ -94,7 +93,8 @@ abstract final class ZipLayout {
     final entries = <ZipEntry>[];
     var p = 0;
     for (var n = 0; n < entryCount; n++) {
-      if (p + 46 > cd.length || data.getUint32(p, Endian.little) != _centralSig) {
+      if (p + 46 > cd.length ||
+          data.getUint32(p, Endian.little) != _centralSig) {
         throw const FormatException('broken zip central directory');
       }
       final nameLength = data.getUint16(p + 28, Endian.little);

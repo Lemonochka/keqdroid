@@ -5,9 +5,12 @@ String protocolFilterKey(String protocol) =>
     protocol == 'hy2' ? 'hysteria2' : protocol;
 
 String protocolFilterKeyOf(String config) => protocolFilterKey(
-      ServerItem(id: '', config: config, type: ServerItemType.subscription)
-          .protocol,
-    );
+  ServerItem(
+    id: '',
+    config: config,
+    type: ServerItemType.subscription,
+  ).protocol,
+);
 
 ({List<String> kept, Map<String, int> counts}) siftProtocols(
   List<String> configs,

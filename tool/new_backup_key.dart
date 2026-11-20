@@ -11,8 +11,10 @@ import 'dart:math';
 void main() {
   final file = File('secrets/backup_key.json');
   if (file.existsSync()) {
-    stderr.writeln('${file.path} already exists; backups of earlier releases '
-        'need this key, so it is left as is.');
+    stderr.writeln(
+      '${file.path} already exists; backups of earlier releases '
+      'need this key, so it is left as is.',
+    );
     exitCode = 1;
     return;
   }
@@ -29,6 +31,8 @@ void main() {
   file.writeAsStringSync(
     '${const JsonEncoder.withIndent('  ').convert(defines)}\n',
   );
-  stdout.writeln('Written ${file.path}. Put its whole content into the '
-      'KEQDROID_BACKUP_KEY secret of the GitHub repository.');
+  stdout.writeln(
+    'Written ${file.path}. Put its whole content into the '
+    'KEQDROID_BACKUP_KEY secret of the GitHub repository.',
+  );
 }

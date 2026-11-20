@@ -67,7 +67,9 @@ Future<int> main(List<String> args) async {
 
   final records = await GeoDatReader.records(source);
   if (records.isEmpty) {
-    stderr.writeln('no records parsed from ${opts.source} — is it a v2fly .dat?');
+    stderr.writeln(
+      'no records parsed from ${opts.source} — is it a v2fly .dat?',
+    );
     return 1;
   }
 
@@ -82,7 +84,11 @@ Future<int> main(List<String> args) async {
   for (final r in records) {
     if (!want.contains(r.code)) continue;
     if (kept.containsKey(r.code)) continue;
-    final body = Uint8List.sublistView(bytes, r.bodyStart, r.bodyStart + r.bodyLength);
+    final body = Uint8List.sublistView(
+      bytes,
+      r.bodyStart,
+      r.bodyStart + r.bodyLength,
+    );
     out.addAll(_encodeRecord(body));
     kept[r.code] = r.bodyLength;
   }
@@ -101,12 +107,16 @@ Future<int> main(List<String> args) async {
 
   final full = bytes.length;
   final lite = out.length;
-  stdout.writeln('source: ${opts.source} — ${_mib(full)}, ${records.length} codes');
+  stdout.writeln(
+    'source: ${opts.source} — ${_mib(full)}, ${records.length} codes',
+  );
   for (final e in kept.entries) {
     stdout.writeln('  keep ${e.key.padRight(12)} ${_kib(e.value).padLeft(10)}');
   }
-  stdout.writeln('out:    ${opts.out} — ${_mib(lite)}, ${kept.length} codes '
-      '(${(lite * 100 / full).toStringAsFixed(1)}% of full)');
+  stdout.writeln(
+    'out:    ${opts.out} — ${_mib(lite)}, ${kept.length} codes '
+    '(${(lite * 100 / full).toStringAsFixed(1)}% of full)',
+  );
   return 0;
 }
 

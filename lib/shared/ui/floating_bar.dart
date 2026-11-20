@@ -26,7 +26,11 @@ enum LiquidBarStyle {
 
 // стиль главного экрана для всего под ним; без него и с null нижняя панель прежняя
 class FloatingBarScope extends InheritedWidget {
-  const FloatingBarScope({super.key, required this.style, required super.child});
+  const FloatingBarScope({
+    super.key,
+    required this.style,
+    required super.child,
+  });
 
   final LiquidBarStyle? style;
 
@@ -128,8 +132,10 @@ abstract final class FloatingBar {
   static final barOnScreen = ValueNotifier<Object?>(null);
 
   // плитки ленты ярче карточек и фона: в тёмной теме даже Highest с ними сливался
-  static Color tileColor(ColorScheme cs) =>
-      Color.alphaBlend(cs.onSurface.withValues(alpha: 0.06), cs.surfaceContainerHighest);
+  static Color tileColor(ColorScheme cs) => Color.alphaBlend(
+    cs.onSurface.withValues(alpha: 0.06),
+    cs.surfaceContainerHighest,
+  );
 }
 
 // как у кнопки раньше: вниз прячет, вверх и у самого верха возвращает
@@ -139,7 +145,8 @@ class FloatingBarHideOnScroll extends StatefulWidget {
   final Widget child;
 
   @override
-  State<FloatingBarHideOnScroll> createState() => _FloatingBarHideOnScrollState();
+  State<FloatingBarHideOnScroll> createState() =>
+      _FloatingBarHideOnScrollState();
 }
 
 class _FloatingBarHideOnScrollState extends State<FloatingBarHideOnScroll> {

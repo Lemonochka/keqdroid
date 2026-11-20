@@ -56,10 +56,12 @@ class DesktopBackgroundService {
       final results = <UpdateResult>[];
       for (var i = 0; i < due.length; i += 3) {
         final batch = due.skip(i).take(3).toList();
-        results.addAll(await Future.wait(
-          batch.map(service.updateSubscription),
-          eagerError: false,
-        ));
+        results.addAll(
+          await Future.wait(
+            batch.map(service.updateSubscription),
+            eagerError: false,
+          ),
+        );
       }
 
       final ok = results.where((r) => r.success).length;

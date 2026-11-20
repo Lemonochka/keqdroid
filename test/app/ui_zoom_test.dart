@@ -52,13 +52,17 @@ Future<void> _pumpApp(
   tester.view.padding = const FakeViewPadding(top: 48, bottom: 32);
   addTearDown(tester.view.reset);
   final settings = const AppSettings().copyWith(uiScale: uiScale);
-  final storage = await tester.runAsync(() => buildStorageService(
-        initialValues: {'keqdis_settings': settings.toJsonString()},
-      ));
-  await tester.pumpWidget(ProviderScope(
-    overrides: [storageProvider.overrideWithValue(storage!)],
-    child: KeqdroidApp(home: home),
-  ));
+  final storage = await tester.runAsync(
+    () => buildStorageService(
+      initialValues: {'keqdis_settings': settings.toJsonString()},
+    ),
+  );
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [storageProvider.overrideWithValue(storage!)],
+      child: KeqdroidApp(home: home),
+    ),
+  );
   await tester.pumpAndSettle();
 }
 
@@ -75,8 +79,9 @@ void main() {
       expect(_Probe.seen!.textScaler.scale(16), 16);
     });
 
-    testWidgets('70% сжимают коробку, а экран внутри становится шире',
-        (tester) async {
+    testWidgets('70% сжимают коробку, а экран внутри становится шире', (
+      tester,
+    ) async {
       PlatformBootstrap.debugIsDesktopOverride = true;
       await _pumpApp(tester, uiScale: 0.7);
 
@@ -98,29 +103,40 @@ void main() {
       expect(_Probe.seen!.size.width, moreOrLessEquals(360 / 0.85));
     });
 
-    testWidgets('нажатие у самого края экрана доходит при уменьшении',
-        (tester) async {
+    testWidgets('нажатие у самого края экрана доходит при уменьшении', (
+      tester,
+    ) async {
       PlatformBootstrap.debugIsDesktopOverride = true;
       var taps = 0;
-      await _pumpApp(tester, uiScale: 0.7, home: _Probe(onCornerTap: () => taps++));
+      await _pumpApp(
+        tester,
+        uiScale: 0.7,
+        home: _Probe(onCornerTap: () => taps++),
+      );
 
       await tester.tapAt(const Offset(360 - 3, 800 - 3));
       expect(taps, 1);
     });
 
-    testWidgets('смена масштаба через 100% не закрывает открытые экраны',
-        (tester) async {
+    testWidgets('смена масштаба через 100% не закрывает открытые экраны', (
+      tester,
+    ) async {
       PlatformBootstrap.debugIsDesktopOverride = true;
       await _pumpApp(tester, uiScale: 0.9);
 
-      unawaited(rootNavigatorKey.currentState!.push(MaterialPageRoute<void>(
-        builder: (_) => const Scaffold(body: Text('second')),
-      )));
+      unawaited(
+        rootNavigatorKey.currentState!.push(
+          MaterialPageRoute<void>(
+            builder: (_) => const Scaffold(body: Text('second')),
+          ),
+        ),
+      );
       await tester.pumpAndSettle();
       expect(find.text('second'), findsOneWidget);
 
-      final container =
-          ProviderScope.containerOf(tester.element(find.text('second')));
+      final container = ProviderScope.containerOf(
+        tester.element(find.text('second')),
+      );
       final notifier = container.read(settingsNotifierProvider.notifier);
       for (final scale in [1.0, 0.75]) {
         // запись хранилища из runAsync в фейковом времени не завершится, состояние меняется сразу

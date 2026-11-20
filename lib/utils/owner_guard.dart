@@ -16,8 +16,8 @@ OwnerGuard ownerGuardFor({
   required int? sdkInt,
 }) =>
     android &&
-            tun &&
-            routingMode != AppRoutingMode.allProxy &&
-            (sdkInt ?? 29) >= 29
-        ? OwnerGuard.all
-        : OwnerGuard.off;
+        tun &&
+        routingMode != AppRoutingMode.allProxy &&
+        (sdkInt ?? 29) >= 29
+    ? OwnerGuard.all
+    : OwnerGuard.off;

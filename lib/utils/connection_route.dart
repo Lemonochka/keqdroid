@@ -48,13 +48,13 @@ class ConnectionTarget {
     final ip = entry.destIp.isNotEmpty
         ? entry.destIp
         : hostIsIp
-            ? host
-            : null;
+        ? host
+        : null;
     final domain = hostIsIp || host.isEmpty
         ? null
         : host.endsWith('.')
-            ? host.substring(0, host.length - 1)
-            : host;
+        ? host.substring(0, host.length - 1)
+        : host;
     return ConnectionTarget._(domain, ip);
   }
 
@@ -248,8 +248,9 @@ RouteExplanation explainRoute({
   final forms = _clashTokenForms(clashType ?? '', payload);
   if (forms.isNotEmpty) {
     for (final route in candidates) {
-      final entries = routingEntries(routeEntriesText(route))
-          .map((e) => e.trim().toLowerCase());
+      final entries = routingEntries(
+        routeEntriesText(route),
+      ).map((e) => e.trim().toLowerCase());
       if (entries.any(forms.contains)) return ByRoute(route);
     }
   }
@@ -279,15 +280,16 @@ Set<String> _clashTokenForms(String type, String payload) {
     'domain' => {'full:$p'},
     'domainregex' => {'regexp:$p'},
     'ipcidr' || 'ipcidr6' => {
-        p,
-        if (p.endsWith('/32')) p.substring(0, p.length - 3),
-        if (p.endsWith('/128')) p.substring(0, p.length - 4),
-      },
+      p,
+      if (p.endsWith('/32')) p.substring(0, p.length - 3),
+      if (p.endsWith('/128')) p.substring(0, p.length - 4),
+    },
     _ => const {},
   };
 }
 
-Map<String, ListMatch> presetMatches(ConnectionTarget target, GeoLookup geo) => {
+Map<String, ListMatch> presetMatches(ConnectionTarget target, GeoLookup geo) =>
+    {
       for (final preset in RoutingPresets.all)
         preset.id: matchTokens(preset.values, target, geo),
     };
@@ -296,10 +298,10 @@ class PreloadedGeoLookup implements GeoLookup {
   PreloadedGeoLookup({
     Map<String, List<GeoDomain>> sites = const {},
     Map<String, List<String>> ips = const {},
-  })  : _sites = {
-          for (final e in sites.entries) e.key.toLowerCase(): _SiteSet(e.value),
-        },
-        _ips = {for (final e in ips.entries) e.key.toLowerCase(): e.value};
+  }) : _sites = {
+         for (final e in sites.entries) e.key.toLowerCase(): _SiteSet(e.value),
+       },
+       _ips = {for (final e in ips.entries) e.key.toLowerCase(): e.value};
 
   final Map<String, _SiteSet> _sites;
   final Map<String, List<String>> _ips;

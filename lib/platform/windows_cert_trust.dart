@@ -13,8 +13,8 @@ class WindowsSystemTrust extends HttpOverrides {
   @override
   HttpClient createHttpClient(SecurityContext? context) =>
       super.createHttpClient(context)
-        ..badCertificateCallback =
-            (cert, host, port) => windowsTrustsCertificate(cert.der, host);
+        ..badCertificateCallback = (cert, host, port) =>
+            windowsTrustsCertificate(cert.der, host);
 }
 
 final _verdicts = <String, bool>{};
@@ -33,7 +33,8 @@ bool windowsTrustsCertificate(Uint8List der, String host) {
   return trusted;
 }
 
-const _encoding = 0x00000001 | 0x00010000; // X509_ASN_ENCODING | PKCS_7_ASN_ENCODING
+const _encoding =
+    0x00000001 | 0x00010000; // X509_ASN_ENCODING | PKCS_7_ASN_ENCODING
 const _authTypeServer = 2;
 const _policyBase = 1;
 const _policySsl = 4;
@@ -88,16 +89,45 @@ final class _PolicyStatus extends Struct {
   external Pointer<Void> extra;
 }
 
-typedef _CreateContextC = Pointer<Void> Function(Uint32, Pointer<Uint8>, Uint32);
+typedef _CreateContextC =
+    Pointer<Void> Function(Uint32, Pointer<Uint8>, Uint32);
 typedef _CreateContext = Pointer<Void> Function(int, Pointer<Uint8>, int);
-typedef _GetChainC = Int32 Function(Pointer<Void>, Pointer<Void>, Pointer<Void>,
-    Pointer<Void>, Pointer<_ChainPara>, Uint32, Pointer<Void>, Pointer<Pointer<Void>>);
-typedef _GetChain = int Function(Pointer<Void>, Pointer<Void>, Pointer<Void>,
-    Pointer<Void>, Pointer<_ChainPara>, int, Pointer<Void>, Pointer<Pointer<Void>>);
-typedef _VerifyPolicyC = Int32 Function(
-    Pointer<Void>, Pointer<Void>, Pointer<_PolicyPara>, Pointer<_PolicyStatus>);
-typedef _VerifyPolicy = int Function(
-    Pointer<Void>, Pointer<Void>, Pointer<_PolicyPara>, Pointer<_PolicyStatus>);
+typedef _GetChainC =
+    Int32 Function(
+      Pointer<Void>,
+      Pointer<Void>,
+      Pointer<Void>,
+      Pointer<Void>,
+      Pointer<_ChainPara>,
+      Uint32,
+      Pointer<Void>,
+      Pointer<Pointer<Void>>,
+    );
+typedef _GetChain =
+    int Function(
+      Pointer<Void>,
+      Pointer<Void>,
+      Pointer<Void>,
+      Pointer<Void>,
+      Pointer<_ChainPara>,
+      int,
+      Pointer<Void>,
+      Pointer<Pointer<Void>>,
+    );
+typedef _VerifyPolicyC =
+    Int32 Function(
+      Pointer<Void>,
+      Pointer<Void>,
+      Pointer<_PolicyPara>,
+      Pointer<_PolicyStatus>,
+    );
+typedef _VerifyPolicy =
+    int Function(
+      Pointer<Void>,
+      Pointer<Void>,
+      Pointer<_PolicyPara>,
+      Pointer<_PolicyStatus>,
+    );
 typedef _FreeC = Void Function(Pointer<Void>);
 typedef _Free = void Function(Pointer<Void>);
 typedef _FreeContextC = Int32 Function(Pointer<Void>);
@@ -106,19 +136,25 @@ typedef _FreeContext = int Function(Pointer<Void>);
 bool _verify(Uint8List der, String host) {
   if (!Platform.isWindows || der.isEmpty) return false;
   final crypt32 = DynamicLibrary.open('crypt32.dll');
-  final createContext = crypt32
-      .lookupFunction<_CreateContextC, _CreateContext>('CertCreateCertificateContext');
-  final getChain =
-      crypt32.lookupFunction<_GetChainC, _GetChain>('CertGetCertificateChain');
+  final createContext = crypt32.lookupFunction<_CreateContextC, _CreateContext>(
+    'CertCreateCertificateContext',
+  );
+  final getChain = crypt32.lookupFunction<_GetChainC, _GetChain>(
+    'CertGetCertificateChain',
+  );
   final verifyPolicy = crypt32.lookupFunction<_VerifyPolicyC, _VerifyPolicy>(
-      'CertVerifyCertificateChainPolicy');
-  final freeChain =
-      crypt32.lookupFunction<_FreeC, _Free>('CertFreeCertificateChain');
-  final freeContext = crypt32
-      .lookupFunction<_FreeContextC, _FreeContext>('CertFreeCertificateContext');
+    'CertVerifyCertificateChainPolicy',
+  );
+  final freeChain = crypt32.lookupFunction<_FreeC, _Free>(
+    'CertFreeCertificateChain',
+  );
+  final freeContext = crypt32.lookupFunction<_FreeContextC, _FreeContext>(
+    'CertFreeCertificateContext',
+  );
 
   return using((arena) {
-    final bytes = arena<Uint8>(der.length)..asTypedList(der.length).setAll(0, der);
+    final bytes = arena<Uint8>(der.length)
+      ..asTypedList(der.length).setAll(0, der);
     final context = createContext(_encoding, bytes, der.length);
     if (context == nullptr) return false;
     final chain = arena<Pointer<Void>>();
@@ -131,7 +167,17 @@ bool _verify(Uint8List der, String host) {
         ..requestedUsage.type = 0
         ..requestedUsage.usage.count = 1
         ..requestedUsage.usage.identifiers = serverAuth;
-      if (getChain(nullptr, context, nullptr, nullptr, para, 0, nullptr, chain) == 0) {
+      if (getChain(
+            nullptr,
+            context,
+            nullptr,
+            nullptr,
+            para,
+            0,
+            nullptr,
+            chain,
+          ) ==
+          0) {
         return false;
       }
       bool passes(int oid, int flags, Pointer<Void> extra) {
@@ -142,7 +188,13 @@ bool _verify(Uint8List der, String host) {
           ..extra = extra;
         final status = arena<_PolicyStatus>();
         status.ref.size = sizeOf<_PolicyStatus>();
-        return verifyPolicy(Pointer.fromAddress(oid), chain.value, policy, status) != 0 &&
+        return verifyPolicy(
+                  Pointer.fromAddress(oid),
+                  chain.value,
+                  policy,
+                  status,
+                ) !=
+                0 &&
             status.ref.error == 0;
       }
 

@@ -49,7 +49,10 @@ Future<void> _openCoreSettings(WidgetTester tester, VpnBackend core) async {
         supportedLocales: AppLocalizations.supportedLocales,
         locale: const Locale('en'),
         theme: buildAppTheme(
-          buildPresetScheme(themePresetFor(const AppSettings()), Brightness.light),
+          buildPresetScheme(
+            themePresetFor(const AppSettings()),
+            Brightness.light,
+          ),
         ),
         home: const SettingsTab(),
       ),
@@ -78,7 +81,9 @@ Future<void> _openCoreSettings(WidgetTester tester, VpnBackend core) async {
 }
 
 void main() {
-  testWidgets('Xray: выбора стека нет, остальной раздел TUN на месте', (tester) async {
+  testWidgets('Xray: выбора стека нет, остальной раздел TUN на месте', (
+    tester,
+  ) async {
     await _openCoreSettings(tester, VpnBackend.xray);
     expect(find.text('TUN mode'), findsWidgets);
     expect(find.text('Network stack'), findsNothing);

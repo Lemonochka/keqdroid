@@ -21,9 +21,11 @@ List<String> processNamesForSplit({
 }) {
   final ids = <String>{...includePackages, ...excludePackages};
   return ids
-      .map((id) => isProcessPathEntry(id)
-          ? normalizeProcessPath(id, windows: windows)
-          : normalizeProcessName(id, windows: windows))
+      .map(
+        (id) => isProcessPathEntry(id)
+            ? normalizeProcessPath(id, windows: windows)
+            : normalizeProcessName(id, windows: windows),
+      )
       .where((e) => e.isNotEmpty)
       .toList();
 }

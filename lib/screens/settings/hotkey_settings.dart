@@ -21,9 +21,11 @@ class _HotkeySettingsScreenState extends ConsumerState<_HotkeySettingsScreen> {
     super.initState();
     // подсказка зависит от того, кто держит сочетания на Linux: X11, портал или только окно
     if (Platform.isLinux) {
-      unawaited(HotkeyService.linuxBackend().then((_) {
-        if (mounted) setState(() {});
-      }));
+      unawaited(
+        HotkeyService.linuxBackend().then((_) {
+          if (mounted) setState(() {});
+        }),
+      );
     }
   }
 
@@ -190,9 +192,13 @@ class _HotkeySettingsScreenState extends ConsumerState<_HotkeySettingsScreen> {
                           HotkeyService.systemConfirmsBindings
                               ? l10n.hotkeysHintPortal
                               : HotkeyService.isGlobal
-                                  ? l10n.hotkeysHintGlobal
-                                  : l10n.hotkeysHintInApp,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(height: 1.4, color: AppTheme.textLight(context)),
+                              ? l10n.hotkeysHintGlobal
+                              : l10n.hotkeysHintInApp,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                height: 1.4,
+                                color: AppTheme.textLight(context),
+                              ),
                         ),
                       ),
                     ],
@@ -203,8 +209,9 @@ class _HotkeySettingsScreenState extends ConsumerState<_HotkeySettingsScreen> {
                   _HotkeyRow(
                     icon: icon,
                     title: title,
-                    binding:
-                        HotkeyBinding.fromToken(settings.hotkeys[action.id]),
+                    binding: HotkeyBinding.fromToken(
+                      settings.hotkeys[action.id],
+                    ),
                     recording: _recording == action,
                     recordingHint: _needsModifierHint
                         ? l10n.hotkeyNeedsModifier
@@ -294,9 +301,11 @@ class _HotkeyRow extends StatelessWidget {
             const SizedBox(height: 10),
             Text(
               recordingHint,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: needsModifier
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: needsModifier
                     ? AppTheme.red(context)
-                    : AppTheme.textLight(context)),
+                    : AppTheme.textLight(context),
+              ),
             ),
           ],
         ],
@@ -319,7 +328,9 @@ class _HotkeyRow extends StatelessWidget {
           ),
           child: Text(
             pressKeysLabel,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(color: accent),
+            style: Theme.of(
+              context,
+            ).textTheme.labelMedium?.copyWith(color: accent),
           ),
         ),
       );
@@ -338,7 +349,9 @@ class _HotkeyRow extends StatelessWidget {
           ),
           child: Text(
             notSetLabel,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
           ),
         ),
       );
@@ -356,7 +369,9 @@ class _HotkeyRow extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 3),
                 child: Text(
                   '+',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppTheme.textLight(context),
+                  ),
                 ),
               ),
             Container(
@@ -374,7 +389,9 @@ class _HotkeyRow extends StatelessWidget {
               ),
               child: Text(
                 parts[i],
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(color: AppTheme.text(context)),
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: AppTheme.text(context),
+                ),
               ),
             ),
           ],

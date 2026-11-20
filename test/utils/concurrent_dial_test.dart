@@ -69,8 +69,7 @@ void main() {
     });
 
     test('с фрагментацией гонка переезжает на того, кто звонит', () {
-      final config =
-          _xray(_vless, _settings(concurrent: true, fragment: true));
+      final config = _xray(_vless, _settings(concurrent: true, fragment: true));
 
       // Прокси-аутбаунд теперь дозванивается через freedom, и ядро его
       // собственную гонку игнорирует — держать её там значит врать конфигом.
@@ -90,8 +89,9 @@ void main() {
 
       for (final outbound
           in (config['outbounds'] as List).cast<Map<String, dynamic>>()) {
-        final sockopt = (outbound['streamSettings']
-            as Map<String, dynamic>?)?['sockopt'] as Map<String, dynamic>?;
+        final sockopt =
+            (outbound['streamSettings'] as Map<String, dynamic>?)?['sockopt']
+                as Map<String, dynamic>?;
         final tag = outbound['tag']?.toString() ?? '';
         if (sockopt?['dialerProxy'] != null) {
           expect(sockopt!['happyEyeballs'], isNull, reason: tag);

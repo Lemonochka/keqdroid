@@ -33,9 +33,9 @@ class UpdateDownloadNotice {
   bool _over = false;
 
   Future<void> started() => _call('startUpdateDownload', {
-        'channel': _l10n.updateNoticeProgressChannel,
-        'title': _l10n.updateNoticeDownloading(_version),
-      });
+    'channel': _l10n.updateNoticeProgressChannel,
+    'title': _l10n.updateNoticeDownloading(_version),
+  });
 
   void progress(double fraction) {
     if (_over) return;
@@ -85,12 +85,11 @@ class UpdateDownloadNotice {
     return back.future;
   }
 
-  Future<void> _show(String title, String text) =>
-      _call('showUpdateNotice', {
-        'channel': _l10n.updateNoticeResultChannel,
-        'title': title,
-        'text': text,
-      });
+  Future<void> _show(String title, String text) => _call('showUpdateNotice', {
+    'channel': _l10n.updateNoticeResultChannel,
+    'title': title,
+    'text': text,
+  });
 
   // без уведомления загрузка всё равно идёт, ронять её из-за шторки нельзя
   Future<void> _call(String method, [Map<String, Object?>? args]) async {

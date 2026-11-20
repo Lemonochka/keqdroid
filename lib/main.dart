@@ -43,88 +43,95 @@ import 'package:keqdroid/ui/desktop/desktop_home_screen.dart';
 import 'package:keqdroid/ui/responsive/window_breakpoints.dart';
 
 Future<void> main() async {
-  await runZonedGuarded(() async {
-    WidgetsFlutterBinding.ensureInitialized();
-    // до всего остального: ошибка до runApp иначе не оставит следа
-    await AppLogger.instance.enableFileLog();
-    if (Platform.isWindows) {
-      HttpOverrides.global = WindowsSystemTrust();
-      WindowsPrefsStore.register();
-    }
-    await PrefsRecovery.prepare();
-
-    if (Platform.isAndroid) {
-      await BackgroundService.init();
-      await BackgroundService.registerPeriodicTask();
-      await NotificationService.init();
-      await PlatformBootstrap.initialize();
-      // пульт шлёт клавиши как виртуальная клавиатура, без этого фокус не видно
-      if (PlatformBootstrap.isTelevision) {
-        FocusManager.instance.highlightStrategy =
-            FocusHighlightStrategy.alwaysTraditional;
+  await runZonedGuarded(
+    () async {
+      WidgetsFlutterBinding.ensureInitialized();
+      // до всего остального: ошибка до runApp иначе не оставит следа
+      await AppLogger.instance.enableFileLog();
+      if (Platform.isWindows) {
+        HttpOverrides.global = WindowsSystemTrust();
+        WindowsPrefsStore.register();
       }
-    } else if (Platform.isWindows) {
-      await PlatformBootstrap.initialize();
-    } else if (Platform.isLinux || Platform.isMacOS) {
-      await DesktopBackgroundService.init();
-      if (Platform.isLinux) {
-        final primary =
-            await LinuxBackgroundService.instance.ensureSingleInstance();
-        if (!primary) {
-          exit(0);
+      await PrefsRecovery.prepare();
+
+      if (Platform.isAndroid) {
+        await BackgroundService.init();
+        await BackgroundService.registerPeriodicTask();
+        await NotificationService.init();
+        await PlatformBootstrap.initialize();
+        // пульт шлёт клавиши как виртуальная клавиатура, без этого фокус не видно
+        if (PlatformBootstrap.isTelevision) {
+          FocusManager.instance.highlightStrategy =
+              FocusHighlightStrategy.alwaysTraditional;
         }
-        LinuxDeepLinks.captureLaunchLink();
-        await LinuxTunnelBackend.cleanupStaleState();
-        await LinuxBackgroundService.instance.initWindowAndTray();
+      } else if (Platform.isWindows) {
+        await PlatformBootstrap.initialize();
+      } else if (Platform.isLinux || Platform.isMacOS) {
+        await DesktopBackgroundService.init();
+        if (Platform.isLinux) {
+          final primary = await LinuxBackgroundService.instance
+              .ensureSingleInstance();
+          if (!primary) {
+            exit(0);
+          }
+          LinuxDeepLinks.captureLaunchLink();
+          await LinuxTunnelBackend.cleanupStaleState();
+          await LinuxBackgroundService.instance.initWindowAndTray();
+        }
       }
-    }
 
-    if (Platform.isAndroid) {
-      FlutterError.onError = (details) {
-        unawaited(AppLogger.instance.recordError(
-          details.exception,
-          details.stack ?? StackTrace.current,
-          reason: 'Flutter framework error',
-        ));
-      };
-      PlatformDispatcher.instance.onError = (error, stack) {
-        unawaited(AppLogger.instance.recordError(
-          error,
-          stack,
-          reason: 'Platform dispatcher error',
-        ));
-        return true;
-      };
-    }
+      if (Platform.isAndroid) {
+        FlutterError.onError = (details) {
+          unawaited(
+            AppLogger.instance.recordError(
+              details.exception,
+              details.stack ?? StackTrace.current,
+              reason: 'Flutter framework error',
+            ),
+          );
+        };
+        PlatformDispatcher.instance.onError = (error, stack) {
+          unawaited(
+            AppLogger.instance.recordError(
+              error,
+              stack,
+              reason: 'Platform dispatcher error',
+            ),
+          );
+          return true;
+        };
+      }
 
-    final storage = await StorageService.init();
-    // до первого кадра, иначе выбранная картинка карточки не покажется
-    await CardImageService.warmUp();
-    await SmoothFade.load();
-    await FloatingBar.load();
-    await LiquidWave.loadShaders();
-    await LiquidBud.load();
+      final storage = await StorageService.init();
+      // до первого кадра, иначе выбранная картинка карточки не покажется
+      await CardImageService.warmUp();
+      await SmoothFade.load();
+      await FloatingBar.load();
+      await LiquidWave.loadShaders();
+      await LiquidBud.load();
 
-    final home = Platform.isWindows || Platform.isLinux
-        ? const DesktopHomeScreen()
-        : const VpnHomeScreen();
+      final home = Platform.isWindows || Platform.isLinux
+          ? const DesktopHomeScreen()
+          : const VpnHomeScreen();
 
-    runApp(
-      ProviderScope(
-        overrides: [storageProvider.overrideWithValue(storage)],
-        child: KeqdroidApp(home: home),
-      ),
-    );
+      runApp(
+        ProviderScope(
+          overrides: [storageProvider.overrideWithValue(storage)],
+          child: KeqdroidApp(home: home),
+        ),
+      );
 
-    MemoryWatch.instance.start();
-    unawaited(UpdateService.sweepLeftovers());
-  }, (error, stack) async {
-    await AppLogger.instance.recordError(
-      error,
-      stack,
-      reason: 'runZonedGuarded unhandled error',
-    );
-  });
+      MemoryWatch.instance.start();
+      unawaited(UpdateService.sweepLeftovers());
+    },
+    (error, stack) async {
+      await AppLogger.instance.recordError(
+        error,
+        stack,
+        reason: 'runZonedGuarded unhandled error',
+      );
+    },
+  );
 }
 
 class VpnHomeScreen extends ConsumerStatefulWidget {
@@ -204,7 +211,9 @@ class _VpnHomeScreenState extends ConsumerState<VpnHomeScreen> {
     if ((index - _navIndex).abs() > 1) {
       _pageCtrl.jumpToPage(index);
       _lastServersVisible = index == 0;
-      ref.read(homeTabPageProvider.notifier).set(_lastServersVisible ? 0.0 : 1.0);
+      ref
+          .read(homeTabPageProvider.notifier)
+          .set(_lastServersVisible ? 0.0 : 1.0);
       setState(() => _navIndex = index);
       return;
     }
@@ -224,94 +233,47 @@ class _VpnHomeScreenState extends ConsumerState<VpnHomeScreen> {
       if (info == null) return;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        final days = ref.read(settingsNotifierProvider).value?.updatePromptDays ??
+        final days =
+            ref.read(settingsNotifierProvider).value?.updatePromptDays ??
             const AppSettings().updatePromptDays;
         unawaited(autoPromptForUpdate(context, info, days: days));
       });
     });
 
     final isConnected = ref.watch(
-      vpnStateProvider.select(
-        (a) => a.value?.status == VpnStatus.connected,
-      ),
+      vpnStateProvider.select((a) => a.value?.status == VpnStatus.connected),
     );
     final expanded = WindowBreakpoints.isExpandedMobile(context);
     final railAtLeft = Directionality.of(context) == TextDirection.ltr;
-    final style = LiquidBarStyle.tryParse(ref.watch(settingsNotifierProvider.select(
-      (a) => a.value?.bottomBarStyle ?? AppSettings.bottomBarModern,
-    )));
+    final style = LiquidBarStyle.tryParse(
+      ref.watch(
+        settingsNotifierProvider.select(
+          (a) => a.value?.bottomBarStyle ?? AppSettings.bottomBarModern,
+        ),
+      ),
+    );
     LiquidToast.enabled = style != null;
     return FloatingBarScope(
       style: style,
       child: Scaffold(
-      // островок висит над краем, список уходит под него
-      extendBody: style != null,
-      backgroundColor: AppTheme.bg(context),
-      // шторки и маршруты отступают от клавиатуры сами, а ужатая оболочка
-      // иногда так и оставалась ужатой после возврата
-      resizeToAvoidBottomInset: false,
-      body: Row(
-        children: [
-          if (expanded)
-            HalloweenIconScope(
-              // телевизор водят пультом, жидкой ленте фокус не нужен
-              child: style == null || PlatformBootstrap.isTelevision
-                  ? AppNavRail(
-                      index: _navIndex,
-                      showConnectedBadge: isConnected,
-                      onTap: _selectTab,
-                    )
-                  : LiquidSideNav(
-                      index: _navIndex,
-                      showConnectedBadge: isConnected,
-                      onTap: _selectTab,
-                      style: style,
-                      pages: _pageCtrl,
-                    ),
-            ),
-          Expanded(
-            // без ключа PageView пересоздаётся при повороте вместе с состоянием вкладок
-            key: const ValueKey('home-pages'),
-            child: MediaQuery.removePadding(
-              context: context,
-              removeLeft: expanded && railAtLeft,
-              removeRight: expanded && !railAtLeft,
-              child: PageView(
-                controller: _pageCtrl,
-                physics: const ClampingScrollPhysics(),
-                dragStartBehavior: DragStartBehavior.down,
-                allowImplicitScrolling: true,
-                onPageChanged: _onPageSettled,
-                children: [
-                  for (final (i, tab) in const [
-                    ServersTab(),
-                    SubscriptionsTab(),
-                    SettingsTab(),
-                  ].indexed)
-                    _HomeTabPage(
-                      index: i,
-                      onScreen: _onScreen & (1 << i) != 0,
-                      child: tab,
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-      // своим слоем: шапка и оверлеи над списком лежат в одном слое с панелью, и любая их перерисовка
-      // заново рисовала ~90 объектов панели, а её пружина при прокрутке так же задевала экран
-      bottomNavigationBar: expanded
-          ? null
-          : RepaintBoundary(
-              child: HalloweenIconScope(
-                child: style == null
-                    ? AppBottomNav(
+        // островок висит над краем, список уходит под него
+        extendBody: style != null,
+        backgroundColor: AppTheme.bg(context),
+        // шторки и маршруты отступают от клавиатуры сами, а ужатая оболочка
+        // иногда так и оставалась ужатой после возврата
+        resizeToAvoidBottomInset: false,
+        body: Row(
+          children: [
+            if (expanded)
+              HalloweenIconScope(
+                // телевизор водят пультом, жидкой ленте фокус не нужен
+                child: style == null || PlatformBootstrap.isTelevision
+                    ? AppNavRail(
                         index: _navIndex,
                         showConnectedBadge: isConnected,
                         onTap: _selectTab,
                       )
-                    : LiquidBottomNav(
+                    : LiquidSideNav(
                         index: _navIndex,
                         showConnectedBadge: isConnected,
                         onTap: _selectTab,
@@ -319,7 +281,57 @@ class _VpnHomeScreenState extends ConsumerState<VpnHomeScreen> {
                         pages: _pageCtrl,
                       ),
               ),
+            Expanded(
+              // без ключа PageView пересоздаётся при повороте вместе с состоянием вкладок
+              key: const ValueKey('home-pages'),
+              child: MediaQuery.removePadding(
+                context: context,
+                removeLeft: expanded && railAtLeft,
+                removeRight: expanded && !railAtLeft,
+                child: PageView(
+                  controller: _pageCtrl,
+                  physics: const ClampingScrollPhysics(),
+                  dragStartBehavior: DragStartBehavior.down,
+                  allowImplicitScrolling: true,
+                  onPageChanged: _onPageSettled,
+                  children: [
+                    for (final (i, tab) in const [
+                      ServersTab(),
+                      SubscriptionsTab(),
+                      SettingsTab(),
+                    ].indexed)
+                      _HomeTabPage(
+                        index: i,
+                        onScreen: _onScreen & (1 << i) != 0,
+                        child: tab,
+                      ),
+                  ],
+                ),
+              ),
             ),
+          ],
+        ),
+        // своим слоем: шапка и оверлеи над списком лежат в одном слое с панелью, и любая их перерисовка
+        // заново рисовала ~90 объектов панели, а её пружина при прокрутке так же задевала экран
+        bottomNavigationBar: expanded
+            ? null
+            : RepaintBoundary(
+                child: HalloweenIconScope(
+                  child: style == null
+                      ? AppBottomNav(
+                          index: _navIndex,
+                          showConnectedBadge: isConnected,
+                          onTap: _selectTab,
+                        )
+                      : LiquidBottomNav(
+                          index: _navIndex,
+                          showConnectedBadge: isConnected,
+                          onTap: _selectTab,
+                          style: style,
+                          pages: _pageCtrl,
+                        ),
+                ),
+              ),
       ),
     );
   }

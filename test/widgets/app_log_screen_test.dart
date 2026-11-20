@@ -20,7 +20,9 @@ Future<void> _frames(WidgetTester tester) async {
 /// теста оно само не идёт.
 Future<void> _settle(WidgetTester tester, Finder until) async {
   for (var i = 0; i < 50 && until.evaluate().isEmpty; i++) {
-    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 50)),
+    );
     await tester.pump(const Duration(milliseconds: 50));
   }
   await _frames(tester);
@@ -59,7 +61,10 @@ void main() {
         supportedLocales: AppLocalizations.supportedLocales,
         locale: const Locale('en'),
         theme: buildAppTheme(
-          buildPresetScheme(themePresetFor(const AppSettings()), Brightness.light),
+          buildPresetScheme(
+            themePresetFor(const AppSettings()),
+            Brightness.light,
+          ),
         ),
         home: appLogScreenForTest(),
       ),
@@ -81,7 +86,9 @@ void main() {
     expect(find.textContaining('update task failed'), findsOneWidget);
   });
 
-  testWidgets('на телефоне журнал уходит файлом через меню «Поделиться»', (tester) async {
+  testWidgets('на телефоне журнал уходит файлом через меню «Поделиться»', (
+    tester,
+  ) async {
     final temp = Directory.systemTemp.createTempSync('app_log_share');
     addTearDown(() => temp.deleteSync(recursive: true));
     final messenger = tester.binding.defaultBinaryMessenger;
@@ -94,7 +101,8 @@ void main() {
     messenger.setMockMethodCallHandler(
       const MethodChannel('dev.fluttercommunity.plus/share'),
       (call) async {
-        final path = ((call.arguments as Map)['paths'] as List).single as String;
+        final path =
+            ((call.arguments as Map)['paths'] as List).single as String;
         sharedName = File(path).uri.pathSegments.last;
         sharedText = File(path).readAsStringSync();
         return 'com.example.chosen';
@@ -128,12 +136,21 @@ void main() {
 
     expect(find.byTooltip('Copy the whole log'), findsNothing);
     await tester.tap(find.byTooltip('Send the log as a file'));
-    for (var i = 0; i < 50 && (sharedText == null || temp.listSync().isNotEmpty); i++) {
-      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+    for (
+      var i = 0;
+      i < 50 && (sharedText == null || temp.listSync().isNotEmpty);
+      i++
+    ) {
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 50)),
+      );
       await tester.pump(const Duration(milliseconds: 50));
     }
 
-    expect(sharedName, matches(RegExp(r'^keqdroid-log-\d{4}-\d{2}-\d{2}-\d{4}\.txt$')));
+    expect(
+      sharedName,
+      matches(RegExp(r'^keqdroid-log-\d{4}-\d{2}-\d{2}-\d{4}\.txt$')),
+    );
     expect(sharedText, contains('record 000'));
     expect(sharedText, contains('record 309'));
     // копию держит share_plus, наша в кэше не копится

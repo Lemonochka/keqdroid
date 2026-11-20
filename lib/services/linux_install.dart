@@ -6,16 +6,7 @@ import 'package:path/path.dart' as p;
 
 import 'linux_appimage_updater.dart';
 
-enum LinuxInstallKind {
-  appImage,
-  deb,
-  rpm,
-  pacman,
-
-  portable,
-
-  readOnly,
-}
+enum LinuxInstallKind { appImage, deb, rpm, pacman, portable, readOnly }
 
 class LinuxInstall {
   LinuxInstall._();
@@ -23,11 +14,11 @@ class LinuxInstall {
   static Future<LinuxInstallKind>? _detected;
 
   static Future<LinuxInstallKind> detect() => _detected ??= classify(
-        appImagePath: LinuxAppImageUpdater.currentAppImagePath(),
-        executable: Platform.resolvedExecutable,
-        owns: _owns,
-        writable: isWritableDir,
-      );
+    appImagePath: LinuxAppImageUpdater.currentAppImagePath(),
+    executable: Platform.resolvedExecutable,
+    owns: _owns,
+    writable: isWritableDir,
+  );
 
   // по владельцу файла: rpm ставят и на Debian
   @visibleForTesting
@@ -71,16 +62,16 @@ class LinuxInstall {
 
   // на образных системах (Silverblue и подобные) /usr только для чтения, rpm -U падает
   @visibleForTesting
-  static bool Function() imageBasedSystem =
-      () => File('/run/ostree-booted').existsSync();
+  static bool Function() imageBasedSystem = () =>
+      File('/run/ostree-booted').existsSync();
 
   @visibleForTesting
   static String? packageInstallBlocker(String package) =>
       package.endsWith('.rpm') && imageBasedSystem()
-          ? 'This system is built from an image (Fedora Silverblue, Kinoite, '
-              'Bazzite and the like), where packages are layered with '
-              'rpm-ostree, not installed with rpm.'
-          : null;
+      ? 'This system is built from an image (Fedora Silverblue, Kinoite, '
+            'Bazzite and the like), where packages are layered with '
+            'rpm-ostree, not installed with rpm.'
+      : null;
 
   static Future<String> saveToDownloads(
     String downloaded,
@@ -128,7 +119,7 @@ class LinuxInstall {
     switch (result.exitCode) {
       case 0:
         break;
-      case 126:  // окно пароля закрыли
+      case 126: // окно пароля закрыли
         return false;
       case 127:
         await OpenFilex.open(package);
@@ -152,10 +143,12 @@ class LinuxInstall {
     final appDir = p.dirname(Platform.resolvedExecutable);
     final staging = await Directory.systemTemp.createTemp('keqdroid_update_');
     try {
-      final result = await Process.run(
-        'tar',
-        ['-xzf', archive, '-C', staging.path],
-      );
+      final result = await Process.run('tar', [
+        '-xzf',
+        archive,
+        '-C',
+        staging.path,
+      ]);
       if (result.exitCode != 0) {
         throw StateError(
           _tail(result.stderr) ?? 'Failed to extract the update archive',
@@ -165,10 +158,12 @@ class LinuxInstall {
       if (!File(p.join(payload, 'keqdroid')).existsSync()) {
         throw StateError('Update archive does not contain keqdroid');
       }
-      await launchAfterExit(
-        _portableScript,
-        [payload, appDir, staging.path, archive],
-      );
+      await launchAfterExit(_portableScript, [
+        payload,
+        appDir,
+        staging.path,
+        archive,
+      ]);
     } catch (_) {
       try {
         await staging.delete(recursive: true);
@@ -213,15 +208,19 @@ setsid "$DST/keqdroid" >/dev/null 2>&1 < /dev/null &
 
 // setsid уводит процесс из нашей группы, чтобы exit(0) его не прихватил
 Future<void> launchAfterExit(String body, List<String> args) async {
-  final script = File(p.join(
-    Directory.systemTemp.path,
-    'keqdroid_update_${DateTime.now().millisecondsSinceEpoch}.sh',
-  ));
+  final script = File(
+    p.join(
+      Directory.systemTemp.path,
+      'keqdroid_update_${DateTime.now().millisecondsSinceEpoch}.sh',
+    ),
+  );
   await script.writeAsString('$_waitForApp\n$body');
   final shArgs = [script.path, '$pid', ...args];
   try {
-    await Process.start('setsid', ['sh', ...shArgs],
-        mode: ProcessStartMode.detached);
+    await Process.start('setsid', [
+      'sh',
+      ...shArgs,
+    ], mode: ProcessStartMode.detached);
   } on ProcessException {
     await Process.start('sh', shArgs, mode: ProcessStartMode.detached);
   }

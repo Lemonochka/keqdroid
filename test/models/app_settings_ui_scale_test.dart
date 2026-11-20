@@ -17,10 +17,14 @@ void main() {
       // Число приезжает из бэкапа и из настроек, записанных другой версией, где
       // границы могли быть другими. Пропустить 4.0 значит показать пользователю
       // экран, на котором не найти обратный ползунок.
-      expect(const AppSettings().copyWith(uiScale: 9.0).uiScale,
-          AppSettings.maxUiScale);
-      expect(const AppSettings().copyWith(uiScale: 0.1).uiScale,
-          AppSettings.minUiScale);
+      expect(
+        const AppSettings().copyWith(uiScale: 9.0).uiScale,
+        AppSettings.maxUiScale,
+      );
+      expect(
+        const AppSettings().copyWith(uiScale: 0.1).uiScale,
+        AppSettings.minUiScale,
+      );
       expect(
         AppSettings.fromJson({'uiScale': 42}).uiScale,
         AppSettings.maxUiScale,

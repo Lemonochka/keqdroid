@@ -20,14 +20,13 @@ class RoutingProfile {
     List<String> subscriptionIds = const [],
     String finalOutbound = AppSettings.finalOutboundProxy,
     List<TrafficRoute> routes = const [],
-  }) =>
-      RoutingProfile(
-        id: const Uuid().v4(),
-        name: name,
-        subscriptionIds: subscriptionIds,
-        finalOutbound: finalOutbound,
-        routes: routes,
-      );
+  }) => RoutingProfile(
+    id: const Uuid().v4(),
+    name: name,
+    subscriptionIds: subscriptionIds,
+    finalOutbound: finalOutbound,
+    routes: routes,
+  );
 
   final String id;
   final String name;
@@ -40,31 +39,32 @@ class RoutingProfile {
   final String? providerSubscriptionId;
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'enabled': enabled,
-        'subscriptionIds': subscriptionIds,
-        'finalOutbound': finalOutbound,
-        'routes': [for (final r in routes) r.toJson()],
-        if (providerSubscriptionId != null) 'providerSubscription': providerSubscriptionId,
-      };
+    'id': id,
+    'name': name,
+    'enabled': enabled,
+    'subscriptionIds': subscriptionIds,
+    'finalOutbound': finalOutbound,
+    'routes': [for (final r in routes) r.toJson()],
+    if (providerSubscriptionId != null)
+      'providerSubscription': providerSubscriptionId,
+  };
 
   factory RoutingProfile.fromJson(Map<String, dynamic> json) => RoutingProfile(
-        id: json['id'] as String,
-        name: json['name'] as String? ?? '',
-        enabled: json['enabled'] as bool? ?? true,
-        subscriptionIds: [
-          for (final s in (json['subscriptionIds'] as List? ?? const []))
-            s.toString(),
-        ],
-        finalOutbound: json['finalOutbound'] as String? ??
-            AppSettings.finalOutboundProxy,
-        routes: [
-          for (final r in (json['routes'] as List? ?? const []))
-            TrafficRoute.fromJson(r as Map<String, dynamic>),
-        ],
-        providerSubscriptionId: json['providerSubscription'] as String?,
-      );
+    id: json['id'] as String,
+    name: json['name'] as String? ?? '',
+    enabled: json['enabled'] as bool? ?? true,
+    subscriptionIds: [
+      for (final s in (json['subscriptionIds'] as List? ?? const []))
+        s.toString(),
+    ],
+    finalOutbound:
+        json['finalOutbound'] as String? ?? AppSettings.finalOutboundProxy,
+    routes: [
+      for (final r in (json['routes'] as List? ?? const []))
+        TrafficRoute.fromJson(r as Map<String, dynamic>),
+    ],
+    providerSubscriptionId: json['providerSubscription'] as String?,
+  );
 
   RoutingProfile copyWith({
     String? name,
@@ -72,23 +72,22 @@ class RoutingProfile {
     List<String>? subscriptionIds,
     String? finalOutbound,
     List<TrafficRoute>? routes,
-  }) =>
-      RoutingProfile(
-        id: id,
-        name: name ?? this.name,
-        enabled: enabled ?? this.enabled,
-        subscriptionIds: subscriptionIds ?? this.subscriptionIds,
-        finalOutbound: finalOutbound ?? this.finalOutbound,
-        routes: routes ?? this.routes,
-        providerSubscriptionId: providerSubscriptionId,
-      );
+  }) => RoutingProfile(
+    id: id,
+    name: name ?? this.name,
+    enabled: enabled ?? this.enabled,
+    subscriptionIds: subscriptionIds ?? this.subscriptionIds,
+    finalOutbound: finalOutbound ?? this.finalOutbound,
+    routes: routes ?? this.routes,
+    providerSubscriptionId: providerSubscriptionId,
+  );
 
   RoutingProfile asOwn() => RoutingProfile(
-        id: id,
-        name: name,
-        enabled: enabled,
-        subscriptionIds: subscriptionIds,
-        finalOutbound: finalOutbound,
-        routes: routes,
-      );
+    id: id,
+    name: name,
+    enabled: enabled,
+    subscriptionIds: subscriptionIds,
+    finalOutbound: finalOutbound,
+    routes: routes,
+  );
 }

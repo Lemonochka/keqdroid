@@ -13,7 +13,8 @@ GeoSanitizeResult stripUnknownGeoTokens(
   final proxy = stripUnknownGeoTokensText(settings.proxyRules, index);
   final blocked = stripUnknownGeoTokensText(settings.blockedRules, index);
   final dropped = [...direct.dropped, ...proxy.dropped, ...blocked.dropped];
-  final unchanged = direct.text == settings.directRules &&
+  final unchanged =
+      direct.text == settings.directRules &&
       proxy.text == settings.proxyRules &&
       blocked.text == settings.blockedRules;
 
@@ -80,7 +81,8 @@ List<String>? geoSubstitutes(String token, GeoAssetIndex index) {
   final colon = trimmed.indexOf(':');
   if (colon < 0) return null;
   if (trimmed.substring(0, colon).toLowerCase() != 'geosite') return null;
-  final targets = _geositeAliases[trimmed.substring(colon + 1).trim().toLowerCase()];
+  final targets =
+      _geositeAliases[trimmed.substring(colon + 1).trim().toLowerCase()];
   if (targets == null ||
       !targets.every((t) => index.geositeCodes.contains(t.split('@').first))) {
     return null;

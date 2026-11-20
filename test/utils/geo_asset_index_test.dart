@@ -57,10 +57,11 @@ void main() {
         'geosite.dat',
         buildGeoDat({'YANDEX': 12, 'CATEGORY-ADS-ALL': 300, 'VK': 0}),
       );
-      expect(
-        await GeoAssetIndex.readCodes(file),
-        {'yandex', 'category-ads-all', 'vk'},
-      );
+      expect(await GeoAssetIndex.readCodes(file), {
+        'yandex',
+        'category-ads-all',
+        'vk',
+      });
     });
 
     test('skips entries whose body needs a multi-byte length varint', () async {

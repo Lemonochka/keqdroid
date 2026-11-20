@@ -97,8 +97,9 @@ part 'vpn_state_provider.dart';
 
 Future<String?> _resolveFirstAddress(String host) async {
   try {
-    final addresses =
-        await InternetAddress.lookup(host).timeout(const Duration(seconds: 5));
+    final addresses = await InternetAddress.lookup(
+      host,
+    ).timeout(const Duration(seconds: 5));
     if (addresses.isNotEmpty) return addresses.first.address;
   } catch (e) {
     AppLogger.instance.debug('Server address not resolved', error: e);
@@ -112,8 +113,7 @@ final storageProvider = Provider<StorageService>((ref) {
 
 class ServerSortModesNotifier extends Notifier<Map<String, String>> {
   @override
-  Map<String, String> build() =>
-      ref.read(storageProvider).getServerSortModes();
+  Map<String, String> build() => ref.read(storageProvider).getServerSortModes();
 
   void update(Map<String, String> Function(Map<String, String> state) fn) {
     state = fn(state);
@@ -123,8 +123,8 @@ class ServerSortModesNotifier extends Notifier<Map<String, String>> {
 
 final serverSortModesProvider =
     NotifierProvider<ServerSortModesNotifier, Map<String, String>>(
-  ServerSortModesNotifier.new,
-);
+      ServerSortModesNotifier.new,
+    );
 
 int? _activeLocalHttpProxyPort(Ref ref, StorageService storage) {
   final vpnConnected =
@@ -152,9 +152,7 @@ final exitIpProvider = FutureProvider.autoDispose<ExitIp?>((ref) async {
   final connected = ref.watch(
     vpnStateProvider.select((a) => a.value?.status == VpnStatus.connected),
   );
-  final serverId = ref.watch(
-    serversProvider.select((s) => s.activeServer?.id),
-  );
+  final serverId = ref.watch(serversProvider.select((s) => s.activeServer?.id));
   // на mihomo сервер меняется без отключения, и вопрос в середине смены ушёл бы через прежний
   final switching = ref.watch(vpnServerSwitchInProgressProvider);
   if (!connected || serverId == null || switching) return null;
@@ -175,7 +173,8 @@ final exitIpProvider = FutureProvider.autoDispose<ExitIp?>((ref) async {
 
 // тесты подменяют, чтобы не ходить в сеть
 final exitIpLookupProvider = Provider<Future<ExitIp?> Function(int)>(
-  (ref) => (port) => ExitIpService.lookup(proxyPort: port),
+  (ref) =>
+      (port) => ExitIpService.lookup(proxyPort: port),
 );
 
 const _exitIpRetryPauses = [
@@ -195,7 +194,8 @@ final vpnEngineProvider = Provider<VpnEngine>((ref) {
       engine.setTrafficStatsPollingEnabled(lifecycleForeground && uiVisible);
   final lifecycle = AppLifecycleListener(
     onStateChange: (state) {
-      final hidden = state == AppLifecycleState.hidden ||
+      final hidden =
+          state == AppLifecycleState.hidden ||
           state == AppLifecycleState.paused ||
           state == AppLifecycleState.detached;
       lifecycleForeground = !hidden;
@@ -224,8 +224,8 @@ final systemAccentColorProvider = StreamProvider<Color?>((ref) async* {
       picked == null
           ? 'System accent unavailable, using brand seed'
           : 'System accent seed: '
-              '#${picked.color.toARGB32().toRadixString(16).padLeft(8, '0')}'
-              ' from ${picked.source.name}',
+                '#${picked.color.toARGB32().toRadixString(16).padLeft(8, '0')}'
+                ' from ${picked.source.name}',
     );
     return picked?.color;
   }
@@ -269,4 +269,3 @@ final updateInfoProvider = FutureProvider<UpdateInfo?>((ref) async {
     httpPort: ActiveLocalPorts().httpPortOr(settings.httpPort),
   );
 }, retry: (_, _) => null);
-

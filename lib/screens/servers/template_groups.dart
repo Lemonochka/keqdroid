@@ -40,10 +40,7 @@ class _SubscriptionTabsRow extends ConsumerWidget {
             // Авто справа: пара не прыгает, когда его включают в виде карточки
             if (subscription.autoSelectVisible) ...[
               const Spacer(),
-              _AutoSelectButton(
-                subscription: subscription,
-                buttonKey: autoKey,
-              ),
+              _AutoSelectButton(subscription: subscription, buttonKey: autoKey),
             ],
           ],
         ),
@@ -55,9 +52,7 @@ class _SubscriptionTabsRow extends ConsumerWidget {
 Map<String, ServerItem> _serversByNode(
   ClashTemplate template,
   List<ServerItem> servers,
-) => {
-      for (final s in servers) ?template.nodeFor(s): s,
-    };
+) => {for (final s in servers) ?template.nodeFor(s): s};
 
 // флагов стран в эмодзи-шрифте Windows нет, он печатает буквы: флаг рисуется картинкой слева, как у серверов
 String _plainName(String name) {
@@ -80,8 +75,10 @@ ServerFlag? _groupFlag(
     if (server != null) return server.flag;
     at = now;
   }
-  if (const {ClashMemberKind.direct, ClashMemberKind.block}
-      .contains(template.kindOf(at))) {
+  if (const {
+    ClashMemberKind.direct,
+    ClashMemberKind.block,
+  }.contains(template.kindOf(at))) {
     return null;
   }
   return firstFlagIn(at) ?? firstFlagIn(group);
@@ -97,10 +94,11 @@ ServerFlag? _groupFlag(
   if (subId == null) return null;
   final template = ref.watch(subscriptionTemplateProvider(subId));
   if (template == null || template.nodeFor(server) == null) return null;
-  final choices = ref.watch(subscriptionsProvider.select((a) => a.value
-      ?.where((s) => s.id == subId)
-      .firstOrNull
-      ?.groupChoices));
+  final choices = ref.watch(
+    subscriptionsProvider.select(
+      (a) => a.value?.where((s) => s.id == subId).firstOrNull?.groupChoices,
+    ),
+  );
   final chosen = template.mainChoice(choices ?? const {});
   if (chosen == null) return null;
   final live = ref.watch(liveTemplateGroupsProvider(subId)).value;
@@ -133,8 +131,7 @@ bool _drillable(
   ClashTemplate template,
   String member,
   Map<String, MihomoGroupState>? live,
-) =>
-    template.pinnable(member) && (live?[member]?.all.length ?? 0) > 1;
+) => template.pinnable(member) && (live?[member]?.all.length ?? 0) > 1;
 
 class _GroupBadge extends StatelessWidget {
   const _GroupBadge({
@@ -151,17 +148,17 @@ class _GroupBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SizedBox.square(
-        dimension: _size,
-        child: ClipPath(
-          clipper: ShapeBorderClipper(
-            shape: ExpressiveIconShapeTheme.of(context).border(_size),
-          ),
-          child: ColoredBox(
-            color: background,
-            child: Icon(icon, size: _size / 2, color: foreground),
-          ),
-        ),
-      );
+    dimension: _size,
+    child: ClipPath(
+      clipper: ShapeBorderClipper(
+        shape: ExpressiveIconShapeTheme.of(context).border(_size),
+      ),
+      child: ColoredBox(
+        color: background,
+        child: Icon(icon, size: _size / 2, color: foreground),
+      ),
+    ),
+  );
 }
 
 Widget _memberAvatar(
@@ -185,27 +182,27 @@ Widget _memberAvatar(
   if (flag != null) return ServerAvatar(flag: flag, protocol: '');
   return switch (kind) {
     ClashMemberKind.direct => _GroupBadge(
-        icon: Icons.call_made_rounded,
-        background: AppTheme.green(context).withValues(alpha: 0.2),
-        foreground: AppTheme.green(context),
-      ),
+      icon: Icons.call_made_rounded,
+      background: AppTheme.green(context).withValues(alpha: 0.2),
+      foreground: AppTheme.green(context),
+    ),
     ClashMemberKind.block => _GroupBadge(
-        icon: Icons.block_rounded,
-        background: AppTheme.red(context).withValues(alpha: 0.2),
-        foreground: AppTheme.red(context),
-      ),
+      icon: Icons.block_rounded,
+      background: AppTheme.red(context).withValues(alpha: 0.2),
+      foreground: AppTheme.red(context),
+    ),
     ClashMemberKind.group => _GroupBadge(
-        icon: template.groupType(member) == 'select'
-            ? Icons.alt_route_rounded
-            : Icons.bolt_rounded,
-        background: scheme.tertiaryContainer,
-        foreground: scheme.onTertiaryContainer,
-      ),
+      icon: template.groupType(member) == 'select'
+          ? Icons.alt_route_rounded
+          : Icons.bolt_rounded,
+      background: scheme.tertiaryContainer,
+      foreground: scheme.onTertiaryContainer,
+    ),
     _ => _GroupBadge(
-        icon: Icons.public_rounded,
-        background: scheme.secondaryContainer,
-        foreground: scheme.onSecondaryContainer,
-      ),
+      icon: Icons.public_rounded,
+      background: scheme.secondaryContainer,
+      foreground: scheme.onSecondaryContainer,
+    ),
   };
 }
 
@@ -250,10 +247,10 @@ String _memberLabel(
       final detail = pin != null && (live == null || pin == now)
           ? l10n.serverGroupPinned(_nodeName(pin, byNode))
           : now == null
-              ? (template.groupType(member) == 'select'
-                  ? null
-                  : l10n.serverGroupAuto)
-              : l10n.serverGroupNow(_nodeName(now, byNode));
+          ? (template.groupType(member) == 'select'
+                ? null
+                : l10n.serverGroupAuto)
+          : l10n.serverGroupNow(_nodeName(now, byNode));
       return [if (withName) _plainName(member), ?detail].join(' · ');
     case ClashMemberKind.node || ClashMemberKind.other:
       return withName ? _plainName(member) : '';
@@ -306,8 +303,10 @@ class _TemplateGroupsSliver extends ConsumerWidget {
       return SizedBox(
         height: rowExtent,
         child: Padding(
-          padding: ExpressiveListSegment.segmentMargin(index: index, spacing: gap)
-              .resolve(direction),
+          padding: ExpressiveListSegment.segmentMargin(
+            index: index,
+            spacing: gap,
+          ).resolve(direction),
           child: ExpressiveListSegment(
             radius: ExpressiveListSegment.segmentRadius(
               index: index,
@@ -343,8 +342,9 @@ class _TemplateGroupsSliver extends ConsumerWidget {
                             _plainName(group.name),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: textTheme.bodyLarge
-                                ?.copyWith(color: AppTheme.text(context)),
+                            style: textTheme.bodyLarge?.copyWith(
+                              color: AppTheme.text(context),
+                            ),
                           ),
                           if (now != null) ...[
                             const SizedBox(height: ExpressiveSpacing.hairline),
@@ -359,8 +359,9 @@ class _TemplateGroupsSliver extends ConsumerWidget {
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: textTheme.labelLarge
-                                  ?.copyWith(color: AppTheme.textLight(context)),
+                              style: textTheme.labelLarge?.copyWith(
+                                color: AppTheme.textLight(context),
+                              ),
                             ),
                           ],
                         ],
@@ -403,8 +404,9 @@ class _TemplateGroupsSliver extends ConsumerWidget {
                 Expanded(
                   child: Text(
                     context.l10n.serverGroupsInactive,
-                    style: textTheme.bodyMedium
-                        ?.copyWith(color: AppTheme.textLight(context)),
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: AppTheme.textLight(context),
+                    ),
                   ),
                 ),
               ],
@@ -424,16 +426,18 @@ void _showGroupPickSheet(
   void Function(ServerItem) onSelectServer,
 ) {
   AppHaptics.selection();
-  unawaited(showModalBottomSheet<void>(
-    context: context,
-    showDragHandle: true,
-    isScrollControlled: true,
-    builder: (_) => _GroupPickSheet(
-      subscriptionId: subscription.id,
-      group: group,
-      onSelectServer: onSelectServer,
+  unawaited(
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (_) => _GroupPickSheet(
+        subscriptionId: subscription.id,
+        group: group,
+        onSelectServer: onSelectServer,
+      ),
     ),
-  ));
+  );
 }
 
 Widget _groupSheetHeader(BuildContext context, String title, String hint) {
@@ -453,8 +457,9 @@ Widget _groupSheetHeader(BuildContext context, String title, String hint) {
         Text(
           hint,
           textAlign: TextAlign.center,
-          style: textTheme.bodyMedium
-              ?.copyWith(color: AppTheme.textLight(context)),
+          style: textTheme.bodyMedium?.copyWith(
+            color: AppTheme.textLight(context),
+          ),
         ),
       ],
     ),
@@ -497,8 +502,9 @@ Widget _groupMemberTile(
                   subtitle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: textTheme.bodySmall
-                      ?.copyWith(color: scheme.onSurfaceVariant),
+                  style: textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
             ],
           ),
@@ -535,14 +541,23 @@ class _GroupPickSheet extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final template = ref.watch(subscriptionTemplateProvider(subscriptionId));
-    final subscription = ref.watch(subscriptionsProvider.select((a) =>
-        a.value?.where((s) => s.id == subscriptionId).firstOrNull));
-    if (template == null || subscription == null) return const SizedBox.shrink();
+    final subscription = ref.watch(
+      subscriptionsProvider.select(
+        (a) => a.value?.where((s) => s.id == subscriptionId).firstOrNull,
+      ),
+    );
+    if (template == null || subscription == null) {
+      return const SizedBox.shrink();
+    }
     final live = ref.watch(liveTemplateGroupsProvider(subscriptionId)).value;
-    final servers = ref.watch(serversProvider.select((s) => [
+    final servers = ref.watch(
+      serversProvider.select(
+        (s) => [
           for (final server in s.servers)
             if (server.subscriptionId == subscriptionId) server,
-        ]));
+        ],
+      ),
+    );
     final active = ref.watch(serversProvider.select((s) => s.activeServer));
     final byNode = _serversByNode(template, servers);
     final isMain = group.name == template.mainGroup;
@@ -556,7 +571,9 @@ class _GroupPickSheet extends ConsumerWidget {
           : null,
     );
     // выбор, поставленный первым в группу с include-all, ядро отдаёт в all дважды
-    final members = [...{...(live?[group.name]?.all ?? group.members)}];
+    final members = [
+      ...{...(live?[group.name]?.all ?? group.members)},
+    ];
     final scheme = Theme.of(context).colorScheme;
     final direction = Directionality.of(context);
     final l10n = context.l10n;
@@ -584,11 +601,17 @@ class _GroupPickSheet extends ConsumerWidget {
     final hint = isMain
         ? l10n.serverGroupMainHint
         : template.isRuleTarget(group.name) || parent == null
-            ? l10n.serverGroupPickHint
-            : l10n.serverGroupViaHint(_plainName(parent));
+        ? l10n.serverGroupPickHint
+        : l10n.serverGroupViaHint(_plainName(parent));
 
-    final others = [for (final m in members) if (byNode[m] == null) m];
-    final nodes = [for (final m in members) if (byNode[m] != null) m];
+    final others = [
+      for (final m in members)
+        if (byNode[m] == null) m,
+    ];
+    final nodes = [
+      for (final m in members)
+        if (byNode[m] != null) m,
+    ];
 
     Widget otherTile(String member) {
       final detail = _memberLabel(
@@ -614,11 +637,11 @@ class _GroupPickSheet extends ConsumerWidget {
         drill: drill,
         onTap: drill
             ? () => _showGroupServersSheet(
-                  context,
-                  subscriptionId: subscriptionId,
-                  parent: group.name,
-                  group: member,
-                )
+                context,
+                subscriptionId: subscriptionId,
+                parent: group.name,
+                group: member,
+              )
             : () => unawaited(choose(member)),
       );
     }
@@ -647,54 +670,59 @@ class _GroupPickSheet extends ConsumerWidget {
                     if (others.isNotEmpty && nodes.isNotEmpty)
                       const SizedBox(height: 12),
                     if (nodes.isNotEmpty)
-                      LayoutBuilder(builder: (context, box) {
-                        final columns = ServerRow.fittingColumns(
-                          box.maxWidth + ServerRow.listSideInset * 2,
-                          MediaQuery.textScalerOf(context),
-                          2,
-                        );
-                        final height = columns > 1
-                            ? ServerRow.cardHeight(context)
-                            : ServerRow.height;
-                        return Wrap(
-                          children: [
-                            for (var i = 0; i < nodes.length; i++)
-                              SizedBox(
-                                width: box.maxWidth / columns,
-                                height: height,
-                                child: Padding(
-                                  padding: ExpressiveListSegment.segmentMargin(
-                                    index: i,
-                                    columns: columns,
-                                  ).resolve(direction),
-                                  child: ExpressiveListSegment(
-                                    radius: ExpressiveListSegment.segmentRadius(
-                                      index: i,
-                                      count: nodes.length,
-                                      columns: columns,
-                                    ).resolve(direction),
-                                    selected: nodes[i] == now,
-                                    color: scheme.surfaceContainerHigh,
-                                    selectedColor: scheme.secondaryContainer,
-                                    onTap: () => chooseNode(nodes[i]),
-                                    child: ServerRow(
-                                      server: byNode[nodes[i]]!,
-                                      pingMs: byNode[nodes[i]]!.pingMs,
-                                      lastTestedAt: byNode[nodes[i]]!.lastTestedAt,
-                                      layout: columns > 1
-                                          ? ServerRowLayout.card
-                                          : ServerRowLayout.inline,
-                                      emphasizeTitle: nodes[i] == now,
-                                      foreground: nodes[i] == now
-                                          ? scheme.onSecondaryContainer
-                                          : null,
+                      LayoutBuilder(
+                        builder: (context, box) {
+                          final columns = ServerRow.fittingColumns(
+                            box.maxWidth + ServerRow.listSideInset * 2,
+                            MediaQuery.textScalerOf(context),
+                            2,
+                          );
+                          final height = columns > 1
+                              ? ServerRow.cardHeight(context)
+                              : ServerRow.height;
+                          return Wrap(
+                            children: [
+                              for (var i = 0; i < nodes.length; i++)
+                                SizedBox(
+                                  width: box.maxWidth / columns,
+                                  height: height,
+                                  child: Padding(
+                                    padding:
+                                        ExpressiveListSegment.segmentMargin(
+                                          index: i,
+                                          columns: columns,
+                                        ).resolve(direction),
+                                    child: ExpressiveListSegment(
+                                      radius:
+                                          ExpressiveListSegment.segmentRadius(
+                                            index: i,
+                                            count: nodes.length,
+                                            columns: columns,
+                                          ).resolve(direction),
+                                      selected: nodes[i] == now,
+                                      color: scheme.surfaceContainerHigh,
+                                      selectedColor: scheme.secondaryContainer,
+                                      onTap: () => chooseNode(nodes[i]),
+                                      child: ServerRow(
+                                        server: byNode[nodes[i]]!,
+                                        pingMs: byNode[nodes[i]]!.pingMs,
+                                        lastTestedAt:
+                                            byNode[nodes[i]]!.lastTestedAt,
+                                        layout: columns > 1
+                                            ? ServerRowLayout.card
+                                            : ServerRowLayout.inline,
+                                        emphasizeTitle: nodes[i] == now,
+                                        foreground: nodes[i] == now
+                                            ? scheme.onSecondaryContainer
+                                            : null,
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                          ],
-                        );
-                      }),
+                            ],
+                          );
+                        },
+                      ),
                   ],
                 ),
               ),
@@ -713,16 +741,18 @@ void _showGroupServersSheet(
   required String group,
 }) {
   AppHaptics.selection();
-  unawaited(showModalBottomSheet<void>(
-    context: context,
-    showDragHandle: true,
-    isScrollControlled: true,
-    builder: (_) => _GroupServersSheet(
-      subscriptionId: subscriptionId,
-      parent: parent,
-      group: group,
+  unawaited(
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (_) => _GroupServersSheet(
+        subscriptionId: subscriptionId,
+        parent: parent,
+        group: group,
+      ),
     ),
-  ));
+  );
 }
 
 // узлы url-test или fallback: самый быстрый сам или закреплённый руками
@@ -745,17 +775,23 @@ class _GroupServersSheet extends ConsumerWidget {
     if (template == null || state == null) return const SizedBox.shrink();
     final delays =
         ref.watch(liveTemplateDelaysProvider(subscriptionId)).value ?? const {};
-    final servers = ref.watch(serversProvider.select((s) => [
+    final servers = ref.watch(
+      serversProvider.select(
+        (s) => [
           for (final server in s.servers)
             if (server.subscriptionId == subscriptionId) server,
-        ]));
+        ],
+      ),
+    );
     final byNode = _serversByNode(template, servers);
     final textTheme = Theme.of(context).textTheme;
     final scheme = Theme.of(context).colorScheme;
     final l10n = context.l10n;
     final pinned = state.fixed;
     final now = state.now;
-    final members = [...{...state.all}];
+    final members = [
+      ...{...state.all},
+    ];
     final order = {for (var i = 0; i < members.length; i++) members[i]: i};
     // без замера в конце, порядок ядра внутри одинаковых
     members.sort((a, b) {
@@ -783,11 +819,13 @@ class _GroupServersSheet extends ConsumerWidget {
       final ms = delays[member];
       return Text(
         ltrIsolate(ms == null ? '—' : '$ms ms'),
-        style: textTheme.emphasized(textTheme.labelMedium)?.copyWith(
-          color: ms == null
-              ? AppTheme.textLight(context)
-              : pingQualityColor(context, ms, PingType.url),
-        ),
+        style: textTheme
+            .emphasized(textTheme.labelMedium)
+            ?.copyWith(
+              color: ms == null
+                  ? AppTheme.textLight(context)
+                  : pingQualityColor(context, ms, PingType.url),
+            ),
       );
     }
 

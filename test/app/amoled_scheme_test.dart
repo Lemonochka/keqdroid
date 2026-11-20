@@ -3,9 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/app/app.dart';
 
 ColorScheme _scheme(Brightness brightness) => ColorScheme.fromSeed(
-      seedColor: const Color(0xFF6750A4),
-      brightness: brightness,
-    );
+  seedColor: const Color(0xFF6750A4),
+  brightness: brightness,
+);
 
 void main() {
   test('светлую схему не трогаем', () {
@@ -31,7 +31,8 @@ void main() {
     expect(amoled.surfaceContainerHighest, base.surfaceContainerHighest);
 
     double gap(ColorScheme s) =>
-        s.surfaceContainerHigh.computeLuminance() - s.surface.computeLuminance();
+        s.surfaceContainerHigh.computeLuminance() -
+        s.surface.computeLuminance();
     expect(gap(amoled), greaterThan(gap(base)));
   });
 

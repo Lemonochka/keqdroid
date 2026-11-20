@@ -10,12 +10,18 @@ import 'package:keqdroid/services/prefs_recovery.dart';
 void main() {
   late Directory dir;
 
-  File prefs() => File('${dir.path}${Platform.pathSeparator}'
-      'shared_preferences.json');
-  File backup() => File('${dir.path}${Platform.pathSeparator}'
-      'shared_preferences.backup.json');
-  File corrupt() => File('${dir.path}${Platform.pathSeparator}'
-      'shared_preferences.corrupt.json');
+  File prefs() => File(
+    '${dir.path}${Platform.pathSeparator}'
+    'shared_preferences.json',
+  );
+  File backup() => File(
+    '${dir.path}${Platform.pathSeparator}'
+    'shared_preferences.backup.json',
+  );
+  File corrupt() => File(
+    '${dir.path}${Platform.pathSeparator}'
+    'shared_preferences.corrupt.json',
+  );
 
   const goodJson = '{"flutter.keqdis_settings":"{}"}';
   const otherJson = '{"flutter.keqdis_servers_v2":"[]"}';
@@ -90,14 +96,17 @@ void main() {
     expect(prefs().existsSync(), isFalse);
   });
 
-  test('файла нет — бэкап не поднимаем: это первый запуск или сброс руками', () {
-    backup().writeAsStringSync(goodJson);
+  test(
+    'файла нет — бэкап не поднимаем: это первый запуск или сброс руками',
+    () {
+      backup().writeAsStringSync(goodJson);
 
-    PrefsRecovery.repairIn(dir);
+      PrefsRecovery.repairIn(dir);
 
-    expect(prefs().existsSync(), isFalse);
-    expect(backup().readAsStringSync(), goodJson);
-  });
+      expect(prefs().existsSync(), isFalse);
+      expect(backup().readAsStringSync(), goodJson);
+    },
+  );
 
   test('бэкап снимается через временный файл и не оставляет его рядом', () {
     prefs().writeAsStringSync(goodJson);

@@ -30,7 +30,10 @@ Future<({bool expanded, double contentWidth})> _probe(
       ),
     ),
   );
-  return (expanded: expanded, contentWidth: tester.getSize(find.byKey(key)).width);
+  return (
+    expanded: expanded,
+    contentWidth: tester.getSize(find.byKey(key)).width,
+  );
 }
 
 void main() {

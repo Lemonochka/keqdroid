@@ -70,10 +70,9 @@ class EphemeralXrayPing {
     VpnBackend core,
     String configPath,
     String sessionDirPath,
-  ) =>
-      core == VpnBackend.mihomo
-          ? ['-d', sessionDirPath, '-f', configPath]
-          : ['run', '-c', configPath];
+  ) => core == VpnBackend.mihomo
+      ? ['-d', sessionDirPath, '-f', configPath]
+      : ['run', '-c', configPath];
 
   static String _coreConfig(String configJson, int port, VpnBackend core) {
     if (core == VpnBackend.mihomo) return _mihomoConfig(configJson, port);
@@ -107,8 +106,9 @@ class EphemeralXrayPing {
     return WindowsCorePaths.sessionDir();
   }
 
-  static String get _binariesHint =>
-      Platform.isLinux ? LinuxCorePaths.binariesHint : WindowsCorePaths.binariesHint;
+  static String get _binariesHint => Platform.isLinux
+      ? LinuxCorePaths.binariesHint
+      : WindowsCorePaths.binariesHint;
 
   static Future<void> _attachCoreProcess(int pid) async {
     if (Platform.isWindows) {
@@ -132,8 +132,7 @@ class EphemeralXrayPing {
     }
   }
 
-  static Future<
-      UrlTestResult> urlTest({
+  static Future<UrlTestResult> urlTest({
     required String xrayConfigJson,
     required int socksPort,
     required String testUrl,
@@ -149,9 +148,7 @@ class EphemeralXrayPing {
     );
   }
 
-  static Future<
-      List<
-          ServerUrlTestResult>> urlTestBatch({
+  static Future<List<ServerUrlTestResult>> urlTestBatch({
     required List<({String id, String xrayConfigJson})> items,
     required int socksPort,
     required String testUrl,
@@ -184,9 +181,7 @@ class EphemeralXrayPing {
 
   // если ядро не поднялось, возвращаем null, и по нему PingService делит пачку пополам; список отказов той же
   // длины он принял бы за ответ, и живые соседи негодного сервера ушли бы в красные
-  static Future<
-      List<
-          ServerUrlTestResult>?> urlTestMulti({
+  static Future<List<ServerUrlTestResult>?> urlTestMulti({
     required String configJson,
     required List<(String id, int port)> probes,
     required String testUrl,
@@ -194,10 +189,7 @@ class EphemeralXrayPing {
     VpnBackend core = VpnBackend.xray,
     bool keepAlive = true,
     int concurrency = 16,
-    void Function(
-      ServerUrlTestResult
-          item,
-    )? onEach,
+    void Function(ServerUrlTestResult item)? onEach,
   }) async {
     if (probes.isEmpty) return const [];
     if (!Platform.isWindows && !Platform.isLinux) return null;
@@ -207,12 +199,20 @@ class EphemeralXrayPing {
       final error = '${core.wireValue} not found. $_binariesHint';
       return [
         for (final (id, _) in probes)
-          (id: id, success: false, latencyMs: null, error: error, httpStatus: null),
+          (
+            id: id,
+            success: false,
+            latencyMs: null,
+            error: error,
+            httpStatus: null,
+          ),
       ];
     }
 
     final sessionDir = await _sessionDir();
-    final configFile = File(p.join(sessionDir.path, '${core.wireValue}_ping_multi.json'));
+    final configFile = File(
+      p.join(sessionDir.path, '${core.wireValue}_ping_multi.json'),
+    );
     Process? process;
     try {
       await configFile.writeAsString(configJson);
@@ -240,13 +240,20 @@ class EphemeralXrayPing {
         // живое ядро без единого порта медленное, а не придирчивое: деление пополам
         // стоило бы по сроку старта на каждую половину. mihomo с занятым портом не выходит,
         // но остальные его порты открыты, и такую пачку делим
-        final slowCore = startup.exitCode == null &&
+        final slowCore =
+            startup.exitCode == null &&
             i == 0 &&
             !await _anyPortOpen([for (final probe in probes.skip(1)) probe.$2]);
         if (slowCore) {
           return [
             for (final (id, _) in probes)
-              (id: id, success: false, latencyMs: null, error: error, httpStatus: null),
+              (
+                id: id,
+                success: false,
+                latencyMs: null,
+                error: error,
+                httpStatus: null,
+              ),
           ];
         }
         AppLogger.instance.debug(
@@ -315,8 +322,7 @@ class EphemeralXrayPing {
     return false;
   }
 
-  static Future<
-      List<ServerSpeedTestResult>> speedTestBatch({
+  static Future<List<ServerSpeedTestResult>> speedTestBatch({
     required List<({String id, String xrayConfigJson})> items,
     required int socksPort,
     required String downloadUrl,
@@ -353,11 +359,9 @@ class EphemeralXrayPing {
   static bool retryProbeWhileCoreWakesUp({
     required VpnBackend core,
     required Duration sinceCoreStart,
-  }) =>
-      core == VpnBackend.mihomo && sinceCoreStart < coreWakeupGrace;
+  }) => core == VpnBackend.mihomo && sinceCoreStart < coreWakeupGrace;
 
-  static Future<
-      UrlTestResult> _runSingle({
+  static Future<UrlTestResult> _runSingle({
     required String xrayConfigJson,
     required int socksPort,
     required String testUrl,
@@ -471,7 +475,11 @@ class EphemeralXrayPing {
     VpnBackend core = VpnBackend.xray,
   }) async {
     if (!Platform.isWindows && !Platform.isLinux) {
-      return (success: false, kbps: null, error: 'Speed test runs on desktop only');
+      return (
+        success: false,
+        kbps: null,
+        error: 'Speed test runs on desktop only',
+      );
     }
 
     final coreBin = await _resolveCore(core);
@@ -485,14 +493,17 @@ class EphemeralXrayPing {
 
     final sessionDir = await _sessionDir();
     final configFile = File(
-      p.join(sessionDir.path,
-          '${core.wireValue}_speed_${DateTime.now().microsecondsSinceEpoch}.json'),
+      p.join(
+        sessionDir.path,
+        '${core.wireValue}_speed_${DateTime.now().microsecondsSinceEpoch}.json',
+      ),
     );
     Process? process;
 
     try {
-      await configFile
-          .writeAsString(_coreConfig(xrayConfigJson, socksPort, core));
+      await configFile.writeAsString(
+        _coreConfig(xrayConfigJson, socksPort, core),
+      );
       process = await Process.start(
         coreBin,
         _coreArgs(core, configFile.path, sessionDir.path),
@@ -544,17 +555,23 @@ class EphemeralXrayPing {
       // dart:io HttpClient умеет только PROXY и DIRECT, поэтому у ядра замера HTTP-инбаунд
       client.findProxy = (_) => 'PROXY 127.0.0.1:$socksPort';
       // сертификат проверяем: иначе MITM нарисует успешный замер мёртвому серверу
-      client.connectionTimeout = Duration(milliseconds: timeoutMs.clamp(1000, 8000));
+      client.connectionTimeout = Duration(
+        milliseconds: timeoutMs.clamp(1000, 8000),
+      );
 
       final request = await client.getUrl(Uri.parse(_ensureHttps(downloadUrl)));
       request.headers.set('User-Agent', 'KEQDIS/1.0');
       final response = await request.close().timeout(
-            Duration(milliseconds: timeoutMs.clamp(2000, 30000)),
-          );
+        Duration(milliseconds: timeoutMs.clamp(2000, 30000)),
+      );
 
       if (response.statusCode < 200 || response.statusCode >= 400) {
         await response.drain<void>();
-        return (success: false, kbps: null, error: 'HTTP ${response.statusCode}');
+        return (
+          success: false,
+          kbps: null,
+          error: 'HTTP ${response.statusCode}',
+        );
       }
 
       final sw = Stopwatch()..start();
@@ -582,8 +599,7 @@ class EphemeralXrayPing {
   }
 
   @visibleForTesting
-  static Future<
-      UrlTestResult> httpProbeViaSocks({
+  static Future<UrlTestResult> httpProbeViaSocks({
     required String testUrl,
     required int socksPort,
     required int timeoutMs,
@@ -734,8 +750,8 @@ class EphemeralXrayPing {
 
   static String _startupError(int? exitCode, int port, _CoreLog log) =>
       exitCode != null
-          ? 'Core exited with code $exitCode before opening port $port${log.tail}'
-          : 'Core did not open port $port in time${log.tail}';
+      ? 'Core exited with code $exitCode before opening port $port${log.tail}'
+      : 'Core did not open port $port in time${log.tail}';
 
   static Future<void> _killProcess(Process? process) async {
     if (process == null) return;
@@ -811,12 +827,14 @@ class _HttpResponseReader {
     for (final line in lines.skip(1)) {
       final i = line.indexOf(':');
       if (i > 0) {
-        headers[line.substring(0, i).trim().toLowerCase()] =
-            line.substring(i + 1).trim();
+        headers[line.substring(0, i).trim().toLowerCase()] = line
+            .substring(i + 1)
+            .trim();
       }
     }
-    final closing =
-        (headers['connection'] ?? '').toLowerCase().contains('close');
+    final closing = (headers['connection'] ?? '').toLowerCase().contains(
+      'close',
+    );
 
     if (status >= 100 && status < 200) {
       return readResponse(deadline, headOnly: headOnly);
@@ -825,8 +843,9 @@ class _HttpResponseReader {
       return (status: status, closing: closing);
     }
 
-    final chunked =
-        (headers['transfer-encoding'] ?? '').toLowerCase().contains('chunked');
+    final chunked = (headers['transfer-encoding'] ?? '').toLowerCase().contains(
+      'chunked',
+    );
     if (chunked) {
       await _drainChunked(deadline);
     } else {

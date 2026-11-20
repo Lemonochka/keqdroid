@@ -120,7 +120,7 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
 
   @override
   Future<({String username, String password})?>
-      fetchActiveSocksCredentials() async => null;
+  fetchActiveSocksCredentials() async => null;
 
   @override
   Future<({String username, String password})> fetchSocksCredentials() async {
@@ -195,7 +195,11 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
       _watchProcessExit(_mihomoProcess, 'mihomo');
       _watchProcessExit(_xrayProcess, 'xray');
     } catch (e, st) {
-      AppLogger.instance.error('Windows tunnel start failed', error: e, stackTrace: st);
+      AppLogger.instance.error(
+        'Windows tunnel start failed',
+        error: e,
+        stackTrace: st,
+      );
       await _cleanupForRestart();
       emit(
         VpnState(
@@ -230,19 +234,23 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
     final xrayLog = XraySessionLog.raise(request.xrayConfig);
     _xrayLogThreshold = xrayLog.threshold;
     final configFile = File('${_sessionDir!.path}/xray.json');
-    await configFile.writeAsString(withXrayDesktopSession(
-      xrayLog.config,
-      metricsPort: metricsPort,
-      processLog: !isTun && request.debugMode,
-      tunName: isTun ? tunName : null,
-    ));
+    await configFile.writeAsString(
+      withXrayDesktopSession(
+        xrayLog.config,
+        metricsPort: metricsPort,
+        processLog: !isTun && request.debugMode,
+        tunName: isTun ? tunName : null,
+      ),
+    );
     _xrayMetricsPort = metricsPort;
     _xrayStarted = false;
 
     if (_viaService && isTun) {
       _xrayProcess = await WindowsTunService.startCore(
         kind: 'xray',
-        config: WindowsTunService.xrayForService(await configFile.readAsString()),
+        config: WindowsTunService.xrayForService(
+          await configFile.readAsString(),
+        ),
         geoDir: await WindowsCorePaths.geoAssetDir(),
         adapterIds: ourWintunInstanceIds(),
       );
@@ -418,7 +426,9 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
       final port = api.port;
       final state = mihomoTunState(
         coreOutput: log.toString(),
-        configs: port == null ? null : await fetchMihomoConfigs(port, api.secret),
+        configs: port == null
+            ? null
+            : await fetchMihomoConfigs(port, api.secret),
       );
       if (state != MihomoTunState.pending) return state == MihomoTunState.up;
       await Future<void>.delayed(const Duration(milliseconds: 300));
@@ -454,7 +464,9 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
         ourWintunInstanceIds(),
       );
       if (removed.isNotEmpty) {
-        AppLogger.instance.info('Removed stale TUN adapters: ${removed.join(', ')}');
+        AppLogger.instance.info(
+          'Removed stale TUN adapters: ${removed.join(', ')}',
+        );
       }
     }
     await _ensurePortsAvailable(request);
@@ -462,8 +474,10 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
 
   // HTTP-инбаунд ядро поднимает всегда, занятый HTTP-порт роняет его целиком
   Future<void> _ensurePortsAvailable(TunnelSessionRequest request) async {
-    final socksIssue =
-        await LocalPortResolver.probe('127.0.0.1', request.socksPort);
+    final socksIssue = await LocalPortResolver.probe(
+      '127.0.0.1',
+      request.socksPort,
+    );
     if (socksIssue != null) {
       throw VpnStartException(
         localPortBlockedMessage(
@@ -473,8 +487,10 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
         ),
       );
     }
-    final httpIssue =
-        await LocalPortResolver.probe('127.0.0.1', request.httpPort);
+    final httpIssue = await LocalPortResolver.probe(
+      '127.0.0.1',
+      request.httpPort,
+    );
     if (httpIssue != null) {
       throw VpnStartException(
         localPortBlockedMessage(
@@ -493,16 +509,14 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
     // до вызова: наполовину применённый прокси тоже надо снять
     _systemProxyApplied = true;
     try {
-      final proxyResult = await _method.invokeMethod<Map<Object?, Object?>>(
-        'setSystemProxy',
-        {
-          'enabled': true,
-          'host': '127.0.0.1',
-          'socksPort': request.socksPort,
-          'httpPort': request.httpPort,
-          'probe': false,
-        },
-      );
+      final proxyResult = await _method
+          .invokeMethod<Map<Object?, Object?>>('setSystemProxy', {
+            'enabled': true,
+            'host': '127.0.0.1',
+            'socksPort': request.socksPort,
+            'httpPort': request.httpPort,
+            'probe': false,
+          });
       final registryEnabled = proxyResult?['registryEnabled'] == true;
       final registryServer = proxyResult?['registryServer']?.toString() ?? '';
       final logFile = proxyResult?['logFile']?.toString() ?? '';
@@ -541,34 +555,38 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
 
   void _watchProcessExit(Process? process, String label) {
     if (process == null) return;
-    unawaited(process.exitCode.then((code) async {
-      if (_stoppingSession) return;
-      if (!identical(process, _mihomoProcess) &&
-          !identical(process, _xrayProcess)) {
-        return;
-      }
-      // хвост до teardown: голый exit code ничего не говорит, а после остановки логов уже нет
-      final details = _sessionLogTail();
-      // причину ищем во всём выводе: настоящая ошибка часто выше десятка строк агонии ядра
-      final hint = tunFailureHint(exportSessionLogs(), windows: true);
-      AppLogger.instance.error(
-        '$label exited unexpectedly with code $code; tearing the session down'
-        '${hint == null ? '' : '\n${hint.message}'}'
-        '${details.isEmpty ? '' : '\n$details'}',
-      );
-      try {
-        await stopSession();
-      } catch (e) {
-        AppLogger.instance.warn('Teardown after core exit failed', error: e);
-      }
-      emit(VpnState(
-        status: VpnStatus.error,
-        errorMessage:
-            '$label stopped unexpectedly (exit code $code). Disconnected.'
-            '${hint == null ? '' : '\n${hint.message}'}'
-            '${details.isEmpty ? '' : '\n$details'}',
-      ));
-    }));
+    unawaited(
+      process.exitCode.then((code) async {
+        if (_stoppingSession) return;
+        if (!identical(process, _mihomoProcess) &&
+            !identical(process, _xrayProcess)) {
+          return;
+        }
+        // хвост до teardown: голый exit code ничего не говорит, а после остановки логов уже нет
+        final details = _sessionLogTail();
+        // причину ищем во всём выводе: настоящая ошибка часто выше десятка строк агонии ядра
+        final hint = tunFailureHint(exportSessionLogs(), windows: true);
+        AppLogger.instance.error(
+          '$label exited unexpectedly with code $code; tearing the session down'
+          '${hint == null ? '' : '\n${hint.message}'}'
+          '${details.isEmpty ? '' : '\n$details'}',
+        );
+        try {
+          await stopSession();
+        } catch (e) {
+          AppLogger.instance.warn('Teardown after core exit failed', error: e);
+        }
+        emit(
+          VpnState(
+            status: VpnStatus.error,
+            errorMessage:
+                '$label stopped unexpectedly (exit code $code). Disconnected.'
+                '${hint == null ? '' : '\n${hint.message}'}'
+                '${details.isEmpty ? '' : '\n$details'}',
+          ),
+        );
+      }),
+    );
   }
 
   @override
@@ -586,7 +604,11 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
         request.mode != _activeMode) {
       return false;
     }
-    if (!await putMihomoConfig(port: port, secret: api.secret, config: config)) {
+    if (!await putMihomoConfig(
+      port: port,
+      secret: api.secret,
+      config: config,
+    )) {
       return false;
     }
     // сбор диагностики кладёт в отчёт этот файл
@@ -721,15 +743,17 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
         'listProcesses',
         <String, dynamic>{'includeSystem': includeSystem},
       );
-      return result
-              ?.map((e) => Map<String, dynamic>.from(e as Map))
-              .toList() ??
+      return result?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ??
           [];
     } on PlatformException catch (e) {
       AppLogger.instance.warn('listProcesses failed: ${e.message}');
       return [];
     } catch (e, st) {
-      AppLogger.instance.error('listProcesses failed', error: e, stackTrace: st);
+      AppLogger.instance.error(
+        'listProcesses failed',
+        error: e,
+        stackTrace: st,
+      );
       return [];
     }
   }
@@ -753,12 +777,7 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
   }
 
   @override
-  Future<
-    List<
-      ServerUrlTestResult
-    >?
-  >
-  xrayUrlTestMulti({
+  Future<List<ServerUrlTestResult>?> xrayUrlTestMulti({
     required String config,
     required List<(String id, int port)> probes,
     VpnBackend core = VpnBackend.xray,
@@ -767,21 +786,19 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
     bool keepAlive = true,
     int concurrency = 16,
     UrlTestProgress? onEach,
-  }) =>
-      EphemeralXrayPing.urlTestMulti(
-        configJson: config,
-        probes: probes,
-        core: core,
-        testUrl: testUrl,
-        timeoutMs: timeoutMs,
-        keepAlive: keepAlive,
-        concurrency: concurrency,
-        onEach: onEach,
-      );
+  }) => EphemeralXrayPing.urlTestMulti(
+    configJson: config,
+    probes: probes,
+    core: core,
+    testUrl: testUrl,
+    timeoutMs: timeoutMs,
+    keepAlive: keepAlive,
+    concurrency: concurrency,
+    onEach: onEach,
+  );
 
   @override
-  Future<
-      List<ServerUrlTestResult>> xrayUrlTestBatch({
+  Future<List<ServerUrlTestResult>> xrayUrlTestBatch({
     required List<(String id, String xrayConfig)> items,
     required int socksPort,
     VpnBackend core = VpnBackend.xray,
@@ -791,9 +808,7 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
   }) async {
     if (items.isEmpty) return [];
     final raw = await EphemeralXrayPing.urlTestBatch(
-      items: items
-          .map((e) => (id: e.$1, xrayConfigJson: e.$2))
-          .toList(),
+      items: items.map((e) => (id: e.$1, xrayConfigJson: e.$2)).toList(),
       socksPort: socksPort,
       core: core,
       testUrl: testUrl,
@@ -814,8 +829,7 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
   }
 
   @override
-  Future<
-      List<ServerSpeedTestResult>> xraySpeedTestBatch({
+  Future<List<ServerSpeedTestResult>> xraySpeedTestBatch({
     required List<(String id, String xrayConfig)> items,
     required int socksPort,
     VpnBackend core = VpnBackend.xray,
@@ -833,9 +847,9 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
   }
 
   static Map<String, String> _coreProcessEnvironment(String? geoDir) => {
-        'XRAY_LOCATION_ASSET': ?geoDir,
-        kXrayStopOnStdinEof: '1',
-      };
+    'XRAY_LOCATION_ASSET': ?geoDir,
+    kXrayStopOnStdinEof: '1',
+  };
 
   Future<void> _pipeProcessOutput(
     Process process,
@@ -938,7 +952,8 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
   String _tunStartError(StringBuffer log, {String core = 'xray.exe'}) {
     final text = log.toString();
     return tunStartFailureMessage(
-      fallback: 'The TUN tunnel did not start. Run the app as Administrator '
+      fallback:
+          'The TUN tunnel did not start. Run the app as Administrator '
           'and make sure wintun.dll sits next to $core.',
       coreOutput: text,
       windows: true,
@@ -1019,7 +1034,10 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
   }
 
   String _tail(StringBuffer buffer, {int maxLines = 12}) {
-    final lines = buffer.toString().split('\n').where((l) => l.trim().isNotEmpty);
+    final lines = buffer
+        .toString()
+        .split('\n')
+        .where((l) => l.trim().isNotEmpty);
     final tail = lines.length > maxLines
         ? lines.skip(lines.length - maxLines)
         : lines;
@@ -1032,14 +1050,12 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
     if (!_stateCtrl.isClosed) _stateCtrl.add(state);
   }
 
-
-
-
   @override
-
-
   @override
-  Future<void> pollTrafficStats(ConnectionMode mode, {bool force = false}) async {
+  Future<void> pollTrafficStats(
+    ConnectionMode mode, {
+    bool force = false,
+  }) async {
     if (!statsPollingEnabled && !force) return;
     if (_xrayProcess == null && _mihomoProcess == null) return;
     try {
@@ -1093,10 +1109,10 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
         return;
       }
 
-      final deltaIn =
-          inOctets >= prevInOctets ? inOctets - prevInOctets : 0;
-      final deltaOut =
-          outOctets >= prevOutOctets ? outOctets - prevOutOctets : 0;
+      final deltaIn = inOctets >= prevInOctets ? inOctets - prevInOctets : 0;
+      final deltaOut = outOctets >= prevOutOctets
+          ? outOctets - prevOutOctets
+          : 0;
       prevInOctets = inOctets;
       prevOutOctets = outOctets;
       totalDownload += deltaIn;
@@ -1114,16 +1130,12 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
     }
   }
 
-
-
-
-
-
-
   Future<void> _logProxyProbesInBackground(int httpPort) async {
     try {
       final localProbe = await _probeLocalHttpProxy(httpPort);
-      await _proxyDebugLogViaChannel('Background local HTTP probe: $localProbe');
+      await _proxyDebugLogViaChannel(
+        'Background local HTTP probe: $localProbe',
+      );
       final result = await _method.invokeMethod<Map<Object?, Object?>>(
         'testSystemProxyHttp',
       );
@@ -1180,9 +1192,7 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
     try {
       final path = await DebugLogService.getProxyDebugLogPath();
       final logs = await DebugLogService.getProxyDebugLogs(maxLines: 200);
-      AppLogger.instance.error(
-        'Proxy debug ($reason)\nFile: $path\n$logs',
-      );
+      AppLogger.instance.error('Proxy debug ($reason)\nFile: $path\n$logs');
     } catch (e) {
       AppLogger.instance.warn('Proxy debug logs unavailable: $e');
     }

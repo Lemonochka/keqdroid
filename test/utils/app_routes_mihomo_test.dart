@@ -37,16 +37,15 @@ TrafficRoute _route(
   RouteTarget target = RouteTarget.vpn,
   String serverId = '',
   bool enabled = true,
-}) =>
-    TrafficRoute(
-      id: id,
-      apps: apps,
-      content: content,
-      sites: sites,
-      target: target,
-      serverId: serverId,
-      enabled: enabled,
-    );
+}) => TrafficRoute(
+  id: id,
+  apps: apps,
+  content: content,
+  sites: sites,
+  target: target,
+  serverId: serverId,
+  enabled: enabled,
+);
 
 /// Конфиг сессии так, как его собирает подключение: выходы серверов и
 /// маршруты приложений из одних и тех же маршрутов.
@@ -96,18 +95,17 @@ String _go(
   String resolvesTo = '',
   String? path,
   String inType = 'TUN',
-}) =>
-    simulateMihomo(
-      config,
-      SimConn(
-        process: process,
-        path: path,
-        host: host,
-        ip: ip,
-        resolvesTo: resolvesTo,
-        inType: inType,
-      ),
-    );
+}) => simulateMihomo(
+  config,
+  SimConn(
+    process: process,
+    path: path,
+    host: host,
+    ip: ip,
+    resolvesTo: resolvesTo,
+    inType: inType,
+  ),
+);
 
 List<String> _rules(Map<String, dynamic> c) =>
     (c['rules'] as List).cast<String>();
@@ -149,10 +147,10 @@ void main() {
     final c = _config(routes);
     expect(unknownMihomoTargets(c), isEmpty);
     expect(c['find-process-mode'], 'strict');
-    expect(
-      (c['proxies'] as List).map((p) => p['name']),
-      [MihomoConfigGen.proxyName, 'keq-srv-0'],
-    );
+    expect((c['proxies'] as List).map((p) => p['name']), [
+      MihomoConfigGen.proxyName,
+      'keq-srv-0',
+    ]);
   });
 
   test('сайты приложения раньше его «весь трафик»', () {
@@ -215,7 +213,10 @@ void main() {
   test('вход не из туннеля маршруты приложений не трогают', () {
     final c = _config(routes);
     expect(_go(c, 'chrome.exe', host: 'youtube.com', inType: 'HTTP'), 'proxy');
-    expect(_go(c, 'keqdroid.exe', host: 'example.com', inType: 'HTTP'), 'proxy');
+    expect(
+      _go(c, 'keqdroid.exe', host: 'example.com', inType: 'HTTP'),
+      'proxy',
+    );
   });
 
   test('выключенный маршрут и маршрут без приложений не участвуют', () {
@@ -262,10 +263,10 @@ void main() {
 
   test('сервер только у маршрута приложения тоже получает выход', () {
     final c = _config([discordAll]);
-    expect(
-      (c['proxies'] as List).map((p) => p['name']),
-      [MihomoConfigGen.proxyName, 'keq-srv-0'],
-    );
+    expect((c['proxies'] as List).map((p) => p['name']), [
+      MihomoConfigGen.proxyName,
+      'keq-srv-0',
+    ]);
     // Сайтов у выхода нет: «весь трафик» Discord не достаётся всем.
     expect(_go(c, 'chrome.exe', host: 'discord.com'), 'proxy');
   });
@@ -321,8 +322,12 @@ void main() {
     test('по домену — после всех доменов, с резолвом', () {
       final c = _config([telegram]);
       expect(
-        _go(c, 'Telegram.exe',
-            host: 'api.example', resolvesTo: '149.154.167.51'),
+        _go(
+          c,
+          'Telegram.exe',
+          host: 'api.example',
+          resolvesTo: '149.154.167.51',
+        ),
         'keq-srv-0',
       );
       // Домен из общего списка решает раньше адреса маршрута.
@@ -346,8 +351,12 @@ void main() {
       );
       expect((c['sub-rules'] as Map).keys, ['keq-app-0']);
       expect(
-        _go(c, 'Telegram.exe',
-            host: 'api.example', resolvesTo: '149.154.167.51'),
+        _go(
+          c,
+          'Telegram.exe',
+          host: 'api.example',
+          resolvesTo: '149.154.167.51',
+        ),
         'keq-srv-0',
       );
     });
@@ -411,14 +420,20 @@ void main() {
       final c = android([telegramAll, chromeYoutube]);
       expect(unknownMihomoTargets(c), isEmpty);
       expect(c['find-process-mode'], 'strict');
-      expect(_go(c, 'org.telegram.messenger', host: 'telegram.org'),
-          'keq-srv-0');
+      expect(
+        _go(c, 'org.telegram.messenger', host: 'telegram.org'),
+        'keq-srv-0',
+      );
       expect(_go(c, 'com.android.chrome', host: 'youtube.com'), 'DIRECT');
       expect(_go(c, 'com.android.chrome', host: 'example.com'), 'proxy');
-      expect(_go(c, 'org.telegram.messenger.web', host: 'telegram.org'),
-          'proxy');
-      expect(_go(c, 'org.telegram.messenger', host: 'doubleclick.net'),
-          'REJECT');
+      expect(
+        _go(c, 'org.telegram.messenger.web', host: 'telegram.org'),
+        'proxy',
+      );
+      expect(
+        _go(c, 'org.telegram.messenger', host: 'doubleclick.net'),
+        'REJECT',
+      );
     });
 
     test('сплит исполняет VpnService, его правил в ядре нет', () {

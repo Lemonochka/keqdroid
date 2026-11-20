@@ -109,10 +109,7 @@ class ServerGroupAnchors {
   ({String groupKey, bool collapsed})? placeOfServer(String serverId) {
     final active = _activeServer;
     if (active == null || active.serverId != serverId) return null;
-    return (
-      groupKey: active.groupKey,
-      collapsed: active.offsetInGroup == null,
-    );
+    return (groupKey: active.groupKey, collapsed: active.offsetInGroup == null);
   }
 
   Future<bool> jumpToServer(
@@ -150,7 +147,8 @@ class ServerGroupAnchors {
     if (!position.hasContentDimensions) return false;
 
     final target =
-        (viewport.getOffsetToReveal(render, 0).offset + extraOffset -
+        (viewport.getOffsetToReveal(render, 0).offset +
+                extraOffset -
                 leadingInset)
             .clamp(position.minScrollExtent, position.maxScrollExtent);
     if ((target - position.pixels).abs() < 1) return true;

@@ -41,22 +41,21 @@ class AppInfo {
     String? iconBase64,
     bool? isRunning,
     String? installPath,
-  }) =>
-      AppInfo(
-        packageName: packageName ?? this.packageName,
-        appName: appName ?? this.appName,
-        isSystem: isSystem ?? this.isSystem,
-        iconBase64: iconBase64 ?? this.iconBase64,
-        isRunning: isRunning ?? this.isRunning,
-        installPath: installPath ?? this.installPath,
-      );
+  }) => AppInfo(
+    packageName: packageName ?? this.packageName,
+    appName: appName ?? this.appName,
+    isSystem: isSystem ?? this.isSystem,
+    iconBase64: iconBase64 ?? this.iconBase64,
+    isRunning: isRunning ?? this.isRunning,
+    installPath: installPath ?? this.installPath,
+  );
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-          other is AppInfo &&
-              runtimeType == other.runtimeType &&
-              packageName == other.packageName;
+      other is AppInfo &&
+          runtimeType == other.runtimeType &&
+          packageName == other.packageName;
 
   @override
   int get hashCode => packageName.hashCode;

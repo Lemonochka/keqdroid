@@ -9,13 +9,12 @@ import 'package:keqdroid/utils/socks5_credentials.dart';
 
 // Записи через пробел склеивались в одну, и маршрут не работал целиком; *.домен
 // оба ядра сравнивали буквально (strmatcher у xray, DOMAIN-SUFFIX у mihomo)
-const _vless =
-    'vless://uuid@198.51.100.20:443?type=tcp&security=none#direct';
+const _vless = 'vless://uuid@198.51.100.20:443?type=tcp&security=none#direct';
 
 List<String> _xrayDirectDomains(AppSettings settings) {
-  final config = jsonDecode(
-    ConfigGeneratorV2.generateConfig(_vless, settings),
-  ) as Map<String, dynamic>;
+  final config =
+      jsonDecode(ConfigGeneratorV2.generateConfig(_vless, settings))
+          as Map<String, dynamic>;
   final rules = ((config['routing'] as Map<String, dynamic>)['rules'] as List)
       .cast<Map<String, dynamic>>();
   return (rules.firstWhere((r) => r['ruleTag'] == 'direct-domains')['domain']

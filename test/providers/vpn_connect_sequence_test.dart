@@ -40,8 +40,10 @@ class _RecordingBackend extends FakeTunnelBackend {
   }
 
   /// Что отдаст нативная часть на следующее подключение.
-  ({String username, String password}) creds =
-      (username: 'user-from-native', password: 'pass-from-native');
+  ({String username, String password}) creds = (
+    username: 'user-from-native',
+    password: 'pass-from-native',
+  );
 
   @override
   Future<({String username, String password})> fetchSocksCredentials() async {
@@ -65,7 +67,8 @@ class _RecordingBackend extends FakeTunnelBackend {
 final _server = ServerItem(
   id: 'srv-1',
   type: ServerItemType.manual,
-  config: 'vless://00000000-0000-4000-8000-000000000000@198.51.100.10:443'
+  config:
+      'vless://00000000-0000-4000-8000-000000000000@198.51.100.10:443'
       '?type=tcp&security=none#test',
 );
 
@@ -107,7 +110,8 @@ void main() {
     expect(
       creds,
       lessThan(start),
-      reason: 'креды обязаны быть известны до сборки сессии: '
+      reason:
+          'креды обязаны быть известны до сборки сессии: '
           'иначе в конфиг уедет пустой пароль. ${backend.calls}',
     );
     expect(
@@ -131,29 +135,31 @@ void main() {
     );
   });
 
-  test('в сессию уезжают креды нативной части и конфиг выбранного сервера',
-      () async {
-    final (container, backend) = await _container();
+  test(
+    'в сессию уезжают креды нативной части и конфиг выбранного сервера',
+    () async {
+      final (container, backend) = await _container();
 
-    await container.read(vpnStateProvider.notifier).connect();
+      await container.read(vpnStateProvider.notifier).connect();
 
-    final session = backend.session;
-    expect(session, isNotNull);
-    expect(session!.serverName, _server.displayName);
-    // Конфиг собран генератором, а не проброшен ссылкой как есть.
-    expect(session.xrayConfig, contains('"outbounds"'));
-    expect(session.xrayConfig, contains('198.51.100.10'));
-    // Креды из нативной части обязаны попасть в синглтон, из которого их
-    // читает генератор инбаундов: именно этот пароль закрывает локальный порт
-    // от посторонних на устройстве. Не «где-то в строке конфига» — инбаунд
-    // бывает и без авторизации (её снимает sing-box на десктопном TUN), а вот
-    // разъехаться креды не имеют права никогда.
-    expect(Socks5Credentials().username, 'user-from-native');
-    expect(Socks5Credentials().password, 'pass-from-native');
-    if (session.xrayConfig.contains('"auth": "password"')) {
-      expect(session.xrayConfig, contains('pass-from-native'));
-    }
-  });
+      final session = backend.session;
+      expect(session, isNotNull);
+      expect(session!.serverName, _server.displayName);
+      // Конфиг собран генератором, а не проброшен ссылкой как есть.
+      expect(session.xrayConfig, contains('"outbounds"'));
+      expect(session.xrayConfig, contains('198.51.100.10'));
+      // Креды из нативной части обязаны попасть в синглтон, из которого их
+      // читает генератор инбаундов: именно этот пароль закрывает локальный порт
+      // от посторонних на устройстве. Не «где-то в строке конфига» — инбаунд
+      // бывает и без авторизации (её снимает sing-box на десктопном TUN), а вот
+      // разъехаться креды не имеют права никогда.
+      expect(Socks5Credentials().username, 'user-from-native');
+      expect(Socks5Credentials().password, 'pass-from-native');
+      if (session.xrayConfig.contains('"auth": "password"')) {
+        expect(session.xrayConfig, contains('pass-from-native'));
+      }
+    },
+  );
 
   test('порт и пароль сессии ложатся на диск, пароль — свежий после '
       'переподключения', () async {
@@ -170,12 +176,14 @@ void main() {
     }
 
     await container.read(vpnStateProvider.notifier).connect();
-    await until(() => storage.getActiveLocalHttpCredentials().password.isNotEmpty);
-    expect(storage.getActiveLocalHttpPort(), isNotNull);
-    expect(
-      storage.getActiveLocalHttpCredentials(),
-      (username: 'user-from-native', password: 'pass-from-native'),
+    await until(
+      () => storage.getActiveLocalHttpCredentials().password.isNotEmpty,
     );
+    expect(storage.getActiveLocalHttpPort(), isNotNull);
+    expect(storage.getActiveLocalHttpCredentials(), (
+      username: 'user-from-native',
+      password: 'pass-from-native',
+    ));
 
     backend
       ..current = VpnState.disconnected
@@ -184,10 +192,10 @@ void main() {
     await until(
       () => storage.getActiveLocalHttpCredentials().password == 'pass-2',
     );
-    expect(
-      storage.getActiveLocalHttpCredentials(),
-      (username: 'user-2', password: 'pass-2'),
-    );
+    expect(storage.getActiveLocalHttpCredentials(), (
+      username: 'user-2',
+      password: 'pass-2',
+    ));
   });
 
   test('без выбранного сервера сессия не стартует вовсе', () async {

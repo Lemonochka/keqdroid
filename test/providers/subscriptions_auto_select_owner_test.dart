@@ -33,8 +33,8 @@ Subscription _sub(String id, {bool visible = true, bool auto = false}) =>
     );
 
 Map<String, bool> _auto(List<Subscription> subs) => {
-      for (final s in subs) s.id: s.autoSelect,
-    };
+  for (final s in subs) s.id: s.autoSelect,
+};
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -53,10 +53,7 @@ void main() {
   });
 
   test('ручной выбор сервера гасит «Авто» везде', () async {
-    final (c, storage) = await _seed([
-      _sub('a', auto: true),
-      _sub('b'),
-    ]);
+    final (c, storage) = await _seed([_sub('a', auto: true), _sub('b')]);
     await c.read(subscriptionsProvider.notifier).handAutoSelectTo(null);
 
     const expected = {'a': false, 'b': false};

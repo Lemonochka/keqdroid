@@ -19,36 +19,37 @@ var _skipped = <String>{};
 var _auto = true;
 
 ServerItem _node(int i, int ping) => ServerItem(
-      id: 'n$i',
-      config: 'vless://00000000-0000-0000-0000-000000000000@n$i'
-          '.example.com:443?security=reality&type=tcp#Node%20$i',
-      type: ServerItemType.subscription,
-      subscriptionId: 's1',
-      pingMs: ping,
-      lastTestedAt: DateTime(2026, 11, 2),
-      autoSkip: _skipped.contains('n$i'),
-    );
+  id: 'n$i',
+  config:
+      'vless://00000000-0000-0000-0000-000000000000@n$i'
+      '.example.com:443?security=reality&type=tcp#Node%20$i',
+  type: ServerItemType.subscription,
+  subscriptionId: 's1',
+  pingMs: ping,
+  lastTestedAt: DateTime(2026, 11, 2),
+  autoSkip: _skipped.contains('n$i'),
+);
 
 class _FakeServers extends ServersNotifier {
   @override
   ServersState build() => ServersState(
-        servers: [_node(0, 40), _node(1, 90), _node(2, 60)],
-        activeServerId: 'n0',
-      );
+    servers: [_node(0, 40), _node(1, 90), _node(2, 60)],
+    activeServerId: 'n0',
+  );
 }
 
 class _FakeSubs extends SubscriptionsNotifier {
   @override
   Future<List<Subscription>> build() async => [
-        Subscription(
-          id: 's1',
-          name: 'Group',
-          url: 'https://example.com/s1',
-          serverCount: 3,
-          autoSelectVisible: true,
-          autoSelect: _auto,
-        ),
-      ];
+    Subscription(
+      id: 's1',
+      name: 'Group',
+      url: 'https://example.com/s1',
+      serverCount: 3,
+      autoSelectVisible: true,
+      autoSelect: _auto,
+    ),
+  ];
 }
 
 class _NoHalloween extends HalloweenActiveNotifier {
@@ -83,7 +84,9 @@ Future<void> _pump(WidgetTester tester) async {
     ),
   );
   await _settle(tester);
-  _container = ProviderScope.containerOf(tester.element(find.byType(ServersTab)));
+  _container = ProviderScope.containerOf(
+    tester.element(find.byType(ServersTab)),
+  );
 }
 
 Future<void> _settle(WidgetTester tester) async {
@@ -98,15 +101,18 @@ Future<void> _tapAndSettle(WidgetTester tester, Finder f) async {
   await _settle(tester);
 }
 
-bool _isSkipped(String id) =>
-    _container.read(serversProvider).servers.firstWhere((s) => s.id == id).autoSkip;
+bool _isSkipped(String id) => _container
+    .read(serversProvider)
+    .servers
+    .firstWhere((s) => s.id == id)
+    .autoSkip;
 
 final _badges = find.byIcon(Icons.remove_rounded);
 
 Finder _tile(String name) => find.descendant(
-      of: find.byType(CustomScrollView),
-      matching: find.text(name),
-    );
+  of: find.byType(CustomScrollView),
+  matching: find.text(name),
+);
 
 void main() {
   setUp(() {
@@ -130,30 +136,38 @@ void main() {
       await tester.pump();
     }
 
-    bool autoOn() => _container.read(subscriptionsProvider).value!.single.autoSelect;
+    bool autoOn() =>
+        _container.read(subscriptionsProvider).value!.single.autoSelect;
 
-    testWidgets('удержанный OK включает выделение по отпусканию, Авто не щёлкает',
-        (tester) async {
-      _auto = false;
-      await _pump(tester);
-      await focusAuto(tester);
+    testWidgets(
+      'удержанный OK включает выделение по отпусканию, Авто не щёлкает',
+      (tester) async {
+        _auto = false;
+        await _pump(tester);
+        await focusAuto(tester);
 
-      await tester.sendKeyDownEvent(LogicalKeyboardKey.select);
-      for (var i = 0; i < 8; i++) {
-        await tester.pump(const Duration(milliseconds: 100));
-        await tester.sendKeyRepeatEvent(LogicalKeyboardKey.select);
-      }
-      expect(_container.read(autoSkipPickingProvider), isNull,
-          reason: 'посреди удержания повторы нажали бы то, что встанет на место Авто');
-      await tester.sendKeyUpEvent(LogicalKeyboardKey.select);
-      await _settle(tester);
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.select);
+        for (var i = 0; i < 8; i++) {
+          await tester.pump(const Duration(milliseconds: 100));
+          await tester.sendKeyRepeatEvent(LogicalKeyboardKey.select);
+        }
+        expect(
+          _container.read(autoSkipPickingProvider),
+          isNull,
+          reason:
+              'посреди удержания повторы нажали бы то, что встанет на место Авто',
+        );
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.select);
+        await _settle(tester);
 
-      expect(_container.read(autoSkipPickingProvider), 's1');
-      expect(autoOn(), isFalse);
-    });
+        expect(_container.read(autoSkipPickingProvider), 's1');
+        expect(autoOn(), isFalse);
+      },
+    );
 
-    testWidgets('короткий OK с повторами клавиши щёлкает Авто один раз',
-        (tester) async {
+    testWidgets('короткий OK с повторами клавиши щёлкает Авто один раз', (
+      tester,
+    ) async {
       _auto = false;
       await _pump(tester);
       await focusAuto(tester);
@@ -170,8 +184,9 @@ void main() {
       expect(_container.read(autoSkipPickingProvider), isNull);
     });
 
-    testWidgets('OK посреди перехода в выделение не щёлкает спрятанное Авто',
-        (tester) async {
+    testWidgets('OK посреди перехода в выделение не щёлкает спрятанное Авто', (
+      tester,
+    ) async {
       _auto = false;
       await _pump(tester);
       await focusAuto(tester);
@@ -192,7 +207,9 @@ void main() {
       expect(_container.read(autoSkipPickingProvider), 's1');
     });
 
-    testWidgets('правая кнопка мыши на Авто включает выделение', (tester) async {
+    testWidgets('правая кнопка мыши на Авто включает выделение', (
+      tester,
+    ) async {
       _auto = false;
       await _pump(tester);
 
@@ -204,8 +221,7 @@ void main() {
     });
   });
 
-  testWidgets(
-      'долгое нажатие на Авто включает выделение: нажатие на сервер '
+  testWidgets('долгое нажатие на Авто включает выделение: нажатие на сервер '
       'отмечает его и не подключает, повторное снимает', (tester) async {
     await _pump(tester);
 
@@ -238,22 +254,25 @@ void main() {
   });
 
   testWidgets(
-      'Готово выходит из выделения, и Авто уходит с отмеченного текущего '
-      'на лучший из оставшихся', (tester) async {
-    await _pump(tester);
-    await tester.longPress(find.text('Auto'));
-    await _settle(tester);
-    await _tapAndSettle(tester, _tile('Node 0'));
+    'Готово выходит из выделения, и Авто уходит с отмеченного текущего '
+    'на лучший из оставшихся',
+    (tester) async {
+      await _pump(tester);
+      await tester.longPress(find.text('Auto'));
+      await _settle(tester);
+      await _tapAndSettle(tester, _tile('Node 0'));
 
-    await _tapAndSettle(tester, find.text('Done'));
+      await _tapAndSettle(tester, find.text('Done'));
 
-    expect(_container.read(autoSkipPickingProvider), isNull);
-    expect(find.text('Auto skips the marked ones'), findsNothing);
-    expect(_container.read(serversProvider).activeServerId, 'n2');
-  });
+      expect(_container.read(autoSkipPickingProvider), isNull);
+      expect(find.text('Auto skips the marked ones'), findsNothing);
+      expect(_container.read(serversProvider).activeServerId, 'n2');
+    },
+  );
 
-  testWidgets('при выключенном Авто отмеченный текущий остаётся выбранным',
-      (tester) async {
+  testWidgets('при выключенном Авто отмеченный текущий остаётся выбранным', (
+    tester,
+  ) async {
     _auto = false;
     await _pump(tester);
     await tester.longPress(find.text('Auto'));
@@ -303,72 +322,84 @@ void main() {
       expect(disposition(tester), RoutePopDisposition.doNotPop);
 
       await tester.tap(find.text('Done'));
-      for (var i = 0;
-          i < 10 && _container.read(autoSkipPickingProvider) != null;
-          i++) {
+      for (
+        var i = 0;
+        i < 10 && _container.read(autoSkipPickingProvider) != null;
+        i++
+      ) {
         await tester.pump(const Duration(milliseconds: 50));
       }
       await tester.pump(const Duration(milliseconds: 100));
 
       expect(_container.read(autoSkipPickingProvider), isNull);
-      expect(find.text('Auto skips the marked ones'), findsOneWidget,
-          reason: 'строка выбора ещё уезжает');
+      expect(
+        find.text('Auto skips the marked ones'),
+        findsOneWidget,
+        reason: 'строка выбора ещё уезжает',
+      );
       expect(disposition(tester), RoutePopDisposition.bubble);
     });
   });
 
   // подсказка выбора начинается там же, где Авто, и торчала буквой из-под её скругления
-  testWidgets('в начале и в конце перехода подсказка не выглядывает из-под Авто', (
+  testWidgets(
+    'в начале и в конце перехода подсказка не выглядывает из-под Авто',
+    (tester) async {
+      await _pump(tester);
+      final autoLeft = tester.getRect(find.text('Auto')).left;
+
+      double? hintClipRight() {
+        for (final element in find.byType(ClipPath).evaluate()) {
+          final clipper = (element.widget as ClipPath).clipper;
+          if (clipper == null || '${clipper.runtimeType}' != '_MorphSideClip') {
+            continue;
+          }
+          final box = element.renderObject! as RenderBox;
+          final bounds = clipper.getClip(box.size).getBounds();
+          if (bounds.width > 0 && bounds.right < box.size.width) {
+            return box.localToGlobal(Offset(bounds.right, 0)).dx;
+          }
+        }
+        return null;
+      }
+
+      final rest = tester.getRect(
+        find
+            .ancestor(of: find.text('Auto'), matching: find.byType(InkWell))
+            .first,
+      );
+      await tester.longPress(find.text('Auto'));
+      await tester.pump(const Duration(milliseconds: 16));
+      expect(hintClipRight(), isNotNull, reason: 'переход идёт');
+      expect(hintClipRight()!, lessThanOrEqualTo(rest.left));
+      expect(autoLeft, greaterThan(rest.left));
+
+      await _settle(tester);
+      await tester.tap(find.text('Done'));
+      double? last;
+      for (var i = 0; i < 60; i++) {
+        await tester.pump(const Duration(milliseconds: 10));
+        final right = hintClipRight();
+        if (right == null) break;
+        last = right;
+      }
+      expect(last, isNotNull, reason: 'возврат шёл с переходом');
+      expect(last!, lessThanOrEqualTo(rest.left + 0.01));
+    },
+  );
+
+  testWidgets('вне выделения пометку видно, только пока Авто включено', (
     tester,
   ) async {
-    await _pump(tester);
-    final autoLeft = tester.getRect(find.text('Auto')).left;
-
-    double? hintClipRight() {
-      for (final element in find.byType(ClipPath).evaluate()) {
-        final clipper = (element.widget as ClipPath).clipper;
-        if (clipper == null || '${clipper.runtimeType}' != '_MorphSideClip') continue;
-        final box = element.renderObject! as RenderBox;
-        final bounds = clipper.getClip(box.size).getBounds();
-        if (bounds.width > 0 && bounds.right < box.size.width) {
-          return box.localToGlobal(Offset(bounds.right, 0)).dx;
-        }
-      }
-      return null;
-    }
-
-    final rest = tester.getRect(
-      find.ancestor(of: find.text('Auto'), matching: find.byType(InkWell)).first,
-    );
-    await tester.longPress(find.text('Auto'));
-    await tester.pump(const Duration(milliseconds: 16));
-    expect(hintClipRight(), isNotNull, reason: 'переход идёт');
-    expect(hintClipRight()!, lessThanOrEqualTo(rest.left));
-    expect(autoLeft, greaterThan(rest.left));
-
-    await _settle(tester);
-    await tester.tap(find.text('Done'));
-    double? last;
-    for (var i = 0; i < 60; i++) {
-      await tester.pump(const Duration(milliseconds: 10));
-      final right = hintClipRight();
-      if (right == null) break;
-      last = right;
-    }
-    expect(last, isNotNull, reason: 'возврат шёл с переходом');
-    expect(last!, lessThanOrEqualTo(rest.left + 0.01));
-  });
-
-  testWidgets('вне выделения пометку видно, только пока Авто включено',
-      (tester) async {
     _skipped = {'n2'};
     _auto = false;
     await _pump(tester);
     expect(_badges, findsNothing);
   });
 
-  testWidgets('вне выделения при включённом Авто отмеченный помечен',
-      (tester) async {
+  testWidgets('вне выделения при включённом Авто отмеченный помечен', (
+    tester,
+  ) async {
     _skipped = {'n2'};
     await _pump(tester);
     expect(_badges, findsOneWidget);

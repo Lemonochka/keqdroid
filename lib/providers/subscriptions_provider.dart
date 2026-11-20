@@ -115,8 +115,8 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
         body: l10n.subscriptionsExpiredNotifBody(
           sub.name,
           '${expiredAt.day.toString().padLeft(2, '0')}.'
-              '${expiredAt.month.toString().padLeft(2, '0')}.'
-              '${expiredAt.year}',
+          '${expiredAt.month.toString().padLeft(2, '0')}.'
+          '${expiredAt.year}',
         ),
       );
       notified[sub.id] = expiredAt.toIso8601String();
@@ -160,10 +160,12 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
       final results = <UpdateResult>[];
       for (var i = 0; i < due.length; i += 3) {
         final batch = due.skip(i).take(3).toList();
-        results.addAll(await Future.wait(
-          batch.map(service.updateSubscription),
-          eagerError: false,
-        ));
+        results.addAll(
+          await Future.wait(
+            batch.map(service.updateSubscription),
+            eagerError: false,
+          ),
+        );
       }
       final hasSuccess = results.any((r) => r.success);
       if (!hasSuccess) return;
@@ -199,8 +201,10 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
       final vpn = await ref.read(vpnStateProvider.future);
       if (!ref.mounted || vpn.status != VpnStatus.connected) return;
       if (ref.read(serversProvider).activeServerId != id) return;
-      AppLogger.instance.info('Auto select: the tunnel follows the server '
-          'picked by the subscription update');
+      AppLogger.instance.info(
+        'Auto select: the tunnel follows the server '
+        'picked by the subscription update',
+      );
       await ref.read(vpnStateProvider.notifier).reconnectToActiveServer();
     } catch (e, st) {
       AppLogger.instance.warn(
@@ -212,14 +216,15 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
   }
 
   void _autoPing(String subscriptionId) => unawaited(
-        ref.read(serversProvider.notifier).autoPingSubscription(subscriptionId),
-      );
+    ref.read(serversProvider.notifier).autoPingSubscription(subscriptionId),
+  );
 
   bool _hasSubscriptionsChanged(List<Subscription> a, List<Subscription> b) =>
       subscriptionsDiffer(a, b);
 
   Future<void> add(Subscription sub) async {
-    final existing = state.value ?? await ref.read(storageProvider).getSubscriptions();
+    final existing =
+        state.value ?? await ref.read(storageProvider).getSubscriptions();
     final newUrl = _normalizeSubscriptionUrl(sub.url);
     final duplicate = existing.any(
       (s) => _normalizeSubscriptionUrl(s.url) == newUrl,
@@ -249,14 +254,14 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
     await ref.read(storageProvider).deleteSubscription(id);
     await ref.read(routingProfilesProvider.notifier).dropProviderProfileOf(id);
     unawaited(CardImageService.remove(id).catchError((_) {}));
-    state = AsyncData(
-      (state.value ?? []).where((s) => s.id != id).toList(),
-    );
+    state = AsyncData((state.value ?? []).where((s) => s.id != id).toList());
     await ref.read(serversProvider.notifier).reloadPreservingActive();
   }
 
   Future<void> refresh(Subscription sub) async {
-    final result = await ref.read(subscriptionServiceProvider).updateSubscription(sub);
+    final result = await ref
+        .read(subscriptionServiceProvider)
+        .updateSubscription(sub);
 
     if (result.success) {
       final subs = (state.value ?? [])
@@ -277,7 +282,9 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
 
   Future<void> refreshTracked(Subscription sub) async {
     final id = sub.id;
-    ref.read(subscriptionRefreshingIdsProvider.notifier).update((set) => {...set, id});
+    ref
+        .read(subscriptionRefreshingIdsProvider.notifier)
+        .update((set) => {...set, id});
     ref.read(subscriptionRefreshErrorsProvider.notifier).update((m) {
       final next = <String, Object>{...m};
       next.remove(id);
@@ -287,13 +294,13 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
     try {
       await refresh(sub);
     } catch (e) {
-      ref.read(subscriptionRefreshErrorsProvider.notifier).update((m) => {
-            ...m,
-            id: e,
-          });
+      ref
+          .read(subscriptionRefreshErrorsProvider.notifier)
+          .update((m) => {...m, id: e});
       rethrow;
     } finally {
-      ref.read(subscriptionRefreshingIdsProvider.notifier)
+      ref
+          .read(subscriptionRefreshingIdsProvider.notifier)
           .update((set) => {...set}..remove(id));
     }
   }
@@ -337,10 +344,10 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
   }
 
   Future<void> reorder(
-      int oldIndex,
-      int newIndex, {
-        bool fromReorderableList = true,
-      }) async {
+    int oldIndex,
+    int newIndex, {
+    bool fromReorderableList = true,
+  }) async {
     final subs = <Subscription>[...(state.value ?? [])];
     if (oldIndex < 0 || oldIndex >= subs.length) return;
 
@@ -406,7 +413,8 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
         : (Uri.tryParse(effectiveUrl)?.host ?? current.name);
     final identityChanged =
         fetchIdentity != null && fetchIdentity != current.fetchIdentity;
-    final protocolsChanged = excludedProtocols != null &&
+    final protocolsChanged =
+        excludedProtocols != null &&
         (excludedProtocols.length != current.excludedProtocols.length ||
             !excludedProtocols.containsAll(current.excludedProtocols));
     final updated = current.copyWith(
@@ -462,7 +470,8 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
     // subscriptionTemplateProvider следит за этим же провайдером: через него было бы кольцо
     final settings = ref.read(settingsNotifierProvider).value;
     final raw = ref.read(storageProvider).getClashTemplate(id);
-    final template = settings == null || raw == null || !clashTemplateApplies(settings)
+    final template =
+        settings == null || raw == null || !clashTemplateApplies(settings)
         ? null
         : ClashTemplate.fromBody(raw);
     final sub = state.value?.where((s) => s.id == id).firstOrNull;
@@ -501,6 +510,6 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
 }
 
 final subscriptionsProvider =
-AsyncNotifierProvider<SubscriptionsNotifier, List<Subscription>>(
-  SubscriptionsNotifier.new,
-);
+    AsyncNotifierProvider<SubscriptionsNotifier, List<Subscription>>(
+      SubscriptionsNotifier.new,
+    );

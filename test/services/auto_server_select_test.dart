@@ -16,18 +16,17 @@ ServerItem _server(
   DateTime? tested,
   String? type,
   List<PingSample> samples = const [],
-}) =>
-    ServerItem(
-      id: id,
-      config: 'vless://uuid@$id.example.com:443?type=tcp&security=none#$id',
-      type: ServerItemType.subscription,
-      subscriptionId: sub,
-      addedAt: DateTime(2026),
-      pingMs: ping,
-      lastTestedAt: tested,
-      lastPingType: type,
-      pingSamples: samples,
-    );
+}) => ServerItem(
+  id: id,
+  config: 'vless://uuid@$id.example.com:443?type=tcp&security=none#$id',
+  type: ServerItemType.subscription,
+  subscriptionId: sub,
+  addedAt: DateTime(2026),
+  pingMs: ping,
+  lastTestedAt: tested,
+  lastPingType: type,
+  pingSamples: samples,
+);
 
 void main() {
   final tested = DateTime(2026, 9, 22);
@@ -40,10 +39,7 @@ void main() {
       _server('c', sub: 's2', ping: 10, tested: tested),
     ];
 
-    expect(
-      AutoServerSelect.pick(servers, subscriptionId: 's1')?.id,
-      'b',
-    );
+    expect(AutoServerSelect.pick(servers, subscriptionId: 's1')?.id, 'b');
   });
 
   test('сервер, с которого съехали, второй раз не берём', () {
@@ -72,7 +68,8 @@ void main() {
         s.id.startsWith('pl')
             ? ServerItem(
                 id: s.id,
-                config: 'vless://uuid@pl.example.com:443?type=tcp&security=none#${s.id}',
+                config:
+                    'vless://uuid@pl.example.com:443?type=tcp&security=none#${s.id}',
                 type: ServerItemType.subscription,
                 subscriptionId: 's1',
                 addedAt: DateTime(2026),
@@ -127,10 +124,7 @@ void main() {
       _server('unknown', sub: 's1'),
     ];
 
-    expect(
-      AutoServerSelect.pick(servers, subscriptionId: 's1')?.id,
-      'unknown',
-    );
+    expect(AutoServerSelect.pick(servers, subscriptionId: 's1')?.id, 'unknown');
   });
 
   test('когда все красные — всё равно кто-то, а не пустота', () {
@@ -144,10 +138,9 @@ void main() {
 
   test('подписка без серверов не выбирает никого', () {
     expect(
-      AutoServerSelect.pick(
-        [_server('a', sub: 's2', ping: 10, tested: tested)],
-        subscriptionId: 's1',
-      ),
+      AutoServerSelect.pick([
+        _server('a', sub: 's2', ping: 10, tested: tested),
+      ], subscriptionId: 's1'),
       isNull,
     );
   });
@@ -178,36 +171,64 @@ void main() {
   group('оценка по истории замеров', () {
     final now = DateTime(2026, 10, 6, 12);
     List<PingSample> history(List<int?> values, {String type = 'url'}) => [
-          for (var i = 0; i < values.length; i++)
-            PingSample(
-              at: now.subtract(Duration(minutes: 5 * (values.length - i))),
-              ms: values[i],
-              type: type,
-            ),
-        ];
+      for (var i = 0; i < values.length; i++)
+        PingSample(
+          at: now.subtract(Duration(minutes: 5 * (values.length - i))),
+          ms: values[i],
+          type: type,
+        ),
+    ];
 
     test('ровный сервер обходит того, у кого пинг скачет', () {
       final servers = [
-        _server('jumpy', sub: 's1', ping: 90, tested: now, type: 'url',
-            samples: history([80, 400, 90])),
-        _server('steady', sub: 's1', ping: 155, tested: now, type: 'url',
-            samples: history([150, 160, 155])),
+        _server(
+          'jumpy',
+          sub: 's1',
+          ping: 90,
+          tested: now,
+          type: 'url',
+          samples: history([80, 400, 90]),
+        ),
+        _server(
+          'steady',
+          sub: 's1',
+          ping: 155,
+          tested: now,
+          type: 'url',
+          samples: history([150, 160, 155]),
+        ),
       ];
 
-      expect(AutoServerSelect.pick(servers, subscriptionId: 's1', now: now)?.id,
-          'steady');
+      expect(
+        AutoServerSelect.pick(servers, subscriptionId: 's1', now: now)?.id,
+        'steady',
+      );
     });
 
     test('недавний провал опускает сервер ниже живых без провалов', () {
       final servers = [
-        _server('flaky', sub: 's1', ping: 60, tested: now, type: 'url',
-            samples: history([70, null, 60])),
-        _server('calm', sub: 's1', ping: 210, tested: now, type: 'url',
-            samples: history([200, 210])),
+        _server(
+          'flaky',
+          sub: 's1',
+          ping: 60,
+          tested: now,
+          type: 'url',
+          samples: history([70, null, 60]),
+        ),
+        _server(
+          'calm',
+          sub: 's1',
+          ping: 210,
+          tested: now,
+          type: 'url',
+          samples: history([200, 210]),
+        ),
       ];
 
-      expect(AutoServerSelect.pick(servers, subscriptionId: 's1', now: now)?.id,
-          'calm');
+      expect(
+        AutoServerSelect.pick(servers, subscriptionId: 's1', now: now)?.id,
+        'calm',
+      );
     });
 
     test('замеры старше суток не считаются', () {
@@ -216,16 +237,33 @@ void main() {
         ms: null,
         type: 'url',
       );
-      final server = _server('a', sub: 's1', ping: 100, tested: now,
-          type: 'url', samples: [old, ...history([100])]);
+      final server = _server(
+        'a',
+        sub: 's1',
+        ping: 100,
+        tested: now,
+        type: 'url',
+        samples: [
+          old,
+          ...history([100]),
+        ],
+      );
 
       expect(AutoServerSelect.latencyScore(server, now), 100);
     });
 
     test('замеры другим методом с текущими не смешиваются', () {
-      final server = _server('a', sub: 's1', ping: 100, tested: now,
-          type: 'url',
-          samples: [...history([5, 900], type: 'tcp'), ...history([100])]);
+      final server = _server(
+        'a',
+        sub: 's1',
+        ping: 100,
+        tested: now,
+        type: 'url',
+        samples: [
+          ...history([5, 900], type: 'tcp'),
+          ...history([100]),
+        ],
+      );
 
       expect(AutoServerSelect.latencyScore(server, now), 100);
     });
@@ -237,16 +275,18 @@ void main() {
     });
   });
 
-  test('после теста скорости выбирается самый быстрый, а не самый медленный',
-      () {
-    // У теста скорости в поле пинга кбит/с, и больше — лучше.
-    final servers = [
-      _server('slow', sub: 's1', ping: 3000, tested: tested, type: 'speed'),
-      _server('fast', sub: 's1', ping: 90000, tested: tested, type: 'speed'),
-    ];
+  test(
+    'после теста скорости выбирается самый быстрый, а не самый медленный',
+    () {
+      // У теста скорости в поле пинга кбит/с, и больше — лучше.
+      final servers = [
+        _server('slow', sub: 's1', ping: 3000, tested: tested, type: 'speed'),
+        _server('fast', sub: 's1', ping: 90000, tested: tested, type: 'speed'),
+      ];
 
-    expect(AutoServerSelect.pick(servers, subscriptionId: 's1')?.id, 'fast');
-  });
+      expect(AutoServerSelect.pick(servers, subscriptionId: 's1')?.id, 'fast');
+    },
+  );
 
   test('свой сервер автовыбора попадает в замер, даже если он в хвосте', () {
     final servers = [
@@ -285,23 +325,26 @@ void main() {
     expect(picked.map((s) => s.id), ['b1', 'home', 'b2']);
   });
 
-  test('ежеминутная проверка из соседней подписки меряет только текущий и свой', () {
-    final servers = [
-      _server('b1', sub: 'neighbour', ping: 50, tested: tested),
-      _server('b2', sub: 'neighbour', ping: 10, tested: tested),
-      _server('home', sub: 'own', ping: 40, tested: tested),
-    ];
+  test(
+    'ежеминутная проверка из соседней подписки меряет только текущий и свой',
+    () {
+      final servers = [
+        _server('b1', sub: 'neighbour', ping: 50, tested: tested),
+        _server('b2', sub: 'neighbour', ping: 10, tested: tested),
+        _server('home', sub: 'own', ping: 40, tested: tested),
+      ];
 
-    final picked = AutoServerSelect.candidatesToMeasure(
-      servers,
-      subscriptionId: 'neighbour',
-      current: servers[0],
-      limit: NeighbourHomePace.measureLimit,
-      include: {'home'},
-    );
+      final picked = AutoServerSelect.candidatesToMeasure(
+        servers,
+        subscriptionId: 'neighbour',
+        current: servers[0],
+        limit: NeighbourHomePace.measureLimit,
+        include: {'home'},
+      );
 
-    expect(picked.map((s) => s.id), ['b1', 'home']);
-  });
+      expect(picked.map((s) => s.id), ['b1', 'home']);
+    },
+  );
 
   group('записывать ли замер', () {
     ({String id, bool success, int? latencyMs}) ok(String id) =>
@@ -387,9 +430,12 @@ void main() {
 
   // долгое нажатие на Авто: отмеченные серверы автовыбор не берёт, руками их выбрать можно
   group('отмеченные мимо Авто', () {
-    ServerItem skipped(String id, {required String sub, int? ping}) =>
-        _server(id, sub: sub, ping: ping, tested: tested)
-            .copyWith(autoSkip: true);
+    ServerItem skipped(String id, {required String sub, int? ping}) => _server(
+      id,
+      sub: sub,
+      ping: ping,
+      tested: tested,
+    ).copyWith(autoSkip: true);
 
     test('лучший по замеру, но отмеченный, не берётся', () {
       final servers = [
@@ -453,10 +499,10 @@ void main() {
       expect(AutoServerSelect.canPick(servers, 'other'), isTrue);
       expect(AutoServerSelect.canPick(servers, 'gone'), isFalse);
       expect(
-        AutoServerSelect.canPick(
-          [...servers, skipped('only', sub: 'all-skipped')],
-          'only',
-        ),
+        AutoServerSelect.canPick([
+          ...servers,
+          skipped('only', sub: 'all-skipped'),
+        ], 'only'),
         isTrue,
       );
     });
@@ -465,19 +511,21 @@ void main() {
   group('на кого переезжать', () {
     final now = DateTime(2026, 10, 28, 12);
     List<PingSample> history(List<int?> values) => [
-          for (var i = 0; i < values.length; i++)
-            PingSample(
-              at: now.subtract(Duration(minutes: 5 * (values.length - i))),
-              ms: values[i],
-              type: 'url',
-            ),
-        ];
+      for (var i = 0; i < values.length; i++)
+        PingSample(
+          at: now.subtract(Duration(minutes: 5 * (values.length - i))),
+          ms: values[i],
+          type: 'url',
+        ),
+    ];
 
     test('ровный обходит того, кто сегодня скакал и падал', () {
-      final jumpy = _server('jumpy', sub: 's1',
-          samples: history([80, null, 400]));
-      final steady = _server('steady', sub: 's1',
-          samples: history([150, 160]));
+      final jumpy = _server(
+        'jumpy',
+        sub: 's1',
+        samples: history([80, null, 400]),
+      );
+      final steady = _server('steady', sub: 's1', samples: history([150, 160]));
 
       expect(
         AutoServerSelect.switchScore(jumpy, 70, now),
@@ -506,8 +554,7 @@ void main() {
           (id: 'steady', success: true, latencyMs: 155),
         ],
         batchComplete: true,
-        score: (id, ms) =>
-            AutoServerSelect.switchScore(servers[id], ms, now),
+        score: (id, ms) => AutoServerSelect.switchScore(servers[id], ms, now),
       );
 
       expect(verdict.nextId, 'steady');

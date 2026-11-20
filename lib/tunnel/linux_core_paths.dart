@@ -25,7 +25,10 @@ class LinuxCorePaths {
     final onPath = _which('pkexec');
     if (onPath != null) return onPath;
     // PATH графической сессии бывает урезан, а pkexec везде лежит здесь
-    for (final candidate in const ['/usr/bin/pkexec', '/usr/local/bin/pkexec']) {
+    for (final candidate in const [
+      '/usr/bin/pkexec',
+      '/usr/local/bin/pkexec',
+    ]) {
       if (File(candidate).existsSync()) return candidate;
     }
     return null;
@@ -97,7 +100,8 @@ class LinuxCorePaths {
   // стабильный каталог: createTemp на каждый вызов копил бы мусор в /tmp
   static Future<String?> _extractGeoFiles() async {
     try {
-      final base = Platform.environment['XDG_CACHE_HOME'] ??
+      final base =
+          Platform.environment['XDG_CACHE_HOME'] ??
           p.join(
             Platform.environment['HOME'] ?? Directory.systemTemp.path,
             '.cache',
@@ -112,15 +116,20 @@ class LinuxCorePaths {
       }.entries) {
         try {
           final data = await rootBundle.load(entry.key);
-          final bytes = data.buffer
-              .asUint8List(data.offsetInBytes, data.lengthInBytes);
+          final bytes = data.buffer.asUint8List(
+            data.offsetInBytes,
+            data.lengthInBytes,
+          );
           final outFile = File(p.join(outDir.path, entry.value));
           if (!outFile.existsSync() || outFile.lengthSync() != bytes.length) {
             await outFile.writeAsBytes(bytes, flush: true);
           }
           extracted = true;
         } catch (e) {
-          AppLogger.instance.warn('Geo file not extracted: ${entry.value}', error: e);
+          AppLogger.instance.warn(
+            'Geo file not extracted: ${entry.value}',
+            error: e,
+          );
         }
       }
       return extracted ? outDir.path : null;
@@ -155,7 +164,8 @@ class LinuxCorePaths {
   }
 
   static Future<String> _coresCacheDir() async {
-    final base = cacheRootOverride ??
+    final base =
+        cacheRootOverride ??
         Platform.environment['XDG_CACHE_HOME'] ??
         p.join(
           Platform.environment['HOME'] ?? Directory.systemTemp.path,
@@ -184,8 +194,7 @@ class LinuxCorePaths {
       final dstPath = p.join(await _coresCacheDir(), fileName);
       final dst = File(dstPath);
       final srcFile = File(src);
-      if (!dst.existsSync() ||
-          dst.lengthSync() != srcFile.lengthSync()) {
+      if (!dst.existsSync() || dst.lengthSync() != srcFile.lengthSync()) {
         await replaceAtomically(dstPath, (tmp) => srcFile.copy(tmp));
       }
       await _ensureExecutable(dstPath);
@@ -235,8 +244,10 @@ class LinuxCorePaths {
   ) async {
     try {
       final data = await rootBundle.load(assetKey);
-      final bytes =
-          data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+      final bytes = data.buffer.asUint8List(
+        data.offsetInBytes,
+        data.lengthInBytes,
+      );
       final outFile = File(p.join(await _coresCacheDir(), fileName));
       if (outFile.existsSync() && outFile.lengthSync() == bytes.length) {
         return outFile.path;

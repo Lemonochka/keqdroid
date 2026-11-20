@@ -62,11 +62,13 @@ class _FakeVpn extends VpnStateNotifier {
 }
 
 AppInfo _app(String pkg, String name, {bool running = false}) => AppInfo(
-      packageName: pkg,
-      appName: name,
-      isRunning: running,
-      installPath: r'C:\Program Files\' '$name.exe',
-    );
+  packageName: pkg,
+  appName: name,
+  isRunning: running,
+  installPath:
+      r'C:\Program Files\'
+      '$name.exe',
+);
 
 /// Список в том виде, в каком его отдаёт Windows: имя процесса с настоящим
 /// регистром и полный путь.
@@ -191,10 +193,7 @@ void main() {
     await _pump(tester, status: VpnStatus.connected, excludes: {'com.discord'});
 
     expect(tester.takeException(), isNull);
-    expect(
-      find.textContaining('переподключ'),
-      findsWidgets,
-    );
+    expect(find.textContaining('переподключ'), findsWidgets);
   });
 
   // 12.11.2026, просьба из чата: «а можно сюда тоже кнопку переподключиться как в правилах?»
@@ -223,11 +222,7 @@ void main() {
       // Windows отдаёт `Discord.exe`, и в списке исключений лежит ровно оно.
       // Пока сравнение шло по сырой строке против набора в нижнем регистре,
       // запись считалась «добавленной руками» и приписывалась второй строкой.
-      await _pump(
-        tester,
-        apps: _windowsApps,
-        excludes: {'Discord.exe'},
-      );
+      await _pump(tester, apps: _windowsApps, excludes: {'Discord.exe'});
 
       expect(find.text('Discord.exe'), findsOneWidget);
       expect(find.text('Выбрано приложений: 1'), findsOneWidget);
@@ -238,11 +233,7 @@ void main() {
     ) async {
       // Старая версия писала имена в нижнем регистре. Такая запись не должна
       // рождать второй строки и обязана показывать отметку на своей.
-      await _pump(
-        tester,
-        apps: _windowsApps,
-        excludes: {'telegram.exe'},
-      );
+      await _pump(tester, apps: _windowsApps, excludes: {'telegram.exe'});
 
       expect(find.text('Telegram.exe'), findsOneWidget);
       expect(_isRowSelected(tester, 'Telegram.exe'), isTrue);
@@ -290,10 +281,9 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    SplitTunnelingState state(WidgetTester tester) =>
-        ProviderScope.containerOf(
-          tester.element(find.byType(SplitTunnelingScreen)),
-        ).read(splitTunnelingProvider);
+    SplitTunnelingState state(WidgetTester tester) => ProviderScope.containerOf(
+      tester.element(find.byType(SplitTunnelingScreen)),
+    ).read(splitTunnelingProvider);
 
     testWidgets('отметка строки сохраняет её имя, а не путь', (tester) async {
       await _pump(tester, apps: _windowsApps, excludes: {'Telegram.exe'});

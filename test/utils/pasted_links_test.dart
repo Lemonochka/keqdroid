@@ -16,17 +16,17 @@ class _Sink {
   Object? failSubscription;
 
   Future<PastedLinksResult> paste(String raw) => importPastedLinks(
-        raw,
-        addSubscription: (url) async {
-          if (failSubscription != null) throw failSubscription!;
-          subscriptions.add(url);
-        },
-        addServer: (config) async => servers.add(config),
-        addRoutingProfile: (link) async {
-          routingLinks.add(link);
-          return 'Профиль';
-        },
-      );
+    raw,
+    addSubscription: (url) async {
+      if (failSubscription != null) throw failSubscription!;
+      subscriptions.add(url);
+    },
+    addServer: (config) async => servers.add(config),
+    addRoutingProfile: (link) async {
+      routingLinks.add(link);
+      return 'Профиль';
+    },
+  );
 }
 
 const _routing = 'happ://routing/onadd/eyJOYW1lIjoiUlUifQ==';
@@ -34,12 +34,18 @@ const _routing = 'happ://routing/onadd/eyJOYW1lIjoiUlUifQ==';
 void main() {
   group('subscriptionUrlFromPastedLine', () {
     test('http и https — подписка, как есть', () {
-      expect(subscriptionUrlFromPastedLine('https://sub.example/api/token'),
-          'https://sub.example/api/token');
-      expect(subscriptionUrlFromPastedLine('  http://sub.example:2096/s/x  '),
-          'http://sub.example:2096/s/x');
-      expect(subscriptionUrlFromPastedLine('HTTPS://Sub.Example/x'),
-          'HTTPS://Sub.Example/x');
+      expect(
+        subscriptionUrlFromPastedLine('https://sub.example/api/token'),
+        'https://sub.example/api/token',
+      );
+      expect(
+        subscriptionUrlFromPastedLine('  http://sub.example:2096/s/x  '),
+        'http://sub.example:2096/s/x',
+      );
+      expect(
+        subscriptionUrlFromPastedLine('HTTPS://Sub.Example/x'),
+        'HTTPS://Sub.Example/x',
+      );
     });
 
     test('кнопка панели отдаёт вложенный адрес', () {
@@ -88,8 +94,10 @@ void main() {
         'https://a.example/s/1\n$_vless\n\nhttp://b.example/s/2',
       );
 
-      expect(sink.subscriptions,
-          ['https://a.example/s/1', 'http://b.example/s/2']);
+      expect(sink.subscriptions, [
+        'https://a.example/s/1',
+        'http://b.example/s/2',
+      ]);
       expect(sink.servers, [_vless]);
       expect(result.added, 3);
     });
@@ -141,7 +149,10 @@ void main() {
 
     test('про подписку не говорит «добавлено серверов»', () async {
       final result = await _Sink().paste('https://sub.example/s');
-      expect(pastedLinksSummary(l10n, result), 'Подписка добавлена: sub.example');
+      expect(
+        pastedLinksSummary(l10n, result),
+        'Подписка добавлена: sub.example',
+      );
     });
 
     test('подписка и серверы — две строки', () async {

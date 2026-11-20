@@ -32,17 +32,16 @@ class TrafficRoute {
     RouteTarget target = RouteTarget.vpn,
     String serverId = '',
     bool enabled = true,
-  }) =>
-      TrafficRoute(
-        id: const Uuid().v4(),
-        enabled: enabled,
-        apps: apps,
-        content: content,
-        sites: sites,
-        presetId: presetId,
-        target: target,
-        serverId: serverId,
-      );
+  }) => TrafficRoute(
+    id: const Uuid().v4(),
+    enabled: enabled,
+    apps: apps,
+    content: content,
+    sites: sites,
+    presetId: presetId,
+    target: target,
+    serverId: serverId,
+  );
 
   final String id;
   final bool enabled;
@@ -73,44 +72,42 @@ class TrafficRoute {
   bool get allApps => apps.isEmpty;
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'enabled': enabled,
-        if (apps.isNotEmpty) 'apps': apps,
-        'content': content.name,
-        if (sites.isNotEmpty) 'sites': sites,
-        if (presetId.isNotEmpty) 'preset': presetId,
-        'target': target.name,
-        if (serverId.isNotEmpty) 'server': serverId,
-        if (network != RouteNetwork.any) 'network': network.name,
-        if (ports.isNotEmpty) 'ports': ports,
-        'order': ?order,
-      };
+    'id': id,
+    'enabled': enabled,
+    if (apps.isNotEmpty) 'apps': apps,
+    'content': content.name,
+    if (sites.isNotEmpty) 'sites': sites,
+    if (presetId.isNotEmpty) 'preset': presetId,
+    'target': target.name,
+    if (serverId.isNotEmpty) 'server': serverId,
+    if (network != RouteNetwork.any) 'network': network.name,
+    if (ports.isNotEmpty) 'ports': ports,
+    'order': ?order,
+  };
 
   factory TrafficRoute.fromJson(Map<String, dynamic> json) => TrafficRoute(
-        id: json['id'] as String,
-        enabled: json['enabled'] as bool? ?? true,
-        apps: [
-          for (final a in (json['apps'] as List? ?? const [])) a.toString(),
-        ],
-        content: RouteContent.values.firstWhere(
-          (c) => c.name == json['content'],
-          orElse: () => RouteContent.sites,
-        ),
-        sites: json['sites'] as String? ?? '',
-        presetId: json['preset'] as String? ?? '',
-        // неизвестная цель из будущей версии идёт через VPN, как маршрут с пропавшим сервером
-        target: RouteTarget.values.firstWhere(
-          (t) => t.name == json['target'],
-          orElse: () => RouteTarget.vpn,
-        ),
-        serverId: json['server'] as String? ?? '',
-        network: RouteNetwork.values.firstWhere(
-          (n) => n.name == json['network'],
-          orElse: () => RouteNetwork.any,
-        ),
-        ports: json['ports'] as String? ?? '',
-        order: json['order'] as int?,
-      );
+    id: json['id'] as String,
+    enabled: json['enabled'] as bool? ?? true,
+    apps: [for (final a in (json['apps'] as List? ?? const [])) a.toString()],
+    content: RouteContent.values.firstWhere(
+      (c) => c.name == json['content'],
+      orElse: () => RouteContent.sites,
+    ),
+    sites: json['sites'] as String? ?? '',
+    presetId: json['preset'] as String? ?? '',
+    // неизвестная цель из будущей версии идёт через VPN, как маршрут с пропавшим сервером
+    target: RouteTarget.values.firstWhere(
+      (t) => t.name == json['target'],
+      orElse: () => RouteTarget.vpn,
+    ),
+    serverId: json['server'] as String? ?? '',
+    network: RouteNetwork.values.firstWhere(
+      (n) => n.name == json['network'],
+      orElse: () => RouteNetwork.any,
+    ),
+    ports: json['ports'] as String? ?? '',
+    order: json['order'] as int?,
+  );
 
   TrafficRoute copyWith({
     bool? enabled,
@@ -123,20 +120,19 @@ class TrafficRoute {
     RouteNetwork? network,
     String? ports,
     int? order,
-  }) =>
-      TrafficRoute(
-        id: id,
-        enabled: enabled ?? this.enabled,
-        apps: apps ?? this.apps,
-        content: content ?? this.content,
-        sites: sites ?? this.sites,
-        presetId: presetId ?? this.presetId,
-        target: target ?? this.target,
-        serverId: serverId ?? this.serverId,
-        network: network ?? this.network,
-        ports: ports ?? this.ports,
-        order: order ?? this.order,
-      );
+  }) => TrafficRoute(
+    id: id,
+    enabled: enabled ?? this.enabled,
+    apps: apps ?? this.apps,
+    content: content ?? this.content,
+    sites: sites ?? this.sites,
+    presetId: presetId ?? this.presetId,
+    target: target ?? this.target,
+    serverId: serverId ?? this.serverId,
+    network: network ?? this.network,
+    ports: ports ?? this.ports,
+    order: order ?? this.order,
+  );
 
   @override
   bool operator ==(Object other) =>
@@ -155,16 +151,16 @@ class TrafficRoute {
 
   @override
   int get hashCode => Object.hash(
-        id,
-        enabled,
-        Object.hashAll(apps),
-        content,
-        sites,
-        presetId,
-        target,
-        serverId,
-        network,
-        ports,
-        order,
-      );
+    id,
+    enabled,
+    Object.hashAll(apps),
+    content,
+    sites,
+    presetId,
+    target,
+    serverId,
+    network,
+    ports,
+    order,
+  );
 }

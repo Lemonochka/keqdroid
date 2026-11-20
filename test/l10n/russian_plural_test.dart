@@ -12,8 +12,9 @@ import 'package:keqdroid/l10n/app_localizations.dart';
 /// каждую строку с числом в русском переводе, чтобы новая не повторила ошибку.
 void main() {
   test('у каждого русского счётчика есть форма one', () {
-    final arb = jsonDecode(File('lib/l10n/app_ru.arb').readAsStringSync())
-        as Map<String, dynamic>;
+    final arb =
+        jsonDecode(File('lib/l10n/app_ru.arb').readAsStringSync())
+            as Map<String, dynamic>;
     final missing = [
       for (final e in arb.entries)
         if (!e.key.startsWith('@') &&

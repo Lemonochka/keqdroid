@@ -19,15 +19,16 @@ class _Servers extends ServersNotifier {
 
   @override
   ServersState build() => ServersState(
-        servers: [
-          ServerItem(
-            id: 'n1',
-            config: 'vless://00000000-0000-0000-0000-000000000000@n1.example.com:443'
-                '?security=reality&type=tcp#Node',
-            type: ServerItemType.manual,
-          ),
-        ],
-      );
+    servers: [
+      ServerItem(
+        id: 'n1',
+        config:
+            'vless://00000000-0000-0000-0000-000000000000@n1.example.com:443'
+            '?security=reality&type=tcp#Node',
+        type: ServerItemType.manual,
+      ),
+    ],
+  );
 
   @override
   Future<void> addManual(String rawConfig) async => added.add(rawConfig);
@@ -53,22 +54,24 @@ Future<_Servers> _openAddSheet(WidgetTester tester) async {
   addTearDown(tester.view.reset);
   final servers = _Servers();
   final storage = await tester.runAsync(buildStorageService);
-  await tester.pumpWidget(ProviderScope(
-    overrides: [
-      storageProvider.overrideWithValue(storage!),
-      serversProvider.overrideWith(() => servers),
-      halloweenActiveProvider.overrideWith(_NoHalloween.new),
-      vpnEngineProvider.overrideWithValue(
-        VpnEngine.withBackend(FakeTunnelBackend()),
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        storageProvider.overrideWithValue(storage!),
+        serversProvider.overrideWith(() => servers),
+        halloweenActiveProvider.overrideWith(_NoHalloween.new),
+        vpnEngineProvider.overrideWithValue(
+          VpnEngine.withBackend(FakeTunnelBackend()),
+        ),
+      ],
+      child: MaterialApp(
+        locale: const Locale('ru'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const Scaffold(body: ServersTab()),
       ),
-    ],
-    child: MaterialApp(
-      locale: const Locale('ru'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: const Scaffold(body: ServersTab()),
     ),
-  ));
+  );
   await _frames(tester);
   await tester.tap(find.byType(FloatingActionButton));
   await _frames(tester);
@@ -82,8 +85,12 @@ void _clipboard(WidgetTester tester, String? text) {
         ? (text == null ? null : <String, dynamic>{'text': text})
         : null,
   );
-  addTearDown(() => tester.binding.defaultBinaryMessenger
-      .setMockMethodCallHandler(SystemChannels.platform, null));
+  addTearDown(
+    () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      null,
+    ),
+  );
 }
 
 void main() {
@@ -110,13 +117,19 @@ void main() {
 
       expect(servers.added, [vless]);
       expect(find.byType(TextField), findsNothing);
-      expect(find.text(_l10n.serversAddServer), findsNothing, reason: 'шторка закрыта');
+      expect(
+        find.text(_l10n.serversAddServer),
+        findsNothing,
+        reason: 'шторка закрыта',
+      );
       expect(find.text(_l10n.serversImportedSummary(1, 1)), findsOneWidget);
     });
 
     // на телевизоре буфер пуст, и набрать ссылку можно только в поле
     for (final (name, clip) in [('пустой', ''), ('без текста', null)]) {
-      testWidgets('$name буфер открывает поле ввода, как раньше', (tester) async {
+      testWidgets('$name буфер открывает поле ввода, как раньше', (
+        tester,
+      ) async {
         _clipboard(tester, clip);
         final servers = await _openAddSheet(tester);
 

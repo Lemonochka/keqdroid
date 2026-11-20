@@ -24,7 +24,10 @@ class LinuxAutostart {
     try {
       await Process.run('systemctl', ['--user', 'daemon-reload']);
     } catch (e) {
-      AppLogger.instance.debug('systemctl --user daemon-reload failed', error: e);
+      AppLogger.instance.debug(
+        'systemctl --user daemon-reload failed',
+        error: e,
+      );
     }
   };
 
@@ -41,8 +44,15 @@ class LinuxAutostart {
 
   static File _file() => File(p.join(_configHome(), 'autostart', _fileName));
 
-  static File _hyprlandDropIn() => File(p.join(_configHome(), 'systemd', 'user',
-      'hyprland-session.target.d', 'keqdroid.conf'));
+  static File _hyprlandDropIn() => File(
+    p.join(
+      _configHome(),
+      'systemd',
+      'user',
+      'hyprland-session.target.d',
+      'keqdroid.conf',
+    ),
+  );
 
   static Future<bool> _syncHyprlandDropIn(bool wanted) async {
     final file = _hyprlandDropIn();
@@ -61,7 +71,8 @@ class LinuxAutostart {
   // Hyprland без systemd-сборки (caelestia на EndeavourOS), sway, river и niri вне своей сессии ярлык не исполнят:
   // xdg-desktop-autostart.target никто не поднимает. Остаётся их собственный запуск при старте; строку ставим
   // только там, иначе приложение стартовало бы дважды
-  static const _startMarker = 'keqdroid autostart, added and removed by the app';
+  static const _startMarker =
+      'keqdroid autostart, added and removed by the app';
 
   static const _compositors = ['hyprland', 'sway', 'river', 'niri'];
 
@@ -94,8 +105,12 @@ class LinuxAutostart {
       'hyprland-session.target',
     ]) {
       try {
-        final r = await Process.run(
-            'systemctl', ['--user', 'is-active', '--quiet', unit]);
+        final r = await Process.run('systemctl', [
+          '--user',
+          'is-active',
+          '--quiet',
+          unit,
+        ]);
         if (r.exitCode == 0) return true;
       } catch (_) {}
     }
@@ -107,15 +122,15 @@ class LinuxAutostart {
     final config = _configHome();
     return switch (wm) {
       'hyprland' => [
-          // caelestia подключает свой пустой hypr-user.lua именно для пользовательских строк
-          File(p.join(config, 'caelestia', 'hypr-user.lua')),
-          File(p.join(config, 'hypr', 'hyprland.lua')),
-          File(p.join(config, 'hypr', 'hyprland.conf')),
-        ],
+        // caelestia подключает свой пустой hypr-user.lua именно для пользовательских строк
+        File(p.join(config, 'caelestia', 'hypr-user.lua')),
+        File(p.join(config, 'hypr', 'hyprland.lua')),
+        File(p.join(config, 'hypr', 'hyprland.conf')),
+      ],
       'sway' => [
-          File(p.join(_home(), '.sway', 'config')),
-          File(p.join(config, 'sway', 'config')),
-        ],
+        File(p.join(_home(), '.sway', 'config')),
+        File(p.join(config, 'sway', 'config')),
+      ],
       'river' => [File(p.join(config, 'river', 'init'))],
       'niri' => [File(p.join(config, 'niri', 'config.kdl'))],
       _ => const [],
@@ -130,13 +145,14 @@ class LinuxAutostart {
     String quoted(String s) =>
         '"${s.replaceAll(r'\', r'\\').replaceAll('"', r'\"')}"';
     return switch (wm) {
-      'hyprland' when configPath.endsWith('.lua') => '-- $_startMarker\n'
-          'hl.on("hyprland.start", function() hl.exec_cmd(${quoted(command)}) end)\n',
+      'hyprland' when configPath.endsWith('.lua') =>
+        '-- $_startMarker\n'
+            'hl.on("hyprland.start", function() hl.exec_cmd(${quoted(command)}) end)\n',
       // hyprlang режет комментарий по решётке и подставляет $имя без всякого экранирования, поэтому $ рвём кавычками
-      'hyprland' => '# $_startMarker\nexec-once = '
-          '${escaped.replaceAll('#', '##').replaceAll(r'$', r"$''")}\n',
-      'sway' =>
-        '# $_startMarker\nexec ${escaped.replaceAll(r'$', r'$$')}\n',
+      'hyprland' =>
+        '# $_startMarker\nexec-once = '
+            '${escaped.replaceAll('#', '##').replaceAll(r'$', r"$''")}\n',
+      'sway' => '# $_startMarker\nexec ${escaped.replaceAll(r'$', r'$$')}\n',
       'river' => '# $_startMarker\n$command &\n',
       'niri' =>
         '// $_startMarker\nspawn-at-startup ${quoted(target)} "$flag"\n',
@@ -147,13 +163,27 @@ class LinuxAutostart {
   // init у river исполняемый файл на любом языке, строку оболочки ставим только в скрипт оболочки
   static bool _shellScript(String text) {
     if (!text.startsWith('#!')) return true;
-    final words = text.split('\n').first.substring(2).trim().split(RegExp(r'\s+'));
+    final words = text
+        .split('\n')
+        .first
+        .substring(2)
+        .trim()
+        .split(RegExp(r'\s+'));
     var program = p.posix.basename(words.first);
     if (program == 'env') {
-      program = words.skip(1).firstWhere((w) => !w.startsWith('-'), orElse: () => '');
+      program = words
+          .skip(1)
+          .firstWhere((w) => !w.startsWith('-'), orElse: () => '');
     }
-    return const {'sh', 'bash', 'dash', 'zsh', 'ksh', 'mksh', 'fish'}
-        .contains(program);
+    return const {
+      'sh',
+      'bash',
+      'dash',
+      'zsh',
+      'ksh',
+      'mksh',
+      'fish',
+    }.contains(program);
   }
 
   static String _withoutStartLines(String text) {
@@ -193,7 +223,10 @@ class LinuxAutostart {
         placed = true;
         if (wm != 'river' || _shellScript(next)) {
           next = _withStartLines(
-              wm, next, startLines(wm, file.path, _target()));
+            wm,
+            next,
+            startLines(wm, file.path, _target()),
+          );
         }
       }
       if (next != text) {
@@ -295,8 +328,11 @@ class LinuxAutostart {
   // path_provider тут не годится, он может уйти в старый каталог по имени бинаря
   static File _inTrayFile() {
     final xdg = Platform.environment['XDG_DATA_HOME'];
-    final dataHome = dataHomeOverride ??
-        (xdg != null && xdg.isNotEmpty ? xdg : p.join(_home(), '.local', 'share'));
+    final dataHome =
+        dataHomeOverride ??
+        (xdg != null && xdg.isNotEmpty
+            ? xdg
+            : p.join(_home(), '.local', 'share'));
     return File(p.join(dataHome, 'com.keqdroid.keqdroid', 'autostart-in-tray'));
   }
 
@@ -329,14 +365,14 @@ class LinuxAutostart {
 
   @visibleForTesting
   static String contentFor(String target) => [
-        '[Desktop Entry]',
-        'Type=Application',
-        'Name=KeqDroid',
-        'Exec=${LinuxDesktopEntry.execArgument(target)} $flag',
-        'Icon=keqdroid',
-        'Terminal=false',
-        'X-GNOME-Autostart-enabled=true',
-        _marker,
-        '',
-      ].join('\n');
+    '[Desktop Entry]',
+    'Type=Application',
+    'Name=KeqDroid',
+    'Exec=${LinuxDesktopEntry.execArgument(target)} $flag',
+    'Icon=keqdroid',
+    'Terminal=false',
+    'X-GNOME-Autostart-enabled=true',
+    _marker,
+    '',
+  ].join('\n');
 }

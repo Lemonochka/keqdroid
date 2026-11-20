@@ -43,10 +43,7 @@ void main() {
 
   group('kdialog', () {
     test('открытие: сначала каталог, потом фильтр', () {
-      final args = AppFileDialogs.cliOpenArgs(
-        'kdialog',
-        type: FileType.image,
-      );
+      final args = AppFileDialogs.cliOpenArgs('kdialog', type: FileType.image);
 
       final mode = args.indexOf('--getopenfilename');
       expect(mode, isNonNegative);

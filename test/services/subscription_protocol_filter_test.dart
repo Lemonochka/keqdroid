@@ -24,11 +24,11 @@ String _hysteria2(String name, {int n = 41}) =>
     'hysteria2://secret@198.51.100.$n:443?sni=a.example#$name';
 
 Subscription _sub({Set<String> excluded = const {}}) => Subscription(
-      id: 'a',
-      name: 'a',
-      url: 'https://a.example/sub',
-      excludedProtocols: excluded,
-    );
+  id: 'a',
+  name: 'a',
+  url: 'https://a.example/sub',
+  excludedProtocols: excluded,
+);
 
 Future<StorageService> _seed(
   Subscription sub, {
@@ -61,8 +61,9 @@ Future<({List<ServerItem> servers, Subscription sub})> _update(
   );
 }
 
-List<String> _names(List<ServerItem> servers) =>
-    [for (final s in servers) s.displayName];
+List<String> _names(List<ServerItem> servers) => [
+  for (final s in servers) s.displayName,
+];
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -129,80 +130,93 @@ void main() {
       expect(_names(r.servers), ['V1', 'S1', 'V2', 'T1', 'S2']);
     });
 
-    test('новый протокол от провайдера приходит, а не пропадает молча',
-        () async {
-      final sub = _sub(excluded: {'ss'});
-      final storage = await _seed(sub);
-      final r = await _update(storage, sub, [...mixed, _hy2('H1')]);
-      expect(_names(r.servers), ['V1', 'V2', 'T1', 'H1']);
-    });
+    test(
+      'новый протокол от провайдера приходит, а не пропадает молча',
+      () async {
+        final sub = _sub(excluded: {'ss'});
+        final storage = await _seed(sub);
+        final r = await _update(storage, sub, [...mixed, _hy2('H1')]);
+        expect(_names(r.servers), ['V1', 'V2', 'T1', 'H1']);
+      },
+    );
 
     test('hy2 и hysteria2 это один протокол', () async {
       final sub = _sub();
       final storage = await _seed(sub);
-      final r = await _update(
-        storage,
-        sub,
-        [_vless('V1'), _hy2('H1'), _hysteria2('H2')],
-      );
+      final r = await _update(storage, sub, [
+        _vless('V1'),
+        _hy2('H1'),
+        _hysteria2('H2'),
+      ]);
       expect(r.sub.protocolCounts, {'vless': 1, 'hysteria2': 2});
 
       final filtered = sub.copyWith(excludedProtocols: {'hysteria2'});
       await storage.saveSubscriptions([filtered]);
-      final again = await _update(
-        storage,
-        filtered,
-        [_vless('V1'), _hy2('H1'), _hysteria2('H2')],
-      );
+      final again = await _update(storage, filtered, [
+        _vless('V1'),
+        _hy2('H1'),
+        _hysteria2('H2'),
+      ]);
       expect(_names(again.servers), ['V1']);
     });
 
-    test('если провайдер прислал одни выключенные, фильтр не опустошает подписку',
-        () async {
-      final sub = _sub(excluded: {'ss'});
-      final storage = await _seed(sub);
-      final r = await _update(storage, sub, [_ss('S1'), _ss('S2', n: 31)]);
-      expect(_names(r.servers), ['S1', 'S2']);
-    });
+    test(
+      'если провайдер прислал одни выключенные, фильтр не опустошает подписку',
+      () async {
+        final sub = _sub(excluded: {'ss'});
+        final storage = await _seed(sub);
+        final r = await _update(storage, sub, [_ss('S1'), _ss('S2', n: 31)]);
+        expect(_names(r.servers), ['S1', 'S2']);
+      },
+    );
 
-    test('выбранный сервер выключенного протокола в ручном режиме снимается',
-        () async {
-      final sub = _sub();
-      final storage = await _seed(sub);
-      final first = await _update(storage, sub, mixed);
-      final picked = first.servers.firstWhere((s) => s.displayName == 'S1');
-      await storage.setActiveServerId(picked.id);
+    test(
+      'выбранный сервер выключенного протокола в ручном режиме снимается',
+      () async {
+        final sub = _sub();
+        final storage = await _seed(sub);
+        final first = await _update(storage, sub, mixed);
+        final picked = first.servers.firstWhere((s) => s.displayName == 'S1');
+        await storage.setActiveServerId(picked.id);
 
-      final filtered = sub.copyWith(excludedProtocols: {'ss'});
-      await storage.saveSubscriptions([filtered]);
-      await _update(storage, filtered, mixed);
-      expect(storage.getActiveServerId(), isNull);
-    });
+        final filtered = sub.copyWith(excludedProtocols: {'ss'});
+        await storage.saveSubscriptions([filtered]);
+        await _update(storage, filtered, mixed);
+        expect(storage.getActiveServerId(), isNull);
+      },
+    );
 
-    test('правленный руками сервер выключенного протокола тоже уходит',
-        () async {
-      final edited = ServerItem.fromRaw(_ss('Mine', n: 99), subscriptionId: 'a')
-          .copyWith(configOverridden: true);
-      final sub = _sub(excluded: {'ss'});
-      final storage = await _seed(sub, servers: [edited]);
-      final r = await _update(storage, sub, mixed);
-      expect(_names(r.servers), ['V1', 'V2', 'T1']);
-    });
+    test(
+      'правленный руками сервер выключенного протокола тоже уходит',
+      () async {
+        final edited = ServerItem.fromRaw(
+          _ss('Mine', n: 99),
+          subscriptionId: 'a',
+        ).copyWith(configOverridden: true);
+        final sub = _sub(excluded: {'ss'});
+        final storage = await _seed(sub, servers: [edited]);
+        final r = await _update(storage, sub, mixed);
+        expect(_names(r.servers), ['V1', 'V2', 'T1']);
+      },
+    );
   });
 
   group('модель', () {
     test('фильтр и счёт переживают сохранение', () {
-      final sub = _sub(excluded: {'ss'})
-          .copyWith(protocolCounts: {'vless': 2, 'ss': 1});
+      final sub = _sub(
+        excluded: {'ss'},
+      ).copyWith(protocolCounts: {'vless': 2, 'ss': 1});
       final back = Subscription.fromJson(sub.toJson());
       expect(back.excludedProtocols, {'ss'});
       expect(back.protocolCounts, {'vless': 2, 'ss': 1});
     });
 
     test('у старой подписки фильтра нет', () {
-      final old = Subscription.fromJson(
-        {'id': 'a', 'name': 'a', 'url': 'https://a.example/sub'},
-      );
+      final old = Subscription.fromJson({
+        'id': 'a',
+        'name': 'a',
+        'url': 'https://a.example/sub',
+      });
       expect(old.excludedProtocols, isEmpty);
       expect(old.protocolCounts, isEmpty);
     });
@@ -235,12 +249,11 @@ class _Body implements HttpClientAdapter {
     RequestOptions options,
     Stream<List<int>>? requestStream,
     Future<void>? cancelFuture,
-  ) async =>
-      ResponseBody.fromString(
-        body,
-        200,
-        headers: {
-          'content-type': ['text/plain; charset=utf-8'],
-        },
-      );
+  ) async => ResponseBody.fromString(
+    body,
+    200,
+    headers: {
+      'content-type': ['text/plain; charset=utf-8'],
+    },
+  );
 }

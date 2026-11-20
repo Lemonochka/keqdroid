@@ -8,41 +8,47 @@ import 'package:keqdroid/services/ping_service.dart';
 /// Строка одна на замер, иначе подписка на сотню серверов съест журнал.
 void main() {
   PingResult ok(String id) => PingResult(
-        serverId: id,
-        serverName: id,
-        latencyMs: 120,
-        success: true,
-        pingType: PingType.url,
-      );
+    serverId: id,
+    serverName: id,
+    latencyMs: 120,
+    success: true,
+    pingType: PingType.url,
+  );
 
   PingResult fail(String id, String error) => PingResult(
-        serverId: id,
-        serverName: id,
-        success: false,
-        error: error,
-        pingType: PingType.url,
-      );
+    serverId: id,
+    serverName: id,
+    success: false,
+    error: error,
+    pingType: PingType.url,
+  );
 
   test('все ответили: строки нет', () {
-    expect(PingService.failureSummary(PingType.url, [ok('a'), ok('b')]), isNull);
+    expect(
+      PingService.failureSummary(PingType.url, [ok('a'), ok('b')]),
+      isNull,
+    );
     expect(PingService.failureSummary(PingType.url, const []), isNull);
   });
 
-  test('причины сгруппированы, частая первой, номер порта причину не дробит', () {
-    final line = PingService.failureSummary(PingType.url, [
-      ok('a'),
-      fail('b', 'Timeout'),
-      fail('c', 'Core did not open port 51234 in time'),
-      fail('d', 'Core did not open port 51999 in time'),
-      fail('e', 'Core did not open port 50001 in time'),
-    ]);
+  test(
+    'причины сгруппированы, частая первой, номер порта причину не дробит',
+    () {
+      final line = PingService.failureSummary(PingType.url, [
+        ok('a'),
+        fail('b', 'Timeout'),
+        fail('c', 'Core did not open port 51234 in time'),
+        fail('d', 'Core did not open port 51999 in time'),
+        fail('e', 'Core did not open port 50001 in time'),
+      ]);
 
-    expect(
-      line,
-      'Ping url: 1 of 5 answered; '
-      'Core did not open port in time x3; Timeout x1',
-    );
-  });
+      expect(
+        line,
+        'Ping url: 1 of 5 answered; '
+        'Core did not open port in time x3; Timeout x1',
+      );
+    },
+  );
 
   test('при равенстве порядок как в замере', () {
     final line = PingService.failureSummary(PingType.tcp, [
@@ -71,7 +77,10 @@ void main() {
 
   test('длинный хвост лога ядра обрезан', () {
     final line = PingService.failureSummary(PingType.url, [
-      fail('a', 'Core exited with code 23 before opening port 4000: ${'x' * 500}'),
+      fail(
+        'a',
+        'Core exited with code 23 before opening port 4000: ${'x' * 500}',
+      ),
     ])!;
 
     expect(line.length, lessThan(260));

@@ -36,10 +36,12 @@ class LiquidBottomNav extends StatefulWidget {
 
   // ширина ленты в покое с раскрытым пунктом label: по ней раскладывается то, что стоит рядом
   static double restWidth(BuildContext context, String label) =>
-      _tabWidth * _count + _grow + _labelWidth(context, label) + _seam * (_count - 1);
+      _tabWidth * _count +
+      _grow +
+      _labelWidth(context, label) +
+      _seam * (_count - 1);
 
   static double sideGap(LiquidBarStyle style) => _Look.of(style).sideGap;
-
 }
 
 const int _count = 3;
@@ -56,9 +58,9 @@ double _labelWidth(BuildContext context, String label) {
   final painter = TextPainter(
     text: TextSpan(
       text: label,
-      style: DefaultTextStyle.of(context)
-          .style
-          .merge(Theme.of(context).textTheme.labelLarge),
+      style: DefaultTextStyle.of(
+        context,
+      ).style.merge(Theme.of(context).textTheme.labelLarge),
     ),
     textDirection: Directionality.of(context),
     textScaler: MediaQuery.textScalerOf(context),
@@ -95,9 +97,9 @@ class _Look {
   );
 
   static _Look of(LiquidBarStyle style) => switch (style) {
-        LiquidBarStyle.mainland => _mainland,
-        LiquidBarStyle.islands => _islands,
-      };
+    LiquidBarStyle.mainland => _mainland,
+    LiquidBarStyle.islands => _islands,
+  };
 
   final bool strip;
   final double sideGap;
@@ -111,13 +113,15 @@ double _lerp(double a, double b, double t) => a + (b - a) * t;
 // отступа (окно кончается над панелью задач планшета) кнопки стекали в лужу
 @visibleForTesting
 double liquidPoolGoo({required double restGap, required double sink}) => _lerp(
-      math.min(_LiquidBarPainter.poolGoo, restGap),
-      _LiquidBarPainter.poolGoo,
-      sink,
-    );
+  math.min(_LiquidBarPainter.poolGoo, restGap),
+  _LiquidBarPainter.poolGoo,
+  sink,
+);
 
 double _pageOf(PageController? pages, int index) {
-  if (pages != null && pages.hasClients && pages.position.hasContentDimensions) {
+  if (pages != null &&
+      pages.hasClients &&
+      pages.position.hasContentDimensions) {
     return pages.page ?? index.toDouble();
   }
   return index.toDouble();
@@ -129,15 +133,24 @@ class _LiquidBottomNavState extends State<LiquidBottomNav>
   static const double _absorbShare = 0.4;
   // мягче системных: лента проходит около 150 dp, и за spatialDefault (0,25 с) движение выходит рывком;
   // без перелёта, оседает примерно за 0,6 с
-  static const _sinkSpring =
-      SpringDescription(mass: 1, stiffness: 60, damping: 2 * 7.75);
+  static const _sinkSpring = SpringDescription(
+    mass: 1,
+    stiffness: 60,
+    damping: 2 * 7.75,
+  );
   // обратно чуть мягче spatialSlow: на нём лента выпрыгивала из края резче, чем уходила
-  static const _riseSpring =
-      SpringDescription(mass: 1, stiffness: 100, damping: 0.85 * 2 * 10);
+  static const _riseSpring = SpringDescription(
+    mass: 1,
+    stiffness: 100,
+    damping: 0.85 * 2 * 10,
+  );
   // выбор вкладки с заметной отдачей: на spatialFast при листании экранов казалось,
   // что анимации нет вовсе
-  static const _switchSpring =
-      SpringDescription(mass: 1, stiffness: 500, damping: 0.6 * 2 * 22.36);
+  static const _switchSpring = SpringDescription(
+    mass: 1,
+    stiffness: 500,
+    damping: 0.6 * 2 * 22.36,
+  );
 
   // unbounded: пружина должна перелетать за цель
   late final List<AnimationController> _ctrls = List.generate(
@@ -168,7 +181,9 @@ class _LiquidBottomNavState extends State<LiquidBottomNav>
   final ui.FragmentShader? _shader = FloatingBar.newBarShader();
 
   // палец, задержанный на ленте: вкладки тянутся к нему, выбирается та, где отпустили
-  late final AnimationController _grab = AnimationController.unbounded(vsync: this);
+  late final AnimationController _grab = AnimationController.unbounded(
+    vsync: this,
+  );
   final _finger = ValueNotifier<double>(0);
   int? _hover;
   var _grabbing = false;
@@ -248,7 +263,9 @@ class _LiquidBottomNavState extends State<LiquidBottomNav>
     FloatingBar.hidden.removeListener(_onHidden);
     FloatingBar.jump.removeListener(_onJump);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (FloatingBar.barOnScreen.value == this) FloatingBar.barOnScreen.value = null;
+      if (FloatingBar.barOnScreen.value == this) {
+        FloatingBar.barOnScreen.value = null;
+      }
     });
     for (final c in _ctrls) {
       c.dispose();
@@ -337,18 +354,18 @@ class _LiquidBottomNavState extends State<LiquidBottomNav>
     gestures: {
       LongPressGestureRecognizer:
           GestureRecognizerFactoryWithHandlers<LongPressGestureRecognizer>(
-        () => LongPressGestureRecognizer(
-          duration: const Duration(milliseconds: 300),
-          debugOwner: this,
-        ),
-        (r) {
-          r
-            ..onLongPressStart = _grabStart
-            ..onLongPressMoveUpdate = _grabMove
-            ..onLongPressEnd = ((_) => _grabEnd())
-            ..onLongPressCancel = _grabEnd;
-        },
-      ),
+            () => LongPressGestureRecognizer(
+              duration: const Duration(milliseconds: 300),
+              debugOwner: this,
+            ),
+            (r) {
+              r
+                ..onLongPressStart = _grabStart
+                ..onLongPressMoveUpdate = _grabMove
+                ..onLongPressEnd = ((_) => _grabEnd())
+                ..onLongPressCancel = _grabEnd;
+            },
+          ),
     },
     child: const SizedBox.expand(),
   );
@@ -429,19 +446,17 @@ class _LiquidBottomNavState extends State<LiquidBottomNav>
       height: FloatingBar.bottomMargin + inset + FloatingBar.height,
       child: LayoutBuilder(
         builder: (context, box) => AnimatedBuilder(
-          animation: Listenable.merge(
-            [
-              ..._ctrls,
-              _hide,
-              _jumpIn,
-              _sideIn,
-              FloatingBar.side,
-              _grab,
-              _wave,
-              _finger,
-              ?pages,
-            ],
-          ),
+          animation: Listenable.merge([
+            ..._ctrls,
+            _hide,
+            _jumpIn,
+            _sideIn,
+            FloatingBar.side,
+            _grab,
+            _wave,
+            _finger,
+            ?pages,
+          ]),
           builder: (context, _) {
             final width = box.maxWidth;
             final ts = [for (final c in _ctrls) c.value.clamp(0.0, 1.0)];
@@ -451,13 +466,16 @@ class _LiquidBottomNavState extends State<LiquidBottomNav>
               _absorbedByPage(page),
               (hide / _absorbShare).clamp(0.0, 1.0),
             );
-            final sink =
-                ((hide - _absorbShare) / (1 - _absorbShare)).clamp(0.0, 1.0);
+            final sink = ((hide - _absorbShare) / (1 - _absorbShare)).clamp(
+              0.0,
+              1.0,
+            );
             final jumpT = _jumpIn.value.clamp(0.0, 1.0);
 
             // место под стрелку держим на всей вкладке серверов, а не только пока она видна:
             // она появляется на прокрутке, и лента не должна от неё дёргаться
-            final leftSide = (look.jumpWidth + look.sideGap) *
+            final leftSide =
+                (look.jumpWidth + look.sideGap) *
                 (1 - (page - _jumpTab).abs().clamp(0.0, 1.0));
             final rightSide = (look.plusWidth + look.sideGap) * (1 - absorbed);
             final budgets = _labelBudgets(
@@ -478,13 +496,15 @@ class _LiquidBottomNavState extends State<LiquidBottomNav>
             final stripWidth =
                 widths.fold(0.0, (a, b) => a + b) + _seam * (_count - 1);
 
-            final restY = box.maxHeight -
+            final restY =
+                box.maxHeight -
                 FloatingBar.bottomMargin -
                 inset -
                 FloatingBar.height / 2;
             // за краем на полсклейки: край ещё тянется к ленте, и от спрятанной панели остаётся бугорок в 1-2 dp;
             // так задумано, на всю склейку он пропадает
-            final centerY = restY +
+            final centerY =
+                restY +
                 sink *
                     (FloatingBar.bottomMargin +
                         inset +
@@ -530,14 +550,20 @@ class _LiquidBottomNavState extends State<LiquidBottomNav>
             final strip = tabs.reduce((a, b) => a.expandToInclude(b));
 
             final grab = _grab.value.clamp(0.0, 1.0);
-            final finger = _finger.value.clamp(strip.left + 24, strip.right - 24);
+            final finger = _finger.value.clamp(
+              strip.left + 24,
+              strip.right - 24,
+            );
             // увеличение не скачком по границе вкладки: за её краем гаснет на ~30 dp
             final hovers = [
               for (final r in tabs)
                 grab *
                     math.exp(
                       -math.pow(
-                            math.max(0, math.max(r.left - finger, finger - r.right)),
+                            math.max(
+                              0,
+                              math.max(r.left - finger, finger - r.right),
+                            ),
                             2,
                           ) /
                           (2 * 18 * 18),
@@ -584,11 +610,19 @@ class _LiquidBottomNavState extends State<LiquidBottomNav>
               height: 0,
             );
             final budLtr = Rect.lerp(out, inside, absorbed)!;
-            final bud = place(budLtr.left, budLtr.top, budLtr.width, budLtr.height);
+            final bud = place(
+              budLtr.left,
+              budLtr.top,
+              budLtr.width,
+              budLtr.height,
+            );
             final budScale = budLtr.height / FloatingBar.height;
             final budRadii = look.strip
                 ? (_inner * budScale, _outer * budScale)
-                : (_Look.islandRadius * budScale, _Look.islandRadius * budScale);
+                : (
+                    _Look.islandRadius * budScale,
+                    _Look.islandRadius * budScale,
+                  );
 
             // стрелка вытекает из начала ленты так же, как кнопка из её конца
             final jumpOut = Rect.fromLTWH(
@@ -599,7 +633,8 @@ class _LiquidBottomNavState extends State<LiquidBottomNav>
             );
             // стрелку в конце убираем совсем, поэтому она уходит за всю склейку:
             // бугорок от неё тает по пути, а не обрывается в последний кадр
-            final gone = box.maxHeight +
+            final gone =
+                box.maxHeight +
                 FloatingBar.height / 2 +
                 _LiquidBarPainter.poolGoo +
                 8;
@@ -612,12 +647,20 @@ class _LiquidBottomNavState extends State<LiquidBottomNav>
             final intoEdge = jumpOut.translate(0, gone - restY);
             final jumpIn = Rect.lerp(intoStrip, intoEdge, sink)!;
             final jumpLtr = Rect.lerp(jumpIn, jumpOut, jumpT)!;
-            final jump = place(jumpLtr.left, jumpLtr.top, jumpLtr.width, jumpLtr.height);
+            final jump = place(
+              jumpLtr.left,
+              jumpLtr.top,
+              jumpLtr.width,
+              jumpLtr.height,
+            );
             final jumpScale = jumpLtr.height / FloatingBar.height;
             // одна стрелка, когда лента ушла в край, круглая с обеих сторон
             final jumpRadii = look.strip
                 ? (_outer * jumpScale, _lerp(_inner, _outer, sink) * jumpScale)
-                : (_Look.islandRadius * jumpScale, _Look.islandRadius * jumpScale);
+                : (
+                    _Look.islandRadius * jumpScale,
+                    _Look.islandRadius * jumpScale,
+                  );
 
             final sideContent = FloatingBar.side.value;
             // плитка проверки встаёт на место кнопки: сначала кнопка втекает в ленту, потом
@@ -640,19 +683,35 @@ class _LiquidBottomNavState extends State<LiquidBottomNav>
             final sideROut = Rect.fromLTWH(
               stripRight + look.sideGap,
               sideTop,
-              math.max(0, width - FloatingBar.margin - stripRight - look.sideGap),
+              math.max(
+                0,
+                width - FloatingBar.margin - stripRight - look.sideGap,
+              ),
               FloatingBar.height,
             );
             final sideLIn = intoStrip;
             final sideRIn = inside.translate(0, restY - centerY);
             final sideLLtr = Rect.lerp(sideLIn, sideLOut, sideT)!;
             final sideRLtr = Rect.lerp(sideRIn, sideROut, sideT)!;
-            final sideL = place(sideLLtr.left, sideLLtr.top, sideLLtr.width, sideLLtr.height);
-            final sideR = place(sideRLtr.left, sideRLtr.top, sideRLtr.width, sideRLtr.height);
+            final sideL = place(
+              sideLLtr.left,
+              sideLLtr.top,
+              sideLLtr.width,
+              sideLLtr.height,
+            );
+            final sideR = place(
+              sideRLtr.left,
+              sideRLtr.top,
+              sideRLtr.width,
+              sideRLtr.height,
+            );
             final sideScale = sideLLtr.height / FloatingBar.height;
             final sideLRadii = look.strip
                 ? (_outer * sideScale, _inner * sideScale)
-                : (_Look.islandRadius * sideScale, _Look.islandRadius * sideScale);
+                : (
+                    _Look.islandRadius * sideScale,
+                    _Look.islandRadius * sideScale,
+                  );
             final sideRRadii = (sideLRadii.$2, sideLRadii.$1);
             final sideOpacity = ((sideT - 0.4) / 0.6).clamp(0.0, 1.0);
 
@@ -680,7 +739,8 @@ class _LiquidBottomNavState extends State<LiquidBottomNav>
                       sideR: sideT > 0.01 ? sideR : Rect.zero,
                       sideRRadii: side(sideRRadii),
                       sideT: sideT,
-                      sideLColor: sideContent?.startColor ?? FloatingBar.tileColor(cs),
+                      sideLColor:
+                          sideContent?.startColor ?? FloatingBar.tileColor(cs),
                       finger: bump,
                       fingerGoo: 24 * grab,
                       dpr: dpr,
@@ -696,7 +756,14 @@ class _LiquidBottomNavState extends State<LiquidBottomNav>
                     rect: tabs[i],
                     child: IgnorePointer(
                       ignoring: sink > 0,
-                      child: _tab(i, items[i], ts[i], hovers[i], budgets[i], labels[i]),
+                      child: _tab(
+                        i,
+                        items[i],
+                        ts[i],
+                        hovers[i],
+                        budgets[i],
+                        labels[i],
+                      ),
                     ),
                   ),
                 if (absorbed < 1)
@@ -728,7 +795,9 @@ class _LiquidBottomNavState extends State<LiquidBottomNav>
                           child: Opacity(
                             opacity: sideOpacity,
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                              ),
                               child: Center(
                                 child: FittedBox(
                                   fit: BoxFit.scaleDown,
@@ -754,10 +823,7 @@ class _LiquidBottomNavState extends State<LiquidBottomNav>
                 // поверх вкладок, но прозрачный: короткое касание по-прежнему достаётся им
                 Positioned.fromRect(
                   rect: strip,
-                  child: IgnorePointer(
-                    ignoring: sink > 0,
-                    child: _grabArea,
-                  ),
+                  child: IgnorePointer(ignoring: sink > 0, child: _grabArea),
                 ),
                 if (jumpT > 0.01)
                   Positioned.fromRect(
@@ -847,38 +913,42 @@ class _Tab extends StatelessWidget {
           child: Center(
             child: Transform.scale(
               scale: 1 + 0.12 * hover,
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-              NavIcon(
-                icon: icon,
-                badge: badge,
-                color: Color.lerp(cs.onSurface, cs.onPrimary, t)!,
-              ),
-              ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: labelMax + 8),
-                child: ClipRect(
-                  child: Align(
-                    alignment: AlignmentDirectional.centerStart,
-                    widthFactor: reveal,
-                    // без heightFactor Align растёт до высоты экрана
-                    heightFactor: 1,
-                    child: Opacity(
-                      opacity: t,
-                      child: Padding(
-                        padding: const EdgeInsetsDirectional.only(start: 8),
-                        child: Text(
-                          label,
-                          style: theme.textTheme.labelLarge
-                              ?.copyWith(color: cs.onPrimary),
-                          maxLines: 1,
-                          softWrap: false,
-                          overflow: TextOverflow.fade,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  NavIcon(
+                    icon: icon,
+                    badge: badge,
+                    color: Color.lerp(cs.onSurface, cs.onPrimary, t)!,
+                  ),
+                  ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: labelMax + 8),
+                    child: ClipRect(
+                      child: Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        widthFactor: reveal,
+                        // без heightFactor Align растёт до высоты экрана
+                        heightFactor: 1,
+                        child: Opacity(
+                          opacity: t,
+                          child: Padding(
+                            padding: const EdgeInsetsDirectional.only(start: 8),
+                            child: Text(
+                              label,
+                              style: theme.textTheme.labelLarge?.copyWith(
+                                color: cs.onPrimary,
+                              ),
+                              maxLines: 1,
+                              softWrap: false,
+                              overflow: TextOverflow.fade,
+                            ),
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
+                ],
               ),
-            ]),
             ),
           ),
         ),
@@ -1038,8 +1108,20 @@ class _LiquidBarPainter extends CustomPainter {
     final a = Radius.circular(math.min(radii.$1, h));
     final b = Radius.circular(math.min(radii.$2, h));
     return vertical
-        ? RRect.fromRectAndCorners(r, topLeft: a, topRight: a, bottomLeft: b, bottomRight: b)
-        : RRect.fromRectAndCorners(r, topLeft: a, bottomLeft: a, topRight: b, bottomRight: b);
+        ? RRect.fromRectAndCorners(
+            r,
+            topLeft: a,
+            topRight: a,
+            bottomLeft: b,
+            bottomRight: b,
+          )
+        : RRect.fromRectAndCorners(
+            r,
+            topLeft: a,
+            bottomLeft: a,
+            topRight: b,
+            bottomRight: b,
+          );
   }
 
   @override
@@ -1068,7 +1150,10 @@ class _LiquidBarPainter extends CustomPainter {
         canvas.drawRRect(_rrect(jump, jumpRadii), Paint()..color = jumpColor);
       }
       if (!sideL.isEmpty) {
-        canvas.drawRRect(_rrect(sideL, sideLRadii), Paint()..color = sideLColor);
+        canvas.drawRRect(
+          _rrect(sideL, sideLRadii),
+          Paint()..color = sideLColor,
+        );
       }
       if (!sideR.isEmpty) canvas.drawRRect(_rrect(sideR, sideRRadii), base);
       return;

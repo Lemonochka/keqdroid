@@ -8,13 +8,13 @@ enum VpnStatus {
   error;
 
   static VpnStatus fromString(String s) => switch (s.toLowerCase()) {
-        'disconnected' || 'stopped' => VpnStatus.disconnected,
-        'connecting' || 'starting' => VpnStatus.connecting,
-        'connected' || 'running' => VpnStatus.connected,
-        'disconnecting' || 'stopping' => VpnStatus.disconnecting,
-        'error' || 'failed' => VpnStatus.error,
-        _ => VpnStatus.disconnected,
-      };
+    'disconnected' || 'stopped' => VpnStatus.disconnected,
+    'connecting' || 'starting' => VpnStatus.connecting,
+    'connected' || 'running' => VpnStatus.connected,
+    'disconnecting' || 'stopping' => VpnStatus.disconnecting,
+    'error' || 'failed' => VpnStatus.error,
+    _ => VpnStatus.disconnected,
+  };
 }
 
 class VpnState {
@@ -43,19 +43,19 @@ class VpnState {
   static const connected = VpnState(status: VpnStatus.connected);
 
   factory VpnState.fromMap(Map<Object?, Object?> map) => VpnState(
-        status: VpnStatus.fromString(map['status'] as String? ?? 'disconnected'),
-        errorMessage: map['error'] as String?,
-        uploadSpeed: map['uploadSpeed'] as int?,
-        downloadSpeed: map['downloadSpeed'] as int?,
-        totalUpload: map['totalUpload'] as int?,
-        totalDownload: map['totalDownload'] as int?,
-        duration: map['durationSeconds'] != null
-            ? Duration(seconds: map['durationSeconds'] as int)
-            : null,
-        activeMode: map['connectionMode'] != null
-            ? ConnectionMode.fromStorage(map['connectionMode'] as String?)
-            : null,
-      );
+    status: VpnStatus.fromString(map['status'] as String? ?? 'disconnected'),
+    errorMessage: map['error'] as String?,
+    uploadSpeed: map['uploadSpeed'] as int?,
+    downloadSpeed: map['downloadSpeed'] as int?,
+    totalUpload: map['totalUpload'] as int?,
+    totalDownload: map['totalDownload'] as int?,
+    duration: map['durationSeconds'] != null
+        ? Duration(seconds: map['durationSeconds'] as int)
+        : null,
+    activeMode: map['connectionMode'] != null
+        ? ConnectionMode.fromStorage(map['connectionMode'] as String?)
+        : null,
+  );
 
   bool telemetryEquals(VpnState other) =>
       status == other.status &&

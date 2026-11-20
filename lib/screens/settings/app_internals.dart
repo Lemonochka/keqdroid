@@ -40,21 +40,21 @@ class _AppInternalsScreen extends ConsumerWidget {
       ],
       children: switch (internals) {
         AsyncError(:final error) => [
-            ExpressiveNotice(
-              color: Theme.of(context).colorScheme.error,
-              icon: Icons.error_outline_rounded,
-              text: friendlyError(error, context),
-            ),
-          ],
+          ExpressiveNotice(
+            color: Theme.of(context).colorScheme.error,
+            icon: Icons.error_outline_rounded,
+            text: friendlyError(error, context),
+          ),
+        ],
         // смена настроек пересобирает провайдер в AsyncLoading со старым значением, и крутилка на это время
         // сбрасывала прокрутку наверх
         AsyncValue(:final value?) => _sections(context, ref, l10n, value),
         _ => const [
-            Padding(
-              padding: EdgeInsets.symmetric(vertical: 48),
-              child: Center(child: ShapeLoadingIndicator()),
-            ),
-          ],
+          Padding(
+            padding: EdgeInsets.symmetric(vertical: 48),
+            child: Center(child: ShapeLoadingIndicator()),
+          ),
+        ],
       },
     );
   }
@@ -82,9 +82,9 @@ class _AppInternalsScreen extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(4, 8, 4, 0),
           child: Text(
             l10n.settingsTunnelModeHint,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppTheme.textLight(context),
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
           ),
         ),
       ],
@@ -112,8 +112,8 @@ class _AppInternalsScreen extends ConsumerWidget {
             child: Text(
               l10n.settingsCoreHint,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppTheme.textLight(context),
-                  ),
+                color: AppTheme.textLight(context),
+              ),
             ),
           ),
         if (_coreMismatch(ref) case final skip?) ...[
@@ -168,14 +168,13 @@ class _AppInternalsScreen extends ConsumerWidget {
         value: _statusLabel(l10n, session.status),
         accent: session.isActive,
       ),
-      _InternalsRow(
-        label: l10n.settingsInternalsEngine,
-        value: session.engine,
-      ),
+      _InternalsRow(label: l10n.settingsInternalsEngine, value: session.engine),
       if (session.mode != null)
         _InternalsRow(
           label: l10n.settingsInternalsMode,
-          value: session.mode == ConnectionMode.tun ? 'TUN' : l10n.trayModeProxy,
+          value: session.mode == ConnectionMode.tun
+              ? 'TUN'
+              : l10n.trayModeProxy,
         ),
       _InternalsRow(
         label: l10n.settingsInternalsPorts,
@@ -188,17 +187,15 @@ class _AppInternalsScreen extends ConsumerWidget {
         ),
       _InternalsRow(
         label: l10n.settingsInternalsUptime,
-        value: session.uptime == null
-            ? dash
-            : _formatDuration(session.uptime!),
+        value: session.uptime == null ? dash : _formatDuration(session.uptime!),
       ),
       _InternalsRow(
         label: l10n.settingsInternalsCorePids,
         value: session.corePids.isEmpty
             ? dash
             : session.corePids.entries
-                .map((e) => '${e.key} ${e.value}')
-                .join('\n'),
+                  .map((e) => '${e.key} ${e.value}')
+                  .join('\n'),
       ),
       if (session.elevated != null)
         _InternalsRow(
@@ -220,10 +217,7 @@ class _AppInternalsScreen extends ConsumerWidget {
         label: l10n.settingsInternalsPackage,
         value: build.packageName,
       ),
-      _InternalsRow(
-        label: l10n.settingsInternalsOs,
-        value: build.osVersion,
-      ),
+      _InternalsRow(label: l10n.settingsInternalsOs, value: build.osVersion),
       _InternalsRow(label: l10n.settingsInternalsAbi, value: build.abi),
       _InternalsRow(
         label: l10n.settingsInternalsDart,
@@ -246,9 +240,9 @@ class _AppInternalsScreen extends ConsumerWidget {
       ClipboardData(text: AppInternalsService.report(data)),
     );
     if (!context.mounted) return;
-    AppSnack.of(context).showSnackBar(
-      SnackBar(content: Text(l10n.settingsInternalsCopied)),
-    );
+    AppSnack.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(l10n.settingsInternalsCopied)));
   }
 
   static String _statusLabel(AppLocalizations l10n, VpnStatus status) {
@@ -440,8 +434,8 @@ class _GeoDownloadTileState extends ConsumerState<_GeoDownloadTile> {
       subtitle: _error != null
           ? l10n.settingsInternalsGeoDownloadFailed(_error!)
           : (_busy
-              ? '${(_progress * 100).round()}%'
-              : l10n.settingsInternalsGeoTrimmedHint),
+                ? '${(_progress * 100).round()}%'
+                : l10n.settingsInternalsGeoTrimmedHint),
       accent: ExpressiveAccent.tertiary,
       danger: _error != null,
       onTap: _busy ? () {} : _download,
@@ -465,10 +459,12 @@ class _GeoTile extends StatelessWidget {
     return _InternalsRow(
       label: base.name,
       value: l10n.settingsInternalsGeoCodes(base.codeCount),
-      detail: ltrIsolate([
-        if (base.sizeBytes != null) formatBytes(base.sizeBytes!),
-        if (base.modified != null) formatFileDate(base.modified!),
-      ].join(' · ')),
+      detail: ltrIsolate(
+        [
+          if (base.sizeBytes != null) formatBytes(base.sizeBytes!),
+          if (base.modified != null) formatFileDate(base.modified!),
+        ].join(' · '),
+      ),
     );
   }
 }
@@ -546,7 +542,9 @@ class _VersionRowState extends ConsumerState<_VersionRow> {
   void _onTap() {
     final now = DateTime.now();
     final last = _lastTap;
-    _taps = (last == null || now.difference(last) > _forgetAfter) ? 1 : _taps + 1;
+    _taps = (last == null || now.difference(last) > _forgetAfter)
+        ? 1
+        : _taps + 1;
     _lastTap = now;
     if (_taps < _VersionRow.tapsToOpen) return;
     _taps = 0;
@@ -620,35 +618,35 @@ class _InternalsRow extends StatelessWidget {
       child: SizedBox(
         width: double.infinity,
         child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: textTheme.bodySmall?.copyWith(
-              color: AppTheme.textLight(context),
-            ),
-          ),
-          if (value.isNotEmpty) ...[
-            const SizedBox(height: 2),
-            SelectableText(
-              value,
-              style: textTheme.bodyMedium?.copyWith(
-                color: accent
-                    ? AppTheme.accent(context)
-                    : AppTheme.text(context),
-              ),
-            ),
-          ],
-          if (detail != null && detail!.isNotEmpty) ...[
-            const SizedBox(height: 2),
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
             Text(
-              detail!,
+              label,
               style: textTheme.bodySmall?.copyWith(
                 color: AppTheme.textLight(context),
               ),
             ),
+            if (value.isNotEmpty) ...[
+              const SizedBox(height: 2),
+              SelectableText(
+                value,
+                style: textTheme.bodyMedium?.copyWith(
+                  color: accent
+                      ? AppTheme.accent(context)
+                      : AppTheme.text(context),
+                ),
+              ),
+            ],
+            if (detail != null && detail!.isNotEmpty) ...[
+              const SizedBox(height: 2),
+              Text(
+                detail!,
+                style: textTheme.bodySmall?.copyWith(
+                  color: AppTheme.textLight(context),
+                ),
+              ),
+            ],
           ],
-        ],
         ),
       ),
     );
@@ -664,8 +662,9 @@ VpnCoreSkip? _coreMismatch(WidgetRef ref) {
     ),
   );
   final sub = server.subscriptionId;
-  final template =
-      sub == null ? null : ref.watch(subscriptionTemplateProvider(sub));
+  final template = sub == null
+      ? null
+      : ref.watch(subscriptionTemplateProvider(sub));
   return serverBackendChoice(
     server,
     preference: core,
@@ -730,13 +729,15 @@ class _ProxyAuthTile extends ConsumerWidget {
                   children: [
                     Text(
                       l10n.settingsProxyAuthTitle,
-                      style: theme.textTheme.titleMedium
-                          ?.copyWith(color: AppTheme.text(context)),
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: AppTheme.text(context),
+                      ),
                     ),
                     Text(
                       l10n.settingsProxyAuthSubtitle,
-                      style: theme.textTheme.bodySmall
-                          ?.copyWith(color: AppTheme.textLight(context)),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: AppTheme.textLight(context),
+                      ),
                     ),
                   ],
                 ),
@@ -777,7 +778,9 @@ class _TunnelModeTile extends ConsumerWidget {
     Future<void> select() async {
       if (selected) return;
       final settings = await ref.read(settingsNotifierProvider.future);
-      await ref.read(settingsNotifierProvider.notifier).save(
+      await ref
+          .read(settingsNotifierProvider.notifier)
+          .save(
             settings.copyWith(
               connectionMode: mode.storageValue,
               connectionModeChosen: true,
@@ -802,7 +805,9 @@ class _TunnelModeTile extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  isProxy ? l10n.settingsTunnelModeProxy : l10n.settingsTunnelModeVpn,
+                  isProxy
+                      ? l10n.settingsTunnelModeProxy
+                      : l10n.settingsTunnelModeVpn,
                   style: theme.textTheme.titleMedium?.copyWith(
                     color: AppTheme.text(context),
                   ),

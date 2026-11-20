@@ -11,15 +11,17 @@ Future<void> _run(WidgetTester tester, Duration total) async {
   }
 }
 
-Object _morph(WidgetTester tester) => (tester
-        .widget<CustomPaint>(
-          find.descendant(
-            of: find.byType(ShapeLoadingIndicator),
-            matching: find.byType(CustomPaint),
-          ),
-        )
-        .painter! as MorphPainter)
-    .morph;
+Object _morph(WidgetTester tester) =>
+    (tester
+                .widget<CustomPaint>(
+                  find.descendant(
+                    of: find.byType(ShapeLoadingIndicator),
+                    matching: find.byType(CustomPaint),
+                  ),
+                )
+                .painter!
+            as MorphPainter)
+        .morph;
 
 void main() {
   final ticking = ValueNotifier(true);
@@ -27,14 +29,14 @@ void main() {
   setUp(() => ticking.value = true);
 
   Future<void> host(WidgetTester tester) => tester.pumpWidget(
-        MaterialApp(
-          home: ValueListenableBuilder<bool>(
-            valueListenable: ticking,
-            builder: (_, on, child) => TickerMode(enabled: on, child: child!),
-            child: const Center(child: ShapeLoadingIndicator()),
-          ),
-        ),
-      );
+    MaterialApp(
+      home: ValueListenableBuilder<bool>(
+        valueListenable: ticking,
+        builder: (_, on, child) => TickerMode(enabled: on, child: child!),
+        child: const Center(child: ShapeLoadingIndicator()),
+      ),
+    ),
+  );
 
   testWidgets('на виду фигуры меняются', (tester) async {
     await host(tester);

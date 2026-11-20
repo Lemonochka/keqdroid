@@ -22,9 +22,9 @@ List<TrafficRoute> routesIn(RouteSection section, List<TrafficRoute> routes) {
   ];
   if (section == RouteSection.allApps) return _allAppsOrder(inSection);
   int rank(TrafficRoute r) => switch (section) {
-        RouteSection.apps => r.content == RouteContent.allTraffic ? 1 : 0,
-        _ => 0,
-      };
+    RouteSection.apps => r.content == RouteContent.allTraffic ? 1 : 0,
+    _ => 0,
+  };
   // List.sort устойчивость не обещает, поэтому ступени собираются по очереди
   final ranks = {for (final r in inSection) rank(r)}.toList()..sort();
   return [
@@ -35,10 +35,10 @@ List<TrafficRoute> routesIn(RouteSection section, List<TrafficRoute> routes) {
 }
 
 int _targetRank(TrafficRoute r) => switch (r.target) {
-      RouteTarget.direct => 0,
-      RouteTarget.server => 1,
-      _ => 2,
-    };
+  RouteTarget.direct => 0,
+  RouteTarget.server => 1,
+  _ => 2,
+};
 
 // перетащенные стоят по своим местам, остальные встают за последним маршрутом своей цели или целей выше;
 // пока мест нет, выходит прежняя сортировка по цели
@@ -59,9 +59,8 @@ List<TrafficRoute> _allAppsOrder(List<TrafficRoute> inSection) {
   return out;
 }
 
-bool routesHaveOwnOrder(List<TrafficRoute> routes) => routes.any(
-      (r) => r.order != null && sectionOf(r) == RouteSection.allApps,
-    );
+bool routesHaveOwnOrder(List<TrafficRoute> routes) =>
+    routes.any((r) => r.order != null && sectionOf(r) == RouteSection.allApps);
 
 // места получают все маршруты раздела: с одним местом у перетащенного соседи остались бы стоять по цели
 List<TrafficRoute> withAllAppsMoved(
@@ -81,8 +80,8 @@ List<TrafficRoute> withAllAppsMoved(
 }
 
 List<TrafficRoute> orderedRoutes(List<TrafficRoute> routes) => [
-      for (final s in RouteSection.values) ...routesIn(s, routes),
-    ];
+  for (final s in RouteSection.values) ...routesIn(s, routes),
+];
 
 RoutingPreset? presetById(String id) {
   for (final p in RoutingPresets.all) {
@@ -93,11 +92,12 @@ RoutingPreset? presetById(String id) {
 
 // пусто у всего трафика и у пресета, которого больше нет
 String routeEntriesText(TrafficRoute route) => switch (route.content) {
-      RouteContent.sites => route.sites,
-      RouteContent.preset => (presetById(route.presetId)?.values ?? const [])
-          .join(', '),
-      RouteContent.allTraffic => '',
-    };
+  RouteContent.sites => route.sites,
+  RouteContent.preset => (presetById(route.presetId)?.values ?? const []).join(
+    ', ',
+  ),
+  RouteContent.allTraffic => '',
+};
 
 const _runetZones = {'ru', 'su', 'рф', 'xn--p1ai'};
 
@@ -177,9 +177,9 @@ AppSettings foldRoutes(
 bool _never(TrafficRoute _) => false;
 
 List<String> routeListUrls(List<TrafficRoute> routes) => {
-      for (final r in routes)
-        if (r.content == RouteContent.sites) ...ruleListUrls(r.sites),
-    }.toList();
+  for (final r in routes)
+    if (r.content == RouteContent.sites) ...ruleListUrls(r.sites),
+}.toList();
 
 // правило по процессу становится маршрутом, но выключенным: раньше такие правила не применялись нигде,
 // и включить их молча значило бы поменять маршрутизацию при обновлении
@@ -214,10 +214,10 @@ List<TrafficRoute> routesFromLegacy(
   }
 
   RouteTarget targetOf(RuleAction a) => switch (a) {
-        RuleAction.direct => RouteTarget.direct,
-        RuleAction.proxy => RouteTarget.vpn,
-        RuleAction.block => RouteTarget.block,
-      };
+    RuleAction.direct => RouteTarget.direct,
+    RuleAction.proxy => RouteTarget.vpn,
+    RuleAction.block => RouteTarget.block,
+  };
 
   final routes = <TrafficRoute>[
     for (final (text, target) in [
@@ -236,30 +236,34 @@ List<TrafficRoute> routesFromLegacy(
     ];
     if (values.isEmpty) continue;
     if (rule.type == RuleType.processName) {
-      routes.add(make(
-        apps: values,
-        content: RouteContent.allTraffic,
-        target: targetOf(rule.action),
-        enabled: false,
-      ));
+      routes.add(
+        make(
+          apps: values,
+          content: RouteContent.allTraffic,
+          target: targetOf(rule.action),
+          enabled: false,
+        ),
+      );
       continue;
     }
     final tokens = switch (rule.type) {
       RuleType.geoip => [
-          for (final v in values)
-            v.toLowerCase().startsWith('geoip:') ? v : 'geoip:$v',
-        ],
+        for (final v in values)
+          v.toLowerCase().startsWith('geoip:') ? v : 'geoip:$v',
+      ],
       RuleType.geosite => [
-          for (final v in values)
-            v.toLowerCase().startsWith('geosite:') ? v : 'geosite:$v',
-        ],
+        for (final v in values)
+          v.toLowerCase().startsWith('geosite:') ? v : 'geosite:$v',
+      ],
       _ => values,
     };
-    routes.add(make(
-      sites: tokens.join(', '),
-      target: targetOf(rule.action),
-      enabled: rule.enabled,
-    ));
+    routes.add(
+      make(
+        sites: tokens.join(', '),
+        target: targetOf(rule.action),
+        enabled: rule.enabled,
+      ),
+    );
   }
   return routes;
 }

@@ -9,39 +9,36 @@ import 'package:keqdroid/utils/proxy_chain.dart';
 /// месте), — это не мелочь оформления, а сломанная навигация, поэтому порядок и
 /// состав закреплены тестом.
 ServerItem _server(String id, {String? subscriptionId}) => ServerItem(
-      id: id,
-      config: 'vless://uuid@$id.example:443?type=tcp&security=none',
-      type: subscriptionId == null
-          ? ServerItemType.manual
-          : ServerItemType.subscription,
-      subscriptionId: subscriptionId,
-    );
+  id: id,
+  config: 'vless://uuid@$id.example:443?type=tcp&security=none',
+  type: subscriptionId == null
+      ? ServerItemType.manual
+      : ServerItemType.subscription,
+  subscriptionId: subscriptionId,
+);
 
 ServerItem _chain() => ServerItem(
-      id: 'chain-1',
-      config: ProxyChainConfig(
-        name: 'DE → NL',
-        hops: const [
-          ProxyChainHop(
-            serverId: 'a',
-            name: 'DE',
-            config: 'vless://uuid@de.example:443?type=tcp&security=none',
-          ),
-          ProxyChainHop(
-            serverId: 'b',
-            name: 'NL',
-            config: 'vless://uuid@nl.example:443?type=tcp&security=none',
-          ),
-        ],
-      ).encode(),
-      type: ServerItemType.manual,
-    );
+  id: 'chain-1',
+  config: ProxyChainConfig(
+    name: 'DE → NL',
+    hops: const [
+      ProxyChainHop(
+        serverId: 'a',
+        name: 'DE',
+        config: 'vless://uuid@de.example:443?type=tcp&security=none',
+      ),
+      ProxyChainHop(
+        serverId: 'b',
+        name: 'NL',
+        config: 'vless://uuid@nl.example:443?type=tcp&security=none',
+      ),
+    ],
+  ).encode(),
+  type: ServerItemType.manual,
+);
 
-Subscription _sub(String id, String name) => Subscription(
-      id: id,
-      name: name,
-      url: 'https://example.com/$id',
-    );
+Subscription _sub(String id, String name) =>
+    Subscription(id: id, name: name, url: 'https://example.com/$id');
 
 void main() {
   test('порядок: цепочки → подписки → ручные', () {
@@ -55,15 +52,12 @@ void main() {
       subscriptions: [_sub('sub-a', 'A'), _sub('sub-b', 'B')],
     );
 
-    expect(
-      groups.map((g) => g.kind).toList(),
-      [
-        ServerGroupKind.chains,
-        ServerGroupKind.subscription,
-        ServerGroupKind.subscription,
-        ServerGroupKind.manual,
-      ],
-    );
+    expect(groups.map((g) => g.kind).toList(), [
+      ServerGroupKind.chains,
+      ServerGroupKind.subscription,
+      ServerGroupKind.subscription,
+      ServerGroupKind.manual,
+    ]);
     expect(groups.map((g) => g.key).toList(), [
       kChainsServerGroupKey,
       'sub-a',

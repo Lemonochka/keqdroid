@@ -30,12 +30,14 @@ void main() {
     };
   }
 
-  test('running firewalld is found without firewall-cmd and its polkit prompt',
-      () async {
-    runReturns(0);
-    expect(await LinuxFirewalls.detect(), LinuxFirewall.firewalld);
-    expect(calls, ['systemctl is-active --quiet firewalld']);
-  });
+  test(
+    'running firewalld is found without firewall-cmd and its polkit prompt',
+    () async {
+      runReturns(0);
+      expect(await LinuxFirewalls.detect(), LinuxFirewall.firewalld);
+      expect(calls, ['systemctl is-active --quiet firewalld']);
+    },
+  );
 
   test('stopped firewalld is not reported', () async {
     runReturns(3);

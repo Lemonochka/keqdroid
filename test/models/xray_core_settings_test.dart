@@ -17,8 +17,9 @@ void main() {
     test('buildDnsBlock resolves direct domains via the system resolver', () {
       // Direct-домены включают корпоративные/LAN-зоны сплит-DNS, которых
       // публичный DoH не знает — их резолвит 'localhost' со skipFallback.
-      final dns = const XrayCoreSettings()
-          .buildDnsBlock(directDomains: ['domain:corp.example']);
+      final dns = const XrayCoreSettings().buildDnsBlock(
+        directDomains: ['domain:corp.example'],
+      );
       final servers = (dns['servers'] as List).cast<Map<String, dynamic>>();
 
       expect(servers.first['address'], 'localhost');
@@ -48,9 +49,10 @@ void main() {
         dnsUseCustom: true,
         dnsServers: 'https://dns.google/dns-query',
       );
-      final servers = (core.buildDnsBlock(
-        directDomains: ['domain:corp.example'],
-      )['servers'] as List).cast<Map<String, dynamic>>();
+      final servers =
+          (core.buildDnsBlock(directDomains: ['domain:corp.example'])['servers']
+                  as List)
+              .cast<Map<String, dynamic>>();
 
       // Под Direct-домены не уходит ни одна из строк — иначе всё остальное
       // осталось бы без резолвера.
@@ -69,8 +71,8 @@ void main() {
         dnsUseCustom: true,
         dnsServers: 'https://9.9.9.9/dns-query',
       );
-      final servers = (core.buildDnsBlock(directDomains: const []))['servers']
-          as List;
+      final servers =
+          (core.buildDnsBlock(directDomains: const []))['servers'] as List;
 
       expect(servers, hasLength(2));
       expect((servers[0] as Map)['address'], 'https://9.9.9.9/dns-query');
@@ -85,8 +87,8 @@ void main() {
         dnsUseCustom: true,
         dnsServers: 'https://9.9.9.9/dns-query\nhttps://1.1.1.1/dns-query',
       );
-      final servers = (core.buildDnsBlock(directDomains: const []))['servers']
-          as List;
+      final servers =
+          (core.buildDnsBlock(directDomains: const []))['servers'] as List;
 
       expect(servers, hasLength(2));
       expect((servers[1] as Map)['address'], 'https://1.1.1.1/dns-query');
@@ -94,48 +96,55 @@ void main() {
 
     // Строки пользователя уходят в конфиг как есть: и `https+local://` (мимо
     // туннеля), и `https://` (через роутинг) остаются на его усмотрение.
-    test('кастомные серверы переписываются только там, где ядро их не поймёт',
-        () {
-      const core = XrayCoreSettings(
-        dnsUseCustom: true,
-        dnsServers: 'https+local://1.1.1.1/dns-query\nquic://dns.adguard.com\n1.1.1.1',
-      );
-      final servers = (core.buildDnsBlock(
-        directDomains: const [],
-        bootstrapDomains: const ['full:vpn.example.net'],
-      )['servers'] as List).cast<Map<String, dynamic>>();
+    test(
+      'кастомные серверы переписываются только там, где ядро их не поймёт',
+      () {
+        const core = XrayCoreSettings(
+          dnsUseCustom: true,
+          dnsServers:
+              'https+local://1.1.1.1/dns-query\nquic://dns.adguard.com\n1.1.1.1',
+        );
+        final servers =
+            (core.buildDnsBlock(
+                      directDomains: const [],
+                      bootstrapDomains: const ['full:vpn.example.net'],
+                    )['servers']
+                    as List)
+                .cast<Map<String, dynamic>>();
 
-      final bootstrap =
-          servers.where((s) => s.containsKey('domains')).toList();
-      // Bootstrap берёт кастомные резолверы, а не дефолтные: раз пользователь
-      // выбрал свой DNS, адрес сервера ищется им же. Не больше двух — каждый
-      // молчащий стоит таймаута на критическом пути к подключению.
-      expect(
-        bootstrap.map((s) => s['address']),
-        [
+        final bootstrap = servers
+            .where((s) => s.containsKey('domains'))
+            .toList();
+        // Bootstrap берёт кастомные резолверы, а не дефолтные: раз пользователь
+        // выбрал свой DNS, адрес сервера ищется им же. Не больше двух — каждый
+        // молчащий стоит таймаута на критическом пути к подключению.
+        expect(bootstrap.map((s) => s['address']), [
           'https+local://1.1.1.1/dns-query',
           'quic+local://dns.adguard.com',
           'localhost',
-        ],
-      );
-      expect(
-        bootstrap.every(
-            (s) => (s['domains'] as List).single == 'full:vpn.example.net'),
-        isTrue,
-      );
+        ]);
+        expect(
+          bootstrap.every(
+            (s) => (s['domains'] as List).single == 'full:vpn.example.net',
+          ),
+          isTrue,
+        );
 
-      expect(
-        servers.where((s) => !s.containsKey('domains')).map((s) => s['address']),
-        // DoQ у xray существует только как `quic+local` (удалённого режима у
-        // QUIC-резолвера нет): голый `quic://` молча становится ДОМЕНОМ
-        // обычного UDP-сервера и не резолвится никогда.
-        [
-          'https+local://1.1.1.1/dns-query',
-          'quic+local://dns.adguard.com',
-          '1.1.1.1',
-        ],
-      );
-    });
+        expect(
+          servers
+              .where((s) => !s.containsKey('domains'))
+              .map((s) => s['address']),
+          // DoQ у xray существует только как `quic+local` (удалённого режима у
+          // QUIC-резолвера нет): голый `quic://` молча становится ДОМЕНОМ
+          // обычного UDP-сервера и не резолвится никогда.
+          [
+            'https+local://1.1.1.1/dns-query',
+            'quic+local://dns.adguard.com',
+            '1.1.1.1',
+          ],
+        );
+      },
+    );
 
     test('bootstrap не ищет адрес сервера через fakedns', () {
       // fakedns вернул бы на адрес сервера ПОДДЕЛЬНЫЙ IP из fake-диапазона, и
@@ -144,10 +153,13 @@ void main() {
         dnsUseCustom: true,
         dnsServers: 'fakedns\nhttps://1.1.1.1/dns-query',
       );
-      final servers = (core.buildDnsBlock(
-        directDomains: const [],
-        bootstrapDomains: const ['full:vpn.example.net'],
-      )['servers'] as List).cast<Map<String, dynamic>>();
+      final servers =
+          (core.buildDnsBlock(
+                    directDomains: const [],
+                    bootstrapDomains: const ['full:vpn.example.net'],
+                  )['servers']
+                  as List)
+              .cast<Map<String, dynamic>>();
 
       expect(
         servers.where((s) => s.containsKey('domains')).map((s) => s['address']),
@@ -166,12 +178,17 @@ void main() {
         dnsUseCustom: true,
         dnsServers: '[2606:4700:4700::1111]:53\ndns.example:5353\n9.9.9.9',
       );
-      final servers = (core.buildDnsBlock(directDomains: const [])['servers']
-              as List)
-          .cast<Map<String, dynamic>>();
+      final servers =
+          (core.buildDnsBlock(directDomains: const [])['servers'] as List)
+              .cast<Map<String, dynamic>>();
 
       expect(
-        servers.map((s) => {'address': s['address'], if (s.containsKey('port')) 'port': s['port']}),
+        servers.map(
+          (s) => {
+            'address': s['address'],
+            if (s.containsKey('port')) 'port': s['port'],
+          },
+        ),
         [
           {'address': '2606:4700:4700::1111', 'port': 53},
           {'address': 'dns.example', 'port': 5353},
@@ -184,55 +201,60 @@ void main() {
       expect(servers.every((s) => s['serveStale'] == true), isTrue);
     });
 
-    test('адреса, которых ядро не исполнит, выбрасываются с откатом на дефолт',
-        () {
-      // `tls://`, `sdns://`, `dhcp://` xray не знает: строка молча становится
-      // доменом UDP-резолвера, который никогда не отвечает. Пустой список
-      // после чистки — уходим в дефолтный DoH, а не остаёмся без DNS.
-      const core = XrayCoreSettings(
-        dnsUseCustom: true,
-        dnsServers: 'tls://1.1.1.1\nsdns://gibberish',
-      );
-      final servers = (core.buildDnsBlock(directDomains: const [])['servers']
-              as List)
-          .cast<Map<String, dynamic>>();
+    test(
+      'адреса, которых ядро не исполнит, выбрасываются с откатом на дефолт',
+      () {
+        // `tls://`, `sdns://`, `dhcp://` xray не знает: строка молча становится
+        // доменом UDP-резолвера, который никогда не отвечает. Пустой список
+        // после чистки — уходим в дефолтный DoH, а не остаёмся без DNS.
+        const core = XrayCoreSettings(
+          dnsUseCustom: true,
+          dnsServers: 'tls://1.1.1.1\nsdns://gibberish',
+        );
+        final servers =
+            (core.buildDnsBlock(directDomains: const [])['servers'] as List)
+                .cast<Map<String, dynamic>>();
 
-      expect(
-        servers.map((s) => s['address']),
-        containsAll(<String>[
-          'https+local://1.1.1.1/dns-query',
-          'https+local://8.8.8.8/dns-query',
-        ]),
-      );
-    });
+        expect(
+          servers.map((s) => s['address']),
+          containsAll(<String>[
+            'https+local://1.1.1.1/dns-query',
+            'https+local://8.8.8.8/dns-query',
+          ]),
+        );
+      },
+    );
 
     test('buildXmuxMap returns null when disabled', () {
       expect(const XrayCoreSettings().buildXmuxMap(), isNull);
     });
 
     // xray 26 не разбирает конфиг, где заданы оба: maxConnections cannot be specified together with maxConcurrency
-    test('buildXmuxMap never writes maxConnections together with maxConcurrency', () {
-      const both = XrayCoreSettings(
-        xmuxEnabled: true,
-        xmuxMaxConcurrency: '16-32',
-        xmuxMaxConnections: '4',
-      );
-      expect(both.buildXmuxMap(), {
-        'maxConcurrency': '16-32',
-        'hMaxRequestTimes': '600-900',
-        'hMaxReusableSecs': '1800-3000',
-      });
+    test(
+      'buildXmuxMap never writes maxConnections together with maxConcurrency',
+      () {
+        const both = XrayCoreSettings(
+          xmuxEnabled: true,
+          xmuxMaxConcurrency: '16-32',
+          xmuxMaxConnections: '4',
+        );
+        expect(both.buildXmuxMap(), {
+          'maxConcurrency': '16-32',
+          'hMaxRequestTimes': '600-900',
+          'hMaxReusableSecs': '1800-3000',
+        });
 
-      const connectionsOnly = XrayCoreSettings(
-        xmuxEnabled: true,
-        xmuxMaxConnections: '4',
-      );
-      expect(connectionsOnly.buildXmuxMap(), {
-        'maxConnections': 4,
-        'hMaxRequestTimes': '600-900',
-        'hMaxReusableSecs': '1800-3000',
-      });
-    });
+        const connectionsOnly = XrayCoreSettings(
+          xmuxEnabled: true,
+          xmuxMaxConnections: '4',
+        );
+        expect(connectionsOnly.buildXmuxMap(), {
+          'maxConnections': 4,
+          'hMaxRequestTimes': '600-900',
+          'hMaxReusableSecs': '1800-3000',
+        });
+      },
+    );
 
     // xray 26.10 transport_method.go: умолчания только у пустого xmux, а незаданное поле значит без предела
     test('buildXmuxMap: пустое поле получает значение Xray по умолчанию', () {
@@ -271,8 +293,7 @@ void main() {
         xmuxMaxConcurrency: '8-16',
         logLevel: 'info',
       );
-      final restored =
-          XrayCoreSettings.fromJson(core.toJson());
+      final restored = XrayCoreSettings.fromJson(core.toJson());
       expect(restored, core);
     });
 
@@ -280,19 +301,29 @@ void main() {
     test('dnsSplitApplies ровно там, где сплит меняет DNS-блок', () {
       for (final core in const [
         XrayCoreSettings(),
-        XrayCoreSettings(dnsUseCustom: true, dnsServers: 'https+local://8.8.8.8/dns-query'),
+        XrayCoreSettings(
+          dnsUseCustom: true,
+          dnsServers: 'https+local://8.8.8.8/dns-query',
+        ),
         XrayCoreSettings(dnsUseCustom: true, dnsServers: '1.1.1.1, 8.8.8.8'),
       ]) {
-        final on = core.copyWith(dnsSplitDirectDomains: true)
+        final on = core
+            .copyWith(dnsSplitDirectDomains: true)
             .buildDnsBlock(directDomains: ['domain:corp.example']);
-        final off = core.copyWith(dnsSplitDirectDomains: false)
+        final off = core
+            .copyWith(dnsSplitDirectDomains: false)
             .buildDnsBlock(directDomains: ['domain:corp.example']);
-        expect(on.toString() != off.toString(), core.dnsSplitApplies,
-            reason: core.dnsServers);
+        expect(
+          on.toString() != off.toString(),
+          core.dnsSplitApplies,
+          reason: core.dnsServers,
+        );
       }
       expect(
-        const XrayCoreSettings(dnsUseCustom: true, dnsServers: 'https+local://8.8.8.8/dns-query')
-            .dnsSplitApplies,
+        const XrayCoreSettings(
+          dnsUseCustom: true,
+          dnsServers: 'https+local://8.8.8.8/dns-query',
+        ).dnsSplitApplies,
         isFalse,
       );
     });

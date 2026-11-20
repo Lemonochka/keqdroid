@@ -3,10 +3,10 @@ part of '../settings_tab.dart';
 Widget behaviourSettingsScreenForTest() => const _BehaviourSettingsScreen();
 
 String _updatePromptLabel(AppLocalizations l10n, int days) => switch (days) {
-      1 => l10n.behaviourEveryDay,
-      7 => l10n.behaviourEveryWeek,
-      _ => l10n.behaviourEvery3Days,
-    };
+  1 => l10n.behaviourEveryDay,
+  7 => l10n.behaviourEveryWeek,
+  _ => l10n.behaviourEvery3Days,
+};
 
 // в подписи значение стоит посреди фразы: «Обновления: раз в 3 дня»
 String _lowerFirst(String s) =>
@@ -29,7 +29,9 @@ class _BehaviourSettingsCard extends StatelessWidget {
       accent: ExpressiveAccent.secondary,
       onTap: () => Navigator.push(
         context,
-        MaterialPageRoute<void>(builder: (_) => const _BehaviourSettingsScreen()),
+        MaterialPageRoute<void>(
+          builder: (_) => const _BehaviourSettingsScreen(),
+        ),
       ),
     );
   }
@@ -64,13 +66,16 @@ class _BehaviourSettingsScreen extends ConsumerWidget {
                   Text(
                     l10n.behaviourUpdatePrompt,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: AppTheme.text(context),
-                        ),
+                      color: AppTheme.text(context),
+                    ),
                   ),
                   const SizedBox(height: 12),
                   ExpressiveConnectedButtons<int>(
                     segments: [
-                      ExpressiveSegment(value: 1, label: l10n.behaviourEveryDay),
+                      ExpressiveSegment(
+                        value: 1,
+                        label: l10n.behaviourEveryDay,
+                      ),
                       ExpressiveSegment(
                         value: 3,
                         label: l10n.behaviourEvery3Days,

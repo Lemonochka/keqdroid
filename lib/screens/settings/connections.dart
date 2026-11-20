@@ -73,16 +73,18 @@ class _ConnectionsScreenState extends ConsumerState<_ConnectionsScreen> {
   Future<void> _enableInfoLogs() async {
     final settings = ref.read(settingsNotifierProvider).value;
     if (settings == null) return;
-    await ref.read(settingsNotifierProvider.notifier).save(
+    await ref
+        .read(settingsNotifierProvider.notifier)
+        .save(
           settings.copyWith(
             xrayCore: settings.xrayCore.copyWith(logLevel: 'info'),
           ),
         );
     if (!mounted) return;
     final l10n = AppLocalizations.of(context)!;
-    AppSnack.of(context).showSnackBar(
-      SnackBar(content: Text(l10n.connectionsRuleHintApplied)),
-    );
+    AppSnack.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(l10n.connectionsRuleHintApplied)));
   }
 
   @override
@@ -97,14 +99,15 @@ class _ConnectionsScreenState extends ConsumerState<_ConnectionsScreen> {
         (a) => a.value?.xrayCore.logLevel ?? 'warning',
       ),
     );
-    final showLogLevelHint = !_snapshot.ruleInfoAvailable &&
+    final showLogLevelHint =
+        !_snapshot.ruleInfoAvailable &&
         _snapshot.source != ConnectionsSource.unavailable &&
         logLevel != 'info' &&
         logLevel != 'debug';
-    final showAppNamesHint =
-        Platform.isAndroid && !_snapshot.appNamesAvailable;
+    final showAppNamesHint = Platform.isAndroid && !_snapshot.appNamesAvailable;
     final split = ref.watch(splitTunnelingProvider);
-    final showSplitNote = Platform.isAndroid &&
+    final showSplitNote =
+        Platform.isAndroid &&
         (split.excludePackages.isNotEmpty || split.includePackages.isNotEmpty);
 
     return Scaffold(
@@ -116,8 +119,9 @@ class _ConnectionsScreenState extends ConsumerState<_ConnectionsScreen> {
           actions: [
             IconButton(
               tooltip: _paused ? l10n.connectionsResume : l10n.connectionsPause,
-              icon:
-                  Icon(_paused ? Icons.play_arrow_rounded : Icons.pause_rounded),
+              icon: Icon(
+                _paused ? Icons.play_arrow_rounded : Icons.pause_rounded,
+              ),
               onPressed: () => setState(() => _paused = !_paused),
             ),
             IconButton(
@@ -165,32 +169,44 @@ class _ConnectionsScreenState extends ConsumerState<_ConnectionsScreen> {
                       TextField(
                         controller: _filterCtrl,
                         textDirection: technicalInputDirection,
-                        style: Theme.of(context)
-                            .textTheme
-                            .bodyMedium
-                            ?.copyWith(color: AppTheme.text(context)),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppTheme.text(context),
+                        ),
                         decoration: InputDecoration(
                           isDense: true,
-                          prefixIcon: const Icon(Icons.search_rounded, size: 18),
+                          prefixIcon: const Icon(
+                            Icons.search_rounded,
+                            size: 18,
+                          ),
                           hintText: l10n.connectionsFilterHint,
-                          hintStyle:
-                              TextStyle(color: AppTheme.textLight(context)),
+                          hintStyle: TextStyle(
+                            color: AppTheme.textLight(context),
+                          ),
                           filled: true,
                           fillColor: AppTheme.inset(context),
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(ExpressiveShape.medium),
-                            borderSide:
-                                BorderSide(color: AppTheme.divider(context)),
+                            borderRadius: BorderRadius.circular(
+                              ExpressiveShape.medium,
+                            ),
+                            borderSide: BorderSide(
+                              color: AppTheme.divider(context),
+                            ),
                           ),
                           enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(ExpressiveShape.medium),
-                            borderSide:
-                                BorderSide(color: AppTheme.divider(context)),
+                            borderRadius: BorderRadius.circular(
+                              ExpressiveShape.medium,
+                            ),
+                            borderSide: BorderSide(
+                              color: AppTheme.divider(context),
+                            ),
                           ),
                           suffixIcon: _filter.isEmpty
                               ? null
                               : IconButton(
-                                  icon: const Icon(Icons.clear_rounded, size: 18),
+                                  icon: const Icon(
+                                    Icons.clear_rounded,
+                                    size: 18,
+                                  ),
                                   onPressed: () {
                                     _filterCtrl.clear();
                                     setState(() => _filter = '');
@@ -211,7 +227,8 @@ class _ConnectionsScreenState extends ConsumerState<_ConnectionsScreen> {
                           separatorBuilder: (_, _) => const SizedBox(height: 8),
                           itemBuilder: (_, i) => ConnectionTile(
                             entry: entries[i],
-                            showProcess: ConnectionsService.supportsProcessNames,
+                            showProcess:
+                                ConnectionsService.supportsProcessNames,
                             ruleInfoAvailable: _snapshot.ruleInfoAvailable,
                             onTap: () => _openDetails(entries[i]),
                           ),
@@ -227,8 +244,7 @@ class _ConnectionsScreenState extends ConsumerState<_ConnectionsScreen> {
     final opened = _opened;
     if (opened == null) return;
     final key = opened.value.groupKey;
-    final fresh =
-        snapshot.entries.where((e) => e.groupKey == key).firstOrNull;
+    final fresh = snapshot.entries.where((e) => e.groupKey == key).firstOrNull;
     if (fresh != null) opened.value = fresh;
   }
 
@@ -242,9 +258,8 @@ class _ConnectionsScreenState extends ConsumerState<_ConnectionsScreen> {
     final profiles =
         ref.read(routingProfilesProvider).value ?? const <RoutingProfile>[];
     // те же маршруты, что взяло подключение
-    final routes = (active == null
-            ? null
-            : profileForServer(profiles, active)?.routes) ??
+    final routes =
+        (active == null ? null : profileForServer(profiles, active)?.routes) ??
         ref.read(routesProvider).value ??
         const <TrafficRoute>[];
     final iconCache = ref.read(appIconCacheProvider);
@@ -276,7 +291,8 @@ class _ConnectionsScreenState extends ConsumerState<_ConnectionsScreen> {
           livenessKnown: snapshot.ruleInfoAvailable,
           insight: insight,
           pendingLists: [
-            for (final preset in RoutingPresets.all) _presetName(l10n, preset.id),
+            for (final preset in RoutingPresets.all)
+              _presetName(l10n, preset.id),
           ],
           app: app,
           rule: _ruleField(
@@ -382,8 +398,7 @@ class _ConnectionsScreenState extends ConsumerState<_ConnectionsScreen> {
   ) {
     final name = ConnectionTile.processName(entry.process);
     if (name.isEmpty) return null;
-    final app =
-        installed.where((a) => a.appName == entry.process).firstOrNull;
+    final app = installed.where((a) => a.appName == entry.process).firstOrNull;
     final path = isProcessPathEntry(entry.process) ? entry.process : null;
     if (Platform.isAndroid && app == null) return ConnectionField(name);
     return ConnectionField(
@@ -427,8 +442,11 @@ class _ConnectionsScreenState extends ConsumerState<_ConnectionsScreen> {
           note: l10n.connectionsDetailsRouteNamed(name),
         );
       default:
-        final label =
-            ConnectionTile.ruleLabel(l10n, entry, ruleInfoAvailable: ruleInfoAvailable);
+        final label = ConnectionTile.ruleLabel(
+          l10n,
+          entry,
+          ruleInfoAvailable: ruleInfoAvailable,
+        );
         if (label.isEmpty) return null;
         return ConnectionField(label, mono: label == entry.rule);
     }
@@ -463,7 +481,8 @@ class _ConnectionsScreenState extends ConsumerState<_ConnectionsScreen> {
             servers.byId[route.serverId],
           _ => null,
         };
-        final server = routeServer ??
+        final server =
+            routeServer ??
             (out == MihomoConfigGen.proxyName ? servers.activeServer : null);
         if (server == null) {
           return out.isEmpty ? null : ConnectionField(out, mono: true);
@@ -489,17 +508,17 @@ class _ConnectionsScreenState extends ConsumerState<_ConnectionsScreen> {
   Widget _statusBar(BuildContext context, AppLocalizations l10n, int shown) {
     final (label, color) = switch (_snapshot.source) {
       ConnectionsSource.coreApi => (
-          l10n.connectionsSourceApi,
-          AppTheme.green(context),
-        ),
+        l10n.connectionsSourceApi,
+        AppTheme.green(context),
+      ),
       ConnectionsSource.coreLog => (
-          l10n.connectionsSourceLog,
-          AppTheme.accent(context),
-        ),
+        l10n.connectionsSourceLog,
+        AppTheme.accent(context),
+      ),
       ConnectionsSource.unavailable => (
-          l10n.connectionsSourceUnavailable,
-          AppTheme.textLight(context),
-        ),
+        l10n.connectionsSourceUnavailable,
+        AppTheme.textLight(context),
+      ),
     };
     return Row(
       children: [
@@ -511,29 +530,26 @@ class _ConnectionsScreenState extends ConsumerState<_ConnectionsScreen> {
           ),
           child: Text(
             label,
-            style: Theme.of(context)
-                .textTheme
-                .labelSmall
-                ?.copyWith(color: color),
+            style: Theme.of(
+              context,
+            ).textTheme.labelSmall?.copyWith(color: color),
           ),
         ),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
             l10n.connectionsCount(shown),
-            style: Theme.of(context)
-                .textTheme
-                .bodySmall
-                ?.copyWith(color: AppTheme.textLight(context)),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
           ),
         ),
         if (_paused)
           Text(
             l10n.connectionsPaused,
-            style: Theme.of(context)
-                .textTheme
-                .labelMedium
-                ?.copyWith(color: AppTheme.orange(context)),
+            style: Theme.of(
+              context,
+            ).textTheme.labelMedium?.copyWith(color: AppTheme.orange(context)),
           ),
       ],
     );
@@ -554,9 +570,9 @@ class _ConnectionsScreenState extends ConsumerState<_ConnectionsScreen> {
             child: Text(
               l10n.connectionsRuleHint,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    height: 1.35,
-                    color: AppTheme.text(context),
-                  ),
+                height: 1.35,
+                color: AppTheme.text(context),
+              ),
             ),
           ),
           const SizedBox(width: 6),
@@ -590,9 +606,9 @@ class _ConnectionsScreenState extends ConsumerState<_ConnectionsScreen> {
             child: Text(
               text,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    height: 1.35,
-                    color: AppTheme.text(context),
-                  ),
+                height: 1.35,
+                color: AppTheme.text(context),
+              ),
             ),
           ),
         ],
@@ -619,10 +635,9 @@ class _ConnectionsScreenState extends ConsumerState<_ConnectionsScreen> {
                   ? l10n.connectionsUnavailable
                   : l10n.connectionsEmpty,
               textAlign: TextAlign.center,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(color: AppTheme.text(context)),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: AppTheme.text(context)),
             ),
             if (note.isNotEmpty) ...[
               const SizedBox(height: 6),
@@ -630,9 +645,9 @@ class _ConnectionsScreenState extends ConsumerState<_ConnectionsScreen> {
                 note,
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontFamily: 'monospace',
-                      color: AppTheme.textLight(context),
-                    ),
+                  fontFamily: 'monospace',
+                  color: AppTheme.textLight(context),
+                ),
               ),
             ],
           ],

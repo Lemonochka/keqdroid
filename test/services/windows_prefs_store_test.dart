@@ -13,7 +13,8 @@ void main() {
   File prefsFile() =>
       File('${dir.path}${Platform.pathSeparator}${WindowsPrefsStore.fileName}');
   Map<String, Object?> onDisk() =>
-      (json.decode(prefsFile().readAsStringSync()) as Map).cast<String, Object?>();
+      (json.decode(prefsFile().readAsStringSync()) as Map)
+          .cast<String, Object?>();
   WindowsPrefsStore store() => WindowsPrefsStore(directory: () async => dir);
 
   setUp(() => dir = Directory.systemTemp.createTempSync('kq_prefs'));
@@ -22,11 +23,13 @@ void main() {
   });
 
   test('читает файл плагина и отдаёт только свои ключи', () async {
-    prefsFile().writeAsStringSync(json.encode({
-      'flutter.keqdis_active_server': 's1',
-      'flutter.keqdis_list': ['a', 'b'],
-      'other.key': 1,
-    }));
+    prefsFile().writeAsStringSync(
+      json.encode({
+        'flutter.keqdis_active_server': 's1',
+        'flutter.keqdis_list': ['a', 'b'],
+        'other.key': 1,
+      }),
+    );
 
     final all = await store().getAll();
 
@@ -59,11 +62,9 @@ void main() {
   });
 
   test('удаление и очистка по префиксу', () async {
-    prefsFile().writeAsStringSync(json.encode({
-      'flutter.a': 1,
-      'flutter.b': 2,
-      'other.c': 3,
-    }));
+    prefsFile().writeAsStringSync(
+      json.encode({'flutter.a': 1, 'flutter.b': 2, 'other.c': 3}),
+    );
     final s = store();
 
     await s.remove('flutter.a');

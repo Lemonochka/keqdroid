@@ -5,15 +5,15 @@ import 'package:keqdroid/shared/ui/kawaii_decorations.dart';
 
 void main() {
   Widget host(KawaiiFlavor flavor, Brightness brightness) => MaterialApp(
-        theme: ThemeData(brightness: brightness),
-        darkTheme: ThemeData(brightness: Brightness.dark),
-        themeMode: brightness == Brightness.dark
-            ? ThemeMode.dark
-            : ThemeMode.light,
-        home: KawaiiOverlay(flavor: flavor, child: const SizedBox.expand()),
-      );
+    theme: ThemeData(brightness: brightness),
+    darkTheme: ThemeData(brightness: Brightness.dark),
+    themeMode: brightness == Brightness.dark ? ThemeMode.dark : ThemeMode.light,
+    home: KawaiiOverlay(flavor: flavor, child: const SizedBox.expand()),
+  );
 
-  testWidgets('overlay paints stickers and rain without exceptions', (tester) async {
+  testWidgets('overlay paints stickers and rain without exceptions', (
+    tester,
+  ) async {
     for (final flavor in [KawaiiFlavor.sakura, KawaiiFlavor.lavender]) {
       for (final brightness in Brightness.values) {
         await tester.pumpWidget(host(flavor, brightness));

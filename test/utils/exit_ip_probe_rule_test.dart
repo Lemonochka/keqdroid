@@ -56,10 +56,10 @@ const _xrayCustom = '''
 ''';
 
 List<Map<String, dynamic>> _xrayRules(String config) => [
-      for (final r in ((jsonDecode(config) as Map)['routing'] as Map)['rules']
-          as List)
-        (r as Map).cast<String, dynamic>(),
-    ];
+  for (final r
+      in ((jsonDecode(config) as Map)['routing'] as Map)['rules'] as List)
+    (r as Map).cast<String, dynamic>(),
+];
 
 bool _isProbe(Map<String, dynamic> r) =>
     (r['domain'] as List?)?.contains('full:$kExitIpProbeHost') ?? false;
@@ -90,7 +90,8 @@ void main() {
       );
       final probe = rules.indexWhere(_isProbe);
       final author = rules.indexWhere(
-        (r) => (r['domain'] as List?)?.contains('domain:cloudflare.com') ?? false,
+        (r) =>
+            (r['domain'] as List?)?.contains('domain:cloudflare.com') ?? false,
       );
       expect(probe, isNonNegative);
       expect(rules[probe]['outboundTag'], 'my-proxy');
@@ -103,15 +104,17 @@ void main() {
         (c['rules'] as List).cast<String>();
 
     test('проверка выхода — первым правилом, через прокси', () {
-      final rules = rulesOf(MihomoConfigGen.build(
-        _server,
-        _hostile,
-        socksPort: 2080,
-        httpPort: 2081,
-        tun: const MihomoTunOptions(device: 'tun-keqdis', stack: 'gvisor'),
-        appProcessName: 'keqdroid.exe',
-        windows: true,
-      ));
+      final rules = rulesOf(
+        MihomoConfigGen.build(
+          _server,
+          _hostile,
+          socksPort: 2080,
+          httpPort: 2081,
+          tun: const MihomoTunOptions(device: 'tun-keqdis', stack: 'gvisor'),
+          appProcessName: 'keqdroid.exe',
+          windows: true,
+        ),
+      );
       expect(
         rules.first,
         'AND,((NOT,((IN-TYPE,TUN))),(DOMAIN,$kExitIpProbeHost)),'
@@ -134,16 +137,18 @@ void main() {
     // нужно только для его собственных сокетов, попавших в TUN: mihomo ищет
     // процесс и у соединений, пришедших на HTTP-вход, и находил там нас же.
     test('свой процесс мимо туннеля — только для соединений из TUN', () {
-      final rules = rulesOf(MihomoConfigGen.build(
-        _server,
-        const AppSettings(),
-        socksPort: 2080,
-        httpPort: 2081,
-        tun: const MihomoTunOptions(device: 'tun-keqdis', stack: 'gvisor'),
-        routingMode: AppRoutingMode.allProxy,
-        appProcessName: 'keqdroid.exe',
-        windows: true,
-      ));
+      final rules = rulesOf(
+        MihomoConfigGen.build(
+          _server,
+          const AppSettings(),
+          socksPort: 2080,
+          httpPort: 2081,
+          tun: const MihomoTunOptions(device: 'tun-keqdis', stack: 'gvisor'),
+          routingMode: AppRoutingMode.allProxy,
+          appProcessName: 'keqdroid.exe',
+          windows: true,
+        ),
+      );
       expect(rules, isNot(contains('PROCESS-NAME,keqdroid.exe,DIRECT')));
       expect(
         rules,
@@ -156,14 +161,16 @@ void main() {
     // Скобка или запятая в имени переименованного exe разорвали бы
     // логическое правило, и ядро не приняло бы весь конфиг.
     test('имя процесса в логическом правиле закодировано', () {
-      final rules = rulesOf(MihomoConfigGen.build(
-        _server,
-        const AppSettings(),
-        socksPort: 2080,
-        tun: const MihomoTunOptions(device: 'tun-keqdis', stack: 'gvisor'),
-        appProcessName: 'keqdroid (1).exe',
-        windows: true,
-      ));
+      final rules = rulesOf(
+        MihomoConfigGen.build(
+          _server,
+          const AppSettings(),
+          socksPort: 2080,
+          tun: const MihomoTunOptions(device: 'tun-keqdis', stack: 'gvisor'),
+          appProcessName: 'keqdroid (1).exe',
+          windows: true,
+        ),
+      );
       final own = rules.singleWhere((r) => r.startsWith('AND,((IN-TYPE,TUN)'));
       expect(own, isNot(contains(' (1)')));
       expect(own, contains(r'keqdroid\x20\x281\x29\x2eexe'));

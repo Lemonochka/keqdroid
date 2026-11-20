@@ -13,7 +13,8 @@ import 'package:keqdroid/utils/socks5_credentials.dart';
 /// имени не видна ничем: неизвестный ключ xray выбрасывает молча, конфиг
 /// поднимается, а шума нет. Поэтому имя проверяется буквой, а не смыслом.
 const _hy2 = 'hysteria2://password@host.example:443?sni=hy2.example';
-const _vless = 'vless://uuid@host.example:443?type=tcp&security=tls&sni=x.example';
+const _vless =
+    'vless://uuid@host.example:443?type=tcp&security=tls&sni=x.example';
 
 AppSettings _noise({
   String kind = XrayCoreSettings.noiseRandom,
@@ -22,23 +23,23 @@ AppSettings _noise({
   String randBytes = '',
   String delay = '',
   String reset = '',
-}) =>
-    AppSettings(
-      xrayCore: XrayCoreSettings(
-        noiseEnabled: true,
-        noiseKind: kind,
-        noisePacket: packet,
-        noiseRandLength: randLength,
-        noiseRandBytes: randBytes,
-        noiseDelay: delay,
-        noiseReset: reset,
-      ),
-    );
+}) => AppSettings(
+  xrayCore: XrayCoreSettings(
+    noiseEnabled: true,
+    noiseKind: kind,
+    noisePacket: packet,
+    noiseRandLength: randLength,
+    noiseRandBytes: randBytes,
+    noiseDelay: delay,
+    noiseReset: reset,
+  ),
+);
 
 Map<String, dynamic>? _stream(String uri, AppSettings settings) {
   Socks5Credentials().init('u', 'p');
   final config =
-      jsonDecode(ConfigGeneratorV2.generateConfig(uri, settings)) as Map<String, dynamic>;
+      jsonDecode(ConfigGeneratorV2.generateConfig(uri, settings))
+          as Map<String, dynamic>;
   final outbound = (config['outbounds'] as List).first as Map<String, dynamic>;
   return outbound['streamSettings'] as Map<String, dynamic>?;
 }
@@ -50,9 +51,9 @@ List<dynamic>? _udpMask(String uri, AppSettings settings) =>
 Map<String, dynamic>? _noiseItem(String uri, AppSettings settings) {
   final udp = _udpMask(uri, settings);
   final entry = udp?.cast<Map<String, dynamic>>().firstWhere(
-        (e) => e['type'] == 'noise',
-        orElse: () => <String, dynamic>{},
-      );
+    (e) => e['type'] == 'noise',
+    orElse: () => <String, dynamic>{},
+  );
   final settingsMap = entry?['settings'] as Map<String, dynamic>?;
   return (settingsMap?['noise'] as List?)?.first as Map<String, dynamic>?;
 }
@@ -65,12 +66,15 @@ void main() {
       expect(stream.containsKey('finalMask'), isFalse);
     });
 
-    test('случайный мусор: rand есть, packet нет — вместе ядро их не берёт', () {
-      final item = _noiseItem(_hy2, _noise())!;
-      expect(item['rand'], XrayCoreSettings.defaultNoiseRandLength);
-      expect(item.containsKey('packet'), isFalse);
-      expect(item.containsKey('type'), isFalse);
-    });
+    test(
+      'случайный мусор: rand есть, packet нет — вместе ядро их не берёт',
+      () {
+        final item = _noiseItem(_hy2, _noise())!;
+        expect(item['rand'], XrayCoreSettings.defaultNoiseRandLength);
+        expect(item.containsKey('packet'), isFalse);
+        expect(item.containsKey('type'), isFalse);
+      },
+    );
 
     test('свой пакет: packet и его кодировка есть, rand нет', () {
       final item = _noiseItem(

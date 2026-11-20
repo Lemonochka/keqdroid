@@ -54,7 +54,8 @@ void main() {
     test('версия тулчейна, свой модуль и зависимости', () {
       final blob = buildBlob(
         goVersion: 'go1.26.0',
-        modinfo: 'path\tkeqrnel/cmd/keqrnel\n'
+        modinfo:
+            'path\tkeqrnel/cmd/keqrnel\n'
             'mod\tkeqrnel\t(devel)\t\n'
             'dep\tgithub.com/sagernet/sing-box\tv1.13.19\th1:abc\n'
             'dep\tgithub.com/xtls/xray-core\tv1.260327.1\th1:def\n'
@@ -74,14 +75,17 @@ void main() {
     test('флаги сборки: по ним видно, что ядро умеет', () {
       // `-tags` решает судьбу TUN: без `with_gvisor` ядро падает на СТАРТЕ со
       // `stack: gvisor`, а это наше умолчание.
-      final info = GoBuildInfo.parse(buildBlob(
-        goVersion: 'go1.26.0',
-        modinfo: 'mod\tkeqrnel\t(devel)\t\n'
-            'build\t-buildmode=exe\n'
-            'build\t-tags=with_gvisor,with_quic\n'
-            'build\tCGO_ENABLED=0\n'
-            'build\t-ldflags=-s -w\n',
-      ))!;
+      final info = GoBuildInfo.parse(
+        buildBlob(
+          goVersion: 'go1.26.0',
+          modinfo:
+              'mod\tkeqrnel\t(devel)\t\n'
+              'build\t-buildmode=exe\n'
+              'build\t-tags=with_gvisor,with_quic\n'
+              'build\tCGO_ENABLED=0\n'
+              'build\t-ldflags=-s -w\n',
+        ),
+      )!;
 
       expect(info.hasBuildSettings, isTrue);
       expect(info.buildTags, {'with_gvisor', 'with_quic'});
@@ -91,20 +95,21 @@ void main() {
     });
 
     test('без флагов сборки «тега нет» означает «неизвестно»', () {
-      final info = GoBuildInfo.parse(buildBlob(
-        goVersion: 'go1.26.0',
-        modinfo: 'mod\tkeqrnel\t(devel)\t\n',
-      ))!;
+      final info = GoBuildInfo.parse(
+        buildBlob(goVersion: 'go1.26.0', modinfo: 'mod\tkeqrnel\t(devel)\t\n'),
+      )!;
 
       expect(info.hasBuildSettings, isFalse);
       expect(info.buildTags, isEmpty);
     });
 
     test('зависимость ищется и по полному пути, и по хвосту', () {
-      final info = GoBuildInfo.parse(buildBlob(
-        goVersion: 'go1.26.0',
-        modinfo: 'dep\tgithub.com/xtls/xray-core\tv1.2.3\t\n',
-      ))!;
+      final info = GoBuildInfo.parse(
+        buildBlob(
+          goVersion: 'go1.26.0',
+          modinfo: 'dep\tgithub.com/xtls/xray-core\tv1.2.3\t\n',
+        ),
+      )!;
 
       expect(info.depVersion('github.com/xtls/xray-core'), 'v1.2.3');
       expect(info.depVersion('xtls/xray-core'), 'v1.2.3');
@@ -118,11 +123,14 @@ void main() {
       // Выпуск мажора переименовывает модуль целиком: amneziawg-go 3.1 живёт
       // по пути `…/amneziawg-go/v3`. Панель обязана показать его версию, не
       // дожидаясь, пока кто-нибудь допишет `/v3` в свой список движков.
-      final info = GoBuildInfo.parse(buildBlob(
-        goVersion: 'go1.26.0',
-        modinfo: 'mod\tgithub.com/artem-russkikh/wireproxy-awg\tv1.0.18\t\n'
-            'dep\tgithub.com/amnezia-vpn/amneziawg-go/v3\tv3.1.20260814\t\n',
-      ))!;
+      final info = GoBuildInfo.parse(
+        buildBlob(
+          goVersion: 'go1.26.0',
+          modinfo:
+              'mod\tgithub.com/artem-russkikh/wireproxy-awg\tv1.0.18\t\n'
+              'dep\tgithub.com/amnezia-vpn/amneziawg-go/v3\tv3.1.20260814\t\n',
+        ),
+      )!;
 
       expect(info.depVersion('amnezia-vpn/amneziawg-go'), 'v3.1.20260814');
       expect(info.depVersion('amnezia-vpn/amneziawg-go/v3'), 'v3.1.20260814');
@@ -131,10 +139,12 @@ void main() {
     });
 
     test('своё ядро узнаётся по пути с мажорной версией', () {
-      final info = GoBuildInfo.parse(buildBlob(
-        goVersion: 'go1.26.0',
-        modinfo: 'mod\tgithub.com/amnezia-vpn/amneziawg-go/v3\tv3.1.0\t\n',
-      ))!;
+      final info = GoBuildInfo.parse(
+        buildBlob(
+          goVersion: 'go1.26.0',
+          modinfo: 'mod\tgithub.com/amnezia-vpn/amneziawg-go/v3\tv3.1.0\t\n',
+        ),
+      )!;
 
       expect(info.isModule('amnezia-vpn/amneziawg-go/v3'), isTrue);
       expect(info.isModule('amnezia-vpn/amneziawg-go'), isTrue);
@@ -142,10 +152,9 @@ void main() {
     });
 
     test('маркеры рамки не утекают в текст модулей', () {
-      final info = GoBuildInfo.parse(buildBlob(
-        goVersion: 'go1.26.0',
-        modinfo: 'mod\tkeqrnel\t(devel)\t\n',
-      ))!;
+      final info = GoBuildInfo.parse(
+        buildBlob(goVersion: 'go1.26.0', modinfo: 'mod\tkeqrnel\t(devel)\t\n'),
+      )!;
 
       expect(info.modulePath, 'keqrnel');
       expect(info.moduleVersion, '(devel)');
@@ -153,30 +162,34 @@ void main() {
 
     test('чужие и обрезанные данные не разбираются', () {
       expect(GoBuildInfo.parse(Uint8List.fromList([1, 2, 3])), isNull);
-      expect(
-        GoBuildInfo.parse(Uint8List.fromList(List.filled(64, 0))),
-        isNull,
-      );
+      expect(GoBuildInfo.parse(Uint8List.fromList(List.filled(64, 0))), isNull);
       // Go младше 1.18: строки по указателям, разбирать нечего.
       expect(
-        GoBuildInfo.parse(buildBlob(
-          goVersion: 'go1.16',
-          modinfo: 'mod\tx\tv1\t\n',
-          flags: 0x00,
-        )),
+        GoBuildInfo.parse(
+          buildBlob(
+            goVersion: 'go1.16',
+            modinfo: 'mod\tx\tv1\t\n',
+            flags: 0x00,
+          ),
+        ),
         isNull,
       );
       // Заявленная длина больше самих данных.
-      final truncated = buildBlob(goVersion: 'go1.26.0', modinfo: 'mod\tx\tv1\t\n');
+      final truncated = buildBlob(
+        goVersion: 'go1.26.0',
+        modinfo: 'mod\tx\tv1\t\n',
+      );
       expect(GoBuildInfo.parse(truncated.sublist(0, 20)), isNull);
     });
 
     test('блок без рамки не выдаёт мусор за модули', () {
-      final info = GoBuildInfo.parse(buildBlob(
-        goVersion: 'go1.26.0',
-        modinfo: 'mod\tkeqrnel\t(devel)\t\n',
-        frame: false,
-      ))!;
+      final info = GoBuildInfo.parse(
+        buildBlob(
+          goVersion: 'go1.26.0',
+          modinfo: 'mod\tkeqrnel\t(devel)\t\n',
+          frame: false,
+        ),
+      )!;
 
       expect(info.goVersion, 'go1.26.0');
       expect(info.deps, isEmpty);
@@ -197,32 +210,32 @@ void main() {
         return;
       }
       final info = await GoBuildInfo.fromFile(file);
-      expect(info, isNotNull, reason: '$path — Go-бинарь, build info обязан быть');
+      expect(
+        info,
+        isNotNull,
+        reason: '$path — Go-бинарь, build info обязан быть',
+      );
       checks(info!);
     }
 
     // xray для ПК собран из того же дерева, что libxray: версия в `mod`.
     test('xray.exe сам является xray-core', () async {
-      await expectCore(
-        'assets/bin/windows/xray.exe',
-        (info) {
-          expect(info.goVersion, startsWith('go1.'));
-          expect(info.modulePath, 'github.com/xtls/xray-core');
-          expect(info.moduleVersion, startsWith('v'));
-        },
-      );
+      await expectCore('assets/bin/windows/xray.exe', (info) {
+        expect(info.goVersion, startsWith('go1.'));
+        expect(info.modulePath, 'github.com/xtls/xray-core');
+        expect(info.moduleVersion, startsWith('v'));
+      });
     });
 
     // libxray тоже сам xray-core, и его версия лежит в `mod`, не в `dep`.
     test('libxray сам является xray-core', () async {
-      await expectCore(
-        'android/app/src/main/jniLibs/arm64-v8a/libxray.so',
-        (info) {
-          expect(info.modulePath, 'github.com/xtls/xray-core');
-          expect(info.moduleVersion, startsWith('v'));
-          expect(info.depVersion('xtls/xray-core'), isNull);
-        },
-      );
+      await expectCore('android/app/src/main/jniLibs/arm64-v8a/libxray.so', (
+        info,
+      ) {
+        expect(info.modulePath, 'github.com/xtls/xray-core');
+        expect(info.moduleVersion, startsWith('v'));
+        expect(info.depVersion('xtls/xray-core'), isNull);
+      });
     });
   });
 }

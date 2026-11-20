@@ -89,18 +89,27 @@ String _coreTarget(String rule) {
   if (item.length < 2) return '';
   return switch (item.first.toUpperCase()) {
     'MATCH' => item[1],
-    'NOT' || 'OR' || 'AND' || 'SUB-RULE' || 'DOMAIN-REGEX' ||
-    'PROCESS-NAME-REGEX' || 'PROCESS-PATH-REGEX' =>
-      item.last,
+    'NOT' ||
+    'OR' ||
+    'AND' ||
+    'SUB-RULE' ||
+    'DOMAIN-REGEX' ||
+    'PROCESS-NAME-REGEX' ||
+    'PROCESS-PATH-REGEX' => item.last,
     _ => item.length > 2 ? item[2] : '',
   };
 }
 
 void _expectRulesResolve(Map<String, dynamic> config) {
   final names = {
-    'DIRECT', 'REJECT', 'REJECT-DROP', 'PASS', 'COMPATIBLE',
+    'DIRECT',
+    'REJECT',
+    'REJECT-DROP',
+    'PASS',
+    'COMPATIBLE',
     for (final p in config['proxies'] as List) (p as Map)['name'],
-    for (final g in config['proxy-groups'] as List? ?? const []) (g as Map)['name'],
+    for (final g in config['proxy-groups'] as List? ?? const [])
+      (g as Map)['name'],
   };
   final subRules = (config['sub-rules'] as Map? ?? const {}).keys.toSet();
   final lines = [
@@ -145,86 +154,125 @@ void main() {
       expect(reparsed.primaryTarget, '🚀 Proxy');
     });
 
-    test('цель правил: первая названная группа, без групп первый узел, без имени DIRECT', () {
-      String target(Object config) =>
-          CustomClashConfig.tryParse(jsonEncode(config))!.primaryTarget;
-      const node = {'name': ' DE ', 'type': 'trojan', 'server': 'de.example'};
-      expect(
-        target({
-          'proxies': [node],
-          'proxy-groups': [
-            {'name': '  ', 'type': 'select', 'proxies': [' DE ']},
-            {'name': ' Main ', 'type': 'select', 'proxies': [' DE ']},
-          ],
-        }),
-        'Main',
-      );
-      expect(target({'proxies': [node]}), 'DE');
-      expect(
-        target({
-          'proxies': [
-            {'type': 'trojan', 'server': 'x.example'},
-            node,
-          ],
-        }),
-        'DIRECT',
-      );
-      expect(
-        target({
-          'proxies': [
-            {...node, 'name': '   '},
-          ],
-        }),
-        'DIRECT',
-      );
-    });
+    test(
+      'цель правил: первая названная группа, без групп первый узел, без имени DIRECT',
+      () {
+        String target(Object config) =>
+            CustomClashConfig.tryParse(jsonEncode(config))!.primaryTarget;
+        const node = {'name': ' DE ', 'type': 'trojan', 'server': 'de.example'};
+        expect(
+          target({
+            'proxies': [node],
+            'proxy-groups': [
+              {
+                'name': '  ',
+                'type': 'select',
+                'proxies': [' DE '],
+              },
+              {
+                'name': ' Main ',
+                'type': 'select',
+                'proxies': [' DE '],
+              },
+            ],
+          }),
+          'Main',
+        );
+        expect(
+          target({
+            'proxies': [node],
+          }),
+          'DE',
+        );
+        expect(
+          target({
+            'proxies': [
+              {'type': 'trojan', 'server': 'x.example'},
+              node,
+            ],
+          }),
+          'DIRECT',
+        );
+        expect(
+          target({
+            'proxies': [
+              {...node, 'name': '   '},
+            ],
+          }),
+          'DIRECT',
+        );
+      },
+    );
 
-    test('группа, которая только звено dialer-proxy, целью правил не становится', () {
-      String target(Map<String, dynamic> config) =>
-          CustomClashConfig.tryParse(jsonEncode(config))!.primaryTarget;
-      Map<String, dynamic> node(String name, [String? via]) => {
-            'name': name,
-            'type': 'trojan',
-            'server': '$name.example',
-            'dialer-proxy': ?via,
-          };
-      // одноузловой из подписки: группа-звено первая и единственная
-      expect(
-        target({
-          'proxies': [node('DE', 'Entry'), node('RU')],
+    test(
+      'группа, которая только звено dialer-proxy, целью правил не становится',
+      () {
+        String target(Map<String, dynamic> config) =>
+            CustomClashConfig.tryParse(jsonEncode(config))!.primaryTarget;
+        Map<String, dynamic> node(String name, [String? via]) => {
+          'name': name,
+          'type': 'trojan',
+          'server': '$name.example',
+          'dialer-proxy': ?via,
+        };
+        // одноузловой из подписки: группа-звено первая и единственная
+        expect(
+          target({
+            'proxies': [node('DE', 'Entry'), node('RU')],
+            'proxy-groups': [
+              {
+                'name': 'Entry',
+                'type': 'url-test',
+                'proxies': ['RU'],
+              },
+            ],
+            'rules': ['MATCH,DE'],
+          }),
+          'DE',
+        );
+        final relayFirst = {
+          'proxies': [node('DE', 'Relay'), node('RU'), node('NL')],
           'proxy-groups': [
-            {'name': 'Entry', 'type': 'url-test', 'proxies': ['RU']},
+            {
+              'name': 'Relay',
+              'type': 'select',
+              'proxies': ['RU'],
+            },
+            {
+              'name': 'Proxy',
+              'type': 'select',
+              'proxies': ['DE', 'NL'],
+            },
           ],
-          'rules': ['MATCH,DE'],
-        }),
-        'DE',
-      );
-      final relayFirst = {
-        'proxies': [node('DE', 'Relay'), node('RU'), node('NL')],
-        'proxy-groups': [
-          {'name': 'Relay', 'type': 'select', 'proxies': ['RU']},
-          {'name': 'Proxy', 'type': 'select', 'proxies': ['DE', 'NL']},
-        ],
-        'rules': ['MATCH,Proxy'],
-      };
-      expect(target(relayFirst), 'Proxy');
-      // звено, на которое ведут и правила или другая группа, остаётся целью, с правилами провайдера и без
-      final sharedAuto = {
-        'proxies': [node('DE', 'Auto'), node('RU'), node('NL')],
-        'proxy-groups': [
-          {'name': 'Auto', 'type': 'url-test', 'proxies': ['RU', 'NL']},
-          {'name': 'Proxy', 'type': 'select', 'proxies': ['Auto', 'DE']},
-        ],
-        'rules': ['MATCH,Auto'],
-      };
-      expect(target(sharedAuto), 'Auto');
-      expect(
-        CustomClashConfig.tryParse(jsonEncode(sharedAuto))!
-            .withoutProviderRules()
-            .primaryTarget,
-        'Auto',
-      );
-    });
+          'rules': ['MATCH,Proxy'],
+        };
+        expect(target(relayFirst), 'Proxy');
+        // звено, на которое ведут и правила или другая группа, остаётся целью, с правилами провайдера и без
+        final sharedAuto = {
+          'proxies': [node('DE', 'Auto'), node('RU'), node('NL')],
+          'proxy-groups': [
+            {
+              'name': 'Auto',
+              'type': 'url-test',
+              'proxies': ['RU', 'NL'],
+            },
+            {
+              'name': 'Proxy',
+              'type': 'select',
+              'proxies': ['Auto', 'DE'],
+            },
+          ],
+          'rules': ['MATCH,Auto'],
+        };
+        expect(target(sharedAuto), 'Auto');
+        expect(
+          CustomClashConfig.tryParse(
+            jsonEncode(sharedAuto),
+          )!.withoutProviderRules().primaryTarget,
+          'Auto',
+        );
+      },
+    );
 
     test('узлы на якорях получают общий блок, свои поля сильнее', () {
       final clash = CustomClashConfig.tryParse(_anchors)!;
@@ -253,16 +301,18 @@ proxies:
     });
 
     test('в JSON << обычный ключ: слияние только у YAML', () {
-      final clash = CustomClashConfig.tryParse(jsonEncode({
-        'proxies': [
-          {
-            'name': 'X',
-            'type': 'trojan',
-            'server': 'x.example',
-            '<<': {'port': 1},
-          },
-        ],
-      }))!;
+      final clash = CustomClashConfig.tryParse(
+        jsonEncode({
+          'proxies': [
+            {
+              'name': 'X',
+              'type': 'trojan',
+              'server': 'x.example',
+              '<<': {'port': 1},
+            },
+          ],
+        }),
+      )!;
       expect(clash.proxies.single['<<'], {'port': 1});
       expect(clash.proxies.single.containsKey('port'), isFalse);
     });
@@ -311,8 +361,11 @@ proxies:
       expect(config['allow-lan'], isFalse);
     });
 
-    test('серверы, проброс портов и правка системы из конфига автора не доходят до ядра', () {
-      final authored = '''
+    test(
+      'серверы, проброс портов и правка системы из конфига автора не доходят до ядра',
+      () {
+        final authored =
+            '''
 $_yaml
 ss-config: ss://aes-128-gcm:pass@:8388
 vmess-config: vmess://aes-128-gcm:11111111-2222-3333-4444-555555555555@:8389
@@ -332,29 +385,35 @@ dns:
   listen: 0.0.0.0:1053
   nameserver: [https://1.1.1.1/dns-query]
 ''';
-      final config = MihomoConfigGen.build(
-        authored,
-        const AppSettings(),
-        socksPort: 2080,
-      );
-      for (final key in [
-        'ss-config',
-        'vmess-config',
-        'tuic-server',
-        'tunnels',
-        'iptables',
-      ]) {
-        expect(config.containsKey(key), isFalse, reason: key);
-      }
-      expect(config['ntp'], {'enable': true, 'server': 'time.apple.com'});
-      expect(config['dns'], {
-        'enable': true,
-        'nameserver': ['https://1.1.1.1/dns-query'],
-      }, reason: 'DNS автора остаётся, без своего сервера на устройстве');
-    });
+        final config = MihomoConfigGen.build(
+          authored,
+          const AppSettings(),
+          socksPort: 2080,
+        );
+        for (final key in [
+          'ss-config',
+          'vmess-config',
+          'tuic-server',
+          'tunnels',
+          'iptables',
+        ]) {
+          expect(config.containsKey(key), isFalse, reason: key);
+        }
+        expect(config['ntp'], {'enable': true, 'server': 'time.apple.com'});
+        expect(
+          config['dns'],
+          {
+            'enable': true,
+            'nameserver': ['https://1.1.1.1/dns-query'],
+          },
+          reason: 'DNS автора остаётся, без своего сервера на устройстве',
+        );
+      },
+    );
 
     group('наше поверх провайдерского', () {
-      final authored = '''
+      final authored =
+          '''
 ${_yaml.replaceFirst('mode: rule', 'mode: global')}
 hosts:
   provider.example: 10.0.0.1
@@ -365,63 +424,86 @@ dns:
   nameserver: [https://dns.provider.example/dns-query]
 ''';
       const tun = MihomoTunOptions(device: 'tun-keqdis', stack: 'gvisor');
-      Map<String, dynamic> session(AppSettings settings) => MihomoConfigGen.build(
-            authored,
-            settings,
-            socksPort: 2080,
-            tun: tun,
-          );
+      Map<String, dynamic> session(AppSettings settings) =>
+          MihomoConfigGen.build(authored, settings, socksPort: 2080, tun: tun);
 
       test('режим всегда по правилам: global обошёл бы защиту и сплит', () {
         expect(session(const AppSettings())['mode'], 'rule');
       });
 
-      test('адрес туннеля по диапазону fake-ip провайдера, с нашим DNS по нашему', () {
-        expect(session(const AppSettings())['rules'],
-            contains('IP-CIDR,28.0.0.0/30,DIRECT,no-resolve'));
-        expect(
-          session(const AppSettings(ignoreProviderDns: true))['rules'],
-          contains('IP-CIDR,${MihomoConfigGen.tunInterfaceRange},DIRECT,no-resolve'),
+      test(
+        'адрес туннеля по диапазону fake-ip провайдера, с нашим DNS по нашему',
+        () {
+          expect(
+            session(const AppSettings())['rules'],
+            contains('IP-CIDR,28.0.0.0/30,DIRECT,no-resolve'),
+          );
+          expect(
+            session(const AppSettings(ignoreProviderDns: true))['rules'],
+            contains(
+              'IP-CIDR,${MihomoConfigGen.tunInterfaceRange},DIRECT,no-resolve',
+            ),
+          );
+        },
+      );
+
+      test(
+        'DNS провайдера по умолчанию, наш только когда человек его поставил',
+        () {
+          expect((session(const AppSettings())['dns'] as Map)['nameserver'], [
+            'https://dns.provider.example/dns-query',
+          ]);
+          final own =
+              session(const AppSettings(ignoreProviderDns: true))['dns'] as Map;
+          expect(
+            own['nameserver'],
+            isNot(contains('https://dns.provider.example/dns-query')),
+          );
+        },
+      );
+
+      test(
+        'hosts человека поверх hosts провайдера, параллельное подключение его',
+        () {
+          final config = session(
+            const AppSettings(
+              xrayCore: XrayCoreSettings(
+                dnsHosts: 'shared.example 10.9.9.9',
+                concurrentDial: true,
+              ),
+            ),
+          );
+          expect(config['hosts'], {
+            'provider.example': '10.0.0.1',
+            'shared.example': '10.9.9.9',
+          });
+          expect(config['tcp-concurrent'], isTrue);
+          expect(session(const AppSettings())['hosts'], {
+            'provider.example': '10.0.0.1',
+            'shared.example': '10.0.0.2',
+          });
+        },
+      );
+    });
+
+    test(
+      'правила автора по приложениям включают поиск процесса, без них он выключен',
+      () {
+        expect(build()['find-process-mode'], 'off');
+        final withProcess = _yaml.replaceFirst(
+          '  - DOMAIN-SUFFIX,author.example,DIRECT',
+          '  - AND,((PROCESS-NAME,org.telegram.messenger),(NETWORK,UDP)),DE WS',
         );
-      });
-
-      test('DNS провайдера по умолчанию, наш только когда человек его поставил', () {
-        expect((session(const AppSettings())['dns'] as Map)['nameserver'],
-            ['https://dns.provider.example/dns-query']);
-        final own = session(const AppSettings(ignoreProviderDns: true))['dns'] as Map;
-        expect(own['nameserver'], isNot(contains('https://dns.provider.example/dns-query')));
-      });
-
-      test('hosts человека поверх hosts провайдера, параллельное подключение его', () {
-        final config = session(const AppSettings(
-          xrayCore: XrayCoreSettings(
-            dnsHosts: 'shared.example 10.9.9.9',
-            concurrentDial: true,
-          ),
-        ));
-        expect(config['hosts'], {
-          'provider.example': '10.0.0.1',
-          'shared.example': '10.9.9.9',
-        });
-        expect(config['tcp-concurrent'], isTrue);
-        expect(session(const AppSettings())['hosts'], {
-          'provider.example': '10.0.0.1',
-          'shared.example': '10.0.0.2',
-        });
-      });
-    });
-
-    test('правила автора по приложениям включают поиск процесса, без них он выключен', () {
-      expect(build()['find-process-mode'], 'off');
-      final withProcess = _yaml.replaceFirst(
-        '  - DOMAIN-SUFFIX,author.example,DIRECT',
-        '  - AND,((PROCESS-NAME,org.telegram.messenger),(NETWORK,UDP)),DE WS',
-      );
-      expect(
-        MihomoConfigGen.build(withProcess, const AppSettings(), socksPort: 2080)['find-process-mode'],
-        'strict',
-      );
-    });
+        expect(
+          MihomoConfigGen.build(
+            withProcess,
+            const AppSettings(),
+            socksPort: 2080,
+          )['find-process-mode'],
+          'strict',
+        );
+      },
+    );
 
     test('tun автора удалён — туннель держит VpnService', () {
       // С авторским `tun.enable` ядро полезет поднимать СВОЁ устройство
@@ -433,19 +515,22 @@ dns:
       final config = build();
       expect((config['proxies'] as List), hasLength(2));
       expect((config['proxy-groups'] as List), hasLength(1));
-      final reality =
-          (config['proxies'] as List).first as Map<String, dynamic>;
+      final reality = (config['proxies'] as List).first as Map<String, dynamic>;
       expect(reality['reality-opts'], isA<Map<Object?, Object?>>());
       expect(reality['flow'], 'xtls-rprx-vision');
     });
 
     test('наши правила — после авторских, но перед их MATCH', () {
-      final rules = (build(const AppSettings(
-        directRules: 'vk.com',
-        blockedRules: 'ads.example',
-        proxyRules: 'youtube.com',
-      ))['rules'] as List)
-          .cast<String>();
+      final rules =
+          (build(
+                    const AppSettings(
+                      directRules: 'vk.com',
+                      blockedRules: 'ads.example',
+                      proxyRules: 'youtube.com',
+                    ),
+                  )['rules']
+                  as List)
+              .cast<String>();
 
       final author = rules.indexOf('DOMAIN-SUFFIX,author.example,DIRECT');
       final ours = rules.indexOf('DOMAIN-SUFFIX,vk.com,DIRECT');
@@ -477,9 +562,9 @@ dns:
 
     test('LAN-раздача цепляется к авторской группе', () {
       final config = build(const AppSettings(lanSharing: true));
-      final rules = ((config['sub-rules'] as Map)[MihomoConfigGen.lanRuleSet]
-              as List)
-          .cast<String>();
+      final rules =
+          ((config['sub-rules'] as Map)[MihomoConfigGen.lanRuleSet] as List)
+              .cast<String>();
       expect(rules.first, endsWith(',🚀 Proxy'));
       expect(rules.last, 'MATCH,REJECT');
     });
@@ -493,7 +578,8 @@ dns:
   // правило искало сервер «no torrent)». ссылкой тот же сервер работал
   group('запятая в имени узла', () {
     const name = '🇫🇮 Ultima Free (YT no ads, no torrent)';
-    const yaml = '''
+    const yaml =
+        '''
 proxies:
   - name: "$name"
     type: vless
@@ -545,9 +631,10 @@ rules:
     test('трафик идёт на этот узел, имя на экране соединений прежнее', () {
       final config = session();
       final match = (config['rules'] as List).cast<String>().lastWhere(
-            (r) => r.startsWith('MATCH'),
-          );
-      final groups = (config['proxy-groups'] as List).cast<Map<Object?, Object?>>();
+        (r) => r.startsWith('MATCH'),
+      );
+      final groups = (config['proxy-groups'] as List)
+          .cast<Map<Object?, Object?>>();
       final target = groups.firstWhere((g) => g['name'] == _coreTarget(match));
       expect(target['proxies'], [name]);
       expect(((config['proxies'] as List).single as Map)['name'], name);
@@ -577,40 +664,52 @@ proxies:
     serverDescription: x2 10 Gbit/s
 ''').single;
 
-    Map<String, dynamic> session(String name, {bool ignoreProviderRules = false}) =>
-        MihomoConfigGen.build(
-          node(name),
-          AppSettings(
-            lanSharing: true,
-            directRules: 'vk.com',
-            proxyRules: 'youtube.com',
-            ignoreProviderRules: ignoreProviderRules,
-          ),
-          socksPort: 2080,
-          tun: const MihomoTunOptions(
-            stack: 'gvisor',
-            autoRoute: false,
-            fromFileDescriptor: true,
-          ),
-        );
+    Map<String, dynamic> session(
+      String name, {
+      bool ignoreProviderRules = false,
+    }) => MihomoConfigGen.build(
+      node(name),
+      AppSettings(
+        lanSharing: true,
+        directRules: 'vk.com',
+        proxyRules: 'youtube.com',
+        ignoreProviderRules: ignoreProviderRules,
+      ),
+      socksPort: 2080,
+      tun: const MihomoTunOptions(
+        stack: 'gvisor',
+        autoRoute: false,
+        fromFileDescriptor: true,
+      ),
+    );
 
     for (final name in [' 🇩🇪 ⚡ Германия', '🇷🇺 ⚡ Россия Москва ']) {
       test('каждое правило ведёт туда, что ядро найдёт по имени [$name]', () {
-        expect(node(name), startsWith('{'), reason: 'узел должен остаться Clash');
+        expect(
+          node(name),
+          startsWith('{'),
+          reason: 'узел должен остаться Clash',
+        );
         _expectRulesResolve(session(name));
         _expectRulesResolve(session(name, ignoreProviderRules: true));
       });
 
-      test('трафик идёт на этот узел, имя на экране соединений прежнее [$name]', () {
-        final config = session(name);
-        final match = (config['rules'] as List).cast<String>().lastWhere(
-              (r) => r.startsWith('MATCH'),
-            );
-        final groups = (config['proxy-groups'] as List).cast<Map<Object?, Object?>>();
-        final target = groups.firstWhere((g) => g['name'] == _coreTarget(match));
-        expect(target['proxies'], [name]);
-        expect(((config['proxies'] as List).single as Map)['name'], name);
-      });
+      test(
+        'трафик идёт на этот узел, имя на экране соединений прежнее [$name]',
+        () {
+          final config = session(name);
+          final match = (config['rules'] as List).cast<String>().lastWhere(
+            (r) => r.startsWith('MATCH'),
+          );
+          final groups = (config['proxy-groups'] as List)
+              .cast<Map<Object?, Object?>>();
+          final target = groups.firstWhere(
+            (g) => g['name'] == _coreTarget(match),
+          );
+          expect(target['proxies'], [name]);
+          expect(((config['proxies'] as List).single as Map)['name'], name);
+        },
+      );
     }
 
     test('имя без пробела по краю конфиг не меняет', () {

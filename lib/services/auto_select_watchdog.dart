@@ -40,8 +40,7 @@ abstract final class AutoSelectWatchdog {
     required bool autoSelectOn,
     required bool trafficMoved,
     required bool trafficSent,
-  }) =>
-      connected && autoSelectOn && trafficSent && !trafficMoved;
+  }) => connected && autoSelectOn && trafficSent && !trafficMoved;
 
   static bool dialFailuresSuggestDeadServer(int newFailures) =>
       newFailures >= failureBurst;
@@ -90,7 +89,8 @@ final class SubscriptionOutage {
   }) {
     if (ownAnswered) return const SubscriptionOutage();
     final last = lastAt;
-    final fresh = this.subscriptionId != subscriptionId ||
+    final fresh =
+        this.subscriptionId != subscriptionId ||
         last == null ||
         now.difference(last) > forgetAfter;
     if (!othersAnswered) return fresh ? const SubscriptionOutage() : this;

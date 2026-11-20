@@ -100,9 +100,10 @@ void main() {
       image.dispose();
       return data!;
     });
-    final mean = [
-      for (var i = 0; i < bytes!.lengthInBytes; i += 4) bytes.getUint8(i),
-    ].reduce((a, b) => a + b) /
+    final mean =
+        [
+          for (var i = 0; i < bytes!.lengthInBytes; i += 4) bytes.getUint8(i),
+        ].reduce((a, b) => a + b) /
         (bytes.lengthInBytes / 4);
     // белый с прозрачностью 0,5 на чёрном: около 128, а не 64 от двойного умножения
     expect(mean, closeTo(128, 4));

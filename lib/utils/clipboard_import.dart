@@ -141,9 +141,15 @@ Future<PastedLinksResult> importPastedLinksInto(
 }) {
   return importPastedLinks(
     raw,
-    addSubscription: (url) => ref.read(subscriptionsProvider.notifier).add(
-      Subscription.create(name: Uri.parse(url).host, url: url, nameIsAuto: true),
-    ),
+    addSubscription: (url) => ref
+        .read(subscriptionsProvider.notifier)
+        .add(
+          Subscription.create(
+            name: Uri.parse(url).host,
+            url: url,
+            nameIsAuto: true,
+          ),
+        ),
     addServer: (config) => ref.read(serversProvider.notifier).addManual(config),
     addRoutingProfile: (link) =>
         importRoutingLink(ref, link, fallbackName: routingFallbackName),
@@ -179,12 +185,17 @@ String? pastedLinksSummary(AppLocalizations l10n, PastedLinksResult result) {
   return lines.isEmpty ? null : lines.join('\n');
 }
 
-SnackBar _bar(Widget content, {Duration duration = const Duration(seconds: 4)}) => SnackBar(
-      content: content,
-      duration: duration,
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ExpressiveShape.medium)),
-    );
+SnackBar _bar(
+  Widget content, {
+  Duration duration = const Duration(seconds: 4),
+}) => SnackBar(
+  content: content,
+  duration: duration,
+  behavior: SnackBarBehavior.floating,
+  shape: RoundedRectangleBorder(
+    borderRadius: BorderRadius.circular(ExpressiveShape.medium),
+  ),
+);
 
 void _toast(BuildContext context, String msg) =>
     AppSnack.of(context).showSnackBar(_bar(Text(msg)));
@@ -196,16 +207,18 @@ class _Busy {
     final label = AppLocalizations.of(context)!.clipboardAdding;
     _delay = Timer(const Duration(milliseconds: 300), () {
       _shown = true;
-      _snack.showSnackBar(_bar(
-        Row(
-          children: [
-            const ShapeLoadingIndicator(size: 22),
-            const SizedBox(width: 12),
-            Expanded(child: Text(label)),
-          ],
+      _snack.showSnackBar(
+        _bar(
+          Row(
+            children: [
+              const ShapeLoadingIndicator(size: 22),
+              const SizedBox(width: 12),
+              Expanded(child: Text(label)),
+            ],
+          ),
+          duration: const Duration(minutes: 2),
         ),
-        duration: const Duration(minutes: 2),
-      ));
+      );
     });
   }
 

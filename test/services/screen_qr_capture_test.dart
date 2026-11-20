@@ -15,17 +15,27 @@ void main() {
     expect(frame?.pixels, [1, 2, 3, 4, 5, 6]);
   });
 
-  test('a frame whose size and bytes disagree is dropped, not read past the end', () {
-    expect(
-      ScreenQrCapture.frameFromMap({
-        'width': 4,
-        'height': 2,
-        'gray': Uint8List(6),
-      }),
-      isNull,
-    );
-    expect(ScreenQrCapture.frameFromMap({'width': 0, 'height': 0, 'gray': Uint8List(0)}), isNull);
-    expect(ScreenQrCapture.frameFromMap(null), isNull);
-    expect(ScreenQrCapture.frameFromMap({'path': '/tmp/shot.png'}), isNull);
-  });
+  test(
+    'a frame whose size and bytes disagree is dropped, not read past the end',
+    () {
+      expect(
+        ScreenQrCapture.frameFromMap({
+          'width': 4,
+          'height': 2,
+          'gray': Uint8List(6),
+        }),
+        isNull,
+      );
+      expect(
+        ScreenQrCapture.frameFromMap({
+          'width': 0,
+          'height': 0,
+          'gray': Uint8List(0),
+        }),
+        isNull,
+      );
+      expect(ScreenQrCapture.frameFromMap(null), isNull);
+      expect(ScreenQrCapture.frameFromMap({'path': '/tmp/shot.png'}), isNull);
+    },
+  );
 }

@@ -26,10 +26,13 @@ String _link({
 
 void main() {
   test('разбирает все шесть полей и параметры из хвоста', () {
-    final parsed = SsrLink.tryParse(_link(
-      query: 'obfsparam=${_b64('cdn.example')}&protoparam=${_b64('32')}'
-          '&remarks=${_b64('Узел RU')}',
-    ));
+    final parsed = SsrLink.tryParse(
+      _link(
+        query:
+            'obfsparam=${_b64('cdn.example')}&protoparam=${_b64('32')}'
+            '&remarks=${_b64('Узел RU')}',
+      ),
+    );
 
     expect(parsed, isNotNull);
     expect(parsed!.host, 'ssr.example');

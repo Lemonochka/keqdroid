@@ -10,7 +10,8 @@ import 'package:keqdroid/utils/vpn_core_support.dart';
 /// оба. Раньше несовпадение молча откатывалось на xray, и это выглядело как
 /// «включил mihomo — приложение пишет, что активное ядро xray».
 void main() {
-  const link = 'vless://uuid@example.com:443?type=tcp&security=reality'
+  const link =
+      'vless://uuid@example.com:443?type=tcp&security=reality'
       '&pbk=k&sni=example.org#node';
 
   final xrayJson = jsonEncode({
@@ -109,10 +110,9 @@ AllowedIPs = 0.0.0.0/0
     });
 
     test('транспорт без поля у mihomo узлом только у xray', () {
-      expect(
-        chainHopBackends('vless://u@h.example:443?type=kcp'),
-        {VpnBackend.xray},
-      );
+      expect(chainHopBackends('vless://u@h.example:443?type=kcp'), {
+        VpnBackend.xray,
+      });
     });
 
     test('hysteria v1 mihomo не исполняет вовсе', () {
@@ -130,14 +130,12 @@ AllowedIPs = 0.0.0.0/0
 
     test('цепочку исполняет ядро, которое умеет все её узлы', () {
       expect(chainBackends(ProxyChainConfig.tryParse(chain)!), both);
-      expect(
-        chainBackends(ProxyChainConfig.tryParse(awgChain)!),
-        {VpnBackend.mihomo},
-      );
-      expect(
-        chainBackends(ProxyChainConfig.tryParse(kcpChain)!),
-        {VpnBackend.xray},
-      );
+      expect(chainBackends(ProxyChainConfig.tryParse(awgChain)!), {
+        VpnBackend.mihomo,
+      });
+      expect(chainBackends(ProxyChainConfig.tryParse(kcpChain)!), {
+        VpnBackend.xray,
+      });
     });
   });
 
@@ -176,7 +174,11 @@ rules:
           'main': {'type': 'http', 'url': 'https://example.invalid/nodes.yaml'},
         },
         'proxy-groups': [
-          {'name': 'Proxy', 'type': 'select', 'use': ['main']},
+          {
+            'name': 'Proxy',
+            'type': 'select',
+            'use': ['main'],
+          },
         ],
         'rules': ['MATCH,Proxy'],
       });
@@ -214,12 +216,11 @@ rules:
       String config, {
       String preference = AppSettings.vpnCoreXray,
       bool mihomo = true,
-    }) =>
-        resolveVpnBackend(
-          config: config,
-          preference: preference,
-          mihomoAvailable: mihomo,
-        );
+    }) => resolveVpnBackend(
+      config: config,
+      preference: preference,
+      mihomoAvailable: mihomo,
+    );
 
     test('по умолчанию xray: ссылку берёт он, готовый конфиг — своё ядро', () {
       expect(choose(link).backend, VpnBackend.xray);
@@ -261,10 +262,7 @@ rules:
         choose(xrayJson, preference: AppSettings.vpnCoreMihomo).skip,
         VpnCoreSkip.customConfig,
       );
-      expect(
-        choose(awgChain).skip,
-        VpnCoreSkip.chainMihomoOnly,
-      );
+      expect(choose(awgChain).skip, VpnCoreSkip.chainMihomoOnly);
       expect(
         choose(kcpChain, preference: AppSettings.vpnCoreMihomo).skip,
         VpnCoreSkip.chainXrayOnly,
@@ -280,7 +278,11 @@ rules:
     });
 
     test('без mihomo на платформе: ссылка на xray, clash — честный отказ', () {
-      final forLink = choose(link, preference: AppSettings.vpnCoreMihomo, mihomo: false);
+      final forLink = choose(
+        link,
+        preference: AppSettings.vpnCoreMihomo,
+        mihomo: false,
+      );
       expect(forLink.backend, VpnBackend.xray);
       expect(forLink.skip, VpnCoreSkip.platform);
 
@@ -340,32 +342,27 @@ rules:
 
     test('UDP внутри TCP у shadowsocks — только mihomo', () {
       for (final query in ['uot=1', 'udp-over-tcp=true']) {
-        expect(
-          backendsForLink('ss://$ssUser@198.51.100.10:8388?$query'),
-          {VpnBackend.mihomo},
-          reason: query,
-        );
+        expect(backendsForLink('ss://$ssUser@198.51.100.10:8388?$query'), {
+          VpnBackend.mihomo,
+        }, reason: query);
       }
     });
 
     test('транспорт h2 — только mihomo: xray 26 его снёс', () {
-      expect(
-        backendsForLink('vless://$uuid@198.51.100.10:443?type=http'),
-        {VpnBackend.mihomo},
-      );
+      expect(backendsForLink('vless://$uuid@198.51.100.10:443?type=http'), {
+        VpnBackend.mihomo,
+      });
       expect(backendsForLink(vmess({'net': 'h2'})), {VpnBackend.mihomo});
     });
 
     test('mKCP и чужой xhttp — только xray', () {
-      expect(
-        backendsForLink('vless://$uuid@198.51.100.10:443?type=kcp'),
-        {VpnBackend.xray},
-      );
+      expect(backendsForLink('vless://$uuid@198.51.100.10:443?type=kcp'), {
+        VpnBackend.xray,
+      });
       expect(backendsForLink(vmess({'net': 'xhttp'})), {VpnBackend.xray});
-      expect(
-        backendsForLink('trojan://p@198.51.100.10:443?type=xhttp'),
-        {VpnBackend.xray},
-      );
+      expect(backendsForLink('trojan://p@198.51.100.10:443?type=xhttp'), {
+        VpnBackend.xray,
+      });
       // У VLESS xhttp есть и у mihomo — эта ссылка по-прежнему для обоих.
       expect(
         backendsForLink('vless://$uuid@198.51.100.10:443?type=xhttp'),
@@ -380,10 +377,9 @@ rules:
         backendsForLink('vless://$uuid@198.51.100.10:443?type=tcp&fm=$fm'),
         {VpnBackend.xray},
       );
-      expect(
-        backendsForLink('trojan://password@198.51.100.10:443?fm=$fm'),
-        {VpnBackend.xray},
-      );
+      expect(backendsForLink('trojan://password@198.51.100.10:443?fm=$fm'), {
+        VpnBackend.xray,
+      });
     });
 
     test('HTTP-маскировка у trojan — только xray', () {
@@ -414,7 +410,8 @@ rules:
     });
 
     test('выбор ядра мимо правила виден причиной, а не молчанием', () {
-      const ss = 'ss://$ssUser@198.51.100.10:8388?plugin=obfs-local%3Bobfs%3Dhttp';
+      const ss =
+          'ss://$ssUser@198.51.100.10:8388?plugin=obfs-local%3Bobfs%3Dhttp';
       final onXray = resolveVpnBackend(
         config: ss,
         preference: AppSettings.vpnCoreXray,

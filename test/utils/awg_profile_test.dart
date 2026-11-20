@@ -6,7 +6,8 @@ void main() {
   const privBlock = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEA=';
   const pubBlock = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIA=';
 
-  const sample = '''
+  const sample =
+      '''
 # Name = Test AWG
 [Interface]
 PrivateKey = $privBlock
@@ -57,7 +58,9 @@ PersistentKeepalive = 25
 
   test('parses IPv6 bracketed endpoint', () {
     final conf = sample.replaceFirst(
-        'Endpoint = 203.0.113.10:51820', 'Endpoint = [2001:db8::1]:443');
+      'Endpoint = 203.0.113.10:51820',
+      'Endpoint = [2001:db8::1]:443',
+    );
     final p = AwgProfile.parse(conf);
     expect(p.endpointHost, '2001:db8::1');
     expect(p.endpointPort, 443);
@@ -65,10 +68,11 @@ PersistentKeepalive = 25
 
   test('splits a domain endpoint into host and port', () {
     final conf = sample.replaceFirst(
-        'Endpoint = 203.0.113.10:51820', 'Endpoint = vpn.example.com:945');
+      'Endpoint = 203.0.113.10:51820',
+      'Endpoint = vpn.example.com:945',
+    );
     final p = AwgProfile.parse(conf);
-    expect(AwgProfile.splitEndpoint(p.peer.endpoint),
-        ('vpn.example.com', 945));
+    expect(AwgProfile.splitEndpoint(p.peer.endpoint), ('vpn.example.com', 945));
   });
 
   test('rejects non-AWG and incomplete configs', () {
@@ -85,9 +89,13 @@ PersistentKeepalive = 25
 
     String withAwg31(String extra) => sample
         .replaceFirst('S1 = 86', 'S1 = 86\n$extra')
-        .replaceFirst('PersistentKeepalive = 25', 'PersistentKeepalive = 22-30');
+        .replaceFirst(
+          'PersistentKeepalive = 25',
+          'PersistentKeepalive = 22-30',
+        );
 
-    const params = '''
+    const params =
+        '''
 HeaderProtectionKey = $hpkBlock
 ContentPaddingAddition = 2-10
 RekeyAfterTime = 100-140
@@ -114,7 +122,10 @@ DisableCookies = false''';
       expect(ranged.peer.persistentKeepalive, '22-30');
 
       final off = AwgProfile.parse(
-        sample.replaceFirst('PersistentKeepalive = 25', 'PersistentKeepalive = off'),
+        sample.replaceFirst(
+          'PersistentKeepalive = 25',
+          'PersistentKeepalive = off',
+        ),
       );
       // `off` понимает wg-quick, но не ядро: оно уронило бы весь IpcSet.
       expect(off.peer.persistentKeepalive, '0');
@@ -148,7 +159,10 @@ DisableCookies = false''';
       );
       expect(
         () => AwgProfile.parse(
-          sample.replaceFirst('PersistentKeepalive = 25', 'PersistentKeepalive = 30-22'),
+          sample.replaceFirst(
+            'PersistentKeepalive = 25',
+            'PersistentKeepalive = 30-22',
+          ),
         ),
         throwsArgumentError,
       );

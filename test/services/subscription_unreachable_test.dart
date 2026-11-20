@@ -33,22 +33,32 @@ class _NoAnswerAdapter implements HttpClientAdapter {
 }
 
 void main() {
-  test('без ответа — только основной запрос и один повтор', () async {
-    final adapter = _NoAnswerAdapter();
-    final dio = Dio()..httpClientAdapter = adapter;
-    final service = SubscriptionService(await buildStorageService(), dio: dio);
+  test(
+    'без ответа — только основной запрос и один повтор',
+    () async {
+      final adapter = _NoAnswerAdapter();
+      final dio = Dio()..httpClientAdapter = adapter;
+      final service = SubscriptionService(
+        await buildStorageService(),
+        dio: dio,
+      );
 
-    // TEST-NET: запасной клиент, если бы он пошёл сюда, ждал бы свои 15 с на
-    // каждую из двух попыток.
-    final sw = Stopwatch()..start();
-    await expectLater(
-      service.fetchRaw('https://203.0.113.7/sub/token'),
-      throwsA(isA<Exception>()),
-    );
-    sw.stop();
+      // TEST-NET: запасной клиент, если бы он пошёл сюда, ждал бы свои 15 с на
+      // каждую из двух попыток.
+      final sw = Stopwatch()..start();
+      await expectLater(
+        service.fetchRaw('https://203.0.113.7/sub/token'),
+        throwsA(isA<Exception>()),
+      );
+      sw.stop();
 
-    expect(adapter.calls, 2);
-    expect(sw.elapsed, lessThan(const Duration(seconds: 10)),
-        reason: 'повтор ждёт 2 с; всё сверх этого — лишние попытки');
-  }, timeout: const Timeout(Duration(minutes: 2)));
+      expect(adapter.calls, 2);
+      expect(
+        sw.elapsed,
+        lessThan(const Duration(seconds: 10)),
+        reason: 'повтор ждёт 2 с; всё сверх этого — лишние попытки',
+      );
+    },
+    timeout: const Timeout(Duration(minutes: 2)),
+  );
 }

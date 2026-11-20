@@ -58,7 +58,9 @@ class ZipPieceDownload {
       try {
         for (final piece in plan.pieces) {
           if (piece.download) {
-            await _stream(dio, uri, piece.at, piece.at + piece.length, out, (n) {
+            await _stream(dio, uri, piece.at, piece.at + piece.length, out, (
+              n,
+            ) {
               received += n;
               onProgress?.call(received, toDownload);
             });
@@ -130,9 +132,10 @@ class ZipPieceDownload {
         continue;
       }
       final data = entries[i + 1].localHeaderOffset - e.compressedSize;
-      if (data < e.localHeaderOffset +
-              ZipLayout.localHeaderSize +
-              e.nameBytes.length ||
+      if (data <
+              e.localHeaderOffset +
+                  ZipLayout.localHeaderSize +
+                  e.nameBytes.length ||
           data < cursor) {
         continue;
       }
@@ -193,11 +196,10 @@ class ZipPieceDownload {
     int end,
     RandomAccessFile out,
     void Function(int) onChunk,
-  ) =>
-      _request(dio, uri, start, end, (chunk) async {
-        await out.writeFrom(chunk);
-        onChunk(chunk.length);
-      });
+  ) => _request(dio, uri, start, end, (chunk) async {
+    await out.writeFrom(chunk);
+    onChunk(chunk.length);
+  });
 
   static Future<void> _request(
     Dio dio,
@@ -226,7 +228,9 @@ class ZipPieceDownload {
     var got = 0;
     await for (final chunk in body) {
       got += chunk.length;
-      if (got > end - start) throw StateError('range $start-${end - 1} overran');
+      if (got > end - start) {
+        throw StateError('range $start-${end - 1} overran');
+      }
       await sink(chunk);
     }
     if (got != end - start) {
@@ -269,12 +273,8 @@ class _Plan {
 }
 
 class _Piece {
-  _Piece.download(this.at, this.length)
-      : download = true,
-        from = 0;
-  _Piece.copy(this.from, this.length)
-      : download = false,
-        at = 0;
+  _Piece.download(this.at, this.length) : download = true, from = 0;
+  _Piece.copy(this.from, this.length) : download = false, at = 0;
 
   final bool download;
   final int at;

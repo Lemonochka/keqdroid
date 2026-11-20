@@ -21,7 +21,11 @@ import '../helpers/test_storage.dart';
 
 final _en = lookupAppLocalizations(const Locale('en'));
 
-const _sub = Subscription(id: 'a', name: 'Gaming VPN', url: 'https://a.example/sub');
+const _sub = Subscription(
+  id: 'a',
+  name: 'Gaming VPN',
+  url: 'https://a.example/sub',
+);
 
 class _Edit {
   _Edit(
@@ -148,12 +152,14 @@ void main() {
     const counts = {'vless': 28, 'hysteria2': 12, 'trojan': 6, 'ss': 6};
 
     Finder switchOf(String protocol) => find.descendant(
-          of: find.ancestor(
+      of: find
+          .ancestor(
             of: find.text(protocol.toUpperCase()),
             matching: find.byType(Row),
-          ).first,
-          matching: find.byType(Switch),
-        );
+          )
+          .first,
+      matching: find.byType(Switch),
+    );
 
     Future<void> openProtocols(WidgetTester tester) async {
       await _openFromMenu(tester, _en.subscriptionsEditSubscription);
@@ -161,36 +167,43 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    testWidgets('a subscription with one protocol has no protocols row',
-        (tester) async {
+    testWidgets('a subscription with one protocol has no protocols row', (
+      tester,
+    ) async {
       _shown = _sub.copyWith(protocolCounts: {'vless': 5});
       await _openFromMenu(tester, _en.subscriptionsEditSubscription);
       expect(find.text(_en.subscriptionProtocolsTitle), findsNothing);
     });
 
     testWidgets(
-        'a subscription not updated since this version counts its listed servers',
-        (tester) async {
-      ServerItem listed(String config) =>
-          ServerItem.fromRaw(config, subscriptionId: _sub.id);
-      await _openFromMenu(
-        tester,
-        _en.subscriptionsEditSubscription,
-        servers: [
-          listed('vless://00000000-0000-4000-8000-000000000000@198.51.100.1:443'
-              '?security=tls&sni=a.example#V'),
-          listed('hy2://secret@198.51.100.2:443?sni=a.example#H1'),
-          listed('hysteria2://secret@198.51.100.3:443?sni=a.example#H2'),
-          ServerItem.fromRaw('trojan://secret@198.51.100.4:443#Manual'),
-        ],
-      );
-      expect(find.text(_en.subscriptionProtocolsAll(3)), findsOneWidget);
-      await tester.tap(find.text(_en.subscriptionProtocolsTitle));
-      await tester.pumpAndSettle();
-      expect(find.text('HYSTERIA2'), findsOneWidget);
-      expect(find.text(_en.subscriptionProtocolsServerCount(2)), findsOneWidget);
-      expect(find.text('TROJAN'), findsNothing);
-    });
+      'a subscription not updated since this version counts its listed servers',
+      (tester) async {
+        ServerItem listed(String config) =>
+            ServerItem.fromRaw(config, subscriptionId: _sub.id);
+        await _openFromMenu(
+          tester,
+          _en.subscriptionsEditSubscription,
+          servers: [
+            listed(
+              'vless://00000000-0000-4000-8000-000000000000@198.51.100.1:443'
+              '?security=tls&sni=a.example#V',
+            ),
+            listed('hy2://secret@198.51.100.2:443?sni=a.example#H1'),
+            listed('hysteria2://secret@198.51.100.3:443?sni=a.example#H2'),
+            ServerItem.fromRaw('trojan://secret@198.51.100.4:443#Manual'),
+          ],
+        );
+        expect(find.text(_en.subscriptionProtocolsAll(3)), findsOneWidget);
+        await tester.tap(find.text(_en.subscriptionProtocolsTitle));
+        await tester.pumpAndSettle();
+        expect(find.text('HYSTERIA2'), findsOneWidget);
+        expect(
+          find.text(_en.subscriptionProtocolsServerCount(2)),
+          findsOneWidget,
+        );
+        expect(find.text('TROJAN'), findsNothing);
+      },
+    );
 
     testWidgets('the row counts every server that came', (tester) async {
       _shown = _sub.copyWith(protocolCounts: counts);
@@ -198,11 +211,15 @@ void main() {
       expect(find.text(_en.subscriptionProtocolsAll(52)), findsOneWidget);
     });
 
-    testWidgets('turned-off protocols are saved and shown in the row',
-        (tester) async {
+    testWidgets('turned-off protocols are saved and shown in the row', (
+      tester,
+    ) async {
       _shown = _sub.copyWith(protocolCounts: counts);
       await openProtocols(tester);
-      expect(find.text(_en.subscriptionProtocolsServerCount(28)), findsOneWidget);
+      expect(
+        find.text(_en.subscriptionProtocolsServerCount(28)),
+        findsOneWidget,
+      );
       await tester.tap(switchOf('hysteria2'));
       await tester.tap(switchOf('ss'));
       await tester.pumpAndSettle();
@@ -221,8 +238,9 @@ void main() {
       expect(_edits.single.excludedProtocols, {'hysteria2', 'ss'});
     });
 
-    testWidgets('the last protocol left on cannot be turned off',
-        (tester) async {
+    testWidgets('the last protocol left on cannot be turned off', (
+      tester,
+    ) async {
       _shown = _sub.copyWith(
         protocolCounts: {'vless': 2, 'ss': 1},
         excludedProtocols: {'ss'},
@@ -233,10 +251,7 @@ void main() {
     });
 
     testWidgets('take all clears the filter', (tester) async {
-      _shown = _sub.copyWith(
-        protocolCounts: counts,
-        excludedProtocols: {'ss'},
-      );
+      _shown = _sub.copyWith(protocolCounts: counts, excludedProtocols: {'ss'});
       await openProtocols(tester);
       await tester.tap(find.text(_en.subscriptionProtocolsTakeAll));
       await tester.pumpAndSettle();
@@ -246,8 +261,9 @@ void main() {
       expect(_edits.single.excludedProtocols, isEmpty);
     });
 
-    testWidgets('closing the protocols sheet keeps the old choice',
-        (tester) async {
+    testWidgets('closing the protocols sheet keeps the old choice', (
+      tester,
+    ) async {
       _shown = _sub.copyWith(protocolCounts: counts);
       await openProtocols(tester);
       await tester.tap(switchOf('ss'));
@@ -258,8 +274,9 @@ void main() {
     });
   });
 
-  testWidgets('card menu lists its actions under the subscription name',
-      (tester) async {
+  testWidgets('card menu lists its actions under the subscription name', (
+    tester,
+  ) async {
     await _openMenu(tester);
     final sheet = find.byType(BottomSheet);
     for (final title in [
@@ -269,15 +286,21 @@ void main() {
       _en.subscriptionsDelete,
       _sub.name,
     ]) {
-      expect(find.descendant(of: sheet, matching: find.text(title)),
-          findsOneWidget, reason: title);
+      expect(
+        find.descendant(of: sheet, matching: find.text(title)),
+        findsOneWidget,
+        reason: title,
+      );
     }
   });
 
-  testWidgets('edit sheet starts from the subscription and saves new values',
-      (tester) async {
+  testWidgets('edit sheet starts from the subscription and saves new values', (
+    tester,
+  ) async {
     await _openFromMenu(tester, _en.subscriptionsEditSubscription);
-    final fields = tester.widgetList<TextField>(find.byType(TextField)).toList();
+    final fields = tester
+        .widgetList<TextField>(find.byType(TextField))
+        .toList();
     expect(fields[0].controller!.text, _sub.name);
     expect(fields[1].controller!.text, _sub.url);
 
@@ -305,8 +328,9 @@ void main() {
     expect(_edits.single.resetName, isTrue);
   });
 
-  testWidgets('empty address saves nothing and keeps the sheet open',
-      (tester) async {
+  testWidgets('empty address saves nothing and keeps the sheet open', (
+    tester,
+  ) async {
     await _openFromMenu(tester, _en.subscriptionsEditSubscription);
     await tester.enterText(find.byType(TextField).at(1), '   ');
     await tester.tap(find.text(_en.subscriptionsSave));
@@ -316,8 +340,9 @@ void main() {
     expect(find.text(_en.subscriptionsEditSubscription), findsOneWidget);
   });
 
-  testWidgets('failed save shows the error and keeps the sheet open',
-      (tester) async {
+  testWidgets('failed save shows the error and keeps the sheet open', (
+    tester,
+  ) async {
     _editFailure = Exception('boom');
     await _openFromMenu(tester, _en.subscriptionsEditSubscription);
     await tester.tap(find.text(_en.subscriptionsSave));
@@ -326,13 +351,16 @@ void main() {
     expect(find.text(_en.subscriptionsEditSubscription), findsOneWidget);
     final sheet = find.byType(BottomSheet);
     final texts = tester
-        .widgetList<Text>(find.descendant(of: sheet, matching: find.byType(Text)))
+        .widgetList<Text>(
+          find.descendant(of: sheet, matching: find.byType(Text)),
+        )
         .map((t) => t.data ?? '');
     expect(texts.where((t) => t.contains('boom')), isNotEmpty);
   });
 
-  testWidgets('leaving the edit sheet without saving changes nothing',
-      (tester) async {
+  testWidgets('leaving the edit sheet without saving changes nothing', (
+    tester,
+  ) async {
     await _openFromMenu(tester, _en.subscriptionsEditSubscription);
     await tester.enterText(find.byType(TextField).at(0), 'Other');
     await tester.tapAt(const Offset(20, 20));
@@ -342,23 +370,28 @@ void main() {
     expect(find.text(_en.subscriptionsEditSubscription), findsNothing);
   });
 
-  testWidgets('share sheet shows the QR of the address and the action',
-      (tester) async {
+  testWidgets('share sheet shows the QR of the address and the action', (
+    tester,
+  ) async {
     await _openFromMenu(tester, _en.subscriptionsShareButton);
     expect(find.byType(QrImageView), findsOneWidget);
     expect(find.widgetWithText(SelectableText, _sub.url), findsOneWidget);
     expect(
-      find.text(Platform.isLinux
-          ? _en.subscriptionsSave
-          : _en.subscriptionsShareAction),
+      find.text(
+        Platform.isLinux ? _en.subscriptionsSave : _en.subscriptionsShareAction,
+      ),
       findsOneWidget,
     );
   });
 
-  testWidgets('delete asks first, cancel keeps the subscription',
-      (tester) async {
+  testWidgets('delete asks first, cancel keeps the subscription', (
+    tester,
+  ) async {
     await _openFromMenu(tester, _en.subscriptionsDelete);
-    expect(find.text(_en.subscriptionsDeleteConfirm(_sub.name)), findsOneWidget);
+    expect(
+      find.text(_en.subscriptionsDeleteConfirm(_sub.name)),
+      findsOneWidget,
+    );
 
     await tester.tap(find.text(_en.subscriptionsCancel));
     await tester.pumpAndSettle();
@@ -368,10 +401,12 @@ void main() {
 
   testWidgets('confirmed delete removes the subscription', (tester) async {
     await _openFromMenu(tester, _en.subscriptionsDelete);
-    await tester.tap(find.descendant(
-      of: find.byType(AlertDialog),
-      matching: find.text(_en.subscriptionsDelete),
-    ));
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.text(_en.subscriptionsDelete),
+      ),
+    );
     await tester.pumpAndSettle();
     expect(_removed, ['a']);
   });

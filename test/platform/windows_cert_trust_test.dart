@@ -30,13 +30,20 @@ void main() {
     );
   }, skip: skip);
 
-  test('центр, на котором оборвалась цепочка: Windows доводит его до корня', () {
-    // корень USERTrust ECC Windows докачает сама, если его ещё нет
-    expect(
-      windowsTrustsCertificate(base64.decode(_sectigoCross), 'api.github.com'),
-      isTrue,
-    );
-  }, skip: skip);
+  test(
+    'центр, на котором оборвалась цепочка: Windows доводит его до корня',
+    () {
+      // корень USERTrust ECC Windows докачает сама, если его ещё нет
+      expect(
+        windowsTrustsCertificate(
+          base64.decode(_sectigoCross),
+          'api.github.com',
+        ),
+        isTrue,
+      );
+    },
+    skip: skip,
+  );
 
   test('настоящий сертификат на чужое имя: отказ', () {
     expect(

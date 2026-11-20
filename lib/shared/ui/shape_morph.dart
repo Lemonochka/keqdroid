@@ -132,7 +132,7 @@ class ShapeMorphCycle extends ChangeNotifier {
     _morph.value = 1;
     _rotationOffset =
         (now.inMilliseconds % _globalRotationDurationMillis) /
-            _globalRotationDurationMillis;
+        _globalRotationDurationMillis;
     _rotation.repeat();
     final untilNext =
         _morphIntervalMillis - now.inMilliseconds % _morphIntervalMillis;
@@ -184,7 +184,9 @@ class MorphPainter extends CustomPainter {
     final side = math.min(size.width, size.height) * scale;
     final dx = (size.width - side) / 2;
     final dy = (size.height - side) / 2;
-    final path = morph.toPath(progress: progress).transform(
+    final path = morph
+        .toPath(progress: progress)
+        .transform(
           (Matrix4.identity()
                 ..translateByDouble(dx, dy, 0, 1)
                 ..scaleByDouble(side, side, 1, 1))
@@ -207,4 +209,3 @@ class MorphPainter extends CustomPainter {
       oldDelegate.scale != scale ||
       !identical(oldDelegate.morph, morph);
 }
-

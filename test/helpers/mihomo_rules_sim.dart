@@ -39,10 +39,7 @@ class SimConn {
 
 /// Цель первого совпавшего правила. Нет совпадения и `MATCH` — `DIRECT`, как
 /// у ядра.
-String simulateMihomo(
-  Map<String, dynamic> config,
-  SimConn conn,
-) {
+String simulateMihomo(Map<String, dynamic> config, SimConn conn) {
   final rules = [for (final r in config['rules'] as List) '$r'];
   final subRules = <String, List<String>>{
     for (final MapEntry(:key, :value)
@@ -85,7 +82,8 @@ List<String> unknownMihomoTargets(Map<String, dynamic> config) {
   final problems = <String>[];
   void check(String raw) {
     final p = _parse(raw, needTarget: true);
-    final known = outbounds.contains(p.target) ||
+    final known =
+        outbounds.contains(p.target) ||
         (p.type == 'SUB-RULE' && sets.contains(p.target));
     if (!known) problems.add('$raw: нет цели ${p.target}');
     if (p.type == 'RULE-SET' && !providers.contains(p.payload)) {
@@ -152,12 +150,12 @@ _Parsed _parse(String raw, {required bool needTarget}) {
       case 'MATCH':
         target = item[1];
       case 'NOT' ||
-            'OR' ||
-            'AND' ||
-            'SUB-RULE' ||
-            'DOMAIN-REGEX' ||
-            'PROCESS-NAME-REGEX' ||
-            'PROCESS-PATH-REGEX':
+          'OR' ||
+          'AND' ||
+          'SUB-RULE' ||
+          'DOMAIN-REGEX' ||
+          'PROCESS-NAME-REGEX' ||
+          'PROCESS-PATH-REGEX':
         if (needTarget) {
           target = item.last;
           item = item.sublist(0, item.length - 1);
@@ -241,40 +239,51 @@ class _Sim {
       'AND' => mihomoLogicParts(p.payload).every(_matchInner),
       'OR' => mihomoLogicParts(p.payload).any(_matchInner),
       'NOT' => () {
-          final parts = mihomoLogicParts(p.payload);
-          if (parts.length != 1) throw FormatException('not: ${p.payload}');
-          return !_matchInner(parts.single);
-        }(),
-      'IN-TYPE' => p.payload
-          .split('/')
-          .map((t) => t.trim().toUpperCase())
-          .any((t) =>
-              t == conn.inType ||
-              (t == 'SOCKS' && conn.inType.startsWith('SOCKS'))),
+        final parts = mihomoLogicParts(p.payload);
+        if (parts.length != 1) throw FormatException('not: ${p.payload}');
+        return !_matchInner(parts.single);
+      }(),
+      'IN-TYPE' =>
+        p.payload
+            .split('/')
+            .map((t) => t.trim().toUpperCase())
+            .any(
+              (t) =>
+                  t == conn.inType ||
+                  (t == 'SOCKS' && conn.inType.startsWith('SOCKS')),
+            ),
       'NETWORK' => p.payload.toUpperCase() == conn.network.toUpperCase(),
       'DST-PORT' => p.payload.split('/').any((part) {
-          final range = part.trim().split('-');
-          return conn.port >= int.parse(range.first) &&
-              conn.port <= int.parse(range.last);
-        }),
+        final range = part.trim().split('-');
+        return conn.port >= int.parse(range.first) &&
+            conn.port <= int.parse(range.last);
+      }),
       'PROCESS-NAME' => conn.process.toLowerCase() == p.payload.toLowerCase(),
-      'PROCESS-NAME-REGEX' =>
-        RegExp(p.payload, caseSensitive: false).hasMatch(conn.process),
-      'PROCESS-PATH-REGEX' =>
-        RegExp(p.payload, caseSensitive: false).hasMatch(conn.path),
+      'PROCESS-NAME-REGEX' => RegExp(
+        p.payload,
+        caseSensitive: false,
+      ).hasMatch(conn.process),
+      'PROCESS-PATH-REGEX' => RegExp(
+        p.payload,
+        caseSensitive: false,
+      ).hasMatch(conn.path),
       'DOMAIN' => host.isNotEmpty && host == p.payload.toLowerCase(),
-      'DOMAIN-SUFFIX' => host.isNotEmpty &&
-          (host == p.payload.toLowerCase() ||
-              host.endsWith('.${p.payload.toLowerCase()}')),
+      'DOMAIN-SUFFIX' =>
+        host.isNotEmpty &&
+            (host == p.payload.toLowerCase() ||
+                host.endsWith('.${p.payload.toLowerCase()}')),
       'DOMAIN-KEYWORD' =>
         host.isNotEmpty && host.contains(p.payload.toLowerCase()),
-      'RULE-SET' => host.isNotEmpty &&
-          (providers[p.payload] ?? const []).any((entry) {
-            final suffix = entry.startsWith('+.') ? entry.substring(2) : entry;
-            return host == suffix || host.endsWith('.$suffix');
-          }),
-      'IP-CIDR' || 'IP-CIDR6' =>
-        resolveUnlessNoResolve() && _inCidr(dstIp, p.payload),
+      'RULE-SET' =>
+        host.isNotEmpty &&
+            (providers[p.payload] ?? const []).any((entry) {
+              final suffix = entry.startsWith('+.')
+                  ? entry.substring(2)
+                  : entry;
+              return host == suffix || host.endsWith('.$suffix');
+            }),
+      'IP-CIDR' ||
+      'IP-CIDR6' => resolveUnlessNoResolve() && _inCidr(dstIp, p.payload),
       'GEOIP' || 'GEOSITE' => false,
       _ => throw UnsupportedError('симулятор не знает правила ${p.type}'),
     };

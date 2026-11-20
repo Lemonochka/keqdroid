@@ -27,8 +27,9 @@ class _FakeVpn extends VpnStateNotifier {
 }
 
 void main() {
-  testWidgets('кнопки диалога не двигаются, когда пошла загрузка',
-      (tester) async {
+  testWidgets('кнопки диалога не двигаются, когда пошла загрузка', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(1080, 2400);
     tester.view.devicePixelRatio = 2.625;
     addTearDown(tester.view.reset);

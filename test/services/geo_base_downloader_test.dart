@@ -5,8 +5,10 @@ import 'package:keqdroid/services/geo_base_downloader.dart';
 ///
 /// Только из подписанного SHA256SUMS: свой `geoip.dat.sha256` лежит в релизе
 /// ради версий 0.15–0.18, но подписи на нём нет.
-Map<String, dynamic> _asset(String name) =>
-    {'name': name, 'browser_download_url': 'https://example.invalid/$name'};
+Map<String, dynamic> _asset(String name) => {
+  'name': name,
+  'browser_download_url': 'https://example.invalid/$name',
+};
 
 void main() {
   test('хеш из подписанного SHA256SUMS', () {

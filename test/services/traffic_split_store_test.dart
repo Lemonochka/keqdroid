@@ -15,17 +15,16 @@ void main() {
     String session = 's1',
     int coreDownload = 700,
     int vpnDownload = 600,
-  }) =>
-      TrafficSplitState(
-        session: session,
-        coreDownload: coreDownload,
-        coreUpload: 30,
-        vpnDownload: vpnDownload,
-        vpnUpload: 20,
-        directDownload: 10,
-        directUpload: 5,
-        connections: const {'a': (700, 20)},
-      );
+  }) => TrafficSplitState(
+    session: session,
+    coreDownload: coreDownload,
+    coreUpload: 30,
+    vpnDownload: vpnDownload,
+    vpnUpload: 20,
+    directDownload: 10,
+    directUpload: 5,
+    connections: const {'a': (700, 20)},
+  );
 
   setUp(() {
     dir = Directory.systemTemp.createTempSync('traffic_split_store_test');
@@ -59,8 +58,9 @@ void main() {
   });
 
   test('порванный файл читается как отсутствующий', () async {
-    File(p.join(dir.path, 'traffic_split.json'))
-        .writeAsStringSync('{"v":1,"session":"s1","core":[7');
+    File(
+      p.join(dir.path, 'traffic_split.json'),
+    ).writeAsStringSync('{"v":1,"session":"s1","core":[7');
     expect(await TrafficSplitStore.load(), isNull);
   });
 

@@ -2,8 +2,10 @@ part of '../servers_tab.dart';
 
 const double _plaqueHeight = 44;
 const _plaqueSpringDuration = Duration(milliseconds: 450);
-const _plaqueSpring =
-    SpringCurve(ExpressiveMotion.spatialFast, _plaqueSpringDuration);
+const _plaqueSpring = SpringCurve(
+  ExpressiveMotion.spatialFast,
+  _plaqueSpringDuration,
+);
 const Radius _plaqueOuter = Radius.circular(_plaqueHeight / 2);
 const Radius _plaqueInner = Radius.circular(ExpressiveShape.small);
 
@@ -58,7 +60,8 @@ Widget _plaqueServerSegment(
 }) {
   final scheme = Theme.of(context).colorScheme;
   final textTheme = Theme.of(context).textTheme;
-  final name = route?.label ??
+  final name =
+      route?.label ??
       ServerNameUtils.formatForDisplay(
         ServerNameUtils.cleanDisplayName(server.displayName),
       );
@@ -69,9 +72,10 @@ Widget _plaqueServerSegment(
     textStyle: textTheme.emphasized(textTheme.titleSmall),
     verticalPadding: 8,
     borderRadius: radius,
-    color: connected ? scheme.secondaryContainer : scheme.surfaceContainerHighest,
-    foregroundColor:
-        connected ? scheme.onSecondaryContainer : scheme.onSurface,
+    color: connected
+        ? scheme.secondaryContainer
+        : scheme.surfaceContainerHighest,
+    foregroundColor: connected ? scheme.onSecondaryContainer : scheme.onSurface,
     fallbackFlag: route == null ? server.flag : route.flag,
     fallbackProtocol: route == null ? server.protocol : '',
     maxLines: maxLines,
@@ -104,8 +108,9 @@ class _ServerPingPlaque extends ConsumerWidget {
     // пинг нажатого сервера тут ни при чём: всё остальное идёт через группу
     if (route != null) {
       return Padding(
-        padding:
-            const EdgeInsets.symmetric(vertical: ExpressiveSpacing.extraSmall),
+        padding: const EdgeInsets.symmetric(
+          vertical: ExpressiveSpacing.extraSmall,
+        ),
         child: _plaqueServerSegment(
           context,
           server: server,
@@ -127,7 +132,9 @@ class _ServerPingPlaque extends ConsumerWidget {
         ? pingQualityColor(context, pingMs, pingType)
         : AppTheme.textLight(context);
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: ExpressiveSpacing.extraSmall),
+      padding: const EdgeInsets.symmetric(
+        vertical: ExpressiveSpacing.extraSmall,
+      ),
       child: IntrinsicHeight(
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -208,7 +215,9 @@ class _StatusServerPlaque extends StatelessWidget {
     };
     final direction = Directionality.of(context);
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: ExpressiveSpacing.extraSmall),
+      padding: const EdgeInsets.symmetric(
+        vertical: ExpressiveSpacing.extraSmall,
+      ),
       child: IntrinsicHeight(
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -237,11 +246,13 @@ class _StatusServerPlaque extends StatelessWidget {
                   child: Text(
                     label,
                     key: ValueKey(label),
-                    style: textTheme.emphasized(textTheme.labelLarge)?.copyWith(
-                      color: connected
-                          ? scheme.onSecondaryContainer
-                          : AppTheme.textLight(context),
-                    ),
+                    style: textTheme
+                        .emphasized(textTheme.labelLarge)
+                        ?.copyWith(
+                          color: connected
+                              ? scheme.onSecondaryContainer
+                              : AppTheme.textLight(context),
+                        ),
                   ),
                 ),
               ),
@@ -319,8 +330,7 @@ class _HeaderLiquid extends ConsumerWidget {
     );
     final phase = switch (status) {
       VpnStatus.connecting || VpnStatus.disconnecting => LiquidPhase.busy,
-      VpnStatus.connected =>
-        switching ? LiquidPhase.busy : LiquidPhase.active,
+      VpnStatus.connected => switching ? LiquidPhase.busy : LiquidPhase.active,
       _ => LiquidPhase.idle,
     };
     final active = phase != LiquidPhase.idle;
@@ -355,8 +365,8 @@ class _HeaderLiquid extends ConsumerWidget {
           overhang: overhang,
           splashFromEnd: panel
               ? 20 +
-                  ExpressiveSpacing.medium +
-                  _ModernConnectPanel._buttonSize / 2
+                    ExpressiveSpacing.medium +
+                    _ModernConnectPanel._buttonSize / 2
               : null,
           mirror: panel || halloween
               ? null
@@ -367,7 +377,8 @@ class _HeaderLiquid extends ConsumerWidget {
                     lit,
                   )!,
                   size: button,
-                  corner: button / 2 +
+                  corner:
+                      button / 2 +
                       (_ConnectButtonState._selectedCorner - button / 2) * lit,
                 ),
         ),
@@ -378,8 +389,8 @@ class _HeaderLiquid extends ConsumerWidget {
     return LayoutBuilder(
       builder: (context, constraints) =>
           constraints.maxWidth < MediaQuery.sizeOf(context).width - 1
-              ? EdgeFadeMask(side: 40, child: wave)
-              : wave,
+          ? EdgeFadeMask(side: 40, child: wave)
+          : wave,
     );
   }
 }

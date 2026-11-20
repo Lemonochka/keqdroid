@@ -86,8 +86,7 @@ _Row _row(
   String base,
   String param,
   String value,
-) =>
-    _Row(protocol, context, param, base, '$base&$param=$value');
+) => _Row(protocol, context, param, base, '$base&$param=$value');
 
 String _vmessLink(Map<String, String> fields) =>
     'vmess://${base64.encode(utf8.encode(jsonEncode(fields)))}';
@@ -98,14 +97,13 @@ _Row _vmessRow(
   Map<String, String> base,
   String field,
   String value,
-) =>
-    _Row(
-      'vmess',
-      context,
-      field,
-      _vmessLink(base),
-      _vmessLink({...base, field: value}),
-    );
+) => _Row(
+  'vmess',
+  context,
+  field,
+  _vmessLink(base),
+  _vmessLink({...base, field: value}),
+);
 
 const _vmessBase = <String, String>{
   'v': '2',
@@ -122,160 +120,305 @@ final _vmessTls = <String, String>{..._vmessBase, 'tls': 'tls'};
 
 /// База под транспорты: `sni` задан явно, иначе `host` подменял бы собой имя
 /// сертификата и строка про `host` проходила бы, ничего о транспорте не сказав.
-Map<String, String> _vmessNet(String net) =>
-    {..._vmessTls, 'sni': 'vmess.example', 'net': net};
+Map<String, String> _vmessNet(String net) => {
+  ..._vmessTls,
+  'sni': 'vmess.example',
+  'net': net,
+};
 
 final _rows = <_Row>[
   // ───────────────────────────── VLESS ─────────────────────────────
-  _row('vless', 'tcp', 'vless://$_uuid@$_host?type=tcp&security=none',
-      'packetEncoding', 'xudp'),
-  _row('vless', 'tcp', 'vless://$_uuid@$_host?type=tcp&security=none',
-      'encryption', _encryption),
-  _row('vless', 'tcp', 'vless://$_uuid@$_host?type=tcp&security=none',
-      'headerType', 'http'),
-
-  _row('vless', 'tls', 'vless://$_uuid@$_host?type=tcp&security=tls', 'sni',
-      'tls.example'),
-  _row('vless', 'tls',
-      'vless://$_uuid@$_host?type=tcp&security=tls&sni=tls.example', 'alpn',
-      'h2,http%2F1.1'),
-  _row('vless', 'tls',
-      'vless://$_uuid@$_host?type=tcp&security=tls&sni=tls.example', 'fp',
-      'chrome'),
-  _row('vless', 'tls',
-      'vless://$_uuid@$_host?type=tcp&security=tls&sni=tls.example', 'pcs',
-      _pcs),
-  _row('vless', 'tls',
-      'vless://$_uuid@$_host?type=tcp&security=tls&sni=tls.example', 'vcn',
-      'verify.example'),
-  _row('vless', 'tls',
-      'vless://$_uuid@$_host?type=tcp&security=tls&sni=tls.example', 'ech',
-      _ech),
-
-  _row('vless', 'reality',
-      'vless://$_uuid@$_host?type=tcp&security=reality&sni=decoy.example',
-      'pbk', 'publickey'),
   _row(
-      'vless',
-      'reality',
-      'vless://$_uuid@$_host?type=tcp&security=reality&sni=decoy.example'
-          '&pbk=publickey',
-      'sid',
-      'aabb'),
+    'vless',
+    'tcp',
+    'vless://$_uuid@$_host?type=tcp&security=none',
+    'packetEncoding',
+    'xudp',
+  ),
   _row(
-      'vless',
-      'reality',
-      'vless://$_uuid@$_host?type=tcp&security=reality&sni=decoy.example'
-          '&pbk=publickey',
-      'spx',
-      '%2Fspider'),
+    'vless',
+    'tcp',
+    'vless://$_uuid@$_host?type=tcp&security=none',
+    'encryption',
+    _encryption,
+  ),
   _row(
-      'vless',
-      'reality',
-      'vless://$_uuid@$_host?type=tcp&security=reality&sni=decoy.example'
-          '&pbk=publickey',
-      'pqv',
-      _pqv),
-  _row(
-      'vless',
-      'reality',
-      'vless://$_uuid@$_host?type=tcp&security=reality&sni=decoy.example'
-          '&pbk=publickey',
-      'fp',
-      'chrome'),
-  _row(
-      'vless',
-      'reality',
-      'vless://$_uuid@$_host?type=tcp&security=reality&sni=decoy.example'
-          '&pbk=publickey',
-      'flow',
-      'xtls-rprx-vision'),
-
-  _row('vless', 'ws',
-      'vless://$_uuid@$_host?type=ws&security=tls&sni=ws.example', 'path',
-      '%2Fws'),
-  _row('vless', 'ws',
-      'vless://$_uuid@$_host?type=ws&security=tls&sni=ws.example', 'host',
-      'wshost.example'),
-  _row('vless', 'ws',
-      'vless://$_uuid@$_host?type=ws&security=tls&sni=ws.example', 'ed', '2048'),
-  _row('vless', 'ws',
-      'vless://$_uuid@$_host?type=ws&security=tls&sni=ws.example', 'eh',
-      'X-Early-Data'),
-
-  _row('vless', 'grpc',
-      'vless://$_uuid@$_host?type=grpc&security=tls&sni=grpc.example',
-      'serviceName', 'grpcsvc'),
-  _row('vless', 'grpc',
-      'vless://$_uuid@$_host?type=grpc&security=tls&sni=grpc.example', 'mode',
-      'multi'),
-  _row('vless', 'grpc',
-      'vless://$_uuid@$_host?type=grpc&security=tls&sni=grpc.example',
-      'authority', 'auth.example'),
-
-  _row('vless', 'xhttp',
-      'vless://$_uuid@$_host?type=xhttp&security=tls&sni=xh.example', 'path',
-      '%2Fxh'),
-  _row('vless', 'xhttp',
-      'vless://$_uuid@$_host?type=xhttp&security=tls&sni=xh.example', 'host',
-      'xhost.example'),
-  _row('vless', 'xhttp',
-      'vless://$_uuid@$_host?type=xhttp&security=tls&sni=xh.example', 'mode',
-      'stream-one'),
-  _row('vless', 'xhttp',
-      'vless://$_uuid@$_host?type=xhttp&security=tls&sni=xh.example', 'extra',
-      '%7B%22xPaddingBytes%22%3A%22100-1000%22%7D'),
+    'vless',
+    'tcp',
+    'vless://$_uuid@$_host?type=tcp&security=none',
+    'headerType',
+    'http',
+  ),
 
   _row(
-      'vless',
-      'httpupgrade',
-      'vless://$_uuid@$_host?type=httpupgrade&security=tls&sni=hu.example',
-      'path',
-      '%2Fhu'),
+    'vless',
+    'tls',
+    'vless://$_uuid@$_host?type=tcp&security=tls',
+    'sni',
+    'tls.example',
+  ),
   _row(
-      'vless',
-      'httpupgrade',
-      'vless://$_uuid@$_host?type=httpupgrade&security=tls&sni=hu.example',
-      'host',
-      'huhost.example'),
+    'vless',
+    'tls',
+    'vless://$_uuid@$_host?type=tcp&security=tls&sni=tls.example',
+    'alpn',
+    'h2,http%2F1.1',
+  ),
   _row(
-      'vless',
-      'httpupgrade',
-      'vless://$_uuid@$_host?type=httpupgrade&security=tls&sni=hu.example',
-      'ed',
-      '2048'),
+    'vless',
+    'tls',
+    'vless://$_uuid@$_host?type=tcp&security=tls&sni=tls.example',
+    'fp',
+    'chrome',
+  ),
+  _row(
+    'vless',
+    'tls',
+    'vless://$_uuid@$_host?type=tcp&security=tls&sni=tls.example',
+    'pcs',
+    _pcs,
+  ),
+  _row(
+    'vless',
+    'tls',
+    'vless://$_uuid@$_host?type=tcp&security=tls&sni=tls.example',
+    'vcn',
+    'verify.example',
+  ),
+  _row(
+    'vless',
+    'tls',
+    'vless://$_uuid@$_host?type=tcp&security=tls&sni=tls.example',
+    'ech',
+    _ech,
+  ),
 
-  _row('vless', 'kcp', 'vless://$_uuid@$_host?type=kcp&security=none', 'seed',
-      'kcpseed'),
-  _row('vless', 'kcp', 'vless://$_uuid@$_host?type=kcp&security=none',
-      'headerType', 'srtp'),
-  _row('vless', 'kcp', 'vless://$_uuid@$_host?type=kcp&security=none', 'mtu',
-      '1200'),
-  _row('vless', 'kcp', 'vless://$_uuid@$_host?type=kcp&security=none', 'tti',
-      '20'),
-  _row('vless', 'kcp', 'vless://$_uuid@$_host?type=kcp&security=none', 'fm',
-      Uri.encodeQueryComponent(jsonEncode(_fmMasks))),
+  _row(
+    'vless',
+    'reality',
+    'vless://$_uuid@$_host?type=tcp&security=reality&sni=decoy.example',
+    'pbk',
+    'publickey',
+  ),
+  _row(
+    'vless',
+    'reality',
+    'vless://$_uuid@$_host?type=tcp&security=reality&sni=decoy.example'
+        '&pbk=publickey',
+    'sid',
+    'aabb',
+  ),
+  _row(
+    'vless',
+    'reality',
+    'vless://$_uuid@$_host?type=tcp&security=reality&sni=decoy.example'
+        '&pbk=publickey',
+    'spx',
+    '%2Fspider',
+  ),
+  _row(
+    'vless',
+    'reality',
+    'vless://$_uuid@$_host?type=tcp&security=reality&sni=decoy.example'
+        '&pbk=publickey',
+    'pqv',
+    _pqv,
+  ),
+  _row(
+    'vless',
+    'reality',
+    'vless://$_uuid@$_host?type=tcp&security=reality&sni=decoy.example'
+        '&pbk=publickey',
+    'fp',
+    'chrome',
+  ),
+  _row(
+    'vless',
+    'reality',
+    'vless://$_uuid@$_host?type=tcp&security=reality&sni=decoy.example'
+        '&pbk=publickey',
+    'flow',
+    'xtls-rprx-vision',
+  ),
+
+  _row(
+    'vless',
+    'ws',
+    'vless://$_uuid@$_host?type=ws&security=tls&sni=ws.example',
+    'path',
+    '%2Fws',
+  ),
+  _row(
+    'vless',
+    'ws',
+    'vless://$_uuid@$_host?type=ws&security=tls&sni=ws.example',
+    'host',
+    'wshost.example',
+  ),
+  _row(
+    'vless',
+    'ws',
+    'vless://$_uuid@$_host?type=ws&security=tls&sni=ws.example',
+    'ed',
+    '2048',
+  ),
+  _row(
+    'vless',
+    'ws',
+    'vless://$_uuid@$_host?type=ws&security=tls&sni=ws.example',
+    'eh',
+    'X-Early-Data',
+  ),
+
+  _row(
+    'vless',
+    'grpc',
+    'vless://$_uuid@$_host?type=grpc&security=tls&sni=grpc.example',
+    'serviceName',
+    'grpcsvc',
+  ),
+  _row(
+    'vless',
+    'grpc',
+    'vless://$_uuid@$_host?type=grpc&security=tls&sni=grpc.example',
+    'mode',
+    'multi',
+  ),
+  _row(
+    'vless',
+    'grpc',
+    'vless://$_uuid@$_host?type=grpc&security=tls&sni=grpc.example',
+    'authority',
+    'auth.example',
+  ),
+
+  _row(
+    'vless',
+    'xhttp',
+    'vless://$_uuid@$_host?type=xhttp&security=tls&sni=xh.example',
+    'path',
+    '%2Fxh',
+  ),
+  _row(
+    'vless',
+    'xhttp',
+    'vless://$_uuid@$_host?type=xhttp&security=tls&sni=xh.example',
+    'host',
+    'xhost.example',
+  ),
+  _row(
+    'vless',
+    'xhttp',
+    'vless://$_uuid@$_host?type=xhttp&security=tls&sni=xh.example',
+    'mode',
+    'stream-one',
+  ),
+  _row(
+    'vless',
+    'xhttp',
+    'vless://$_uuid@$_host?type=xhttp&security=tls&sni=xh.example',
+    'extra',
+    '%7B%22xPaddingBytes%22%3A%22100-1000%22%7D',
+  ),
+
+  _row(
+    'vless',
+    'httpupgrade',
+    'vless://$_uuid@$_host?type=httpupgrade&security=tls&sni=hu.example',
+    'path',
+    '%2Fhu',
+  ),
+  _row(
+    'vless',
+    'httpupgrade',
+    'vless://$_uuid@$_host?type=httpupgrade&security=tls&sni=hu.example',
+    'host',
+    'huhost.example',
+  ),
+  _row(
+    'vless',
+    'httpupgrade',
+    'vless://$_uuid@$_host?type=httpupgrade&security=tls&sni=hu.example',
+    'ed',
+    '2048',
+  ),
+
+  _row(
+    'vless',
+    'kcp',
+    'vless://$_uuid@$_host?type=kcp&security=none',
+    'seed',
+    'kcpseed',
+  ),
+  _row(
+    'vless',
+    'kcp',
+    'vless://$_uuid@$_host?type=kcp&security=none',
+    'headerType',
+    'srtp',
+  ),
+  _row(
+    'vless',
+    'kcp',
+    'vless://$_uuid@$_host?type=kcp&security=none',
+    'mtu',
+    '1200',
+  ),
+  _row(
+    'vless',
+    'kcp',
+    'vless://$_uuid@$_host?type=kcp&security=none',
+    'tti',
+    '20',
+  ),
+  _row(
+    'vless',
+    'kcp',
+    'vless://$_uuid@$_host?type=kcp&security=none',
+    'fm',
+    Uri.encodeQueryComponent(jsonEncode(_fmMasks)),
+  ),
   // vmess-json: seed mKCP v2rayN кладёт в `path`, заголовок — в `type`.
   _vmessRow('kcp', {..._vmessBase, 'net': 'kcp'}, 'path', 'kcpseed'),
   _vmessRow('kcp', {..._vmessBase, 'net': 'kcp'}, 'type', 'srtp'),
   _vmessRow('kcp', {..._vmessBase, 'net': 'kcp'}, 'fm', jsonEncode(_fmMasks)),
 
-  _row('vless', 'h2',
-      'vless://$_uuid@$_host?type=http&security=tls&sni=h2.example', 'path',
-      '%2Fh2'),
-  _row('vless', 'h2',
-      'vless://$_uuid@$_host?type=http&security=tls&sni=h2.example', 'host',
-      'h2host.example'),
+  _row(
+    'vless',
+    'h2',
+    'vless://$_uuid@$_host?type=http&security=tls&sni=h2.example',
+    'path',
+    '%2Fh2',
+  ),
+  _row(
+    'vless',
+    'h2',
+    'vless://$_uuid@$_host?type=http&security=tls&sni=h2.example',
+    'host',
+    'h2host.example',
+  ),
 
-  _row('vless', 'tcp-http',
-      'vless://$_uuid@$_host?type=tcp&security=none&headerType=http', 'host',
-      'masq.example'),
-  _row('vless', 'tcp-http',
-      'vless://$_uuid@$_host?type=tcp&security=none&headerType=http', 'path',
-      '%2Fmasq'),
-  _row('vless', 'tcp-http',
-      'vless://$_uuid@$_host?type=tcp&security=none&headerType=http', 'method',
-      'POST'),
+  _row(
+    'vless',
+    'tcp-http',
+    'vless://$_uuid@$_host?type=tcp&security=none&headerType=http',
+    'host',
+    'masq.example',
+  ),
+  _row(
+    'vless',
+    'tcp-http',
+    'vless://$_uuid@$_host?type=tcp&security=none&headerType=http',
+    'path',
+    '%2Fmasq',
+  ),
+  _row(
+    'vless',
+    'tcp-http',
+    'vless://$_uuid@$_host?type=tcp&security=none&headerType=http',
+    'method',
+    'POST',
+  ),
 
   // ───────────────────────────── VMess ─────────────────────────────
   _vmessRow('tcp', _vmessBase, 'aid', '1'),
@@ -292,145 +435,338 @@ final _rows = <_Row>[
   _vmessRow('h2', _vmessNet('h2'), 'host', 'h2vmess.example'),
   _vmessRow('httpupgrade', _vmessNet('httpupgrade'), 'path', '/huvmess'),
   _vmessRow('xhttp', _vmessNet('xhttp'), 'path', '/xhvmess'),
-  _vmessRow('tcp-http', {..._vmessBase, 'type': 'http'}, 'host',
-      'masqvmess.example'),
+  _vmessRow(
+    'tcp-http',
+    {..._vmessBase, 'type': 'http'},
+    'host',
+    'masqvmess.example',
+  ),
   _vmessRow('tcp-http', {..._vmessBase, 'type': 'http'}, 'path', '/masqvmess'),
 
   // vmess-ссылка стандарта #716: по строению это vless-ссылка, а не base64-json.
-  _row('vmess', 'aead', 'vmess://$_uuid@$_host?type=tcp&security=none',
-      'encryption', 'zero'),
-  _row('vmess', 'aead', 'vmess://$_uuid@$_host?type=tcp&security=tls', 'sni',
-      'aead.example'),
-  _row('vmess', 'aead',
-      'vmess://$_uuid@$_host?type=tcp&security=tls&sni=aead.example', 'fp',
-      'chrome'),
-  _row('vmess', 'aead',
-      'vmess://$_uuid@$_host?type=ws&security=tls&sni=aead.example', 'path',
-      '%2Faead'),
-  _row('vmess', 'aead',
-      'vmess://$_uuid@$_host?type=ws&security=tls&sni=aead.example', 'host',
-      'aeadhost.example'),
-  _row('vmess', 'aead',
-      'vmess://$_uuid@$_host?type=tcp&security=reality&sni=decoy.example',
-      'pbk', 'publickey'),
-  _row('vmess', 'aead',
-      'vmess://$_uuid@$_host?type=tcp&security=tls&sni=aead.example', 'ech',
-      _ech),
+  _row(
+    'vmess',
+    'aead',
+    'vmess://$_uuid@$_host?type=tcp&security=none',
+    'encryption',
+    'zero',
+  ),
+  _row(
+    'vmess',
+    'aead',
+    'vmess://$_uuid@$_host?type=tcp&security=tls',
+    'sni',
+    'aead.example',
+  ),
+  _row(
+    'vmess',
+    'aead',
+    'vmess://$_uuid@$_host?type=tcp&security=tls&sni=aead.example',
+    'fp',
+    'chrome',
+  ),
+  _row(
+    'vmess',
+    'aead',
+    'vmess://$_uuid@$_host?type=ws&security=tls&sni=aead.example',
+    'path',
+    '%2Faead',
+  ),
+  _row(
+    'vmess',
+    'aead',
+    'vmess://$_uuid@$_host?type=ws&security=tls&sni=aead.example',
+    'host',
+    'aeadhost.example',
+  ),
+  _row(
+    'vmess',
+    'aead',
+    'vmess://$_uuid@$_host?type=tcp&security=reality&sni=decoy.example',
+    'pbk',
+    'publickey',
+  ),
+  _row(
+    'vmess',
+    'aead',
+    'vmess://$_uuid@$_host?type=tcp&security=tls&sni=aead.example',
+    'ech',
+    _ech,
+  ),
 
   // ───────────────────────────── Trojan ────────────────────────────
-  _row('trojan', 'tls', 'trojan://password@$_host?type=tcp&security=tls', 'sni',
-      'tj.example'),
-  _row('trojan', 'tls',
-      'trojan://password@$_host?type=tcp&security=tls&sni=tj.example', 'alpn',
-      'h2,http%2F1.1'),
-  _row('trojan', 'tls',
-      'trojan://password@$_host?type=tcp&security=tls&sni=tj.example', 'fp',
-      'chrome'),
-  _row('trojan', 'tls',
-      'trojan://password@$_host?type=tcp&security=tls&sni=tj.example', 'pcs',
-      _pcs),
-  _row('trojan', 'tls',
-      'trojan://password@$_host?type=tcp&security=tls&sni=tj.example', 'vcn',
-      'verify.example'),
-  _row('trojan', 'tls',
-      'trojan://password@$_host?type=tcp&security=tls&sni=tj.example', 'ech',
-      _ech),
-  _row('trojan', 'tls',
-      'trojan://password@$_host?type=tcp&security=tls&sni=tj.example',
-      'allowInsecure', '1'),
-
-  _row('trojan', 'reality',
-      'trojan://password@$_host?type=tcp&security=reality&sni=decoy.example',
-      'pbk', 'publickey'),
   _row(
-      'trojan',
-      'reality',
-      'trojan://password@$_host?type=tcp&security=reality&sni=decoy.example'
-          '&pbk=publickey',
-      'sid',
-      'aabb'),
-
-  _row('trojan', 'ws',
-      'trojan://password@$_host?type=ws&security=tls&sni=tjws.example', 'path',
-      '%2Ftjws'),
-  _row('trojan', 'ws',
-      'trojan://password@$_host?type=ws&security=tls&sni=tjws.example', 'host',
-      'tjwshost.example'),
-  _row('trojan', 'grpc',
-      'trojan://password@$_host?type=grpc&security=tls&sni=tjg.example',
-      'serviceName', 'tjgrpcsvc'),
-  _row('trojan', 'grpc',
-      'trojan://password@$_host?type=grpc&security=tls&sni=tjg.example',
-      'authority', 'tjauth.example'),
-  _row('trojan', 'xhttp',
-      'trojan://password@$_host?type=xhttp&security=tls&sni=tjx.example',
-      'path', '%2Ftjx'),
-  _row('trojan', 'xhttp',
-      'trojan://password@$_host?type=xhttp&security=tls&sni=tjx.example',
-      'mode', 'stream-one'),
+    'trojan',
+    'tls',
+    'trojan://password@$_host?type=tcp&security=tls',
+    'sni',
+    'tj.example',
+  ),
   _row(
-      'trojan',
-      'httpupgrade',
-      'trojan://password@$_host?type=httpupgrade&security=tls&sni=tjh.example',
-      'path',
-      '%2Ftjh'),
+    'trojan',
+    'tls',
+    'trojan://password@$_host?type=tcp&security=tls&sni=tj.example',
+    'alpn',
+    'h2,http%2F1.1',
+  ),
+  _row(
+    'trojan',
+    'tls',
+    'trojan://password@$_host?type=tcp&security=tls&sni=tj.example',
+    'fp',
+    'chrome',
+  ),
+  _row(
+    'trojan',
+    'tls',
+    'trojan://password@$_host?type=tcp&security=tls&sni=tj.example',
+    'pcs',
+    _pcs,
+  ),
+  _row(
+    'trojan',
+    'tls',
+    'trojan://password@$_host?type=tcp&security=tls&sni=tj.example',
+    'vcn',
+    'verify.example',
+  ),
+  _row(
+    'trojan',
+    'tls',
+    'trojan://password@$_host?type=tcp&security=tls&sni=tj.example',
+    'ech',
+    _ech,
+  ),
+  _row(
+    'trojan',
+    'tls',
+    'trojan://password@$_host?type=tcp&security=tls&sni=tj.example',
+    'allowInsecure',
+    '1',
+  ),
+
+  _row(
+    'trojan',
+    'reality',
+    'trojan://password@$_host?type=tcp&security=reality&sni=decoy.example',
+    'pbk',
+    'publickey',
+  ),
+  _row(
+    'trojan',
+    'reality',
+    'trojan://password@$_host?type=tcp&security=reality&sni=decoy.example'
+        '&pbk=publickey',
+    'sid',
+    'aabb',
+  ),
+
+  _row(
+    'trojan',
+    'ws',
+    'trojan://password@$_host?type=ws&security=tls&sni=tjws.example',
+    'path',
+    '%2Ftjws',
+  ),
+  _row(
+    'trojan',
+    'ws',
+    'trojan://password@$_host?type=ws&security=tls&sni=tjws.example',
+    'host',
+    'tjwshost.example',
+  ),
+  _row(
+    'trojan',
+    'grpc',
+    'trojan://password@$_host?type=grpc&security=tls&sni=tjg.example',
+    'serviceName',
+    'tjgrpcsvc',
+  ),
+  _row(
+    'trojan',
+    'grpc',
+    'trojan://password@$_host?type=grpc&security=tls&sni=tjg.example',
+    'authority',
+    'tjauth.example',
+  ),
+  _row(
+    'trojan',
+    'xhttp',
+    'trojan://password@$_host?type=xhttp&security=tls&sni=tjx.example',
+    'path',
+    '%2Ftjx',
+  ),
+  _row(
+    'trojan',
+    'xhttp',
+    'trojan://password@$_host?type=xhttp&security=tls&sni=tjx.example',
+    'mode',
+    'stream-one',
+  ),
+  _row(
+    'trojan',
+    'httpupgrade',
+    'trojan://password@$_host?type=httpupgrade&security=tls&sni=tjh.example',
+    'path',
+    '%2Ftjh',
+  ),
   // На mihomo эта строка зелёная не потому, что маскировка собирается, а
   // потому что генератор на неё честно отказывается: `http-opts` у
   // `TrojanOption` нет вовсе, и ссылку разводит правило выбора ядра.
-  _row('trojan', 'tcp-http',
-      'trojan://password@$_host?type=tcp&security=tls&sni=tjm.example',
-      'headerType', 'http'),
+  _row(
+    'trojan',
+    'tcp-http',
+    'trojan://password@$_host?type=tcp&security=tls&sni=tjm.example',
+    'headerType',
+    'http',
+  ),
 
   // ────────────────────────── Shadowsocks ──────────────────────────
-  _row('ss', 'obfs', 'ss://$_ssUser@198.51.100.10:8388?x=1', 'plugin',
-      'obfs-local%3Bobfs%3Dhttp%3Bobfs-host%3Dobfs.example'),
-  _row('ss', 'v2ray-plugin', 'ss://$_ssUser@198.51.100.10:8388?x=1', 'plugin',
-      'v2ray-plugin%3Bmode%3Dwebsocket%3Bhost%3Dv2ray.example%3Bpath%3D%2Fv2'),
+  _row(
+    'ss',
+    'obfs',
+    'ss://$_ssUser@198.51.100.10:8388?x=1',
+    'plugin',
+    'obfs-local%3Bobfs%3Dhttp%3Bobfs-host%3Dobfs.example',
+  ),
+  _row(
+    'ss',
+    'v2ray-plugin',
+    'ss://$_ssUser@198.51.100.10:8388?x=1',
+    'plugin',
+    'v2ray-plugin%3Bmode%3Dwebsocket%3Bhost%3Dv2ray.example%3Bpath%3D%2Fv2',
+  ),
   _row('ss', 'sip002', 'ss://$_ssUser@198.51.100.10:8388?x=1', 'uot', '1'),
-  _row('ss', 'sip002', 'ss://$_ssUser@198.51.100.10:8388?x=1', 'udp-over-tcp',
-      'true'),
+  _row(
+    'ss',
+    'sip002',
+    'ss://$_ssUser@198.51.100.10:8388?x=1',
+    'udp-over-tcp',
+    'true',
+  ),
 
   // ───────────────────────────── TUIC ──────────────────────────────
-  _row('tuic', 'v5', 'tuic://$_uuid:password@$_host?x=1', 'sni', 'tuic.example'),
-  _row('tuic', 'v5', 'tuic://$_uuid:password@$_host?sni=tuic.example', 'alpn',
-      'h3'),
-  _row('tuic', 'v5', 'tuic://$_uuid:password@$_host?sni=tuic.example',
-      'congestion_control', 'bbr'),
-  _row('tuic', 'v5', 'tuic://$_uuid:password@$_host?sni=tuic.example',
-      'udp_relay_mode', 'quic'),
-  _row('tuic', 'v5', 'tuic://$_uuid:password@$_host?sni=tuic.example',
-      'disable_sni', '1'),
-  _row('tuic', 'v5', 'tuic://$_uuid:password@$_host?sni=tuic.example',
-      'allow_insecure', '1'),
+  _row(
+    'tuic',
+    'v5',
+    'tuic://$_uuid:password@$_host?x=1',
+    'sni',
+    'tuic.example',
+  ),
+  _row(
+    'tuic',
+    'v5',
+    'tuic://$_uuid:password@$_host?sni=tuic.example',
+    'alpn',
+    'h3',
+  ),
+  _row(
+    'tuic',
+    'v5',
+    'tuic://$_uuid:password@$_host?sni=tuic.example',
+    'congestion_control',
+    'bbr',
+  ),
+  _row(
+    'tuic',
+    'v5',
+    'tuic://$_uuid:password@$_host?sni=tuic.example',
+    'udp_relay_mode',
+    'quic',
+  ),
+  _row(
+    'tuic',
+    'v5',
+    'tuic://$_uuid:password@$_host?sni=tuic.example',
+    'disable_sni',
+    '1',
+  ),
+  _row(
+    'tuic',
+    'v5',
+    'tuic://$_uuid:password@$_host?sni=tuic.example',
+    'allow_insecure',
+    '1',
+  ),
   // Версию TUIC различает форма userInfo, а не параметр: пара — пятая, один
   // токен — четвёртая, и поля у них в ядре разные.
-  _Row('tuic', 'v4', 'токен вместо пары', 'tuic://$_uuid:password@$_host?x=1',
-      'tuic://token@$_host?x=1'),
+  _Row(
+    'tuic',
+    'v4',
+    'токен вместо пары',
+    'tuic://$_uuid:password@$_host?x=1',
+    'tuic://token@$_host?x=1',
+  ),
 
   // ──────────────────────────── AnyTLS ─────────────────────────────
-  _row('anytls', 'base', 'anytls://password@$_host?x=1', 'sni',
-      'anytls.example'),
-  _row('anytls', 'base', 'anytls://password@$_host?sni=anytls.example', 'fp',
-      'chrome'),
-  _row('anytls', 'base', 'anytls://password@$_host?sni=anytls.example', 'alpn',
-      'h2'),
-  _row('anytls', 'base', 'anytls://password@$_host?sni=anytls.example', 'hpkp',
-      _pcs),
-  _row('anytls', 'base', 'anytls://password@$_host?sni=anytls.example', 'ech',
-      _ech),
-  _row('anytls', 'base', 'anytls://password@$_host?sni=anytls.example',
-      'insecure', '1'),
+  _row(
+    'anytls',
+    'base',
+    'anytls://password@$_host?x=1',
+    'sni',
+    'anytls.example',
+  ),
+  _row(
+    'anytls',
+    'base',
+    'anytls://password@$_host?sni=anytls.example',
+    'fp',
+    'chrome',
+  ),
+  _row(
+    'anytls',
+    'base',
+    'anytls://password@$_host?sni=anytls.example',
+    'alpn',
+    'h2',
+  ),
+  _row(
+    'anytls',
+    'base',
+    'anytls://password@$_host?sni=anytls.example',
+    'hpkp',
+    _pcs,
+  ),
+  _row(
+    'anytls',
+    'base',
+    'anytls://password@$_host?sni=anytls.example',
+    'ech',
+    _ech,
+  ),
+  _row(
+    'anytls',
+    'base',
+    'anytls://password@$_host?sni=anytls.example',
+    'insecure',
+    '1',
+  ),
 
   // ────────────────────────────── SSR ──────────────────────────────
   // У SSR параметры не в запросе: пять полей стоят позициями внутри base64, и
   // ещё два лежат в его же хвосте. Поэтому строки сравнивают два значения, а
   // не «есть/нет»: пустым такое поле не бывает.
-  _Row('ssr', 'base', 'метод', _ssr(method: 'aes-256-cfb'),
-      _ssr(method: 'chacha20-ietf')),
-  _Row('ssr', 'base', 'протокол', _ssr(protocol: 'origin'),
-      _ssr(protocol: 'auth_aes128_md5')),
-  _Row('ssr', 'base', 'обфускация', _ssr(obfs: 'plain'),
-      _ssr(obfs: 'tls1.2_ticket_auth')),
+  _Row(
+    'ssr',
+    'base',
+    'метод',
+    _ssr(method: 'aes-256-cfb'),
+    _ssr(method: 'chacha20-ietf'),
+  ),
+  _Row(
+    'ssr',
+    'base',
+    'протокол',
+    _ssr(protocol: 'origin'),
+    _ssr(protocol: 'auth_aes128_md5'),
+  ),
+  _Row(
+    'ssr',
+    'base',
+    'обфускация',
+    _ssr(obfs: 'plain'),
+    _ssr(obfs: 'tls1.2_ticket_auth'),
+  ),
   _Row('ssr', 'base', 'пароль', _ssr(password: 'one'), _ssr(password: 'two')),
   _Row('ssr', 'base', 'obfsparam', _ssr(), _ssr(obfsParam: 'cdn.example')),
   _Row('ssr', 'base', 'protoparam', _ssr(), _ssr(protoParam: '32')),
@@ -438,60 +774,134 @@ final _rows = <_Row>[
   // ───────────────────────────── Mieru ─────────────────────────────
   // Порт и транспорт у mieru — пара повторяющихся параметров запроса, а не
   // часть адреса; отсюда и `?port=` в базовых ссылках.
-  _Row('mieru', 'base', 'транспорт', 'mierus://u:p@$_mieruHost?port=2999&protocol=TCP',
-      'mierus://u:p@$_mieruHost?port=2999&protocol=UDP'),
-  _Row('mieru', 'base', 'порт', 'mierus://u:p@$_mieruHost?port=2999&protocol=TCP',
-      'mierus://u:p@$_mieruHost?port=3000&protocol=TCP'),
-  _Row('mieru', 'base', 'диапазон портов',
-      'mierus://u:p@$_mieruHost?port=2999&protocol=TCP',
-      'mierus://u:p@$_mieruHost?port=2999-3010&protocol=TCP'),
-  _row('mieru', 'base', 'mierus://u:p@$_mieruHost?port=2999&protocol=TCP',
-      'multiplexing', 'MULTIPLEXING_HIGH'),
-  _row('mieru', 'base', 'mierus://u:p@$_mieruHost?port=2999&protocol=TCP',
-      'handshake-mode', 'standard'),
-  _row('mieru', 'base', 'mierus://u:p@$_mieruHost?port=2999&protocol=TCP',
-      'traffic-pattern', 'chatty'),
+  _Row(
+    'mieru',
+    'base',
+    'транспорт',
+    'mierus://u:p@$_mieruHost?port=2999&protocol=TCP',
+    'mierus://u:p@$_mieruHost?port=2999&protocol=UDP',
+  ),
+  _Row(
+    'mieru',
+    'base',
+    'порт',
+    'mierus://u:p@$_mieruHost?port=2999&protocol=TCP',
+    'mierus://u:p@$_mieruHost?port=3000&protocol=TCP',
+  ),
+  _Row(
+    'mieru',
+    'base',
+    'диапазон портов',
+    'mierus://u:p@$_mieruHost?port=2999&protocol=TCP',
+    'mierus://u:p@$_mieruHost?port=2999-3010&protocol=TCP',
+  ),
+  _row(
+    'mieru',
+    'base',
+    'mierus://u:p@$_mieruHost?port=2999&protocol=TCP',
+    'multiplexing',
+    'MULTIPLEXING_HIGH',
+  ),
+  _row(
+    'mieru',
+    'base',
+    'mierus://u:p@$_mieruHost?port=2999&protocol=TCP',
+    'handshake-mode',
+    'standard',
+  ),
+  _row(
+    'mieru',
+    'base',
+    'mierus://u:p@$_mieruHost?port=2999&protocol=TCP',
+    'traffic-pattern',
+    'chatty',
+  ),
 
   // ─────────────────────────── Hysteria2 ───────────────────────────
-  _row('hysteria2', 'base', 'hysteria2://password@$_host?x=1', 'sni',
-      'hy2.example'),
-  _row('hysteria2', 'base',
-      'hysteria2://password@$_host?sni=hy2.example&obfs-password=obfspass',
-      'obfs', 'salamander'),
-  _row('hysteria2', 'base',
-      'hysteria2://password@$_host?sni=hy2.example&obfs=salamander',
-      'obfs-password', 'obfspass'),
+  _row(
+    'hysteria2',
+    'base',
+    'hysteria2://password@$_host?x=1',
+    'sni',
+    'hy2.example',
+  ),
+  _row(
+    'hysteria2',
+    'base',
+    'hysteria2://password@$_host?sni=hy2.example&obfs-password=obfspass',
+    'obfs',
+    'salamander',
+  ),
+  _row(
+    'hysteria2',
+    'base',
+    'hysteria2://password@$_host?sni=hy2.example&obfs=salamander',
+    'obfs-password',
+    'obfspass',
+  ),
   // Значение не `h3`: у xray это и есть подставляемое по умолчанию, и такая
   // строка проверяла бы не чтение параметра, а совпадение с дефолтом.
-  _row('hysteria2', 'base', 'hysteria2://password@$_host?sni=hy2.example',
-      'alpn', 'hq-interop'),
-  _row('hysteria2', 'base', 'hysteria2://password@$_host?sni=hy2.example',
-      'pinSHA256', _pcs),
-  _row('hysteria2', 'base', 'hysteria2://password@$_host?sni=hy2.example', 'up',
-      '100'),
-  _row('hysteria2', 'base', 'hysteria2://password@$_host?sni=hy2.example',
-      'down', '200'),
-  _row('hysteria2', 'base', 'hysteria2://password@$_host?sni=hy2.example',
-      'mport', '20000-20050'),
+  _row(
+    'hysteria2',
+    'base',
+    'hysteria2://password@$_host?sni=hy2.example',
+    'alpn',
+    'hq-interop',
+  ),
+  _row(
+    'hysteria2',
+    'base',
+    'hysteria2://password@$_host?sni=hy2.example',
+    'pinSHA256',
+    _pcs,
+  ),
+  _row(
+    'hysteria2',
+    'base',
+    'hysteria2://password@$_host?sni=hy2.example',
+    'up',
+    '100',
+  ),
+  _row(
+    'hysteria2',
+    'base',
+    'hysteria2://password@$_host?sni=hy2.example',
+    'down',
+    '200',
+  ),
+  _row(
+    'hysteria2',
+    'base',
+    'hysteria2://password@$_host?sni=hy2.example',
+    'mport',
+    '20000-20050',
+  ),
   // Интервал без списка портов и в ссылке бессмыслен, и у обоих ядер: перебирать
   // нечего. Поэтому контекст строки — уже включённый перебор.
   _row(
-      'hysteria2',
-      'base',
-      'hysteria2://password@$_host?sni=hy2.example&mport=20000-20050',
-      'hop-interval',
-      '30'),
-  _row('hysteria2', 'base', 'hysteria2://password@$_host?sni=hy2.example',
-      'insecure', '1'),
+    'hysteria2',
+    'base',
+    'hysteria2://password@$_host?sni=hy2.example&mport=20000-20050',
+    'hop-interval',
+    '30',
+  ),
+  _row(
+    'hysteria2',
+    'base',
+    'hysteria2://password@$_host?sni=hy2.example',
+    'insecure',
+    '1',
+  ),
   // Список портов пишут и прямо в адресе — такую ссылку `Uri.parse` не берёт,
   // и раньше она разваливалась целиком. Поэтому строка тут не про параметр
   // запроса, а про вид адреса.
   _Row(
-      'hysteria2',
-      'ports-in-address',
-      'адрес со списком портов',
-      'hysteria2://password@198.51.100.10:443?sni=hy2.example',
-      'hysteria2://password@198.51.100.10:20000-20050,443?sni=hy2.example'),
+    'hysteria2',
+    'ports-in-address',
+    'адрес со списком портов',
+    'hysteria2://password@198.51.100.10:443?sni=hy2.example',
+    'hysteria2://password@198.51.100.10:20000-20050,443?sni=hy2.example',
+  ),
 ];
 
 final _ssUser = base64Url.encode(utf8.encode('aes-256-gcm:password'));
@@ -511,7 +921,8 @@ String _ssr({
     if (obfsParam.isNotEmpty) 'obfsparam=${b64(obfsParam)}',
     if (protoParam.isNotEmpty) 'protoparam=${b64(protoParam)}',
   ].join('&');
-  final payload = '198.51.100.32:8388:$protocol:$method:$obfs:'
+  final payload =
+      '198.51.100.32:8388:$protocol:$method:$obfs:'
       '${b64(password)}/?$query';
   return 'ssr://${b64(payload)}';
 }
@@ -520,22 +931,27 @@ String _ssr({
 const _waivedXray = <String, String>{
   'vless/tcp/packetEncoding':
       'у VLESS-аутбаунда xray такого поля нет (infra/conf/vless.go), XUDP '
-          'включает мультиплексор, а не ссылка',
-  'vless/h2/path': 'транспорт HTTP/2 xray 26 снёс целиком '
+      'включает мультиплексор, а не ссылка',
+  'vless/h2/path':
+      'транспорт HTTP/2 xray 26 снёс целиком '
       '(TransportProtocol.Build отвечает PrintRemovedFeatureError и роняет весь '
       'конфиг); такую ссылку правило выбора ядра отдаёт mihomo',
   'vless/h2/host': 'там же',
   'vmess/h2/path': 'там же',
   'vmess/h2/host': 'там же',
-  'vless/ws/eh': 'имя заголовка ранних данных у xray жёстко '
+  'vless/ws/eh':
+      'имя заголовка ранних данных у xray жёстко '
       'Sec-WebSocket-Protocol (transport/internet/websocket/dialer.go), '
       'задать своё нечем',
-  'vmess/tcp/aid': 'xray 26 знает только VMess AEAD, поля alterId в конфиге '
+  'vmess/tcp/aid':
+      'xray 26 знает только VMess AEAD, поля alterId в конфиге '
       'нет вовсе (infra/conf/vmess.go)',
-  'trojan/tls/allowInsecure': 'политика: allowInsecure не эмитим никогда, '
+  'trojan/tls/allowInsecure':
+      'политика: allowInsecure не эмитим никогда, '
       'см. removed_tls_fields.dart',
   'hysteria2/base/insecure': 'то же, что allowInsecure',
-  'tuic/v5/sni': 'TUIC у xray нет вовсе — своего аутбаунда под него в ядре не '
+  'tuic/v5/sni':
+      'TUIC у xray нет вовсе — своего аутбаунда под него в ядре не '
       'заведено; ссылку целиком разводит правило выбора ядра',
   'tuic/v5/alpn': 'там же',
   'tuic/v5/congestion_control': 'там же',
@@ -543,31 +959,36 @@ const _waivedXray = <String, String>{
   'tuic/v5/disable_sni': 'там же',
   'tuic/v5/allow_insecure': 'там же',
   'tuic/v4/токен вместо пары': 'там же',
-  'anytls/base/sni': 'AnyTLS у xray нет вовсе — своего аутбаунда под него в '
+  'anytls/base/sni':
+      'AnyTLS у xray нет вовсе — своего аутбаунда под него в '
       'ядре не заведено; ссылку целиком разводит правило выбора ядра',
   'anytls/base/fp': 'там же',
   'anytls/base/alpn': 'там же',
   'anytls/base/hpkp': 'там же',
   'anytls/base/ech': 'там же',
   'anytls/base/insecure': 'там же',
-  'mieru/base/транспорт': 'Mieru у xray нет вовсе — своего аутбаунда под него '
+  'mieru/base/транспорт':
+      'Mieru у xray нет вовсе — своего аутбаунда под него '
       'в ядре не заведено; ссылку целиком разводит правило выбора ядра',
   'mieru/base/порт': 'там же',
   'mieru/base/диапазон портов': 'там же',
   'mieru/base/multiplexing': 'там же',
   'mieru/base/handshake-mode': 'там же',
   'mieru/base/traffic-pattern': 'там же',
-  'ssr/base/метод': 'SSR у xray нет вовсе — своего аутбаунда под него в ядре '
+  'ssr/base/метод':
+      'SSR у xray нет вовсе — своего аутбаунда под него в ядре '
       'не заведено; ссылку целиком разводит правило выбора ядра',
   'ssr/base/протокол': 'там же',
   'ssr/base/обфускация': 'там же',
   'ssr/base/пароль': 'там же',
   'ssr/base/obfsparam': 'там же',
   'ssr/base/protoparam': 'там же',
-  'ss/obfs/plugin': 'у shadowsocks в xray плагинов нет вовсе '
+  'ss/obfs/plugin':
+      'у shadowsocks в xray плагинов нет вовсе '
       '(infra/conf/shadowsocks.go — только method и password)',
   'ss/v2ray-plugin/plugin': 'там же: плагинов нет',
-  'ss/sip002/uot': 'полей uot и UoTVersion у xray 26 нет вовсе — мы их писали, '
+  'ss/sip002/uot':
+      'полей uot и UoTVersion у xray 26 нет вовсе — мы их писали, '
       'а ядро молча выбрасывало; ссылку разводит правило выбора ядра',
   'ss/sip002/udp-over-tcp': 'там же',
 };
@@ -577,28 +998,34 @@ const _gapsXray = <String, String>{};
 
 /// Выброшено сознательно на mihomo.
 const _waivedMihomo = <String, String>{
-  'tuic/v5/allow_insecure': 'политика: доверять любому сертификату не '
+  'tuic/v5/allow_insecure':
+      'политика: доверять любому сертификату не '
       'соглашаемся, см. removed_tls_fields.dart',
   'anytls/base/insecure': 'там же',
   'vless/reality/spx':
       'у RealityOptions нет spiderX (adapter/outbound/reality.go)',
   'vless/reality/pqv': 'там же нет поля постквантовой подписи',
-  'vless/grpc/mode': 'GrpcOptions это только grpc-service-name и '
+  'vless/grpc/mode':
+      'GrpcOptions это только grpc-service-name и '
       'grpc-user-agent (adapter/outbound/vmess.go)',
   'vless/grpc/authority': 'там же: authority у GrpcOptions нет',
   'trojan/grpc/authority': 'там же',
-  'vless/kcp/seed': 'у VlessOption нет mkcp-opts — ссылка целиком не для '
+  'vless/kcp/seed':
+      'у VlessOption нет mkcp-opts — ссылка целиком не для '
       'mihomo, это разводит G-03',
   'vless/kcp/headerType': 'там же',
   'vless/kcp/mtu': 'там же',
   'vless/kcp/tti': 'там же',
-  'vless/kcp/fm': 'масок finalmask у mihomo нет вовсе; ссылку с fm правило '
+  'vless/kcp/fm':
+      'масок finalmask у mihomo нет вовсе; ссылку с fm правило '
       'выбора ядра отдаёт xray',
-  'vmess/kcp/path': 'mkcp-opts у VmessOption есть, но генератор его не '
+  'vmess/kcp/path':
+      'mkcp-opts у VmessOption есть, но генератор его не '
       'собирает; vmess на mKCP правило выбора ядра отдаёт xray',
   'vmess/kcp/type': 'там же',
   'vmess/kcp/fm': 'как vless/kcp/fm: масок у mihomo нет',
-  'vmess/xhttp/path': 'xhttp-opts есть только у VlessOption; с G-03 генератор '
+  'vmess/xhttp/path':
+      'xhttp-opts есть только у VlessOption; с G-03 генератор '
       'на такую ссылку честно отказывается, а не пишет ключи в пустоту',
   'trojan/xhttp/path': 'там же',
   'trojan/xhttp/mode': 'там же',
@@ -627,8 +1054,11 @@ void main() {
   test('в списках нет строк, которых нет в переписи', () {
     final ids = _rows.map((r) => r.id).toSet();
     for (final list in [_waivedXray, _gapsXray, _waivedMihomo, _gapsMihomo]) {
-      expect(list.keys.where((k) => !ids.contains(k)), isEmpty,
-          reason: 'строка исчезла из переписи — убери её и из списка');
+      expect(
+        list.keys.where((k) => !ids.contains(k)),
+        isEmpty,
+        reason: 'строка исчезла из переписи — убери её и из списка',
+      );
     }
   });
 }
@@ -642,15 +1072,23 @@ void _check(
   final carried = proxyOf(row.base) != proxyOf(row.link);
   final excuse = waived[row.id] ?? gaps[row.id];
   if (excuse == null) {
-    expect(carried, isTrue,
-        reason: '${row.param} из ссылки не доехал до ядра. Либо чинить, либо '
-            'заносить строку в waived (с причиной по исходникам ядра) или в '
-            'knownGaps (с номером задачи).\n  без: ${row.base}\n   c:  ${row.link}');
+    expect(
+      carried,
+      isTrue,
+      reason:
+          '${row.param} из ссылки не доехал до ядра. Либо чинить, либо '
+          'заносить строку в waived (с причиной по исходникам ядра) или в '
+          'knownGaps (с номером задачи).\n  без: ${row.base}\n   c:  ${row.link}',
+    );
     return;
   }
-  expect(carried, isFalse,
-      reason: '${row.param} уже доезжает, а строка всё ещё числится '
-          'выброшенной или дырой: $excuse. Убери её из списка.');
+  expect(
+    carried,
+    isFalse,
+    reason:
+        '${row.param} уже доезжает, а строка всё ещё числится '
+        'выброшенной или дырой: $excuse. Убери её из списка.',
+  );
 }
 
 /// Аутбаунд `proxy` из конфига xray — без инбаундов, dns и правил: они от
@@ -659,7 +1097,8 @@ String _xrayProxy(String link) {
   try {
     final config =
         jsonDecode(ConfigGeneratorV2.generateConfig(link, _settings)) as Map;
-    final outbounds = (config['outbounds'] as List).cast<Map<String, dynamic>>();
+    final outbounds = (config['outbounds'] as List)
+        .cast<Map<String, dynamic>>();
     return jsonEncode(outbounds.firstWhere((o) => o['tag'] == 'proxy'));
   } catch (e) {
     // Отказ собрать конфиг — тоже исход, и от исхода без параметра он обязан

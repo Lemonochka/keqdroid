@@ -22,12 +22,22 @@ void main() {
   }
 
   test('старые файлы обновлений удаляются, свежие и чужие остаются', () async {
-    final apk = file('keqdroid_update_v0.36.2.apk', age: const Duration(days: 2));
-    final zip = file('keqdroid_update_v0.36.1.zip', age: const Duration(hours: 1));
-    final script =
-        file('keqdroid_update_1763000000000.sh', age: const Duration(days: 1));
-    final fresh = file('keqdroid_update_v0.36.3.apk',
-        age: const Duration(minutes: 2));
+    final apk = file(
+      'keqdroid_update_v0.36.2.apk',
+      age: const Duration(days: 2),
+    );
+    final zip = file(
+      'keqdroid_update_v0.36.1.zip',
+      age: const Duration(hours: 1),
+    );
+    final script = file(
+      'keqdroid_update_1763000000000.sh',
+      age: const Duration(days: 1),
+    );
+    final fresh = file(
+      'keqdroid_update_v0.36.3.apk',
+      age: const Duration(minutes: 2),
+    );
     final log = file('keqdroid_update.log', age: const Duration(days: 5));
     final foreign = file('other_app_update.zip', age: const Duration(days: 5));
 

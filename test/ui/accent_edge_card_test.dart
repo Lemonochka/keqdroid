@@ -6,16 +6,14 @@ import 'package:keqdroid/shared/ui/accent_edge_card.dart';
 /// неограниченную высоту — проверять её в чём-то с конечной высотой
 /// бессмысленно: так не видно ни переполнения, ни бесконечных constraint'ов.
 Widget _inList(Widget child) => MaterialApp(
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF7B61FF),
-          brightness: Brightness.dark,
-        ),
-      ),
-      home: Scaffold(
-        body: ListView(children: [child]),
-      ),
-    );
+  theme: ThemeData(
+    colorScheme: ColorScheme.fromSeed(
+      seedColor: const Color(0xFF7B61FF),
+      brightness: Brightness.dark,
+    ),
+  ),
+  home: Scaffold(body: ListView(children: [child])),
+);
 
 void main() {
   group('AccentEdgeCard', () {
@@ -26,8 +24,9 @@ void main() {
     // Оба раза исключение глотается на уровне render object'а: приложение живо,
     // но содержимое карточки не доходит до экрана, и экран «Соединения»
     // выглядит пустым при непустом счётчике.
-    testWidgets('lays out and paints inside a list without throwing',
-        (tester) async {
+    testWidgets('lays out and paints inside a list without throwing', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         _inList(
           const AccentEdgeCard(
@@ -41,8 +40,9 @@ void main() {
       expect(find.text('tcp:example.com:443'), findsOneWidget);
     });
 
-    testWidgets('height follows the content, not the incoming constraints',
-        (tester) async {
+    testWidgets('height follows the content, not the incoming constraints', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         _inList(
           const AccentEdgeCard(

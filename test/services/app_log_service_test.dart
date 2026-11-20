@@ -49,7 +49,8 @@ void main() {
 
   group('журнал приложения и нативной части', () {
     // Формат общий: так пишут и AppLogger в Dart, и NativeLog в Kotlin.
-    const text = '2026-09-27T22:51:39.123456 [INFO] VPN connected\n'
+    const text =
+        '2026-09-27T22:51:39.123456 [INFO] VPN connected\n'
         '2026-09-27T22:51:40.000 [ERROR] KEQDIS: startVpn failed: boom\n'
         'java.lang.IllegalStateException: boom\n'
         '\tat com.keqdroid.keqdroid.KeqdisVpnService.startXray(Unknown)\n'
@@ -71,9 +72,10 @@ void main() {
     });
 
     test('проблемы — это предупреждения и ошибки', () {
-      final problems = AppLogService.parse(AppLogSource.app, text)
-          .where((e) => e.isProblem)
-          .map((e) => e.level);
+      final problems = AppLogService.parse(
+        AppLogSource.app,
+        text,
+      ).where((e) => e.isProblem).map((e) => e.level);
       expect(problems, [LogLevel.error, LogLevel.warn]);
     });
 

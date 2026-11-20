@@ -13,9 +13,6 @@ class SocksCredentialGenerator {
   }
 
   static ({String username, String password}) generatePair() {
-    return (
-      username: randomToken(16),
-      password: randomToken(24),
-    );
+    return (username: randomToken(16), password: randomToken(24));
   }
 }

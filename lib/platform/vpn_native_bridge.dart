@@ -124,8 +124,9 @@ class VpnNativeBridge {
   static Future<({int port, String secret})?> getMihomoApi() async {
     if (!Platform.isAndroid) return null;
     try {
-      final result =
-          await channel.invokeMethod<Map<Object?, Object?>>('getMihomoApi');
+      final result = await channel.invokeMethod<Map<Object?, Object?>>(
+        'getMihomoApi',
+      );
       final port = result?['port'] as int? ?? 0;
       final secret = result?['secret'] as String? ?? '';
       if (port <= 0 || secret.isEmpty) return null;
@@ -190,9 +191,7 @@ class VpnNativeBridge {
     _syncMethodCallHandler();
   }
 
-  static void registerAutostartHandler(
-    Future<void> Function()? handler,
-  ) {
+  static void registerAutostartHandler(Future<void> Function()? handler) {
     _autostartHandler = handler;
     _syncMethodCallHandler();
   }
@@ -205,7 +204,8 @@ class VpnNativeBridge {
   }
 
   static void _syncMethodCallHandler() {
-    final needsHandler = supportsNotificationLaunch ||
+    final needsHandler =
+        supportsNotificationLaunch ||
         supportsDeepLinks ||
         supportsAutostartNotification ||
         supportsSystemAccentEvents ||
@@ -215,17 +215,20 @@ class VpnNativeBridge {
       return;
     }
     channel.setMethodCallHandler((call) async {
-      if (call.method == 'onAutostartConnect' && supportsAutostartNotification) {
+      if (call.method == 'onAutostartConnect' &&
+          supportsAutostartNotification) {
         await _autostartHandler?.call();
         return;
       }
-      if (call.method == 'onWindowVisibility' && supportsWindowVisibilityEvents) {
+      if (call.method == 'onWindowVisibility' &&
+          supportsWindowVisibilityEvents) {
         final args = call.arguments;
         final visible = args is Map ? args['visible'] as bool? ?? true : true;
         _windowVisibilityHandler?.call(visible);
         return;
       }
-      if (call.method == 'onSystemAccentChanged' && supportsSystemAccentEvents) {
+      if (call.method == 'onSystemAccentChanged' &&
+          supportsSystemAccentEvents) {
         final args = call.arguments;
         _systemAccentCtrl.add(
           SystemAccentCandidates.fromMap(args is Map ? args : null),
@@ -243,4 +246,3 @@ class VpnNativeBridge {
     });
   }
 }
-

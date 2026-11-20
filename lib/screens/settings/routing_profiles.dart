@@ -5,19 +5,16 @@ Future<void> _upsertRoute(
   WidgetRef ref,
   String? profileId,
   TrafficRoute route,
-) =>
-    profileId == null
-        ? ref.read(routesProvider.notifier).upsert(route)
-        : ref
-            .read(routingProfilesProvider.notifier)
-            .upsertRoute(profileId, route);
+) => profileId == null
+    ? ref.read(routesProvider.notifier).upsert(route)
+    : ref.read(routingProfilesProvider.notifier).upsertRoute(profileId, route);
 
 Future<void> _removeRoute(WidgetRef ref, String? profileId, String routeId) =>
     profileId == null
-        ? ref.read(routesProvider.notifier).remove(routeId)
-        : ref
-            .read(routingProfilesProvider.notifier)
-            .removeRoute(profileId, routeId);
+    ? ref.read(routesProvider.notifier).remove(routeId)
+    : ref
+          .read(routingProfilesProvider.notifier)
+          .removeRoute(profileId, routeId);
 
 Future<List<TrafficRoute>> _routesFor(WidgetRef ref, String? profileId) async {
   if (profileId == null) return ref.read(routesProvider.future);
@@ -92,10 +89,9 @@ class _ProfileChip extends StatelessWidget {
         label,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: Theme.of(context)
-            .textTheme
-            .labelLarge
-            ?.copyWith(color: scheme.onPrimaryContainer),
+        style: Theme.of(
+          context,
+        ).textTheme.labelLarge?.copyWith(color: scheme.onPrimaryContainer),
       ),
     );
   }
@@ -108,14 +104,14 @@ class _ProfileSectionLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(4, 14, 0, 6),
-        child: Text(
-          text,
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: Theme.of(context).colorScheme.primary,
-              ),
-        ),
-      );
+    padding: const EdgeInsets.fromLTRB(4, 14, 0, 6),
+    child: Text(
+      text,
+      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+        color: Theme.of(context).colorScheme.primary,
+      ),
+    ),
+  );
 }
 
 class _ProfileCard extends StatelessWidget {
@@ -186,7 +182,8 @@ class _ProfileCard extends StatelessWidget {
                               builder: (context) => Icon(
                                 Icons.expand_more_rounded,
                                 size: 22,
-                                color: TvFocusHighlight.containerOf(context) !=
+                                color:
+                                    TvFocusHighlight.containerOf(context) !=
                                         null
                                     ? Theme.of(context).colorScheme.onSurface
                                     : light,
@@ -213,7 +210,8 @@ class _ProfileCard extends StatelessWidget {
                   ),
                 ),
               ),
-              if (enabled != null) Switch(value: enabled!, onChanged: onEnabled),
+              if (enabled != null)
+                Switch(value: enabled!, onChanged: onEnabled),
               ?menu,
             ],
           ),
@@ -264,83 +262,84 @@ class _ProfileCard extends StatelessWidget {
 
 void _showProfileMenu(BuildContext context, WidgetRef ref, RoutingProfile p) {
   final l10n = AppLocalizations.of(context)!;
-  unawaited(showModalBottomSheet<void>(
-    context: context,
-    showDragHandle: true,
-    builder: (ctx) => SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Text(
-                p.name,
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(ctx)
-                    .textTheme
-                    .emphasized(Theme.of(ctx).textTheme.titleLarge)
-                    ?.copyWith(color: AppTheme.text(ctx)),
+  unawaited(
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Text(
+                  p.name,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(ctx).textTheme
+                      .emphasized(Theme.of(ctx).textTheme.titleLarge)
+                      ?.copyWith(color: AppTheme.text(ctx)),
+                ),
               ),
-            ),
-            ExpressiveGroup(
-              children: [
-                ExpressiveActionTile(
-                  icon: Icons.edit_rounded,
-                  title: l10n.serversRename,
-                  accent: ExpressiveAccent.primary,
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    unawaited(_renameProfile(context, ref, p));
-                  },
-                ),
-                ExpressiveActionTile(
-                  icon: Icons.language_rounded,
-                  title: l10n.routingProfileSubscriptions,
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    unawaited(_showProfileSheet(context, ref, editing: p));
-                  },
-                ),
-                ExpressiveActionTile(
-                  icon: Icons.qr_code_2_rounded,
-                  title: l10n.subscriptionsShareButton,
-                  accent: ExpressiveAccent.secondary,
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    _showRoutingShareSheet(
-                      context,
-                      name: p.name,
-                      finalOutbound: p.finalOutbound,
-                      routes: p.routes,
-                    );
-                  },
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            ExpressiveGroup(
-              children: [
-                ExpressiveActionTile(
-                  icon: Icons.delete_outline_rounded,
-                  title: l10n.subscriptionsDelete,
-                  danger: true,
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    unawaited(_deleteProfile(context, ref, p));
-                  },
-                ),
-              ],
-            ),
-          ],
+              ExpressiveGroup(
+                children: [
+                  ExpressiveActionTile(
+                    icon: Icons.edit_rounded,
+                    title: l10n.serversRename,
+                    accent: ExpressiveAccent.primary,
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      unawaited(_renameProfile(context, ref, p));
+                    },
+                  ),
+                  ExpressiveActionTile(
+                    icon: Icons.language_rounded,
+                    title: l10n.routingProfileSubscriptions,
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      unawaited(_showProfileSheet(context, ref, editing: p));
+                    },
+                  ),
+                  ExpressiveActionTile(
+                    icon: Icons.qr_code_2_rounded,
+                    title: l10n.subscriptionsShareButton,
+                    accent: ExpressiveAccent.secondary,
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _showRoutingShareSheet(
+                        context,
+                        name: p.name,
+                        finalOutbound: p.finalOutbound,
+                        routes: p.routes,
+                      );
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              ExpressiveGroup(
+                children: [
+                  ExpressiveActionTile(
+                    icon: Icons.delete_outline_rounded,
+                    title: l10n.subscriptionsDelete,
+                    danger: true,
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      unawaited(_deleteProfile(context, ref, p));
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     ),
-  ));
+  );
 }
 
 Future<void> _renameProfile(
@@ -408,13 +407,12 @@ Future<void> _showProfileSheet(
   BuildContext context,
   WidgetRef ref, {
   RoutingProfile? editing,
-}) =>
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (_) => _ProfileSheet(editing: editing),
-    );
+}) => showModalBottomSheet<void>(
+  context: context,
+  showDragHandle: true,
+  isScrollControlled: true,
+  builder: (_) => _ProfileSheet(editing: editing),
+);
 
 // с editing шторка правит только подписки готового профиля
 class _ProfileSheet extends ConsumerStatefulWidget {
@@ -477,8 +475,10 @@ class _ProfileSheetState extends ConsumerState<_ProfileSheet> {
     // подпись только у занятой другим профилем: отметка здесь заберёт её оттуда
     String? owner(String subId) {
       final other = profiles
-          .where((p) =>
-              p.id != widget.editing?.id && p.subscriptionIds.contains(subId))
+          .where(
+            (p) =>
+                p.id != widget.editing?.id && p.subscriptionIds.contains(subId),
+          )
           .firstOrNull;
       return other == null ? null : l10n.routingProfileSubOnOther(other.name);
     }
@@ -550,8 +550,8 @@ class _ProfileSheetState extends ConsumerState<_ProfileSheet> {
                                       overflow: TextOverflow.ellipsis,
                                       style: theme.textTheme.titleMedium
                                           ?.copyWith(
-                                        color: AppTheme.text(context),
-                                      ),
+                                            color: AppTheme.text(context),
+                                          ),
                                     ),
                                     if (owner(sub.id) case final note?)
                                       Text(
@@ -629,101 +629,103 @@ void _showRoutingShareSheet(
     errorCorrectionLevel: QrErrorCorrectLevel.M,
   ).qrCode;
   final showQr = qr != null && qr.typeNumber <= _maxShareQrVersion;
-  unawaited(showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    showDragHandle: true,
-    builder: (ctx) => Padding(
-      padding: const EdgeInsets.fromLTRB(24, 4, 24, 24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            name,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(ctx)
-                .textTheme
-                .emphasized(Theme.of(ctx).textTheme.titleMedium)
-                ?.copyWith(color: AppTheme.text(ctx)),
-          ),
-          const SizedBox(height: 16),
-          if (showQr)
-            ClipRRect(
-              borderRadius: BorderRadius.circular(ExpressiveShape.large),
-              child: Container(
-                padding: const EdgeInsets.all(18),
-                color: Colors.white,
-                child: QrImageView.withQr(
-                  qr: qr,
-                  size: 220,
-                  backgroundColor: Colors.white,
-                  eyeStyle: const QrEyeStyle(
-                    eyeShape: QrEyeShape.circle,
-                    color: Colors.black,
-                  ),
-                  dataModuleStyle: const QrDataModuleStyle(
-                    dataModuleShape: QrDataModuleShape.circle,
-                    color: Colors.black,
+  unawaited(
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.fromLTRB(24, 4, 24, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(ctx).textTheme
+                  .emphasized(Theme.of(ctx).textTheme.titleMedium)
+                  ?.copyWith(color: AppTheme.text(ctx)),
+            ),
+            const SizedBox(height: 16),
+            if (showQr)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(ExpressiveShape.large),
+                child: Container(
+                  padding: const EdgeInsets.all(18),
+                  color: Colors.white,
+                  child: QrImageView.withQr(
+                    qr: qr,
+                    size: 220,
+                    backgroundColor: Colors.white,
+                    eyeStyle: const QrEyeStyle(
+                      eyeShape: QrEyeShape.circle,
+                      color: Colors.black,
+                    ),
+                    dataModuleStyle: const QrDataModuleStyle(
+                      dataModuleShape: QrDataModuleShape.circle,
+                      color: Colors.black,
+                    ),
                   ),
                 ),
               ),
-            ),
-          if (share.skipped > 0) ...[
+            if (share.skipped > 0) ...[
+              const SizedBox(height: 12),
+              ExpressiveNotice(
+                color: AppTheme.orange(ctx),
+                icon: Icons.info_outline_rounded,
+                text: l10n.routingShareSkipped(share.skipped),
+              ),
+            ],
             const SizedBox(height: 12),
-            ExpressiveNotice(
-              color: AppTheme.orange(ctx),
-              icon: Icons.info_outline_rounded,
-              text: l10n.routingShareSkipped(share.skipped),
+            SelectableText(
+              share.link,
+              textAlign: TextAlign.center,
+              maxLines: 3,
+              style: Theme.of(
+                ctx,
+              ).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(ctx)),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.accentContainer(ctx),
+                  foregroundColor: AppTheme.onAccentContainer(ctx),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(ExpressiveShape.large),
+                  ),
+                ),
+                icon: Icon(
+                  Platform.isAndroid ? Icons.share_rounded : Icons.copy_rounded,
+                  size: 18,
+                ),
+                label: Text(
+                  Platform.isAndroid
+                      ? l10n.subscriptionsShareAction
+                      : l10n.subscriptionsCopyUrl,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                onPressed: () async {
+                  if (Platform.isAndroid) {
+                    await SharePlus.instance.share(
+                      ShareParams(text: share.link),
+                    );
+                    return;
+                  }
+                  await Clipboard.setData(ClipboardData(text: share.link));
+                  if (!ctx.mounted) return;
+                  AppSnack.of(ctx).showSnackBar(
+                    SnackBar(content: Text(l10n.subscriptionsUrlCopied)),
+                  );
+                },
+              ),
             ),
           ],
-          const SizedBox(height: 12),
-          SelectableText(
-            share.link,
-            textAlign: TextAlign.center,
-            maxLines: 3,
-            style: Theme.of(ctx)
-                .textTheme
-                .bodySmall
-                ?.copyWith(color: AppTheme.textLight(ctx)),
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            height: 50,
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.accentContainer(ctx),
-                foregroundColor: AppTheme.onAccentContainer(ctx),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(ExpressiveShape.large),
-                ),
-              ),
-              icon: Icon(
-                Platform.isAndroid ? Icons.share_rounded : Icons.copy_rounded,
-                size: 18,
-              ),
-              label: Text(
-                Platform.isAndroid
-                    ? l10n.subscriptionsShareAction
-                    : l10n.subscriptionsCopyUrl,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              onPressed: () async {
-                if (Platform.isAndroid) {
-                  await SharePlus.instance.share(ShareParams(text: share.link));
-                  return;
-                }
-                await Clipboard.setData(ClipboardData(text: share.link));
-                if (!ctx.mounted) return;
-                AppSnack.of(ctx).showSnackBar(
-                  SnackBar(content: Text(l10n.subscriptionsUrlCopied)),
-                );
-              },
-            ),
-          ),
-        ],
+        ),
       ),
     ),
-  ));
+  );
 }

@@ -10,10 +10,14 @@ import 'package:keqdroid/utils/socks5_credentials.dart';
 /// блока XHTTP (`SplitHTTPConfig.Build` оставляет от внешнего только host,
 /// path и mode). Панели xray 25+ складывают туда все настройки транспорта,
 /// поэтому потерянный `extra` — это клиент с дефолтным XHTTP вместо серверного.
-Map<String, dynamic> _xhttp(String uri, {AppSettings settings = const AppSettings()}) {
+Map<String, dynamic> _xhttp(
+  String uri, {
+  AppSettings settings = const AppSettings(),
+}) {
   Socks5Credentials().init('u', 'p');
   final config =
-      jsonDecode(ConfigGeneratorV2.generateConfig(uri, settings)) as Map<String, dynamic>;
+      jsonDecode(ConfigGeneratorV2.generateConfig(uri, settings))
+          as Map<String, dynamic>;
   final outbound = (config['outbounds'] as List).first as Map<String, dynamic>;
   final stream = outbound['streamSettings'] as Map<String, dynamic>;
   return stream['xhttpSettings'] as Map<String, dynamic>;
@@ -76,7 +80,10 @@ void main() {
         'vless://uuid@host.example:443?type=xhttp&security=tls&sni=host.example'
         '&extra=%7B%22xPaddingBytes%22%3A%2292-1412%22%7D',
         settings: const AppSettings(
-          xrayCore: XrayCoreSettings(xmuxEnabled: true, xmuxMaxConcurrency: '8'),
+          xrayCore: XrayCoreSettings(
+            xmuxEnabled: true,
+            xmuxMaxConcurrency: '8',
+          ),
         ),
       );
       final extra = xhttp['extra'] as Map<String, dynamic>;

@@ -122,20 +122,22 @@ Map<String, dynamic> _build(
   bool nativeTunInbound = false,
 }) =>
     jsonDecode(
-      ConfigGeneratorV2.generateConfig(
-        raw,
-        settings,
-        nativeTunInbound: nativeTunInbound,
-      ),
-    ) as Map<String, dynamic>;
+          ConfigGeneratorV2.generateConfig(
+            raw,
+            settings,
+            nativeTunInbound: nativeTunInbound,
+          ),
+        )
+        as Map<String, dynamic>;
 
 List<Map<String, dynamic>> _rules(Map<String, dynamic> config) => [
-      for (final r in ((config['routing'] as Map)['rules'] as List))
-        (r as Map).cast<String, dynamic>(),
-    ];
+  for (final r in ((config['routing'] as Map)['rules'] as List))
+    (r as Map).cast<String, dynamic>(),
+];
 
-List<String?> _ruleTags(Map<String, dynamic> config) =>
-    [for (final r in _rules(config)) r['ruleTag'] as String?];
+List<String?> _ruleTags(Map<String, dynamic> config) => [
+  for (final r in _rules(config)) r['ruleTag'] as String?,
+];
 
 Map<String, dynamic>? _outbound(Map<String, dynamic> config, String tag) {
   for (final o in config['outbounds'] as List) {
@@ -218,13 +220,15 @@ void main() {
       expect(_outbound(config, 'direct')?['protocol'], 'freedom');
     });
 
-    test('резолверу мимо роутинга выход не нужен — блок остаётся буквальным',
-        () {
-      // `https+local` ходит мимо роутинга, блокировать там нечего: лишнее
-      // правило означало бы дырку в порт 53 на пустом месте.
-      final config = _build(_authorRoutesDns, _clearedAndBlocked);
-      expect(_ruleTags(config), isNot(contains('dns-resolver')));
-    });
+    test(
+      'резолверу мимо роутинга выход не нужен — блок остаётся буквальным',
+      () {
+        // `https+local` ходит мимо роутинга, блокировать там нечего: лишнее
+        // правило означало бы дырку в порт 53 на пустом месте.
+        final config = _build(_authorRoutesDns, _clearedAndBlocked);
+        expect(_ruleTags(config), isNot(contains('dns-resolver')));
+      },
+    );
 
     test('в режимах direct/proxy выход резолверу не дописывается', () {
       for (final finalOutbound in const [
@@ -271,7 +275,9 @@ void main() {
 
       expect(servers, isNotEmpty);
       expect(
-        servers.any((s) => '${(s as Map)['address']}'.startsWith('https+local')),
+        servers.any(
+          (s) => '${(s as Map)['address']}'.startsWith('https+local'),
+        ),
         isTrue,
       );
       // DoH мимо роутинга — значит и выход резолверу не нужен.
@@ -395,28 +401,30 @@ void main() {
       expect(report.rules, 0);
     });
 
-    test('теги, которые ставит генератор, совпадают со списком для проверки',
-        () {
-      // Список `appInboundTags` — не константа сама по себе: разъедется с
-      // `_buildInbounds`, и детект начнёт врать в обе стороны.
-      // Оба состава инбаундов, а не один: туннель, который держит само ядро,
-      // добавляет свой тег, и разъехаться список может именно на нём.
-      for (final nativeTun in [false, true]) {
-        final config = _build(
-          _withAuthorDns,
-          _clearedAndBlocked.copyWith(lanSharing: true, lanUsername: ''),
-          nativeTunInbound: nativeTun,
-        );
-        final actual = [
-          for (final i in config['inbounds'] as List)
-            (i as Map)['tag'] as String,
-        ];
+    test(
+      'теги, которые ставит генератор, совпадают со списком для проверки',
+      () {
+        // Список `appInboundTags` — не константа сама по себе: разъедется с
+        // `_buildInbounds`, и детект начнёт врать в обе стороны.
+        // Оба состава инбаундов, а не один: туннель, который держит само ядро,
+        // добавляет свой тег, и разъехаться список может именно на нём.
+        for (final nativeTun in [false, true]) {
+          final config = _build(
+            _withAuthorDns,
+            _clearedAndBlocked.copyWith(lanSharing: true, lanUsername: ''),
+            nativeTunInbound: nativeTun,
+          );
+          final actual = [
+            for (final i in config['inbounds'] as List)
+              (i as Map)['tag'] as String,
+          ];
 
-        expect(actual, isNotEmpty);
-        for (final tag in actual) {
-          expect(ConfigGeneratorV2.appInboundTags, contains(tag));
+          expect(actual, isNotEmpty);
+          for (final tag in actual) {
+            expect(ConfigGeneratorV2.appInboundTags, contains(tag));
+          }
         }
-      }
-    });
+      },
+    );
   });
 }

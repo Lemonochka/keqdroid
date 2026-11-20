@@ -25,10 +25,10 @@ class _LocalPortsSectionState extends ConsumerState<_LocalPortsSection> {
   void initState() {
     super.initState();
     VoidCallback blurListener(FocusNode focus) => () {
-          if (focus.hasFocus) return;
-          final settings = ref.read(settingsNotifierProvider).value;
-          if (settings != null) unawaited(_apply(settings));
-        };
+      if (focus.hasFocus) return;
+      final settings = ref.read(settingsNotifierProvider).value;
+      if (settings != null) unawaited(_apply(settings));
+    };
     _socksFocus.addListener(_socksBlur = blurListener(_socksFocus));
     _httpFocus.addListener(_httpBlur = blurListener(_httpFocus));
   }
@@ -56,9 +56,9 @@ class _LocalPortsSectionState extends ConsumerState<_LocalPortsSection> {
     bool valid(int? p) => p != null && p > 0 && p < 65536;
     if (!valid(socks) || !valid(http) || socks == http) return;
     if (socks == settings.localPort && http == settings.httpPort) return;
-    unawaited(notifier.save(
-      settings.copyWith(localPort: socks, httpPort: http),
-    ));
+    unawaited(
+      notifier.save(settings.copyWith(localPort: socks, httpPort: http)),
+    );
   }
 
   // из ref.listen: в build присваивать текст смонтированному TextField нельзя
@@ -83,22 +83,22 @@ class _LocalPortsSectionState extends ConsumerState<_LocalPortsSection> {
     if (!valid(socks) || !valid(http)) {
       _socksCtrl.text = settings.localPort.toString();
       _httpCtrl.text = settings.httpPort.toString();
-      AppSnack.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.settingsPortInvalid)),
-      );
+      AppSnack.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.settingsPortInvalid)));
       return;
     }
     if (socks == http) {
-      AppSnack.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.settingsPortsMustDiffer)),
-      );
+      AppSnack.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.settingsPortsMustDiffer)));
       return;
     }
     if (socks == settings.localPort && http == settings.httpPort) return;
 
-    await ref.read(settingsNotifierProvider.notifier).save(
-          settings.copyWith(localPort: socks, httpPort: http),
-        );
+    await ref
+        .read(settingsNotifierProvider.notifier)
+        .save(settings.copyWith(localPort: socks, httpPort: http));
   }
 
   Widget _portField(
@@ -115,16 +115,24 @@ class _LocalPortsSectionState extends ConsumerState<_LocalPortsSection> {
       focusNode: focus,
       enabled: enabled,
       keyboardType: TextInputType.number,
-      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.text(context)),
+      style: Theme.of(
+        context,
+      ).textTheme.bodyMedium?.copyWith(color: AppTheme.text(context)),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        labelStyle: Theme.of(
+          context,
+        ).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 10,
+        ),
         isDense: true,
         filled: true,
         fillColor: AppTheme.bg(context).withValues(alpha: 0.45),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(ExpressiveShape.medium)),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(ExpressiveShape.medium),
+        ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(ExpressiveShape.medium),
           borderSide: BorderSide(color: AppTheme.divider(context)),
@@ -216,7 +224,9 @@ class _LocalPortsSectionState extends ConsumerState<_LocalPortsSection> {
                     const SizedBox(height: 8),
                     Text(
                       l10n.settingsTurnOffToChange,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.orange(context)),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppTheme.orange(context),
+                      ),
                     ),
                   ],
                 ],

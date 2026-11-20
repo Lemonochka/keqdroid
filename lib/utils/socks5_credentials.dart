@@ -25,6 +25,7 @@ class Socks5Credentials {
 
   bool get isInitialized => _username.isNotEmpty && _password.isNotEmpty;
 }
+
 String randomProxyToken(int length) {
   const alphabet = 'abcdefghijkmnpqrstuvwxyz23456789';
   final rnd = Random.secure();

@@ -6,23 +6,23 @@ import 'package:keqdroid/shared/ui/expressive_toggle_button.dart';
 /// квадрат, а не меняется форма. Так и было — радиус ехал от 9999 к 8, и
 /// видимая часть перехода сваливалась в последние проценты анимации.
 Widget _host({required bool selected, VoidCallback? onPressed}) => MaterialApp(
-      home: Scaffold(
-        body: Center(
-          child: SizedBox(
-            height: 40,
-            width: 300,
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: ExpressiveToggleButton(
-                selected: selected,
-                label: 'Auto',
-                onPressed: onPressed ?? () {},
-              ),
-            ),
+  home: Scaffold(
+    body: Center(
+      child: SizedBox(
+        height: 40,
+        width: 300,
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: ExpressiveToggleButton(
+            selected: selected,
+            label: 'Auto',
+            onPressed: onPressed ?? () {},
           ),
         ),
       ),
-    );
+    ),
+  ),
+);
 
 double _corner(WidgetTester tester) {
   final material = tester.widget<Material>(
@@ -76,7 +76,10 @@ void main() {
     var taps = 0;
     await tester.pumpWidget(_host(selected: false, onPressed: () => taps++));
     final visual = find
-        .descendant(of: find.byType(FilledButton), matching: find.byType(Material))
+        .descendant(
+          of: find.byType(FilledButton),
+          matching: find.byType(Material),
+        )
         .first;
     final box = tester.getRect(visual);
     expect(box.height, ExpressiveToggleButton.height);

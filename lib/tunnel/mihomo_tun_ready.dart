@@ -29,8 +29,9 @@ Future<Object?> fetchMihomoConfigs(
     ..connectionTimeout = timeout
     ..findProxy = (_) => 'DIRECT';
   try {
-    final request =
-        await client.get('127.0.0.1', port, '/configs').timeout(timeout);
+    final request = await client
+        .get('127.0.0.1', port, '/configs')
+        .timeout(timeout);
     if (secret.isNotEmpty) {
       request.headers.set(HttpHeaders.authorizationHeader, 'Bearer $secret');
     }

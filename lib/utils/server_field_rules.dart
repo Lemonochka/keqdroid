@@ -11,7 +11,11 @@ const kServerTransports = <String>[
 ];
 
 // другие flow ядро не принимает и отвергает конфиг целиком
-const kServerFlows = <String>['', 'xtls-rprx-vision', 'xtls-rprx-vision-udp443'];
+const kServerFlows = <String>[
+  '',
+  'xtls-rprx-vision',
+  'xtls-rprx-vision-udp443',
+];
 
 String normalizeTransport(String raw) {
   final value = raw.trim().toLowerCase();
@@ -114,10 +118,10 @@ List<ServerRuleIssue> serverRuleIssues({
 }
 
 List<String> securityOptionsFor(String transport) => [
-      'none',
-      'tls',
-      if (realityWorksOver(transport)) 'reality',
-    ];
+  'none',
+  'tls',
+  if (realityWorksOver(transport)) 'reality',
+];
 
 List<String> flowOptionsFor({
   required String protocol,

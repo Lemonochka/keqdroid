@@ -13,24 +13,24 @@ import '../models/traffic_route.dart';
 import '../utils/traffic_routes.dart';
 
 class StorageService {
-  static const _kServers       = 'keqdis_servers_v2';
+  static const _kServers = 'keqdis_servers_v2';
   static const _kSubscriptions = 'keqdis_subscriptions';
-  static const _kRules         = 'keqdis_rules';
-  static const _kRoutes        = 'keqdis_routes';
-  static const _kRoutesHint    = 'keqdis_routes_hint';
+  static const _kRules = 'keqdis_rules';
+  static const _kRoutes = 'keqdis_routes';
+  static const _kRoutesHint = 'keqdis_routes_hint';
   static const _kRoutingProfiles = 'keqdis_routing_profiles';
-  static const _kActiveId      = 'keqdis_active_server';
-  static const _kExcludePkgs   = 'keqdis_exclude_packages';
-  static const _kIncludePkgs   = 'keqdis_include_packages';
-  static const _kSettings      = 'keqdis_settings';
-  static const _kSocksPort     = 'keqdis_socks_port';
+  static const _kActiveId = 'keqdis_active_server';
+  static const _kExcludePkgs = 'keqdis_exclude_packages';
+  static const _kIncludePkgs = 'keqdis_include_packages';
+  static const _kSettings = 'keqdis_settings';
+  static const _kSocksPort = 'keqdis_socks_port';
   static const _kActiveHttpPort = 'keqdis_active_http_port';
   static const _kActiveHttpUser = 'keqdis_active_http_user';
   static const _kActiveHttpPass = 'keqdis_active_http_pass';
-  static const _kKeqtrisBest  = 'keqdis_keqtris_best';
-  static const _kHwid          = 'keqdis_hwid';
-  static const _kWindowBounds  = 'keqdis_window_bounds';
-  static const _kSortModes     = 'keqdis_server_sort_modes';
+  static const _kKeqtrisBest = 'keqdis_keqtris_best';
+  static const _kHwid = 'keqdis_hwid';
+  static const _kWindowBounds = 'keqdis_window_bounds';
+  static const _kSortModes = 'keqdis_server_sort_modes';
   static const _kExpiryNotified = 'keqdis_subscription_expiry_notified';
   static const _kExpiryReminded = 'keqdis_subscription_expiry_reminded';
   // отдельным ключом: шаблон с правилами бывает в сотни КБ, а список подписок разбирается при каждом чтении
@@ -76,9 +76,9 @@ class StorageService {
   }
 
   Future<void> reloadFromDisk() => _serial(() async {
-        await _prefs.reload();
-        _settingsCache = null;
-      });
+    await _prefs.reload();
+    _settingsCache = null;
+  });
 
   // один экземпляр на изолят: вторая очередь поверх тех же prefs вернула бы гонки
   static StorageService? _instance;
@@ -113,46 +113,43 @@ class StorageService {
       _serial(() => _writeServers(servers));
 
   Future<void> upsertServer(ServerItem server) => _serial(() async {
-        final servers = await getServers();
-        final idx = servers.indexWhere((s) => s.id == server.id);
-        if (idx == -1) {
-          servers.add(server);
-        } else {
-          servers[idx] = server;
-        }
-        await _writeServers(servers);
-      });
+    final servers = await getServers();
+    final idx = servers.indexWhere((s) => s.id == server.id);
+    if (idx == -1) {
+      servers.add(server);
+    } else {
+      servers[idx] = server;
+    }
+    await _writeServers(servers);
+  });
 
-  Future<void> upsertServers(Iterable<ServerItem> changed) =>
-      _serial(() async {
-        final servers = await getServers();
-        for (final server in changed) {
-          final idx = servers.indexWhere((s) => s.id == server.id);
-          if (idx == -1) {
-            servers.add(server);
-          } else {
-            servers[idx] = server;
-          }
-        }
-        await _writeServers(servers);
-      });
+  Future<void> upsertServers(Iterable<ServerItem> changed) => _serial(() async {
+    final servers = await getServers();
+    for (final server in changed) {
+      final idx = servers.indexWhere((s) => s.id == server.id);
+      if (idx == -1) {
+        servers.add(server);
+      } else {
+        servers[idx] = server;
+      }
+    }
+    await _writeServers(servers);
+  });
 
   Future<void> deleteServer(String id) => _serial(() async {
-        final servers = await getServers();
-        servers.removeWhere((s) => s.id == id);
-        await _writeServers(servers);
-      });
+    final servers = await getServers();
+    servers.removeWhere((s) => s.id == id);
+    await _writeServers(servers);
+  });
 
   Future<void> replaceServersBySubscription(
     String subscriptionId,
     List<ServerItem> newServers,
-  ) =>
-      _serial(() async {
-        final all = await getServers();
-        final kept =
-            all.where((s) => s.subscriptionId != subscriptionId).toList();
-        await _writeServers([...kept, ...newServers]);
-      });
+  ) => _serial(() async {
+    final all = await getServers();
+    final kept = all.where((s) => s.subscriptionId != subscriptionId).toList();
+    await _writeServers([...kept, ...newServers]);
+  });
 
   Future<void> deleteServersBySubscription(String subscriptionId) =>
       _serial(() async {
@@ -165,49 +162,47 @@ class StorageService {
   Future<List<ServerItem>> applyPingUpdates(
     Map<String, ({int? pingMs, String? lastPingType})> updates,
     DateTime testedAt,
-  ) =>
-      _serial(() async {
-        final servers = await getServers();
-        var changed = false;
-        final out = servers.map((s) {
-          final u = updates[s.id];
-          if (u == null) return s;
-          changed = true;
-          var item = s.copyWith(pingMs: u.pingMs, lastTestedAt: testedAt);
-          if (u.lastPingType != null) {
-            item = item.copyWith(lastPingType: u.lastPingType);
-          }
-          final type = item.lastPingType;
-          if (type != null && PingSample.latencyTypes.contains(type)) {
-            item = item.copyWith(
-              pingSamples: PingSample.append(
-                item.pingSamples,
-                PingSample(at: testedAt, ms: u.pingMs, type: type),
-              ),
-            );
-          }
-          return item;
-        }).toList();
-        if (changed) await _writeServers(out);
-        return out;
-      });
+  ) => _serial(() async {
+    final servers = await getServers();
+    var changed = false;
+    final out = servers.map((s) {
+      final u = updates[s.id];
+      if (u == null) return s;
+      changed = true;
+      var item = s.copyWith(pingMs: u.pingMs, lastTestedAt: testedAt);
+      if (u.lastPingType != null) {
+        item = item.copyWith(lastPingType: u.lastPingType);
+      }
+      final type = item.lastPingType;
+      if (type != null && PingSample.latencyTypes.contains(type)) {
+        item = item.copyWith(
+          pingSamples: PingSample.append(
+            item.pingSamples,
+            PingSample(at: testedAt, ms: u.pingMs, type: type),
+          ),
+        );
+      }
+      return item;
+    }).toList();
+    if (changed) await _writeServers(out);
+    return out;
+  });
 
   Future<List<ServerItem>> applyIpv6Probe(
     Map<String, bool> results,
     DateTime checkedAt,
-  ) =>
-      _serial(() async {
-        final servers = await getServers();
-        var changed = false;
-        final out = servers.map((s) {
-          final hasIpv6 = results[s.id];
-          if (hasIpv6 == null) return s;
-          changed = true;
-          return s.copyWith(ipv6Exit: hasIpv6, ipv6CheckedAt: checkedAt);
-        }).toList();
-        if (changed) await _writeServers(out);
-        return out;
-      });
+  ) => _serial(() async {
+    final servers = await getServers();
+    var changed = false;
+    final out = servers.map((s) {
+      final hasIpv6 = results[s.id];
+      if (hasIpv6 == null) return s;
+      changed = true;
+      return s.copyWith(ipv6Exit: hasIpv6, ipv6CheckedAt: checkedAt);
+    }).toList();
+    if (changed) await _writeServers(out);
+    return out;
+  });
 
   Future<List<Subscription>> getSubscriptions() async {
     try {
@@ -232,15 +227,15 @@ class StorageService {
       _serial(() => _writeSubscriptions(subs));
 
   Future<void> upsertSubscription(Subscription sub) => _serial(() async {
-        final subs = await getSubscriptions();
-        final idx = subs.indexWhere((s) => s.id == sub.id);
-        if (idx == -1) {
-          subs.add(sub);
-        } else {
-          subs[idx] = sub;
-        }
-        await _writeSubscriptions(subs);
-      });
+    final subs = await getSubscriptions();
+    final idx = subs.indexWhere((s) => s.id == sub.id);
+    if (idx == -1) {
+      subs.add(sub);
+    } else {
+      subs[idx] = sub;
+    }
+    await _writeSubscriptions(subs);
+  });
 
   String? getClashTemplate(String subscriptionId) =>
       _prefs.getString('$_kClashTemplatePrefix$subscriptionId');
@@ -256,15 +251,13 @@ class StorageService {
       });
 
   Future<void> deleteSubscription(String id) => _serial(() async {
-        final subs = await getSubscriptions();
-        subs.removeWhere((s) => s.id == id);
-        await _writeSubscriptions(subs);
-        await _prefs.remove('$_kClashTemplatePrefix$id');
-        final all = await getServers();
-        await _writeServers(
-          all.where((s) => s.subscriptionId != id).toList(),
-        );
-      });
+    final subs = await getSubscriptions();
+    subs.removeWhere((s) => s.id == id);
+    await _writeSubscriptions(subs);
+    await _prefs.remove('$_kClashTemplatePrefix$id');
+    final all = await getServers();
+    await _writeServers(all.where((s) => s.subscriptionId != id).toList());
+  });
 
   // читает только перенос в маршруты (getRoutes)
   Future<List<RoutingRule>> getRules() async {
@@ -312,18 +305,22 @@ class StorageService {
     final raw = _prefs.getString(_kRoutingProfiles);
     if (raw == null) return const [];
     try {
-      return _decodeListResilient(raw, RoutingProfile.fromJson, 'routing profile');
+      return _decodeListResilient(
+        raw,
+        RoutingProfile.fromJson,
+        'routing profile',
+      );
     } catch (e) {
       throw StorageException('Failed to load routing profiles', cause: e);
     }
   }
 
   Future<void> saveRoutingProfiles(List<RoutingProfile> profiles) => _serial(
-        () => _prefs.setString(
-          _kRoutingProfiles,
-          jsonEncode([for (final p in profiles) p.toJson()]),
-        ),
-      );
+    () => _prefs.setString(
+      _kRoutingProfiles,
+      jsonEncode([for (final p in profiles) p.toJson()]),
+    ),
+  );
 
   bool get routesHintPending => _prefs.getBool(_kRoutesHint) ?? false;
 
@@ -344,12 +341,12 @@ class StorageService {
   String? getActiveServerId() => _prefs.getString(_kActiveId);
 
   Future<void> setActiveServerId(String? id) => _serial(() async {
-        if (id == null) {
-          await _prefs.remove(_kActiveId);
-        } else {
-          await _prefs.setString(_kActiveId, id);
-        }
-      });
+    if (id == null) {
+      await _prefs.remove(_kActiveId);
+    } else {
+      await _prefs.setString(_kActiveId, id);
+    }
+  });
 
   List<String> getExcludePackages() =>
       _prefs.getStringList(_kExcludePkgs) ?? [];
@@ -370,8 +367,9 @@ class StorageService {
     if (cached != null) return cached;
     try {
       final raw = _prefs.getString(_kSettings);
-      final settings =
-          raw == null ? const AppSettings() : AppSettings.fromJsonString(raw);
+      final settings = raw == null
+          ? const AppSettings()
+          : AppSettings.fromJsonString(raw);
       _settingsCache = settings;
       return settings;
     } catch (_) {
@@ -380,13 +378,12 @@ class StorageService {
   }
 
   Future<void> saveSettings(AppSettings settings) => _serial(() async {
-        await _prefs.setString(_kSettings, settings.toJsonString());
-        _settingsCache = settings;
-      });
+    await _prefs.setString(_kSettings, settings.toJsonString());
+    _settingsCache = settings;
+  });
 
-  int? getSocksPort() => _prefs.containsKey(_kSocksPort)
-      ? _prefs.getInt(_kSocksPort)
-      : null;
+  int? getSocksPort() =>
+      _prefs.containsKey(_kSocksPort) ? _prefs.getInt(_kSocksPort) : null;
 
   Future<void> setSocksPort(int port) =>
       _serial(() => _prefs.setInt(_kSocksPort, port));
@@ -399,29 +396,28 @@ class StorageService {
   int? getActiveLocalHttpPort() => _prefs.getInt(_kActiveHttpPort);
 
   ({String username, String password}) getActiveLocalHttpCredentials() => (
-        username: _prefs.getString(_kActiveHttpUser) ?? '',
-        password: _prefs.getString(_kActiveHttpPass) ?? '',
-      );
+    username: _prefs.getString(_kActiveHttpUser) ?? '',
+    password: _prefs.getString(_kActiveHttpPass) ?? '',
+  );
 
   Future<void> setActiveLocalHttpPort(
     int? port, {
     String username = '',
     String password = '',
-  }) =>
-      _serial(() async {
-        if (port == null) {
-          await _prefs.remove(_kActiveHttpPort);
-        } else {
-          await _prefs.setInt(_kActiveHttpPort, port);
-        }
-        if (port == null || username.isEmpty || password.isEmpty) {
-          await _prefs.remove(_kActiveHttpUser);
-          await _prefs.remove(_kActiveHttpPass);
-        } else {
-          await _prefs.setString(_kActiveHttpUser, username);
-          await _prefs.setString(_kActiveHttpPass, password);
-        }
-      });
+  }) => _serial(() async {
+    if (port == null) {
+      await _prefs.remove(_kActiveHttpPort);
+    } else {
+      await _prefs.setInt(_kActiveHttpPort, port);
+    }
+    if (port == null || username.isEmpty || password.isEmpty) {
+      await _prefs.remove(_kActiveHttpUser);
+      await _prefs.remove(_kActiveHttpPass);
+    } else {
+      await _prefs.setString(_kActiveHttpUser, username);
+      await _prefs.setString(_kActiveHttpPass, password);
+    }
+  });
 
   String? getHwid() => _prefs.getString(_kHwid);
 

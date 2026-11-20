@@ -122,31 +122,30 @@ StatMetric _channelMetric(
   required String tag,
   required String label,
   required ChannelTraffic traffic,
-}) =>
-    StatMetric.channel(
-      tag: tag,
-      label: label,
-      lines: [
-        StatLine(
-          icon: Icons.arrow_downward_rounded,
-          label: l10n.statsDownloadLabel,
-          value: _formatVpnRate(traffic.downloadSpeed),
-          template: _kRateTemplate,
-        ),
-        StatLine(
-          icon: Icons.arrow_upward_rounded,
-          label: l10n.statsUploadLabel,
-          value: _formatVpnRate(traffic.uploadSpeed),
-          template: _kRateTemplate,
-        ),
-        StatLine(
-          icon: Icons.data_usage_rounded,
-          label: l10n.statsSplitTotalLabel,
-          value: _formatVpnBytes(traffic.total),
-          template: _kBytesTemplate,
-        ),
-      ],
-    );
+}) => StatMetric.channel(
+  tag: tag,
+  label: label,
+  lines: [
+    StatLine(
+      icon: Icons.arrow_downward_rounded,
+      label: l10n.statsDownloadLabel,
+      value: _formatVpnRate(traffic.downloadSpeed),
+      template: _kRateTemplate,
+    ),
+    StatLine(
+      icon: Icons.arrow_upward_rounded,
+      label: l10n.statsUploadLabel,
+      value: _formatVpnRate(traffic.uploadSpeed),
+      template: _kRateTemplate,
+    ),
+    StatLine(
+      icon: Icons.data_usage_rounded,
+      label: l10n.statsSplitTotalLabel,
+      value: _formatVpnBytes(traffic.total),
+      template: _kBytesTemplate,
+    ),
+  ],
+);
 
 // выдвигается из-под того, что над ней, и уезжает обратно, а не проявляется на пустом месте; пружина мягче
 // шапочной, за 0,38 с на easeOutCubic строка вставала раньше, чем двигалась вода
@@ -202,9 +201,7 @@ class _StatsRevealState extends State<_StatsReveal>
       builder: (context, child) {
         // пружина замирает в долях пикселя от цели, а не ровно на ней
         if (!_out.isAnimating || (!widget.shown && _out.value < 0.01)) {
-          return widget.shown
-              ? child!
-              : const SizedBox(width: double.infinity);
+          return widget.shown ? child! : const SizedBox(width: double.infinity);
         }
         return ClipRect(
           child: Align(
@@ -354,7 +351,10 @@ class _BudPainter extends CustomPainter {
     final shader = state._shader;
     final self = state.context.findRenderObject();
     if (shader == null || self is! RenderBox) return;
-    final target = _rectOf(state._strip.currentContext?.findRenderObject(), self);
+    final target = _rectOf(
+      state._strip.currentContext?.findRenderObject(),
+      self,
+    );
     if (target == null || target.isEmpty) return;
     final source = _rectOf(
       state.widget.source?.currentContext?.findRenderObject(),
@@ -425,4 +425,3 @@ class _BudPainter extends CustomPainter {
 const _kRateTemplate = '999.9 MB/s';
 const _kBytesTemplate = '999.99 GB';
 const _kDurationTemplate = '59m 59s';
-

@@ -35,7 +35,11 @@ const _happChina = {
 const _v2rayTunHeader =
     'eyJkb21haW5TdHJhdGVneSI6IkFzSXMiLCJpZCI6IjFFQUE4OEJCLUI1RjUtNEY2OS04MkQwLTlGRjQ0OTkwODc5NCIsImJhbGFuY2VycyI6W10sImRvbWFpbk1hdGNoZXIiOiJoeWJyaWQiLCJydWxlcyI6W3siZG9tYWluIjpbInJlZ2V4cDouKlxcXFwucnUkIiwiZ2Vvc2l0ZTpjYXRlZ29yeS1ydSJdLCJpZCI6IjlDQTYyQzY5LTNEN0EtNEZFNS05RTE5LTIxODlFMkU0ODUzRSIsIm91dGJvdW5kVGFnIjoiZGlyZWN0IiwidHlwZSI6ImZpZWxkIiwiX19uYW1lX18iOiJEaXJlY3QgUnVzc2lhIiwiaXAiOlsiZ2VvaXA6cnUiXX1dLCJuYW1lIjoiRXhhbXBsZSJ9';
 
-String _link(String scheme, Map<String, Object?> profile, {String kind = 'onadd'}) =>
+String _link(
+  String scheme,
+  Map<String, Object?> profile, {
+  String kind = 'onadd',
+}) =>
     '$scheme://routing/$kind/${base64.encode(utf8.encode(jsonEncode(profile)))}';
 
 ProviderRoutingRules _rules(ProviderRouting? parsed) {
@@ -78,26 +82,42 @@ void main() {
     });
 
     test('GlobalProxy false отправляет остальное напрямую', () {
-      final rules = _rules(parseProviderRouting(
-        _link('happ', {'Name': 'RU', 'GlobalProxy': 'false'}),
-      ));
+      final rules = _rules(
+        parseProviderRouting(
+          _link('happ', {'Name': 'RU', 'GlobalProxy': 'false'}),
+        ),
+      );
       expect(rules.finalOutbound, AppSettings.finalOutboundDirect);
       expect(rules.routes, isEmpty);
     });
 
     test('пустые списки маршрутов не дают, без имени имя пустое', () {
-      final rules = _rules(parseProviderRouting(
-        _link('happ', {'DirectSites': <String>[], 'ProxySites': ['  ']}),
-      ));
+      final rules = _rules(
+        parseProviderRouting(
+          _link('happ', {
+            'DirectSites': <String>[],
+            'ProxySites': ['  '],
+          }),
+        ),
+      );
       expect(rules.name, isNull);
       expect(rules.routes, isEmpty);
     });
 
     test('base64 без паддинга и в url-safe алфавите', () {
       final payload = base64Url
-          .encode(utf8.encode(jsonEncode({'Name': 'Ютуб?', 'ProxySites': ['geosite:youtube']})))
+          .encode(
+            utf8.encode(
+              jsonEncode({
+                'Name': 'Ютуб?',
+                'ProxySites': ['geosite:youtube'],
+              }),
+            ),
+          )
           .replaceAll('=', '');
-      final rules = _rules(parseProviderRouting('happ://routing/onadd/$payload'));
+      final rules = _rules(
+        parseProviderRouting('happ://routing/onadd/$payload'),
+      );
       expect(rules.name, 'Ютуб?');
       expect(rules.routes.single.sites, 'geosite:youtube');
     });
@@ -108,23 +128,36 @@ void main() {
     });
 
     test('keyword становится regexp, ext и ссылки на списки выпадают', () {
-      final rules = _rules(parseProviderRouting(_link('happ', {
-        'DirectSites': [
-          'keyword:sber',
-          'ext:custom.dat:ru',
-          'https://example.com/list.txt',
-          'full:gosuslugi.ru',
-        ],
-      })));
+      final rules = _rules(
+        parseProviderRouting(
+          _link('happ', {
+            'DirectSites': [
+              'keyword:sber',
+              'ext:custom.dat:ru',
+              'https://example.com/list.txt',
+              'full:gosuslugi.ru',
+            ],
+          }),
+        ),
+      );
       expect(rules.routes.single.sites, 'regexp:sber\nfull:gosuslugi.ru');
     });
 
     test('off выключает, мусор не профиль', () {
-      expect(parseProviderRouting('happ://routing/off'), isA<ProviderRoutingOff>());
-      expect(parseProviderRouting('keqdroid://routing/off'), isA<ProviderRoutingOff>());
+      expect(
+        parseProviderRouting('happ://routing/off'),
+        isA<ProviderRoutingOff>(),
+      );
+      expect(
+        parseProviderRouting('keqdroid://routing/off'),
+        isA<ProviderRoutingOff>(),
+      );
       expect(parseProviderRouting('happ://routing/onadd/не-base64'), isNull);
       expect(parseProviderRouting('happ://routing/add/'), isNull);
-      expect(parseProviderRouting('happ://add/https://example.com/sub'), isNull);
+      expect(
+        parseProviderRouting('happ://add/https://example.com/sub'),
+        isNull,
+      );
       expect(parseProviderRouting(jsonEncode({'foo': 1})), isNull);
       expect(parseProviderRouting(''), isNull);
     });
@@ -137,19 +170,50 @@ void main() {
       expect(rules.finalOutbound, AppSettings.finalOutboundProxy);
       final route = rules.routes.single;
       expect(route.target, RouteTarget.direct);
-      expect(route.sites, r'regexp:.*\\.ru$' '\ngeosite:category-ru\ngeoip:ru');
+      expect(
+        route.sites,
+        r'regexp:.*\\.ru$'
+        '\ngeosite:category-ru\ngeoip:ru',
+      );
     });
 
     test('правило с портом пропускается, правило на всё задаёт остальное', () {
       final routing = {
         'rules': [
-          {'type': 'field', 'port': '443', 'domain': ['a.example'], 'outboundTag': 'direct'},
-          {'type': 'field', 'domain': ['b.example'], 'outboundTag': 'block'},
-          {'type': 'field', 'domain': ['c.example'], 'outboundTag': 'my-balancer'},
-          {'type': 'field', 'network': 'udp', 'ip': ['1.1.1.1'], 'outboundTag': 'direct'},
-          {'type': 'field', 'domain': ['d.example'], 'outboundTag': 'proxy', 'enabled': false},
+          {
+            'type': 'field',
+            'port': '443',
+            'domain': ['a.example'],
+            'outboundTag': 'direct',
+          },
+          {
+            'type': 'field',
+            'domain': ['b.example'],
+            'outboundTag': 'block',
+          },
+          {
+            'type': 'field',
+            'domain': ['c.example'],
+            'outboundTag': 'my-balancer',
+          },
+          {
+            'type': 'field',
+            'network': 'udp',
+            'ip': ['1.1.1.1'],
+            'outboundTag': 'direct',
+          },
+          {
+            'type': 'field',
+            'domain': ['d.example'],
+            'outboundTag': 'proxy',
+            'enabled': false,
+          },
           {'type': 'field', 'network': 'tcp,udp', 'outboundTag': 'direct'},
-          {'type': 'field', 'domain': ['e.example'], 'outboundTag': 'proxy'},
+          {
+            'type': 'field',
+            'domain': ['e.example'],
+            'outboundTag': 'proxy',
+          },
         ],
       };
       final rules = _rules(
@@ -172,24 +236,32 @@ void main() {
         'China',
       );
       expect(providerRoutingInBody('vless://u@198.51.100.1:443#A'), isNull);
-      expect(providerRoutingInBody('happ://routing/off\n'), isA<ProviderRoutingOff>());
+      expect(
+        providerRoutingInBody('happ://routing/off\n'),
+        isA<ProviderRoutingOff>(),
+      );
     });
 
     test('заголовки: Routing-Enable 0 сильнее правил рядом', () {
       final link = _link('happ', _happChina);
-      String? Function(String) headers(Map<String, String> h) => (n) => h[n];
+      String? Function(String) headers(Map<String, String> h) =>
+          (n) => h[n];
       expect(
         _rules(providerRoutingFromHeaders(headers({'routing': link}))).name,
         'China',
       );
       expect(
-        providerRoutingFromHeaders(headers({'routing': link, 'routing-enable': '0'})),
+        providerRoutingFromHeaders(
+          headers({'routing': link, 'routing-enable': '0'}),
+        ),
         isA<ProviderRoutingOff>(),
       );
       expect(
-        _rules(providerRoutingFromHeaders(
-          headers({'routing': link, 'routing-enable': 'true'}),
-        )).name,
+        _rules(
+          providerRoutingFromHeaders(
+            headers({'routing': link, 'routing-enable': 'true'}),
+          ),
+        ).name,
         'China',
       );
       expect(providerRoutingFromHeaders(headers({})), isNull);
@@ -214,7 +286,11 @@ void main() {
             target: RouteTarget.direct,
           ),
           TrafficRoute(id: 'c', sites: 'youtube.com', target: RouteTarget.vpn),
-          TrafficRoute(id: 'd', sites: 'doubleclick.net', target: RouteTarget.block),
+          TrafficRoute(
+            id: 'd',
+            sites: 'doubleclick.net',
+            target: RouteTarget.block,
+          ),
         ],
       );
       expect(share.skipped, 0);
@@ -235,31 +311,48 @@ void main() {
       );
     });
 
-    test('чего формат не передаёт, считается, а выключенное молча остаётся дома', () {
-      final share = routingLinkOf(
-        name: 'Основной',
-        finalOutbound: AppSettings.finalOutboundBlock,
-        routes: const [
-          TrafficRoute(
-            id: 'app',
-            apps: ['org.telegram.messenger'],
-            content: RouteContent.allTraffic,
-          ),
-          TrafficRoute(id: 'srv', sites: 'netflix.com', target: RouteTarget.server, serverId: 's1'),
-          TrafficRoute(id: 'list', sites: 'https://example.com/ads.txt', target: RouteTarget.block),
-          TrafficRoute(
-            id: 'mixed',
-            sites: 'vk.com\nhttps://example.com/ru.txt',
-            target: RouteTarget.direct,
-          ),
-          TrafficRoute(id: 'off', enabled: false, sites: 'mail.ru', target: RouteTarget.direct),
-        ],
-      );
-      // приложение, сервер, список, частично список и остальное в блок
-      expect(share.skipped, 5);
-      final rules = _rules(parseProviderRouting(share.link));
-      expect(rules.routes.single.sites, 'vk.com');
-    });
+    test(
+      'чего формат не передаёт, считается, а выключенное молча остаётся дома',
+      () {
+        final share = routingLinkOf(
+          name: 'Основной',
+          finalOutbound: AppSettings.finalOutboundBlock,
+          routes: const [
+            TrafficRoute(
+              id: 'app',
+              apps: ['org.telegram.messenger'],
+              content: RouteContent.allTraffic,
+            ),
+            TrafficRoute(
+              id: 'srv',
+              sites: 'netflix.com',
+              target: RouteTarget.server,
+              serverId: 's1',
+            ),
+            TrafficRoute(
+              id: 'list',
+              sites: 'https://example.com/ads.txt',
+              target: RouteTarget.block,
+            ),
+            TrafficRoute(
+              id: 'mixed',
+              sites: 'vk.com\nhttps://example.com/ru.txt',
+              target: RouteTarget.direct,
+            ),
+            TrafficRoute(
+              id: 'off',
+              enabled: false,
+              sites: 'mail.ru',
+              target: RouteTarget.direct,
+            ),
+          ],
+        );
+        // приложение, сервер, список, частично список и остальное в блок
+        expect(share.skipped, 5);
+        final rules = _rules(parseProviderRouting(share.link));
+        expect(rules.routes.single.sites, 'vk.com');
+      },
+    );
 
     test('всё остальное напрямую доезжает', () {
       final share = routingLinkOf(

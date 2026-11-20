@@ -33,7 +33,7 @@ class _Backend extends FakeTunnelBackend {
 
   @override
   Future<({String username, String password})?>
-      fetchActiveSocksCredentials() async => core;
+  fetchActiveSocksCredentials() async => core;
 
   @override
   Future<void> startSession(TunnelSessionRequest request) async {
@@ -44,7 +44,8 @@ class _Backend extends FakeTunnelBackend {
 final _server = ServerItem(
   id: 'srv-1',
   type: ServerItemType.manual,
-  config: 'vless://00000000-0000-4000-8000-000000000000@198.51.100.10:443'
+  config:
+      'vless://00000000-0000-4000-8000-000000000000@198.51.100.10:443'
       '?type=tcp&security=none#test',
 );
 
@@ -80,18 +81,20 @@ void main() {
     Socks5Credentials().init('', '');
   });
 
-  test('сессия подключена, а пароль приложения другой: берётся пароль ядра',
-      () async {
-    Socks5Credentials().init('stale', 'stale');
-    backend.core = (username: 'core', password: 'core');
-    await build();
+  test(
+    'сессия подключена, а пароль приложения другой: берётся пароль ядра',
+    () async {
+      Socks5Credentials().init('stale', 'stale');
+      backend.core = (username: 'core', password: 'core');
+      await build();
 
-    backend.states.add(const VpnState(status: VpnStatus.connected));
-    await pumpEventQueue();
+      backend.states.add(const VpnState(status: VpnStatus.connected));
+      await pumpEventQueue();
 
-    expect(Socks5Credentials().username, 'core');
-    expect(Socks5Credentials().password, 'core');
-  });
+      expect(Socks5Credentials().username, 'core');
+      expect(Socks5Credentials().password, 'core');
+    },
+  );
 
   test('свежий изолят без кредов получает их у ядра', () async {
     backend.core = (username: 'core', password: 'core');
@@ -155,8 +158,10 @@ void main() {
       await container.read(vpnStateProvider.notifier).connect();
       await pumpEventQueue();
 
-      expect(container.read(vpnStateProvider).value?.status,
-          VpnStatus.connected);
+      expect(
+        container.read(vpnStateProvider).value?.status,
+        VpnStatus.connected,
+      );
       expect(Socks5Credentials().username, 'core');
     },
     skip: Platform.isWindows ? false : 'connect() идёт веткой этой платформы',

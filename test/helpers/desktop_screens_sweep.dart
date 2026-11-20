@@ -15,24 +15,25 @@ import 'test_storage.dart';
 class _OneSub extends SubscriptionsNotifier {
   @override
   Future<List<Subscription>> build() async => [
-        Subscription(
-          id: 's1',
-          name: 'Provider with a rather long name',
-          url: 'https://sub.example/abc',
-          usedBytes: 667684659200,
-          totalBytes: 107374182400,
-          expiresAt: DateTime.now().add(const Duration(days: 12)),
-          lastUpdatedAt: DateTime.now().subtract(const Duration(minutes: 12)),
-          serverCount: 12,
-          supportUrl: 'https://t.me/support',
-          webPageUrl: 'https://sub.example',
-        ),
-      ];
+    Subscription(
+      id: 's1',
+      name: 'Provider with a rather long name',
+      url: 'https://sub.example/abc',
+      usedBytes: 667684659200,
+      totalBytes: 107374182400,
+      expiresAt: DateTime.now().add(const Duration(days: 12)),
+      lastUpdatedAt: DateTime.now().subtract(const Duration(minutes: 12)),
+      serverCount: 12,
+      supportUrl: 'https://t.me/support',
+      webPageUrl: 'https://sub.example',
+    ),
+  ];
 }
 
 class _IdleVpn extends VpnStateNotifier {
   @override
-  Future<VpnState> build() async => const VpnState(status: VpnStatus.disconnected);
+  Future<VpnState> build() async =>
+      const VpnState(status: VpnStatus.disconnected);
 }
 
 Future<void> _frames(WidgetTester tester, [int n = 4]) async {
@@ -68,20 +69,24 @@ Future<Map<String, Set<String>>> sweepDesktopScreens(
   addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
   try {
     final settings = AppSettings(appLanguageCode: locale);
-    final storage = await tester.runAsync(() => buildStorageService(
-          initialValues: {'keqdis_settings': settings.toJsonString()},
-        ));
-    await tester.pumpWidget(ProviderScope(
-      overrides: [
-        storageProvider.overrideWithValue(storage!),
-        subscriptionsProvider.overrideWith(_OneSub.new),
-        vpnStateProvider.overrideWith(_IdleVpn.new),
-        vpnEngineProvider.overrideWithValue(
-          VpnEngine.withBackend(FakeTunnelBackend()),
-        ),
-      ],
-      child: const KeqdroidApp(home: DesktopHomeScreen()),
-    ));
+    final storage = await tester.runAsync(
+      () => buildStorageService(
+        initialValues: {'keqdis_settings': settings.toJsonString()},
+      ),
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          storageProvider.overrideWithValue(storage!),
+          subscriptionsProvider.overrideWith(_OneSub.new),
+          vpnStateProvider.overrideWith(_IdleVpn.new),
+          vpnEngineProvider.overrideWithValue(
+            VpnEngine.withBackend(FakeTunnelBackend()),
+          ),
+        ],
+        child: const KeqdroidApp(home: DesktopHomeScreen()),
+      ),
+    );
     await _frames(tester, 20);
 
     for (final (outlined, rounded, name) in const [

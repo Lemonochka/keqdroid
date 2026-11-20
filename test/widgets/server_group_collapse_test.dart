@@ -25,56 +25,57 @@ const _count = 200;
 class _FakeServers extends ServersNotifier {
   @override
   ServersState build() => ServersState(
-        servers: [
-          for (var i = 0; i < _count; i++)
-            ServerItem(
-              id: 'n$i',
-              config: 'vless://00000000-0000-0000-0000-000000000000@n$i'
-                  '.example.com:443?security=reality&type=tcp#Node%20$i',
-              type: ServerItemType.subscription,
-              subscriptionId: 's1',
-            ),
-        ],
-      );
+    servers: [
+      for (var i = 0; i < _count; i++)
+        ServerItem(
+          id: 'n$i',
+          config:
+              'vless://00000000-0000-0000-0000-000000000000@n$i'
+              '.example.com:443?security=reality&type=tcp#Node%20$i',
+          type: ServerItemType.subscription,
+          subscriptionId: 's1',
+        ),
+    ],
+  );
 }
 
 class _FakeSubs extends SubscriptionsNotifier {
   @override
   Future<List<Subscription>> build() async => const [
-        Subscription(
-          id: 's1',
-          name: 'Group',
-          url: 'https://example.com/s1',
-          serverCount: _count,
-        ),
-      ];
+    Subscription(
+      id: 's1',
+      name: 'Group',
+      url: 'https://example.com/s1',
+      serverCount: _count,
+    ),
+  ];
 }
 
 class _PictureSubs extends SubscriptionsNotifier {
   @override
   Future<List<Subscription>> build() async => const [
-        Subscription(
-          id: 's1',
-          name: 'Group',
-          url: 'https://example.com/s1',
-          serverCount: _count,
-          cardThemeId: '${SubscriptionCardTheme.filePrefix}pic.png',
-        ),
-      ];
+    Subscription(
+      id: 's1',
+      name: 'Group',
+      url: 'https://example.com/s1',
+      serverCount: _count,
+      cardThemeId: '${SubscriptionCardTheme.filePrefix}pic.png',
+    ),
+  ];
 }
 
 class _PictureAutoSubs extends SubscriptionsNotifier {
   @override
   Future<List<Subscription>> build() async => const [
-        Subscription(
-          id: 's1',
-          name: 'Group',
-          url: 'https://example.com/s1',
-          serverCount: _count,
-          cardThemeId: '${SubscriptionCardTheme.filePrefix}pic.png',
-          autoSelectVisible: true,
-        ),
-      ];
+    Subscription(
+      id: 's1',
+      name: 'Group',
+      url: 'https://example.com/s1',
+      serverCount: _count,
+      cardThemeId: '${SubscriptionCardTheme.filePrefix}pic.png',
+      autoSelectVisible: true,
+    ),
+  ];
 }
 
 class _NoHalloween extends HalloweenActiveNotifier {
@@ -124,8 +125,7 @@ Future<void> _pumpServers(
 }
 
 void main() {
-  testWidgets(
-      'группа сворачивается и разворачивается пружиной, '
+  testWidgets('группа сворачивается и разворачивается пружиной, '
       'а плитки строятся только видимые', (tester) async {
     await _pumpServers(tester, _FakeSubs.new);
     Future<void> run(int ms) async {
@@ -157,8 +157,7 @@ void main() {
     expect(_builtTiles(), inExclusiveRange(0, 60));
   });
 
-  testWidgets(
-      'картинка в шапке уходит в фон списка только у раскрытой группы, '
+  testWidgets('картинка в шапке уходит в фон списка только у раскрытой группы, '
       'и после сворачивания затемнение не возвращается', (tester) async {
     SubscriptionCardTheme.customDirectory = '/data/app/card_themes';
     addTearDown(() => SubscriptionCardTheme.customDirectory = null);
@@ -200,8 +199,7 @@ void main() {
     await tester.pump(const Duration(seconds: 5));
   });
 
-  testWidgets(
-      'при сворачивании затемнение гаснет по ходу, Авто тает раньше, '
+  testWidgets('при сворачивании затемнение гаснет по ходу, Авто тает раньше, '
       'а в конце шапка пружинит, как при разворачивании', (tester) async {
     SubscriptionCardTheme.customDirectory = '/data/app/card_themes';
     addTearDown(() => SubscriptionCardTheme.customDirectory = null);
@@ -226,13 +224,19 @@ void main() {
       fades.add(_headerFade());
       heights.add(tester.getSize(header).height);
       autos.add(
-        auto.evaluate().isEmpty ? 0 : tester.widget<Opacity>(auto.first).opacity,
+        auto.evaluate().isEmpty
+            ? 0
+            : tester.widget<Opacity>(auto.first).opacity,
       );
     }
 
     expect(fades.any((f) => f > 0.2 && f < 0.8), isTrue);
     for (var i = 1; i < fades.length; i++) {
-      expect(fades[i - 1] - fades[i], lessThan(0.5), reason: 'кадр ${i * 16} мс');
+      expect(
+        fades[i - 1] - fades[i],
+        lessThan(0.5),
+        reason: 'кадр ${i * 16} мс',
+      );
     }
     final folded = heights.last;
     final autoGone = autos.indexWhere((a) => a == 0);
@@ -244,30 +248,39 @@ void main() {
 
   // картинка и затемнение сглаживались по краю каждое само, и под картинкой светилась полоска
   testWidgets(
-      'картинка шапки шире шапки на 1 dp, на ПК скругляется одним слоем, '
-      'на телефоне по-прежнему', (tester) async {
-    SubscriptionCardTheme.customDirectory = '/data/app/card_themes';
-    addTearDown(() => SubscriptionCardTheme.customDirectory = null);
-    addTearDown(() => PlatformBootstrap.debugIsDesktopOverride = null);
-    for (final desktop in [true, false]) {
-      PlatformBootstrap.debugIsDesktopOverride = desktop;
-      await _pumpServers(tester, _PictureSubs.new);
-      for (var i = 0; i < 75; i++) {
-        await tester.pump(const Duration(milliseconds: 16));
+    'картинка шапки шире шапки на 1 dp, на ПК скругляется одним слоем, '
+    'на телефоне по-прежнему',
+    (tester) async {
+      SubscriptionCardTheme.customDirectory = '/data/app/card_themes';
+      addTearDown(() => SubscriptionCardTheme.customDirectory = null);
+      addTearDown(() => PlatformBootstrap.debugIsDesktopOverride = null);
+      for (final desktop in [true, false]) {
+        PlatformBootstrap.debugIsDesktopOverride = desktop;
+        await _pumpServers(tester, _PictureSubs.new);
+        for (var i = 0; i < 75; i++) {
+          await tester.pump(const Duration(milliseconds: 16));
+        }
+        final fade = _fadeIntoList.first;
+        final clip = find
+            .ancestor(of: fade, matching: find.byType(ClipRRect))
+            .first;
+        expect(
+          tester.widget<ClipRRect>(clip).clipBehavior,
+          desktop ? Clip.antiAliasWithSaveLayer : Clip.antiAlias,
+        );
+        expect(
+          tester.getRect(fade),
+          rectMoreOrLessEquals(tester.getRect(clip).inflate(1)),
+        );
+        await tester.pump(const Duration(seconds: 5));
+        await tester.pumpWidget(const SizedBox());
       }
-      final fade = _fadeIntoList.first;
-      final clip = find.ancestor(of: fade, matching: find.byType(ClipRRect)).first;
-      expect(
-        tester.widget<ClipRRect>(clip).clipBehavior,
-        desktop ? Clip.antiAliasWithSaveLayer : Clip.antiAlias,
-      );
-      expect(tester.getRect(fade), rectMoreOrLessEquals(tester.getRect(clip).inflate(1)));
-      await tester.pump(const Duration(seconds: 5));
-      await tester.pumpWidget(const SizedBox());
-    }
-  });
+    },
+  );
 
-  testWidgets('на отдаче свёрнутый список не выглядывает обратно', (tester) async {
+  testWidgets('на отдаче свёрнутый список не выглядывает обратно', (
+    tester,
+  ) async {
     await _pumpServers(tester, _FakeSubs.new);
     for (var i = 0; i < 75; i++) {
       await tester.pump(const Duration(milliseconds: 16));
@@ -289,20 +302,24 @@ void main() {
     expect(shut, isTrue);
   });
 
-  testWidgets('на телевизоре группа сворачивается пультом: фокус на стрелке и OK', (tester) async {
-    PlatformBootstrap.debugIsTelevisionOverride = true;
-    addTearDown(() => PlatformBootstrap.debugIsTelevisionOverride = null);
-    await _pumpServers(tester, _FakeSubs.new);
-    await tester.pump(const Duration(seconds: 1));
-    final container = ProviderScope.containerOf(
-      tester.element(find.byType(ServersTab)),
-    );
-    Focus.of(tester.element(find.byIcon(Icons.expand_more_rounded).first))
-        .requestFocus();
-    await tester.pump();
-    await tester.sendKeyEvent(LogicalKeyboardKey.select);
-    await tester.pump();
-    expect(container.read(collapsedServerGroupsProvider)['s1'], isTrue);
-    await tester.pump(const Duration(seconds: 2));
-  });
+  testWidgets(
+    'на телевизоре группа сворачивается пультом: фокус на стрелке и OK',
+    (tester) async {
+      PlatformBootstrap.debugIsTelevisionOverride = true;
+      addTearDown(() => PlatformBootstrap.debugIsTelevisionOverride = null);
+      await _pumpServers(tester, _FakeSubs.new);
+      await tester.pump(const Duration(seconds: 1));
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(ServersTab)),
+      );
+      Focus.of(
+        tester.element(find.byIcon(Icons.expand_more_rounded).first),
+      ).requestFocus();
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.select);
+      await tester.pump();
+      expect(container.read(collapsedServerGroupsProvider)['s1'], isTrue);
+      await tester.pump(const Duration(seconds: 2));
+    },
+  );
 }

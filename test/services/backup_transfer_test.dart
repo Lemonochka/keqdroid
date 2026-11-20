@@ -8,11 +8,11 @@ import 'package:keqdroid/services/backup_transfer.dart';
 
 // настоящий сокет на петле: сервер слушает 127.0.0.1, а в код подставляем частный адрес только для разбора ссылки
 BackupTransferLink _local(BackupTransferLink link) => BackupTransferLink(
-      host: '127.0.0.1',
-      port: link.port,
-      direction: link.direction,
-      key: link.key,
-    );
+  host: '127.0.0.1',
+  port: link.port,
+  direction: link.direction,
+  key: link.key,
+);
 
 final _payload = utf8.encode('{"format":"keqdis_backup","secret":"token-42"}');
 
@@ -34,7 +34,12 @@ void main() {
 
     test('a code pointing outside the home network is refused', () {
       final key = base64Url.encode(List<int>.filled(32, 1)).replaceAll('=', '');
-      for (final host in ['8.8.8.8', 'evil.example', '100.64.0.1', '127.0.0.1']) {
+      for (final host in [
+        '8.8.8.8',
+        'evil.example',
+        '100.64.0.1',
+        '127.0.0.1',
+      ]) {
         expect(
           BackupTransferLink.parse('keqdroid://backup?h=$host&p=1&d=r&k=$key'),
           isNull,
@@ -42,7 +47,9 @@ void main() {
         );
       }
       expect(
-        BackupTransferLink.parse('keqdroid://backup?h=10.0.0.2&p=80&d=r&k=short'),
+        BackupTransferLink.parse(
+          'keqdroid://backup?h=10.0.0.2&p=80&d=r&k=short',
+        ),
         isNull,
       );
       expect(
@@ -101,33 +108,39 @@ void main() {
     expect(received, 1, reason: 'the right device still gets through');
   });
 
-  test('the giving screen hands its backup only to the device with the code',
-      () async {
-    final given = Completer<void>();
-    final server = await BackupTransferServer.start(
-      lanAddress: '192.168.1.47',
-      direction: BackupTransferDirection.give,
-      provide: () async => _payload,
-      onGiven: given.complete,
-      bindAddress: InternetAddress.loopbackIPv4,
-    );
-    addTearDown(server.close);
+  test(
+    'the giving screen hands its backup only to the device with the code',
+    () async {
+      final given = Completer<void>();
+      final server = await BackupTransferServer.start(
+        lanAddress: '192.168.1.47',
+        direction: BackupTransferDirection.give,
+        provide: () async => _payload,
+        onGiven: given.complete,
+        bindAddress: InternetAddress.loopbackIPv4,
+      );
+      addTearDown(server.close);
 
-    // чужой в сети без ключа: отказ, и код после него всё ещё действует
-    final client = HttpClient();
-    addTearDown(client.close);
-    final probe = await (await client.get('127.0.0.1', server.link.port, '/backup')).close();
-    await probe.drain<void>();
-    expect(probe.statusCode, HttpStatus.forbidden);
+      // чужой в сети без ключа: отказ, и код после него всё ещё действует
+      final client = HttpClient();
+      addTearDown(client.close);
+      final probe = await (await client.get(
+        '127.0.0.1',
+        server.link.port,
+        '/backup',
+      )).close();
+      await probe.drain<void>();
+      expect(probe.statusCode, HttpStatus.forbidden);
 
-    expect(await fetchBackup(_local(server.link)), _payload);
-    // сервер отмечает выдачу, когда дописал ответ, это может быть позже, чем клиент его прочёл
-    await given.future.timeout(const Duration(seconds: 5));
-    await expectLater(
-      fetchBackup(_local(server.link)),
-      throwsA(isA<BackupTransferException>()),
-    );
-  });
+      expect(await fetchBackup(_local(server.link)), _payload);
+      // сервер отмечает выдачу, когда дописал ответ, это может быть позже, чем клиент его прочёл
+      await given.future.timeout(const Duration(seconds: 5));
+      await expectLater(
+        fetchBackup(_local(server.link)),
+        throwsA(isA<BackupTransferException>()),
+      );
+    },
+  );
 
   test('nothing in the traffic shows the backup or the key', () async {
     final sealed = await sealForTransfer(_payload, List<int>.filled(32, 5));

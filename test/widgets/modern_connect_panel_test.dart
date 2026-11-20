@@ -29,18 +29,19 @@ class _FakeServers extends ServersNotifier {
 
   @override
   ServersState build() => ServersState(
-        servers: [
-          ServerItem(
-            id: 'pl',
-            config: 'vless://00000000-0000-0000-0000-000000000000@pl.example'
-                '.com:443#Poland',
-            type: ServerItemType.manual,
-            pingMs: 44,
-            lastTestedAt: DateTime(2026),
-          ),
-        ],
-        activeServerId: 'pl',
-      );
+    servers: [
+      ServerItem(
+        id: 'pl',
+        config:
+            'vless://00000000-0000-0000-0000-000000000000@pl.example'
+            '.com:443#Poland',
+        type: ServerItemType.manual,
+        pingMs: 44,
+        lastTestedAt: DateTime(2026),
+      ),
+    ],
+    activeServerId: 'pl',
+  );
 }
 
 // боком плашке достаётся узкая колонка, пинг рядом с именем её переполняет
@@ -50,7 +51,8 @@ class _FakeServersNoPing extends _FakeServers {
     final state = super.build();
     return ServersState(
       servers: [
-        for (final s in state.servers) s.copyWith(pingMs: null, lastTestedAt: null),
+        for (final s in state.servers)
+          s.copyWith(pingMs: null, lastTestedAt: null),
       ],
       activeServerId: state.activeServerId,
     );
@@ -281,44 +283,43 @@ void main() {
   }
 
   for (final modern in [false, true]) {
-    testWidgets(
-      'строка трафика вытекает каплей и втекает обратно, '
-      '${modern ? 'модерн' : 'легаси'}',
-      (tester) async {
-        const connected = VpnState(status: VpnStatus.connected);
-        await _pump(tester, modern: modern, vpn: connected);
-        final strip = find.byType(StatStrip);
-        // цифры проявляются, только когда капля уже растеклась
-        final fading = find.ancestor(
-          of: strip,
-          matching: find.byWidgetPredicate((w) => w is Opacity && w.opacity < 1),
-        );
-        final rest = tester.getTopLeft(strip).dy;
-        expect(fading, findsNothing);
-        final vpn = ProviderScope.containerOf(
-          tester.element(find.byType(ServersTab)),
-        ).read(vpnStateProvider.notifier) as _FakeVpn;
+    testWidgets('строка трафика вытекает каплей и втекает обратно, '
+        '${modern ? 'модерн' : 'легаси'}', (tester) async {
+      const connected = VpnState(status: VpnStatus.connected);
+      await _pump(tester, modern: modern, vpn: connected);
+      final strip = find.byType(StatStrip);
+      // цифры проявляются, только когда капля уже растеклась
+      final fading = find.ancestor(
+        of: strip,
+        matching: find.byWidgetPredicate((w) => w is Opacity && w.opacity < 1),
+      );
+      final rest = tester.getTopLeft(strip).dy;
+      expect(fading, findsNothing);
+      final vpn =
+          ProviderScope.containerOf(
+                tester.element(find.byType(ServersTab)),
+              ).read(vpnStateProvider.notifier)
+              as _FakeVpn;
 
-        vpn.put(const VpnState(status: VpnStatus.disconnected));
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 120));
-        expect(fading, findsOneWidget);
-        for (var i = 0; i < 15; i++) {
-          await tester.pump(const Duration(milliseconds: 100));
-        }
-        expect(strip, findsNothing);
+      vpn.put(const VpnState(status: VpnStatus.disconnected));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 120));
+      expect(fading, findsOneWidget);
+      for (var i = 0; i < 15; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(strip, findsNothing);
 
-        vpn.put(connected);
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 120));
-        expect(fading, findsOneWidget);
-        for (var i = 0; i < 15; i++) {
-          await tester.pump(const Duration(milliseconds: 100));
-        }
-        expect(fading, findsNothing);
-        expect(tester.getTopLeft(strip).dy, closeTo(rest, 0.5));
-      },
-    );
+      vpn.put(connected);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 120));
+      expect(fading, findsOneWidget);
+      for (var i = 0; i < 15; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(fading, findsNothing);
+      expect(tester.getTopLeft(strip).dy, closeTo(rest, 0.5));
+    });
   }
 
   testWidgets('нажатие на пинг в плашке перепинговывает сервер', (
@@ -374,11 +375,16 @@ void main() {
         if (!beside) {
           final intrinsic = (tester.renderObject(name) as RenderBox)
               .getMaxIntrinsicWidth(double.infinity);
-          expect(tester.getSize(name).width, greaterThanOrEqualTo(intrinsic - 0.5));
+          expect(
+            tester.getSize(name).width,
+            greaterThanOrEqualTo(intrinsic - 0.5),
+          );
         }
-        final button = tester.getRect(find.byWidgetPredicate(
-          (w) => w.runtimeType.toString() == '_ConnectButton',
-        ));
+        final button = tester.getRect(
+          find.byWidgetPredicate(
+            (w) => w.runtimeType.toString() == '_ConnectButton',
+          ),
+        );
         final plaque = tester.getRect(name);
         if (beside) {
           expect(plaque.center.dy, inInclusiveRange(button.top, button.bottom));

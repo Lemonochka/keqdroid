@@ -36,7 +36,11 @@ class ExpressiveToggleButton extends StatefulWidget {
 
   @visibleForTesting
   static double cornerAt({required double selected, required double pressed}) {
-    final rest = lerpDouble(pillCorner, squareCorner, selected.clamp(0.0, 1.0))!;
+    final rest = lerpDouble(
+      pillCorner,
+      squareCorner,
+      selected.clamp(0.0, 1.0),
+    )!;
     return lerpDouble(rest, pressedCorner, pressed.clamp(0.0, 1.0))!;
   }
 

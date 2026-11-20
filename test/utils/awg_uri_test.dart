@@ -11,7 +11,8 @@ void main() {
   const priv = '10YOue8MajJuVp5aQVVYv9Q7syNlHr/bTIsMkkRL/6M=';
   const pub = 'bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=';
 
-  const warp = 'wg://engage.cloudflareclient.com:4500'
+  const warp =
+      'wg://engage.cloudflareclient.com:4500'
       '?private_key=10YOue8MajJuVp5aQVVYv9Q7syNlHr/bTIsMkkRL/6M%3D'
       '&local_address=172.16.0.2/32-2606:4700:110:8620:87e2:71e1:8d9d:1bc2/128'
       '&mtu=1280&enable_amnezia=true&jc=4&jmin=40&jmax=70'
@@ -157,8 +158,10 @@ void main() {
       ),
     );
     expect(
-      () => AwgUri.toConf('wg://203.0.113.10?private_key=$priv&public_key=$pub'
-          '&address=10.8.0.2/32'),
+      () => AwgUri.toConf(
+        'wg://203.0.113.10?private_key=$priv&public_key=$pub'
+        '&address=10.8.0.2/32',
+      ),
       throwsA(
         isA<ArgumentError>().having(
           (e) => '${e.message}',

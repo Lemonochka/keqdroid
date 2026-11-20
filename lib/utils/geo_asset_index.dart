@@ -3,10 +3,7 @@ import 'dart:io';
 import 'geo_dat_reader.dart';
 
 class GeoAssetIndex {
-  const GeoAssetIndex({
-    required this.geoipCodes,
-    required this.geositeCodes,
-  });
+  const GeoAssetIndex({required this.geoipCodes, required this.geositeCodes});
 
   // пустой индекс отключает проверку: лучше отдать конфиг ядру, чем выкинуть рабочее правило
   static const empty = GeoAssetIndex(geoipCodes: {}, geositeCodes: {});

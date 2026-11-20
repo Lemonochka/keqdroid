@@ -29,8 +29,9 @@ class _FakeVpn extends VpnStateNotifier {
 }
 
 void main() {
-  testWidgets('на Android «Обновить» сразу ставит уведомление с загрузкой',
-      (tester) async {
+  testWidgets('на Android «Обновить» сразу ставит уведомление с загрузкой', (
+    tester,
+  ) async {
     UpdateDownloadNotice.debugSupported = true;
     addTearDown(() => UpdateDownloadNotice.debugSupported = null);
     final calls = <MethodCall>[];
@@ -41,8 +42,12 @@ void main() {
         return null;
       },
     );
-    addTearDown(() => tester.binding.defaultBinaryMessenger
-        .setMockMethodCallHandler(VpnNativeBridge.channel, null));
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        VpnNativeBridge.channel,
+        null,
+      ),
+    );
     SharedPreferences.setMockInitialValues({});
     final storage = _StuckStorage(await SharedPreferences.getInstance());
     final info = UpdateInfo(

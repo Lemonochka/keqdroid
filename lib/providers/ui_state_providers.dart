@@ -82,69 +82,71 @@ class DesktopWindowVisibleNotifier extends Notifier<bool> {
 
 final subscriptionRefreshingIdsProvider =
     NotifierProvider<SubscriptionRefreshingIdsNotifier, Set<String>>(
-  SubscriptionRefreshingIdsNotifier.new,
-);
+      SubscriptionRefreshingIdsNotifier.new,
+    );
 
 final subscriptionRefreshErrorsProvider =
     NotifierProvider<SubscriptionRefreshErrorsNotifier, Map<String, Object>>(
-  SubscriptionRefreshErrorsNotifier.new,
-);
+      SubscriptionRefreshErrorsNotifier.new,
+    );
 
 final pingingScopesProvider =
     NotifierProvider<PingingScopesNotifier, Set<String>>(
-  PingingScopesNotifier.new,
-);
+      PingingScopesNotifier.new,
+    );
 
 final pingingServerIdsProvider =
     NotifierProvider<PingingServerIdsNotifier, Set<String>>(
-  PingingServerIdsNotifier.new,
-);
+      PingingServerIdsNotifier.new,
+    );
 
 final collapsedServerGroupsProvider =
     NotifierProvider<CollapsedServerGroupsNotifier, Map<String, bool>>(
-  CollapsedServerGroupsNotifier.new,
-);
+      CollapsedServerGroupsNotifier.new,
+    );
 
 final collapsedSubscriptionCardsProvider =
     NotifierProvider<CollapsedSubscriptionCardsNotifier, Map<String, bool>>(
-  CollapsedSubscriptionCardsNotifier.new,
-);
+      CollapsedSubscriptionCardsNotifier.new,
+    );
 
 final serverGroupsTabProvider =
     NotifierProvider<ServerGroupsTabNotifier, Map<String, bool>>(
-  ServerGroupsTabNotifier.new,
-);
+      ServerGroupsTabNotifier.new,
+    );
 
 final autoSkipPickingProvider =
     NotifierProvider<AutoSkipPickingNotifier, String?>(
-  AutoSkipPickingNotifier.new,
-);
+      AutoSkipPickingNotifier.new,
+    );
 
 final expandedRoutingProfilesProvider =
     NotifierProvider<ExpandedRoutingProfilesNotifier, Map<String, bool>>(
-  ExpandedRoutingProfilesNotifier.new,
-);
+      ExpandedRoutingProfilesNotifier.new,
+    );
 
 final subscriptionReorderInProgressProvider =
     NotifierProvider<SubscriptionReorderInProgressNotifier, bool>(
-  SubscriptionReorderInProgressNotifier.new,
+      SubscriptionReorderInProgressNotifier.new,
+    );
+
+final homeTabIndexProvider = NotifierProvider<HomeTabIndexNotifier, int>(
+  HomeTabIndexNotifier.new,
 );
 
-final homeTabIndexProvider =
-    NotifierProvider<HomeTabIndexNotifier, int>(HomeTabIndexNotifier.new);
-
-final homeTabPageProvider =
-    NotifierProvider<HomeTabPageNotifier, double>(HomeTabPageNotifier.new);
+final homeTabPageProvider = NotifierProvider<HomeTabPageNotifier, double>(
+  HomeTabPageNotifier.new,
+);
 
 final vpnServerSwitchInProgressProvider =
     NotifierProvider<VpnServerSwitchInProgressNotifier, bool>(
-  VpnServerSwitchInProgressNotifier.new,
-);
+      VpnServerSwitchInProgressNotifier.new,
+    );
 
 final desktopWindowVisibleProvider =
     NotifierProvider<DesktopWindowVisibleNotifier, bool>(
-  DesktopWindowVisibleNotifier.new,
-);
+      DesktopWindowVisibleNotifier.new,
+    );
 
 final desktopUiVisibleProvider = Provider<bool>((ref) {
   return ref.watch(desktopWindowVisibleProvider);
@@ -158,4 +160,6 @@ class ConnectRehearsalNotifier extends Notifier<bool> {
 }
 
 final connectRehearsalProvider =
-    NotifierProvider<ConnectRehearsalNotifier, bool>(ConnectRehearsalNotifier.new);
+    NotifierProvider<ConnectRehearsalNotifier, bool>(
+      ConnectRehearsalNotifier.new,
+    );

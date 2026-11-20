@@ -33,36 +33,34 @@ class _ServersListPanel extends ConsumerWidget {
       ))
         switch (group.kind) {
           ServerGroupKind.chains => _ServerGroupEntry(
-              key: const ValueKey('server-group-chains'),
-              subscription: null,
-              servers: group.servers,
-              groupKey: group.key,
-              groupTitle: context.l10n.chainGroupTitle,
-              onRefresh: null,
-              onPingAll: () => ref.read(serversProvider.notifier).pingChains(),
-            ),
+            key: const ValueKey('server-group-chains'),
+            subscription: null,
+            servers: group.servers,
+            groupKey: group.key,
+            groupTitle: context.l10n.chainGroupTitle,
+            onRefresh: null,
+            onPingAll: () => ref.read(serversProvider.notifier).pingChains(),
+          ),
           ServerGroupKind.subscription => _ServerGroupEntry(
-              key: ValueKey('server-group-${group.key}'),
-              subscription: group.subscription,
-              servers: group.servers,
-              onRefresh: () => ref
-                  .read(subscriptionsProvider.notifier)
-                  .refreshTracked(group.subscription!),
-              onPingAll: () => ref
-                  .read(serversProvider.notifier)
-                  .pingSubscription(group.key),
-            ),
+            key: ValueKey('server-group-${group.key}'),
+            subscription: group.subscription,
+            servers: group.servers,
+            onRefresh: () => ref
+                .read(subscriptionsProvider.notifier)
+                .refreshTracked(group.subscription!),
+            onPingAll: () =>
+                ref.read(serversProvider.notifier).pingSubscription(group.key),
+          ),
           ServerGroupKind.manual => _ServerGroupEntry(
-              key: const ValueKey('server-group-manual'),
-              subscription: null,
-              servers: group.servers,
-              onRefresh: null,
-              onPingAll: () =>
-                  ref.read(serversProvider.notifier).pingSubscription(null),
-            ),
+            key: const ValueKey('server-group-manual'),
+            subscription: null,
+            servers: group.servers,
+            onRefresh: null,
+            onPingAll: () =>
+                ref.read(serversProvider.notifier).pingSubscription(null),
+          ),
         },
     ];
-
 
     // передаём сверху: подписка на провайдер внутри карточки пересобрала бы и список, уходящий при смене
     final wantedColumns = ref.watch(
@@ -128,10 +126,7 @@ class _ServersListPanel extends ConsumerWidget {
               child: child,
             ),
           ),
-          child: KeyedSubtree(
-            key: ValueKey(layout),
-            child: list,
-          ),
+          child: KeyedSubtree(key: ValueKey(layout), child: list),
         );
       },
     );
@@ -163,8 +158,7 @@ class _GroupHeaderBackground extends StatelessWidget {
     Subscription? subscription, {
     required bool collapsed,
     bool groups = false,
-  }) =>
-      heightAt(subscription, collapsed ? 0 : 1, groups: groups);
+  }) => heightAt(subscription, collapsed ? 0 : 1, groups: groups);
 
   static double heightAt(
     Subscription? subscription,
@@ -229,8 +223,9 @@ class _GroupHeaderBackground extends StatelessWidget {
       ),
       // картинка и затемнение сглаживались по краю каждое само, и под картинкой светилась полоска до серверов (ПК);
       // сперва слой, потом скругление, а картинка шире шапки на 1 dp
-      clipBehavior:
-          PlatformBootstrap.isDesktop ? Clip.antiAliasWithSaveLayer : Clip.antiAlias,
+      clipBehavior: PlatformBootstrap.isDesktop
+          ? Clip.antiAliasWithSaveLayer
+          : Clip.antiAlias,
       child: Stack(
         fit: StackFit.expand,
         clipBehavior: Clip.none,
@@ -323,25 +318,27 @@ class _ListEdgeFadeState extends State<_ListEdgeFade> {
     return ValueListenableBuilder<double>(
       valueListenable: FloatingBar.bottomInset,
       builder: (context, barInset, _) => NotificationListener<ScrollNotification>(
-      onNotification: _onScroll,
-      child: EdgeFadeMask(
-        // сверху в покое под краем пусто, затухание растёт с прокруткой
-        top: _progress == 0
-            ? 0
-            : _listTopPadding + (35 - _listTopPadding) * _progress,
-        // без излома хватает короткого: полностью скрыт только системный отступ
-        bottom: 28,
-        // под плавающей полосой отступ тела включает её саму, а гасить надо только системный
-        bottomHidden: floating ? barInset : MediaQuery.paddingOf(context).bottom,
-        topOutline: widget.underPanel
-            ? const EdgeFadeOutline(
-                inset: _ModernConnectPanel._margin,
-                radius: ExpressiveShape.extraLarge,
-                gap: _ModernConnectPanel._gapBelow,
-              )
-            : null,
-        child: widget.child,
-      ),
+        onNotification: _onScroll,
+        child: EdgeFadeMask(
+          // сверху в покое под краем пусто, затухание растёт с прокруткой
+          top: _progress == 0
+              ? 0
+              : _listTopPadding + (35 - _listTopPadding) * _progress,
+          // без излома хватает короткого: полностью скрыт только системный отступ
+          bottom: 28,
+          // под плавающей полосой отступ тела включает её саму, а гасить надо только системный
+          bottomHidden: floating
+              ? barInset
+              : MediaQuery.paddingOf(context).bottom,
+          topOutline: widget.underPanel
+              ? const EdgeFadeOutline(
+                  inset: _ModernConnectPanel._margin,
+                  radius: ExpressiveShape.extraLarge,
+                  gap: _ModernConnectPanel._gapBelow,
+                )
+              : null,
+          child: widget.child,
+        ),
       ),
     );
   }
@@ -376,8 +373,9 @@ class _ServerListLayout {
     final columns = ServerRow.fittingColumns(width, textScaler, wantedColumns);
     if (columns == 1) return list;
     final cell = ServerRow.columnCell(width, columns);
-    final kind =
-        ServerRow.fitsInline(cell, textScaler) ? _RowKind.grid : _RowKind.cards;
+    final kind = ServerRow.fitsInline(cell, textScaler)
+        ? _RowKind.grid
+        : _RowKind.cards;
     return _ServerListLayout._(kind, columns);
   }
 
@@ -456,9 +454,9 @@ void _serverGroupSortMenu(
                         title: mode.label(l10n),
                         selected: mode == current,
                         onTap: () {
-                          ref.read(serverSortModesProvider.notifier).update(
-                                (m) => {...m, collapseKey: mode.name},
-                              );
+                          ref
+                              .read(serverSortModesProvider.notifier)
+                              .update((m) => {...m, collapseKey: mode.name});
                           Navigator.of(ctx).pop();
                         },
                       ),
@@ -473,7 +471,6 @@ void _serverGroupSortMenu(
     },
   );
 }
-
 
 class _ServerGroupHeader extends ConsumerWidget {
   const _ServerGroupHeader({
@@ -538,13 +535,13 @@ class _ServerGroupHeader extends ConsumerWidget {
         (sub != null
             ? '${sub.name}  |  ${ltrIsolate(sub.usageLabel)}'
             : context.l10n.serversManualGroup);
-    final template =
-        sub == null ? null : ref.watch(subscriptionTemplateProvider(sub.id));
-    final picking =
-        sub != null && ref.watch(autoSkipPickingProvider) == sub.id;
+    final template = sub == null
+        ? null
+        : ref.watch(subscriptionTemplateProvider(sub.id));
+    final picking = sub != null && ref.watch(autoSkipPickingProvider) == sub.id;
     return ServerGroupAnchor(
-        groupKey: collapseKey,
-        child: RepaintBoundary(
+      groupKey: collapseKey,
+      child: RepaintBoundary(
         child: AnimatedBuilder(
           animation: openness,
           builder: (context, row) {
@@ -554,7 +551,8 @@ class _ServerGroupHeader extends ConsumerWidget {
             // Авто тает в первой половине сворачивания, а не уезжает за край
             final auto = ((open - 0.4) / 0.6).clamp(0.0, 1.0);
             return SizedBox(
-              height: _GroupHeaderBackground.heightAt(
+              height:
+                  _GroupHeaderBackground.heightAt(
                     sub,
                     open,
                     groups: template != null,
@@ -597,243 +595,249 @@ class _ServerGroupHeader extends ConsumerWidget {
             );
           },
           child: SizedBox(
-                  height: _subCardRowHeight,
-                  child: Center(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 14, 0),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Expanded(
-                  child: MergeSemantics(
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: toggleFold,
-                      onLongPress: () {
-                        HapticFeedback.mediumImpact();
-                        _serverGroupSortMenu(ref, context, collapseKey, sortMode);
-                      },
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          TvTappable(
-                            onTap: toggleFold,
-                            radius: BorderRadius.circular(
-                              _subCardHeaderIconSize / 2,
-                            ),
-                            child: SizedBox(
-                              width: _subCardHeaderIconSize,
-                              height: _subCardHeaderIconSize,
-                              child: Center(
-                                child: AnimatedRotation(
-                                  turns: collapsed ? -0.25 : 0,
-                                  duration: ExpressiveMotion.durationFast,
-                                  curve: ExpressiveMotion.emphasized,
-                                  child: Builder(
-                                    builder: (context) => Icon(
-                                      Icons.expand_more_rounded,
-                                      size: ExpressiveIconSize.medium,
-                                      color: TvFocusHighlight.containerOf(
-                                                context) !=
-                                              null
-                                          ? Theme.of(context)
-                                              .colorScheme
-                                              .onSurface
-                                          : textLightColor,
+            height: _subCardRowHeight,
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 14, 0),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: MergeSemantics(
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: toggleFold,
+                          onLongPress: () {
+                            HapticFeedback.mediumImpact();
+                            _serverGroupSortMenu(
+                              ref,
+                              context,
+                              collapseKey,
+                              sortMode,
+                            );
+                          },
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              TvTappable(
+                                onTap: toggleFold,
+                                radius: BorderRadius.circular(
+                                  _subCardHeaderIconSize / 2,
+                                ),
+                                child: SizedBox(
+                                  width: _subCardHeaderIconSize,
+                                  height: _subCardHeaderIconSize,
+                                  child: Center(
+                                    child: AnimatedRotation(
+                                      turns: collapsed ? -0.25 : 0,
+                                      duration: ExpressiveMotion.durationFast,
+                                      curve: ExpressiveMotion.emphasized,
+                                      child: Builder(
+                                        builder: (context) => Icon(
+                                          Icons.expand_more_rounded,
+                                          size: ExpressiveIconSize.medium,
+                                          color:
+                                              TvFocusHighlight.containerOf(
+                                                    context,
+                                                  ) !=
+                                                  null
+                                              ? Theme.of(
+                                                  context,
+                                                ).colorScheme.onSurface
+                                              : textLightColor,
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ),
                               ),
+                              const SizedBox(width: ExpressiveSpacing.small),
+                              Expanded(
+                                child: Text(
+                                  title,
+                                  style: Theme.of(context).textTheme.titleSmall
+                                      ?.copyWith(color: textLightColor),
+                                  textDirection: contentDirection(
+                                    title,
+                                    fallback: Directionality.of(context),
+                                  ),
+                                  textAlign: uiStartAlign(context),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    Padding(
+                      padding: const EdgeInsetsDirectional.only(
+                        start: ExpressiveSpacing.small,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (sub != null && sub.autoUpdate) ...[
+                            TvFocusHighlight(
+                              radius: BorderRadius.circular(
+                                ExpressiveShape.full,
+                              ),
+                              child: Builder(
+                                builder: (context) {
+                                  final focusFill =
+                                      TvFocusHighlight.containerOf(context);
+                                  return Material(
+                                    color:
+                                        focusFill ??
+                                        accentColor.withValues(alpha: 0.18),
+                                    shape: ExpressiveShape.border(
+                                      ExpressiveShape.full,
+                                    ),
+                                    child: InkWell(
+                                      onTap: () => showUpdateIntervalSheet(
+                                        context,
+                                        ref,
+                                        sub,
+                                      ),
+                                      customBorder: ExpressiveShape.border(
+                                        ExpressiveShape.full,
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: ExpressiveSpacing.small,
+                                          vertical:
+                                              ExpressiveSpacing.extraSmall,
+                                        ),
+                                        child: Text(
+                                          context.l10n
+                                              .subscriptionsIntervalShort(
+                                                sub.updateIntervalHours,
+                                              ),
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .labelSmall
+                                              ?.copyWith(
+                                                color: focusFill != null
+                                                    ? Theme.of(
+                                                        context,
+                                                      ).colorScheme.onSurface
+                                                    : accentColor,
+                                              ),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: _subCardHeaderIntervalGap),
+                          ],
+                          _subCardHeaderIconButton(
+                            context,
+                            tooltip: AppLocalizations.of(
+                              context,
+                            )!.serversSortTitle,
+                            onPressed: () => _serverGroupSortMenu(
+                              ref,
+                              context,
+                              collapseKey,
+                              sortMode,
+                            ),
+                            color: sortMode == ServerSortMode.defaultOrder
+                                ? textLightColor
+                                : accentColor,
+                            icon: SeasonalIcon(
+                              sortMode == ServerSortMode.defaultOrder
+                                  ? Icons.sort_rounded
+                                  : sortMode.icon,
+                              size: ExpressiveIconSize.medium,
                             ),
                           ),
-                          const SizedBox(width: ExpressiveSpacing.small),
-                          Expanded(
-                            child: Text(
-                              title,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleSmall
-                                  ?.copyWith(color: textLightColor),
-                              textDirection: contentDirection(
-                                title,
-                                fallback: Directionality.of(context),
-                              ),
-                              textAlign: uiStartAlign(context),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
+                          const SizedBox(width: _subCardHeaderActionGap),
+                          if (onRefresh != null) ...[
+                            _subCardHeaderIconButton(
+                              context,
+                              tooltip: AppLocalizations.of(
+                                context,
+                              )!.serversRefreshSubscription,
+                              color: hasRefreshError
+                                  ? AppTheme.red(context)
+                                  : textLightColor,
+                              onPressed: isRefreshing
+                                  ? null
+                                  : () async {
+                                      try {
+                                        await onRefresh!.call();
+                                      } catch (e) {
+                                        if (!context.mounted) return;
+                                        AppSnack.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text(_shortError(e)),
+                                            backgroundColor: AppTheme.red(
+                                              context,
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    },
+                              icon: isRefreshing
+                                  ? ShapeLoadingIndicator(
+                                      size: ExpressiveIconSize.medium,
+                                      color: accentColor,
+                                    )
+                                  : const SeasonalIcon(
+                                      Icons.refresh_rounded,
+                                      size: ExpressiveIconSize.medium,
+                                    ),
                             ),
+                            const SizedBox(width: _subCardHeaderActionGap),
+                          ],
+                          _subCardHeaderIconButton(
+                            context,
+                            tooltip: AppLocalizations.of(
+                              context,
+                            )!.serversPingAll,
+                            color: textLightColor,
+                            onPressed: isPingingAll
+                                ? null
+                                : () async {
+                                    try {
+                                      await onPingAll();
+                                    } catch (e) {
+                                      if (!context.mounted) return;
+                                      AppSnack.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text(_shortError(e)),
+                                          backgroundColor: AppTheme.red(
+                                            context,
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                  },
+                            icon: isPingingAll
+                                ? ShapeLoadingIndicator(
+                                    size: ExpressiveIconSize.medium,
+                                    color: accentColor,
+                                  )
+                                : const SeasonalIcon(
+                                    Icons.network_ping_rounded,
+                                    size: ExpressiveIconSize.medium,
+                                  ),
                           ),
                         ],
                       ),
                     ),
-                  ),
+                  ],
                 ),
-
-                Padding(
-                  padding: const EdgeInsetsDirectional.only(
-                    start: ExpressiveSpacing.small,
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (sub != null && sub.autoUpdate) ...[
-                        TvFocusHighlight(
-                          radius: BorderRadius.circular(ExpressiveShape.full),
-                          child: Builder(builder: (context) {
-                            final focusFill =
-                                TvFocusHighlight.containerOf(context);
-                            return Material(
-                              color: focusFill ??
-                                  accentColor.withValues(alpha: 0.18),
-                              shape: ExpressiveShape.border(
-                                ExpressiveShape.full,
-                              ),
-                              child: InkWell(
-                                onTap: () => showUpdateIntervalSheet(
-                                  context,
-                                  ref,
-                                  sub,
-                                ),
-                                customBorder: ExpressiveShape.border(
-                                  ExpressiveShape.full,
-                                ),
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: ExpressiveSpacing.small,
-                                    vertical: ExpressiveSpacing.extraSmall,
-                                  ),
-                                  child: Text(
-                                    context.l10n.subscriptionsIntervalShort(
-                                      sub.updateIntervalHours,
-                                    ),
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .labelSmall
-                                        ?.copyWith(
-                                          color: focusFill != null
-                                              ? Theme.of(context)
-                                                  .colorScheme
-                                                  .onSurface
-                                              : accentColor,
-                                        ),
-                                  ),
-                                ),
-                              ),
-                            );
-                          }),
-                        ),
-                        const SizedBox(
-                          width: _subCardHeaderIntervalGap,
-                        ),
-                      ],
-                      _subCardHeaderIconButton(
-                        context,
-                        tooltip:
-                            AppLocalizations.of(context)!.serversSortTitle,
-                        onPressed: () => _serverGroupSortMenu(ref,
-                          context,
-                          collapseKey,
-                          sortMode,
-                        ),
-                        color: sortMode == ServerSortMode.defaultOrder
-                            ? textLightColor
-                            : accentColor,
-                        icon: SeasonalIcon(
-                          sortMode == ServerSortMode.defaultOrder
-                              ? Icons.sort_rounded
-                              : sortMode.icon,
-                          size: ExpressiveIconSize.medium,
-                        ),
-                      ),
-                      const SizedBox(width: _subCardHeaderActionGap),
-                      if (onRefresh != null) ...[
-                        _subCardHeaderIconButton(
-                          context,
-                          tooltip: AppLocalizations.of(
-                            context,
-                          )!.serversRefreshSubscription,
-                          color: hasRefreshError
-                              ? AppTheme.red(context)
-                              : textLightColor,
-                          onPressed: isRefreshing
-                              ? null
-                              : () async {
-                                  try {
-                                    await onRefresh!.call();
-                                  } catch (e) {
-                                    if (!context.mounted) return;
-                                    AppSnack.of(
-                                      context,
-                                    ).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          _shortError(e),
-                                        ),
-                                        backgroundColor: AppTheme.red(
-                                          context,
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                },
-                          icon: isRefreshing
-                              ? ShapeLoadingIndicator(
-                                  size: ExpressiveIconSize.medium,
-                                  color: accentColor,
-                                )
-                              : const SeasonalIcon(
-                                  Icons.refresh_rounded,
-                                  size: ExpressiveIconSize.medium,
-                                ),
-                        ),
-                        const SizedBox(width: _subCardHeaderActionGap),
-                      ],
-                      _subCardHeaderIconButton(
-                        context,
-                        tooltip: AppLocalizations.of(
-                          context,
-                        )!.serversPingAll,
-                        color: textLightColor,
-                        onPressed: isPingingAll
-                            ? null
-                            : () async {
-                                try {
-                                  await onPingAll();
-                                } catch (e) {
-                                  if (!context.mounted) return;
-                                  AppSnack.of(
-                                    context,
-                                  ).showSnackBar(
-                                    SnackBar(
-                                      content: Text(_shortError(e)),
-                                      backgroundColor: AppTheme.red(
-                                        context,
-                                      ),
-                                    ),
-                                  );
-                                }
-                              },
-                        icon: isPingingAll
-                            ? ShapeLoadingIndicator(
-                                size: ExpressiveIconSize.medium,
-                                color: accentColor,
-                              )
-                            : const SeasonalIcon(
-                                Icons.network_ping_rounded,
-                                size: ExpressiveIconSize.medium,
-                              ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ),
-                ),
-        ),
       ),
-      );
+    );
   }
 }
 
@@ -845,18 +849,18 @@ class _AutoSelectRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SizedBox(
-        height: _GroupHeaderBackground.autoRowHeight,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 14, 0),
-          child: Align(
-            alignment: AlignmentDirectional.centerStart,
-            child: _AutoSelectButton(
-              subscription: subscription,
-              buttonKey: buttonKey,
-            ),
-          ),
+    height: _GroupHeaderBackground.autoRowHeight,
+    child: Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 14, 0),
+      child: Align(
+        alignment: AlignmentDirectional.centerStart,
+        child: _AutoSelectButton(
+          subscription: subscription,
+          buttonKey: buttonKey,
         ),
-      );
+      ),
+    ),
+  );
 }
 
 class _AutoSelectButton extends ConsumerWidget {
@@ -961,10 +965,9 @@ class _AutoSkipPickRow extends ConsumerWidget {
                   child: Text(
                     l10n.serversAutoSkipHint,
                     maxLines: 1,
-                    style: Theme.of(context)
-                        .textTheme
-                        .labelLarge
-                        ?.copyWith(color: AppTheme.textLight(context)),
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: AppTheme.textLight(context),
+                    ),
                   ),
                 ),
               ),
@@ -1087,8 +1090,9 @@ class _AutoRowMorphState extends State<_AutoRowMorph>
     final stretched = ((s1 - s0 - restWidth) / (width / 8)).clamp(0.0, 1.0);
     final tint = _tint.transform(t);
     // долгое нажатие срабатывает под пальцем: Авто ещё нажата, иначе вспыхнула бы светлее
-    final pressed =
-        _c.status == AnimationStatus.forward ? 1 - _release.transform(t) : 0.0;
+    final pressed = _c.status == AnimationStatus.forward
+        ? 1 - _release.transform(t)
+        : 0.0;
     final restCorner = ui.lerpDouble(
       ui.lerpDouble(
         widget.subscription.autoSelect
@@ -1248,21 +1252,19 @@ class _MorphSideClip extends CustomClipper<Path> {
       return Path.combine(
         PathOperation.difference,
         all,
-        Path()
-          ..addRRect(
-            RRect.fromRectAndRadius(pill.rect, Radius.circular(pill.corner)),
-          ),
+        Path()..addRRect(
+          RRect.fromRectAndRadius(pill.rect, Radius.circular(pill.corner)),
+        ),
       );
     }
     // настоящая Готово не выглядывает, когда задний край на отскоке заходит за неё;
     // ровно по краю, с запасом в 1 dp буква подсказки торчала из-под скругления Авто
     final edge = min(pill.startEdge, pill.toStart - 1);
-    return Path()
-      ..addRect(
-        pill.ltr
-            ? Rect.fromLTRB(0, 0, edge, size.height)
-            : Rect.fromLTRB(size.width - edge, 0, size.width, size.height),
-      );
+    return Path()..addRect(
+      pill.ltr
+          ? Rect.fromLTRB(0, 0, edge, size.height)
+          : Rect.fromLTRB(size.width - edge, 0, size.width, size.height),
+    );
   }
 
   @override
@@ -1358,10 +1360,19 @@ class _MorphPainter extends CustomPainter {
       ..clipPath(path);
     // старая надпись уходит с задним краем, новая встаёт у переднего: посередине не слипаются
     final y = r.center.dy;
-    final fromX =
-        pill.ltr ? r.left + pill.fromWidth / 2 : r.right - pill.fromWidth / 2;
-    final toX = pill.ltr ? r.right - pill.toWidth / 2 : r.left + pill.toWidth / 2;
-    _label(canvas, Offset(fromX, y), fromLabel, ink, 1 - _fromText.transform(t));
+    final fromX = pill.ltr
+        ? r.left + pill.fromWidth / 2
+        : r.right - pill.fromWidth / 2;
+    final toX = pill.ltr
+        ? r.right - pill.toWidth / 2
+        : r.left + pill.toWidth / 2;
+    _label(
+      canvas,
+      Offset(fromX, y),
+      fromLabel,
+      ink,
+      1 - _fromText.transform(t),
+    );
     _label(canvas, Offset(toX, y), toLabel, ink, _toText.transform(t));
     canvas.restore();
   }
@@ -1529,7 +1540,9 @@ class _SubCardState extends ConsumerState<_SubCard>
             _open,
             target,
             snapToEnd: true,
-            spring: next ? ExpressiveMotion.fold : ExpressiveMotion.spatialDefault,
+            spring: next
+                ? ExpressiveMotion.fold
+                : ExpressiveMotion.spatialDefault,
           );
         }
       },
@@ -1542,11 +1555,12 @@ class _SubCardState extends ConsumerState<_SubCard>
       serversProvider.select((s) => s.activeServerId),
     );
 
-    final template =
-        sub == null ? null : ref.watch(subscriptionTemplateProvider(sub.id));
-    final picking =
-        sub != null && ref.watch(autoSkipPickingProvider) == sub.id;
-    final groupsOpen = template != null &&
+    final template = sub == null
+        ? null
+        : ref.watch(subscriptionTemplateProvider(sub.id));
+    final picking = sub != null && ref.watch(autoSkipPickingProvider) == sub.id;
+    final groupsOpen =
+        template != null &&
         !picking &&
         ref.watch(serverGroupsTabProvider.select((m) => m[sub!.id] ?? false));
 
@@ -1561,12 +1575,12 @@ class _SubCardState extends ConsumerState<_SubCard>
         offsetInGroup: collapsed || groupsOpen
             ? null
             : _GroupHeaderBackground.heightFor(
-                  sub,
-                  collapsed: false,
-                  groups: template != null,
-                ) +
-                widget.layout.gap / 2 +
-                row * widget.rowExtent,
+                    sub,
+                    collapsed: false,
+                    groups: template != null,
+                  ) +
+                  widget.layout.gap / 2 +
+                  row * widget.rowExtent,
       );
     } else {
       ServerGroupAnchors.instance.unregisterActiveServer(collapseKey);
@@ -1574,7 +1588,8 @@ class _SubCardState extends ConsumerState<_SubCard>
 
     final accent = _accent;
     final scheme = Theme.of(context).colorScheme;
-    final groupColor = accent?.surface(scheme.surfaceContainerLow) ??
+    final groupColor =
+        accent?.surface(scheme.surfaceContainerLow) ??
         scheme.surfaceContainerLow;
     final textLightColor = AppTheme.textLight(context);
 
@@ -1613,8 +1628,8 @@ class _SubCardState extends ConsumerState<_SubCard>
                     // всё остальное идёт через группу шаблона, а не через нажатый сервер
                     activeServerId:
                         template?.mainChoice(sub!.groupChoices) != null
-                            ? null
-                            : activeServerId,
+                        ? null
+                        : activeServerId,
                     textLightColor: textLightColor,
                     accent: accent,
                     picking: picking,
@@ -1644,8 +1659,8 @@ class _SubCardState extends ConsumerState<_SubCard>
     // пометки в group старые: на них список не перестраивается
     final now = ref.read(serversProvider).byId;
     bool skipped(ServerItem s) => now[s.id]?.autoSkip ?? s.autoSkip;
-    final last = !skipped(server) &&
-        group.every((s) => s.id == server.id || skipped(s));
+    final last =
+        !skipped(server) && group.every((s) => s.id == server.id || skipped(s));
     if (last) {
       AppSnack.of(context).showSnackBar(
         SnackBar(content: Text(context.l10n.serversAutoSkipKeepOne)),
@@ -1670,7 +1685,9 @@ class _SubCardState extends ConsumerState<_SubCard>
           child: Text(
             context.l10n.serversEmptyGroupHint,
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: textLightColor),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: textLightColor),
           ),
         ),
       );

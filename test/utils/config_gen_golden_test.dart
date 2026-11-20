@@ -94,9 +94,7 @@ void main() {
       return ConfigGeneratorV2.generateConfig(
         'vless://$_uuid@198.51.100.23:443?type=ws&security=tls'
         '&sni=mux.example&host=mux.example&path=%2Fm#mux',
-        _settings.copyWith(
-          xrayCore: const XrayCoreSettings(muxEnabled: true),
-        ),
+        _settings.copyWith(xrayCore: const XrayCoreSettings(muxEnabled: true)),
       );
     });
 
@@ -161,20 +159,24 @@ void main() {
 
     _golden('vmess-ws-tls', () {
       // vmess прячет параметры в base64-json, а не в query.
-      final vmess = base64.encode(utf8.encode(jsonEncode({
-        'v': '2',
-        'ps': 'vmess',
-        'add': '198.51.100.13',
-        'port': '443',
-        'id': _uuid,
-        'aid': '0',
-        'net': 'ws',
-        'type': 'none',
-        'host': 'vmess.example',
-        'path': '/vmess',
-        'tls': 'tls',
-        'sni': 'vmess.example',
-      })));
+      final vmess = base64.encode(
+        utf8.encode(
+          jsonEncode({
+            'v': '2',
+            'ps': 'vmess',
+            'add': '198.51.100.13',
+            'port': '443',
+            'id': _uuid,
+            'aid': '0',
+            'net': 'ws',
+            'type': 'none',
+            'host': 'vmess.example',
+            'path': '/vmess',
+            'tls': 'tls',
+            'sni': 'vmess.example',
+          }),
+        ),
+      );
       return ConfigGeneratorV2.generateConfig('vmess://$vmess', _settings);
     });
 
@@ -193,20 +195,24 @@ void main() {
       // httpupgrade и HTTP-маскировка у vmess не собирались вовсе: сборка знала
       // только ws и grpc. Заодно видно `type` — у vmess это заголовок, а не
       // транспорт.
-      final vmess = base64.encode(utf8.encode(jsonEncode({
-        'v': '2',
-        'ps': 'vmess-hu',
-        'add': '198.51.100.26',
-        'port': '443',
-        'id': _uuid,
-        'aid': '0',
-        'net': 'httpupgrade',
-        'type': 'none',
-        'host': 'hu.example',
-        'path': '/hu',
-        'tls': 'tls',
-        'sni': 'hu.example',
-      })));
+      final vmess = base64.encode(
+        utf8.encode(
+          jsonEncode({
+            'v': '2',
+            'ps': 'vmess-hu',
+            'add': '198.51.100.26',
+            'port': '443',
+            'id': _uuid,
+            'aid': '0',
+            'net': 'httpupgrade',
+            'type': 'none',
+            'host': 'hu.example',
+            'path': '/hu',
+            'tls': 'tls',
+            'sni': 'hu.example',
+          }),
+        ),
+      );
       return ConfigGeneratorV2.generateConfig('vmess://$vmess', _settings);
     });
 
@@ -387,10 +393,7 @@ void main() {
           captureIpv6: true,
           udpTimeoutSec: 120,
           routingMode: AppRoutingMode.onlySelected,
-          managedProcessNames: [
-            'firefox.exe',
-            r'C:\Games\Game One\game.exe',
-          ],
+          managedProcessNames: ['firefox.exe', r'C:\Games\Game One\game.exe'],
           appProcessName: 'keqdroid.exe',
         ),
       );
@@ -524,11 +527,13 @@ void main() {
           name: 'chain',
           hops: [
             ProxyChainHop(
-              config: 'vless://$_uuid@198.51.100.27:443?type=tcp&security=reality'
+              config:
+                  'vless://$_uuid@198.51.100.27:443?type=tcp&security=reality'
                   '&sni=decoy.example&pbk=publickey&sid=aabb&fp=chrome#hop1',
             ),
             const ProxyChainHop(
-              config: 'trojan://pass@198.51.100.28:8443?sni=tr.example&type=ws&path=%2Fw#hop2',
+              config:
+                  'trojan://pass@198.51.100.28:8443?sni=tr.example&type=ws&path=%2Fw#hop2',
             ),
           ],
         ).encode(),
@@ -566,10 +571,7 @@ void main() {
               'protocol': 'freedom',
               'settings': <String, dynamic>{},
             },
-            {
-              'tag': 'drop',
-              'protocol': 'blackhole',
-            },
+            {'tag': 'drop', 'protocol': 'blackhole'},
           ],
         }),
         _settings,
@@ -601,8 +603,7 @@ void _golden(String name, String Function() generate, {bool compact = false}) {
     final file = File('$_fixtureDir/$name.json');
     var actual = generate();
     if (compact) {
-      actual = const JsonEncoder.withIndent('  ')
-          .convert(jsonDecode(actual));
+      actual = const JsonEncoder.withIndent('  ').convert(jsonDecode(actual));
     }
 
     if (Platform.environment['UPDATE_GOLDEN'] == '1') {
@@ -614,7 +615,8 @@ void _golden(String name, String Function() generate, {bool compact = false}) {
     expect(
       file.existsSync(),
       isTrue,
-      reason: 'нет фикстуры ${file.path} — сними её: UPDATE_GOLDEN=1 flutter test',
+      reason:
+          'нет фикстуры ${file.path} — сними её: UPDATE_GOLDEN=1 flutter test',
     );
     // Пояс поверх .gitattributes: если фикстура всё же приехала с CRLF.
     final expected = file.readAsStringSync().replaceAll('\r\n', '\n');
@@ -704,11 +706,7 @@ const _customNativeTun = {
         'domain': ['domain:author.example'],
         'outboundTag': 'direct',
       },
-      {
-        'type': 'field',
-        'port': '53',
-        'outboundTag': 'direct',
-      },
+      {'type': 'field', 'port': '53', 'outboundTag': 'direct'},
     ],
   },
 };
@@ -718,12 +716,36 @@ final _providerJson = jsonEncode({
   'routing': {
     'domainStrategy': 'IPIfNonMatch',
     'rules': [
-      {'type': 'field', 'ip': ['::/0'], 'outboundTag': 'block'},
-      {'type': 'field', 'protocol': ['bittorrent'], 'outboundTag': 'direct'},
-      {'type': 'field', 'ip': ['geoip:private'], 'outboundTag': 'direct'},
-      {'type': 'field', 'domain': ['geosite:private', 'domain:provider-direct.example'], 'outboundTag': 'direct'},
-      {'type': 'field', 'domain': ['domain:provider-block.example'], 'outboundTag': 'block'},
-      {'type': 'field', 'domain': ['domain:video.example'], 'outboundTag': 'proxy-fast'},
+      {
+        'type': 'field',
+        'ip': ['::/0'],
+        'outboundTag': 'block',
+      },
+      {
+        'type': 'field',
+        'protocol': ['bittorrent'],
+        'outboundTag': 'direct',
+      },
+      {
+        'type': 'field',
+        'ip': ['geoip:private'],
+        'outboundTag': 'direct',
+      },
+      {
+        'type': 'field',
+        'domain': ['geosite:private', 'domain:provider-direct.example'],
+        'outboundTag': 'direct',
+      },
+      {
+        'type': 'field',
+        'domain': ['domain:provider-block.example'],
+        'outboundTag': 'block',
+      },
+      {
+        'type': 'field',
+        'domain': ['domain:video.example'],
+        'outboundTag': 'proxy-fast',
+      },
       {'type': 'field', 'port': '0-65535', 'outboundTag': 'direct'},
     ],
   },
@@ -742,7 +764,16 @@ final _providerJson = jsonEncode({
           },
         ],
       },
-      'streamSettings': {'network': 'tcp', 'security': 'reality', 'realitySettings': {'serverName': 'decoy.example', 'publicKey': 'publickey', 'shortId': 'aabb', 'fingerprint': 'chrome'}},
+      'streamSettings': {
+        'network': 'tcp',
+        'security': 'reality',
+        'realitySettings': {
+          'serverName': 'decoy.example',
+          'publicKey': 'publickey',
+          'shortId': 'aabb',
+          'fingerprint': 'chrome',
+        },
+      },
     },
     {
       'tag': 'proxy-fast',
@@ -758,7 +789,16 @@ final _providerJson = jsonEncode({
           },
         ],
       },
-      'streamSettings': {'network': 'tcp', 'security': 'reality', 'realitySettings': {'serverName': 'decoy.example', 'publicKey': 'publickey', 'shortId': 'aabb', 'fingerprint': 'chrome'}},
+      'streamSettings': {
+        'network': 'tcp',
+        'security': 'reality',
+        'realitySettings': {
+          'serverName': 'decoy.example',
+          'publicKey': 'publickey',
+          'shortId': 'aabb',
+          'fingerprint': 'chrome',
+        },
+      },
     },
     {'tag': 'direct', 'protocol': 'freedom'},
     {'tag': 'block', 'protocol': 'blackhole'},

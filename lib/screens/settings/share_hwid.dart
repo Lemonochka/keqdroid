@@ -11,12 +11,15 @@ class _ShareHwidCard extends ConsumerWidget {
     final enabled = settings.shareDeviceHwid;
 
     Future<void> save(bool value) async {
-      await ref.read(settingsNotifierProvider.notifier).save(settings.copyWith(shareDeviceHwid: value));
+      await ref
+          .read(settingsNotifierProvider.notifier)
+          .save(settings.copyWith(shareDeviceHwid: value));
     }
 
     final textTheme = Theme.of(context).textTheme;
-    final iconAccent =
-        enabled ? ExpressiveAccent.tertiary : ExpressiveAccent.secondary;
+    final iconAccent = enabled
+        ? ExpressiveAccent.tertiary
+        : ExpressiveAccent.secondary;
 
     return ExpressiveGroupTile(
       padding: const EdgeInsets.all(16),
@@ -38,8 +41,14 @@ class _ShareHwidCard extends ConsumerWidget {
                   ),
                 ),
                 Text(
-                  enabled ? l10n.settingsShareHwidOn : l10n.settingsShareHwidOff,
-                  style: textTheme.bodyMedium?.copyWith(color: enabled ? AppTheme.accent(context) : AppTheme.textLight(context)),
+                  enabled
+                      ? l10n.settingsShareHwidOn
+                      : l10n.settingsShareHwidOff,
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: enabled
+                        ? AppTheme.accent(context)
+                        : AppTheme.textLight(context),
+                  ),
                 ),
               ],
             ),
@@ -54,4 +63,3 @@ class _ShareHwidCard extends ConsumerWidget {
     );
   }
 }
-

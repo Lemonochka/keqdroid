@@ -46,8 +46,9 @@ class _ScrollJumpOverlayState extends State<ScrollJumpOverlay> {
 
   void _sync() {
     if (!_external) return;
-    FloatingBar.jump.value =
-        _visible ? FloatingJump(up: _up, onTap: _jump) : null;
+    FloatingBar.jump.value = _visible
+        ? FloatingJump(up: _up, onTap: _jump)
+        : null;
   }
 
   @override

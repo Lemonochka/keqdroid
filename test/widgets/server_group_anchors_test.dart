@@ -121,19 +121,19 @@ void main() {
     addTearDown(controller.dispose);
 
     Widget tree(bool alt) => MaterialApp(
-          home: Scaffold(
-            body: SizedBox(
-              height: 300,
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 200),
-                child: KeyedSubtree(
-                  key: ValueKey(alt),
-                  child: _list(controller: alt ? ScrollController() : controller),
-                ),
-              ),
+      home: Scaffold(
+        body: SizedBox(
+          height: 300,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 200),
+            child: KeyedSubtree(
+              key: ValueKey(alt),
+              child: _list(controller: alt ? ScrollController() : controller),
             ),
           ),
-        );
+        ),
+      ),
+    );
 
     await tester.pumpWidget(tree(false));
     await tester.pumpAndSettle();
@@ -328,35 +328,43 @@ void main() {
       expect(ServerGroupAnchors.instance.currentGroup.value, 'g5');
     });
 
-    testWidgets('в самом низу последняя, даже если она короткая и до верха не доезжает', (
-      tester,
-    ) async {
-      // иначе переход к ней из карусели тут же откатывался на предыдущую группу
-      final controller = ScrollController();
-      addTearDown(controller.dispose);
-      await _pump(
-        tester,
-        CustomScrollView(
-          controller: controller,
-          slivers: [
-            for (var i = 0; i < 4; i++)
-              SliverToBoxAdapter(
-                child: ServerGroupAnchor(
-                  groupKey: 'g$i',
-                  child: SizedBox(height: i == 3 ? 80 : 400, child: Text('group $i')),
+    testWidgets(
+      'в самом низу последняя, даже если она короткая и до верха не доезжает',
+      (tester) async {
+        // иначе переход к ней из карусели тут же откатывался на предыдущую группу
+        final controller = ScrollController();
+        addTearDown(controller.dispose);
+        await _pump(
+          tester,
+          CustomScrollView(
+            controller: controller,
+            slivers: [
+              for (var i = 0; i < 4; i++)
+                SliverToBoxAdapter(
+                  child: ServerGroupAnchor(
+                    groupKey: 'g$i',
+                    child: SizedBox(
+                      height: i == 3 ? 80 : 400,
+                      child: Text('group $i'),
+                    ),
+                  ),
                 ),
-              ),
-          ],
-        ),
-      );
+            ],
+          ),
+        );
 
-      controller.jumpTo(controller.position.maxScrollExtent - 40);
-      await tester.pumpAndSettle();
-      expect(ServerGroupAnchors.instance.currentGroup.value, 'g2', reason: 'ещё не у конца');
+        controller.jumpTo(controller.position.maxScrollExtent - 40);
+        await tester.pumpAndSettle();
+        expect(
+          ServerGroupAnchors.instance.currentGroup.value,
+          'g2',
+          reason: 'ещё не у конца',
+        );
 
-      controller.jumpTo(controller.position.maxScrollExtent);
-      await tester.pumpAndSettle();
-      expect(ServerGroupAnchors.instance.currentGroup.value, 'g3');
-    });
+        controller.jumpTo(controller.position.maxScrollExtent);
+        await tester.pumpAndSettle();
+        expect(ServerGroupAnchors.instance.currentGroup.value, 'g3');
+      },
+    );
   });
 }

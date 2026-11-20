@@ -14,10 +14,13 @@ bool routeServerSupported(String config, VpnBackend core) =>
       ServerFormat.link => backendsForLink(config).contains(core),
       ServerFormat.amneziaWg => core == VpnBackend.mihomo,
       ServerFormat.chain => core == VpnBackend.mihomo && _mihomoChain(config),
-      ServerFormat.xrayJson => core == VpnBackend.xray &&
-          CustomXrayConfig.tryParse(config)?.routeOutbounds(_probeTag) != null,
-      ServerFormat.clashYaml => core == VpnBackend.mihomo &&
-          CustomClashConfig.tryParse(config)?.routeNodes(_probeTag) != null,
+      ServerFormat.xrayJson =>
+        core == VpnBackend.xray &&
+            CustomXrayConfig.tryParse(config)?.routeOutbounds(_probeTag) !=
+                null,
+      ServerFormat.clashYaml =>
+        core == VpnBackend.mihomo &&
+            CustomClashConfig.tryParse(config)?.routeNodes(_probeTag) != null,
       _ => false,
     };
 

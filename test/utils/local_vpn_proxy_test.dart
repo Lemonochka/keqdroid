@@ -65,16 +65,13 @@ class _SessionProxy {
     _server = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
     _server.listen((socket) {
       final head = BytesBuilder();
-      socket.listen(
-        (chunk) {
-          head.add(chunk);
-          final text = latin1.decode(head.toBytes(), allowInvalid: true);
-          final end = text.indexOf('\r\n\r\n');
-          if (end < 0) return;
-          _answer(socket, text.substring(0, end).split('\r\n'));
-        },
-        onError: (_) {},
-      );
+      socket.listen((chunk) {
+        head.add(chunk);
+        final text = latin1.decode(head.toBytes(), allowInvalid: true);
+        final end = text.indexOf('\r\n\r\n');
+        if (end < 0) return;
+        _answer(socket, text.substring(0, end).split('\r\n'));
+      }, onError: (_) {});
     });
   }
 
@@ -92,22 +89,27 @@ class _SessionProxy {
     }
     authHeaders.add(auth);
     final pair = accepted;
-    final ok = pair != null &&
+    final ok =
+        pair != null &&
         auth == 'Basic ${base64.encode(utf8.encode('${pair.$1}:${pair.$2}'))}';
     if (!ok) {
-      socket.add(latin1.encode(
-        'HTTP/1.1 407 Proxy Authentication Required\r\n'
-        'Proxy-Authenticate: Basic realm="proxy"\r\n\r\n',
-      ));
+      socket.add(
+        latin1.encode(
+          'HTTP/1.1 407 Proxy Authentication Required\r\n'
+          'Proxy-Authenticate: Basic realm="proxy"\r\n\r\n',
+        ),
+      );
     } else if (line.startsWith('CONNECT ')) {
       // Туннель открыт, но за ним никого: TLS упадёт, а нам важно только,
       // что до этой точки клиент дошёл с правильным паролем.
       socket.add(latin1.encode('HTTP/1.1 200 Connection established\r\n\r\n'));
     } else {
-      socket.add(latin1.encode(
-        'HTTP/1.1 200 OK\r\nContent-Length: 7\r\nConnection: close\r\n\r\n'
-        'proxied',
-      ));
+      socket.add(
+        latin1.encode(
+          'HTTP/1.1 200 OK\r\nContent-Length: 7\r\nConnection: close\r\n\r\n'
+          'proxied',
+        ),
+      );
     }
     unawaited(socket.flush().whenComplete(socket.destroy));
   }
@@ -148,9 +150,12 @@ void main() {
       expect(localProxyDirective(null), 'DIRECT');
     });
 
-    test('port becomes an HTTP proxy directive (SOCKS dart:io не понимает)', () {
-      expect(localProxyDirective(2081), 'PROXY 127.0.0.1:2081');
-    });
+    test(
+      'port becomes an HTTP proxy directive (SOCKS dart:io не понимает)',
+      () {
+        expect(localProxyDirective(2081), 'PROXY 127.0.0.1:2081');
+      },
+    );
 
     test('логин с паролем едут в самой строке', () {
       expect(
@@ -209,22 +214,24 @@ void main() {
       expect(proxy.requestLines, isEmpty);
     });
 
-    test('решение принимается на каждый запрос, а не при сборке клиента',
-        () async {
-      // Ровно тот случай, ради которого резолвер и появился: сервис подписок
-      // живёт всё время работы приложения, а VPN за это время включают.
-      int? port;
-      final client = HttpClient();
-      configureHttpClientForLocalVpnProxy(client, () => port);
-      addTearDown(() => client.close(force: true));
+    test(
+      'решение принимается на каждый запрос, а не при сборке клиента',
+      () async {
+        // Ровно тот случай, ради которого резолвер и появился: сервис подписок
+        // живёт всё время работы приложения, а VPN за это время включают.
+        int? port;
+        final client = HttpClient();
+        configureHttpClientForLocalVpnProxy(client, () => port);
+        addTearDown(() => client.close(force: true));
 
-      await expectLater(fetch(client), throwsA(isA<SocketException>()));
-      expect(proxy.requestLines, isEmpty);
+        await expectLater(fetch(client), throwsA(isA<SocketException>()));
+        expect(proxy.requestLines, isEmpty);
 
-      port = proxy.port; // «подключили VPN»
-      expect(await fetch(client), 'proxied');
-      expect(proxy.requestLines, ['GET $url']);
-    });
+        port = proxy.port; // «подключили VPN»
+        expect(await fetch(client), 'proxied');
+        expect(proxy.requestLines, ['GET $url']);
+      },
+    );
   });
 
   group('прокси с аутентификацией', () {
@@ -258,33 +265,35 @@ void main() {
       ]);
     });
 
-    test('креды из синглтона, появившиеся после сборки клиента, применяются',
-        () async {
-      // Ровно случай Android: VpnService пережил пересоздание Flutter-движка,
-      // свежий изолят видит connected, а креды подтягиваются из нативного
-      // сервиса асинхронно — уже после того, как клиент собран.
-      final proxy = _RecordingProxy(requireAuth: true);
-      await proxy.start();
-      addTearDown(proxy.stop);
+    test(
+      'креды из синглтона, появившиеся после сборки клиента, применяются',
+      () async {
+        // Ровно случай Android: VpnService пережил пересоздание Flutter-движка,
+        // свежий изолят видит connected, а креды подтягиваются из нативного
+        // сервиса асинхронно — уже после того, как клиент собран.
+        final proxy = _RecordingProxy(requireAuth: true);
+        await proxy.start();
+        addTearDown(proxy.stop);
 
-      addTearDown(() => Socks5Credentials().init('', ''));
+        addTearDown(() => Socks5Credentials().init('', ''));
 
-      final client = HttpClient();
-      configureHttpClientForLocalVpnProxy(client, () => proxy.port);
-      addTearDown(() => client.close(force: true));
+        final client = HttpClient();
+        configureHttpClientForLocalVpnProxy(client, () => proxy.port);
+        addTearDown(() => client.close(force: true));
 
-      // «приехали» из нативного сервиса уже после сборки клиента
-      Socks5Credentials().init('late', 'creds');
+        // «приехали» из нативного сервиса уже после сборки клиента
+        Socks5Credentials().init('late', 'creds');
 
-      final req = await client.getUrl(Uri.parse('http://example.test/sub'));
-      final resp = await req.close();
+        final req = await client.getUrl(Uri.parse('http://example.test/sub'));
+        final resp = await req.close();
 
-      expect(await resp.transform(utf8.decoder).join(), 'proxied');
-      expect(
-        proxy.authHeaders.last,
-        'Basic ${base64.encode(utf8.encode('late:creds'))}',
-      );
-    });
+        expect(await resp.transform(utf8.decoder).join(), 'proxied');
+        expect(
+          proxy.authHeaders.last,
+          'Basic ${base64.encode(utf8.encode('late:creds'))}',
+        );
+      },
+    );
   });
 
   group('пароль инбаунда сменился, а клиент живёт дальше', () {
@@ -330,8 +339,9 @@ void main() {
       proxy.requestLines.clear();
       proxy.authHeaders.clear();
 
-      final second = await get('http://example.test/sub')
-          .timeout(const Duration(seconds: 5));
+      final second = await get(
+        'http://example.test/sub',
+      ).timeout(const Duration(seconds: 5));
       expect(await second.transform(utf8.decoder).join(), 'proxied');
       expect(proxy.authHeaders, [basic('userB', 'passB')]);
     });
@@ -438,7 +448,10 @@ void main() {
       final e = await failureOf(dio.get<String>('https://example.test/sub'));
       expect(refused(e), isFalse, reason: '$e');
       expect(syncCalls, 1);
-      expect(proxy.authHeaders, [basic('stale', 'stale'), basic('live', 'live')]);
+      expect(proxy.authHeaders, [
+        basic('stale', 'stale'),
+        basic('live', 'live'),
+      ]);
     });
 
     test('у сессии тот же пароль: ошибка сразу, без повтора', () async {

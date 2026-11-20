@@ -23,8 +23,8 @@ class RoutesNotifier extends AsyncNotifier<List<TrafficRoute>> {
 
 final routesProvider =
     AsyncNotifierProvider<RoutesNotifier, List<TrafficRoute>>(
-  RoutesNotifier.new,
-);
+      RoutesNotifier.new,
+    );
 
 class RoutingProfilesNotifier extends AsyncNotifier<List<RoutingProfile>> {
   @override
@@ -44,12 +44,12 @@ class RoutingProfilesNotifier extends AsyncNotifier<List<RoutingProfile>> {
       _save([for (final p in await future) p.id == id ? change(p).asOwn() : p]);
 
   Future<void> add(RoutingProfile profile) async => _save(
-        withSubscriptions(
-          [...await future, profile],
-          profile.id,
-          profile.subscriptionIds,
-        ),
-      );
+    withSubscriptions(
+      [...await future, profile],
+      profile.id,
+      profile.subscriptionIds,
+    ),
+  );
 
   // профиль из вставленной ссылки свой: правится сразу, подписки к нему пользователь привяжет сам
   Future<RoutingProfile> addFromRules(
@@ -65,8 +65,10 @@ class RoutingProfilesNotifier extends AsyncNotifier<List<RoutingProfile>> {
     return profile;
   }
 
-  Future<void> remove(String id) async =>
-      _save([for (final p in await future) if (p.id != id) p]);
+  Future<void> remove(String id) async => _save([
+    for (final p in await future)
+      if (p.id != id) p,
+  ]);
 
   Future<void> rename(String id, String name) =>
       _update(id, (p) => p.copyWith(name: name));
@@ -74,11 +76,13 @@ class RoutingProfilesNotifier extends AsyncNotifier<List<RoutingProfile>> {
   Future<void> setEnabled(String id, bool enabled) =>
       _update(id, (p) => p.copyWith(enabled: enabled));
 
-  Future<void> setSubscriptions(String id, List<String> subscriptionIds) async =>
-      _save([
-        for (final p in withSubscriptions(await future, id, subscriptionIds))
-          p.id == id ? p.asOwn() : p,
-      ]);
+  Future<void> setSubscriptions(
+    String id,
+    List<String> subscriptionIds,
+  ) async => _save([
+    for (final p in withSubscriptions(await future, id, subscriptionIds))
+      p.id == id ? p.asOwn() : p,
+  ]);
 
   Future<void> dropProviderProfileOf(String subscriptionId) async {
     final profiles = await future;
@@ -96,15 +100,15 @@ class RoutingProfilesNotifier extends AsyncNotifier<List<RoutingProfile>> {
       _update(id, (p) => p.copyWith(routes: withoutRoute(p.routes, routeId)));
 
   Future<void> moveRouteInAllApps(String id, int from, int to) => _update(
-        id,
-        (p) => p.copyWith(routes: withAllAppsMoved(p.routes, from, to)),
-      );
+    id,
+    (p) => p.copyWith(routes: withAllAppsMoved(p.routes, from, to)),
+  );
 }
 
 final routingProfilesProvider =
     AsyncNotifierProvider<RoutingProfilesNotifier, List<RoutingProfile>>(
-  RoutingProfilesNotifier.new,
-);
+      RoutingProfilesNotifier.new,
+    );
 
 // чего ядро не умеет, того в шторках нет, а заведённый маршрут с этим показывает причину на карточке
 class RouteCapabilities {
@@ -152,5 +156,6 @@ class RoutesHintNotifier extends Notifier<bool> {
   }
 }
 
-final routesHintProvider =
-    NotifierProvider<RoutesHintNotifier, bool>(RoutesHintNotifier.new);
+final routesHintProvider = NotifierProvider<RoutesHintNotifier, bool>(
+  RoutesHintNotifier.new,
+);

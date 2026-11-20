@@ -141,14 +141,20 @@ class BackupKeys {
     final out = <int>[];
     for (var i = 0; i < a.length; i++) {
       final word = (a[i] ^ b[i]) & 0xFFFFFFFF;
-      out.addAll([word >> 24 & 0xFF, word >> 16 & 0xFF, word >> 8 & 0xFF, word & 0xFF]);
+      out.addAll([
+        word >> 24 & 0xFF,
+        word >> 16 & 0xFF,
+        word >> 8 & 0xFF,
+        word & 0xFF,
+      ]);
     }
     return out;
   }
 
   // сборки без секрета (собранные самостоятельно, тесты): ключ открытый, копия из них читается любой сборкой
-  static final List<int> dev =
-      hashes.sha256.convert(utf8.encode('keqdroid public backup key 1')).bytes;
+  static final List<int> dev = hashes.sha256
+      .convert(utf8.encode('keqdroid public backup key 1'))
+      .bytes;
 
   static int get writeKeyId =>
       release != null ? BackupCrypto.keyRelease : BackupCrypto.keyDev;
@@ -156,8 +162,8 @@ class BackupKeys {
   static List<int> get writeKey => release ?? dev;
 
   static List<int> forReading(int keyId) => switch (keyId) {
-        BackupCrypto.keyDev => dev,
-        BackupCrypto.keyRelease => release ?? (throw const BackupKeyUnavailable()),
-        _ => throw FormatException('Unknown backup key: $keyId'),
-      };
+    BackupCrypto.keyDev => dev,
+    BackupCrypto.keyRelease => release ?? (throw const BackupKeyUnavailable()),
+    _ => throw FormatException('Unknown backup key: $keyId'),
+  };
 }

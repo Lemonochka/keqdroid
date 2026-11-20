@@ -39,8 +39,10 @@ void main() {
     });
 
     test('чужие схемы не трогаем', () {
-      expect(HysteriaLinkParams.isV1('hysteria2://pwd@host:443?upmbps=100'),
-          isFalse);
+      expect(
+        HysteriaLinkParams.isV1('hysteria2://pwd@host:443?upmbps=100'),
+        isFalse,
+      );
       expect(HysteriaLinkParams.isV1('vless://uuid@host:443?peer=x'), isFalse);
     });
   });

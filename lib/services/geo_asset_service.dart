@@ -51,14 +51,15 @@ class GeoAssetService {
     final assets = await index();
     final result = stripUnknownGeoTokens(settings, assets);
     if (result.dropped.isNotEmpty) {
-      final trimmedBase = !assets.hasFullGeoip &&
+      final trimmedBase =
+          !assets.hasFullGeoip &&
           result.dropped.any((t) => t.toLowerCase().startsWith('geoip:'));
       AppLogger.instance.warn(
         'Routing rules: dropped ${result.dropped.length} geo entries missing '
         'from the bundled geoip/geosite databases (they would abort the core '
         'at config load): ${result.dropped.join(', ')}'
         '${trimmedBase ? ' — the bundled country database is the trimmed one; '
-            'download the full base in Settings -> About -> Internals' : ''}',
+                  'download the full base in Settings -> About -> Internals' : ''}',
       );
     }
     return result.settings;

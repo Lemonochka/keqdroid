@@ -63,13 +63,12 @@ class XrayCoreSettings {
 
   final String dnsPolicy;
 
-
-
   const XrayCoreSettings({
     this.logLevel = 'warning',
     this.routingDomainStrategy = 'AsIs',
     this.dnsUseCustom = false,
-    this.dnsServers = 'https+local://1.1.1.1/dns-query\nhttps+local://8.8.8.8/dns-query',
+    this.dnsServers =
+        'https+local://1.1.1.1/dns-query\nhttps+local://8.8.8.8/dns-query',
     this.dnsQueryStrategy = 'UseIPv4',
     this.dnsDisableCache = false,
     this.dnsSplitDirectDomains = true,
@@ -156,46 +155,47 @@ class XrayCoreSettings {
   static const routingDomainStrategies = ['AsIs', 'IPIfNonMatch', 'IPOnDemand'];
 
   Map<String, dynamic> toJson() => {
-        'logLevel': logLevel,
-        'routingDomainStrategy': routingDomainStrategy,
-        'dnsUseCustom': dnsUseCustom,
-        'dnsServers': dnsServers,
-        'dnsQueryStrategy': dnsQueryStrategy,
-        'dnsDisableCache': dnsDisableCache,
-        'dnsSplitDirectDomains': dnsSplitDirectDomains,
-        'muxEnabled': muxEnabled,
-        'muxConcurrency': muxConcurrency,
-        'muxXudpConcurrency': muxXudpConcurrency,
-        'muxXudpProxyUDP443': muxXudpProxyUDP443,
-        'xmuxEnabled': xmuxEnabled,
-        'xmuxMaxConcurrency': xmuxMaxConcurrency,
-        'xmuxMaxConnections': xmuxMaxConnections,
-        'xmuxCMaxReuseTimes': xmuxCMaxReuseTimes,
-        'xmuxHMaxRequestTimes': xmuxHMaxRequestTimes,
-        'xmuxHMaxReusableSecs': xmuxHMaxReusableSecs,
-        'xmuxHKeepAlivePeriod': xmuxHKeepAlivePeriod,
-        'fragmentEnabled': fragmentEnabled,
-        'fragmentPackets': fragmentPackets,
-        'fragmentLength': fragmentLength,
-        'fragmentInterval': fragmentInterval,
-        'noiseEnabled': noiseEnabled,
-        'noiseKind': noiseKind,
-        'noisePacket': noisePacket,
-        'noiseRandLength': noiseRandLength,
-        'noiseRandBytes': noiseRandBytes,
-        'noiseDelay': noiseDelay,
-        'noiseReset': noiseReset,
-        'sniffingEnabled': sniffingEnabled,
-        'sniffingRouteOnly': sniffingRouteOnly,
-        'concurrentDial': concurrentDial,
-        'udpPerAddress': udpPerAddress,
-        'dnsHosts': dnsHosts,
-        'dnsPolicy': dnsPolicy,
-      };
+    'logLevel': logLevel,
+    'routingDomainStrategy': routingDomainStrategy,
+    'dnsUseCustom': dnsUseCustom,
+    'dnsServers': dnsServers,
+    'dnsQueryStrategy': dnsQueryStrategy,
+    'dnsDisableCache': dnsDisableCache,
+    'dnsSplitDirectDomains': dnsSplitDirectDomains,
+    'muxEnabled': muxEnabled,
+    'muxConcurrency': muxConcurrency,
+    'muxXudpConcurrency': muxXudpConcurrency,
+    'muxXudpProxyUDP443': muxXudpProxyUDP443,
+    'xmuxEnabled': xmuxEnabled,
+    'xmuxMaxConcurrency': xmuxMaxConcurrency,
+    'xmuxMaxConnections': xmuxMaxConnections,
+    'xmuxCMaxReuseTimes': xmuxCMaxReuseTimes,
+    'xmuxHMaxRequestTimes': xmuxHMaxRequestTimes,
+    'xmuxHMaxReusableSecs': xmuxHMaxReusableSecs,
+    'xmuxHKeepAlivePeriod': xmuxHKeepAlivePeriod,
+    'fragmentEnabled': fragmentEnabled,
+    'fragmentPackets': fragmentPackets,
+    'fragmentLength': fragmentLength,
+    'fragmentInterval': fragmentInterval,
+    'noiseEnabled': noiseEnabled,
+    'noiseKind': noiseKind,
+    'noisePacket': noisePacket,
+    'noiseRandLength': noiseRandLength,
+    'noiseRandBytes': noiseRandBytes,
+    'noiseDelay': noiseDelay,
+    'noiseReset': noiseReset,
+    'sniffingEnabled': sniffingEnabled,
+    'sniffingRouteOnly': sniffingRouteOnly,
+    'concurrentDial': concurrentDial,
+    'udpPerAddress': udpPerAddress,
+    'dnsHosts': dnsHosts,
+    'dnsPolicy': dnsPolicy,
+  };
 
   factory XrayCoreSettings.fromJson(Map<String, dynamic>? json) {
     if (json == null) return const XrayCoreSettings();
-    String str(String k, String def) => (json[k] as String?)?.trim().isNotEmpty == true
+    String str(String k, String def) =>
+        (json[k] as String?)?.trim().isNotEmpty == true
         ? (json[k] as String).trim()
         : def;
     bool b(String k, bool def) => json[k] as bool? ?? def;
@@ -203,11 +203,13 @@ class XrayCoreSettings {
       final v = (json[k] as num?)?.toInt() ?? def;
       return v < 0 ? 0 : v;
     }
+
     // у mux минус запрещает мультиплексирование, и общий i срезал бы его в ноль
     int signed(String k, int def, int min, int max) {
       final v = (json[k] as num?)?.toInt() ?? def;
       return v < min ? min : (v > max ? max : v);
     }
+
     final log = str('logLevel', 'warning');
     final domain = str('routingDomainStrategy', 'AsIs');
     final query = str('dnsQueryStrategy', 'UseIPv4');
@@ -216,18 +218,24 @@ class XrayCoreSettings {
     final noiseKind = str('noiseKind', noiseRandom);
     return XrayCoreSettings(
       logLevel: logLevels.contains(log) ? log : 'warning',
-      routingDomainStrategy:
-          routingDomainStrategies.contains(domain) ? domain : 'AsIs',
+      routingDomainStrategy: routingDomainStrategies.contains(domain)
+          ? domain
+          : 'AsIs',
       dnsUseCustom: b('dnsUseCustom', false),
-      dnsServers: json['dnsServers'] as String? ??
+      dnsServers:
+          json['dnsServers'] as String? ??
           'https+local://1.1.1.1/dns-query\nhttps+local://8.8.8.8/dns-query',
       dnsQueryStrategy: dnsQueryStrategies.contains(query) ? query : 'UseIPv4',
       dnsDisableCache: b('dnsDisableCache', false),
       dnsSplitDirectDomains: b('dnsSplitDirectDomains', true),
       muxEnabled: b('muxEnabled', false),
       muxConcurrency: signed('muxConcurrency', defaultMuxConcurrency, -1, 128),
-      muxXudpConcurrency:
-          signed('muxXudpConcurrency', defaultMuxXudpConcurrency, -1, 1024),
+      muxXudpConcurrency: signed(
+        'muxXudpConcurrency',
+        defaultMuxXudpConcurrency,
+        -1,
+        1024,
+      ),
       muxXudpProxyUDP443: muxUdp443Modes.contains(udp443)
           ? udp443
           : muxUdp443Reject,
@@ -296,52 +304,46 @@ class XrayCoreSettings {
     bool? udpPerAddress,
     String? dnsHosts,
     String? dnsPolicy,
-  }) =>
-      XrayCoreSettings(
-        logLevel: logLevel ?? this.logLevel,
-        routingDomainStrategy:
-            routingDomainStrategy ?? this.routingDomainStrategy,
-        dnsUseCustom: dnsUseCustom ?? this.dnsUseCustom,
-        dnsServers: dnsServers ?? this.dnsServers,
-        dnsQueryStrategy: dnsQueryStrategy ?? this.dnsQueryStrategy,
-        dnsDisableCache: dnsDisableCache ?? this.dnsDisableCache,
-        dnsSplitDirectDomains:
-            dnsSplitDirectDomains ?? this.dnsSplitDirectDomains,
-        muxEnabled: muxEnabled ?? this.muxEnabled,
-        muxConcurrency: muxConcurrency ?? this.muxConcurrency,
-        muxXudpConcurrency: muxXudpConcurrency ?? this.muxXudpConcurrency,
-        muxXudpProxyUDP443: muxXudpProxyUDP443 ?? this.muxXudpProxyUDP443,
-        xmuxEnabled: xmuxEnabled ?? this.xmuxEnabled,
-        xmuxMaxConcurrency: xmuxMaxConcurrency ?? this.xmuxMaxConcurrency,
-        xmuxMaxConnections: xmuxMaxConnections ?? this.xmuxMaxConnections,
-        xmuxCMaxReuseTimes: xmuxCMaxReuseTimes ?? this.xmuxCMaxReuseTimes,
-        xmuxHMaxRequestTimes:
-            xmuxHMaxRequestTimes ?? this.xmuxHMaxRequestTimes,
-        xmuxHMaxReusableSecs:
-            xmuxHMaxReusableSecs ?? this.xmuxHMaxReusableSecs,
-        xmuxHKeepAlivePeriod:
-            xmuxHKeepAlivePeriod ?? this.xmuxHKeepAlivePeriod,
-        fragmentEnabled: fragmentEnabled ?? this.fragmentEnabled,
-        fragmentPackets: fragmentPackets ?? this.fragmentPackets,
-        fragmentLength: fragmentLength ?? this.fragmentLength,
-        fragmentInterval: fragmentInterval ?? this.fragmentInterval,
-        noiseEnabled: noiseEnabled ?? this.noiseEnabled,
-        noiseKind: noiseKind ?? this.noiseKind,
-        noisePacket: noisePacket ?? this.noisePacket,
-        noiseRandLength: noiseRandLength ?? this.noiseRandLength,
-        noiseRandBytes: noiseRandBytes ?? this.noiseRandBytes,
-        noiseDelay: noiseDelay ?? this.noiseDelay,
-        noiseReset: noiseReset ?? this.noiseReset,
-        sniffingEnabled: sniffingEnabled ?? this.sniffingEnabled,
-        sniffingRouteOnly: sniffingRouteOnly ?? this.sniffingRouteOnly,
-        concurrentDial: concurrentDial ?? this.concurrentDial,
-        udpPerAddress: udpPerAddress ?? this.udpPerAddress,
-        dnsHosts: dnsHosts ?? this.dnsHosts,
-        dnsPolicy: dnsPolicy ?? this.dnsPolicy,
-      );
+  }) => XrayCoreSettings(
+    logLevel: logLevel ?? this.logLevel,
+    routingDomainStrategy: routingDomainStrategy ?? this.routingDomainStrategy,
+    dnsUseCustom: dnsUseCustom ?? this.dnsUseCustom,
+    dnsServers: dnsServers ?? this.dnsServers,
+    dnsQueryStrategy: dnsQueryStrategy ?? this.dnsQueryStrategy,
+    dnsDisableCache: dnsDisableCache ?? this.dnsDisableCache,
+    dnsSplitDirectDomains: dnsSplitDirectDomains ?? this.dnsSplitDirectDomains,
+    muxEnabled: muxEnabled ?? this.muxEnabled,
+    muxConcurrency: muxConcurrency ?? this.muxConcurrency,
+    muxXudpConcurrency: muxXudpConcurrency ?? this.muxXudpConcurrency,
+    muxXudpProxyUDP443: muxXudpProxyUDP443 ?? this.muxXudpProxyUDP443,
+    xmuxEnabled: xmuxEnabled ?? this.xmuxEnabled,
+    xmuxMaxConcurrency: xmuxMaxConcurrency ?? this.xmuxMaxConcurrency,
+    xmuxMaxConnections: xmuxMaxConnections ?? this.xmuxMaxConnections,
+    xmuxCMaxReuseTimes: xmuxCMaxReuseTimes ?? this.xmuxCMaxReuseTimes,
+    xmuxHMaxRequestTimes: xmuxHMaxRequestTimes ?? this.xmuxHMaxRequestTimes,
+    xmuxHMaxReusableSecs: xmuxHMaxReusableSecs ?? this.xmuxHMaxReusableSecs,
+    xmuxHKeepAlivePeriod: xmuxHKeepAlivePeriod ?? this.xmuxHKeepAlivePeriod,
+    fragmentEnabled: fragmentEnabled ?? this.fragmentEnabled,
+    fragmentPackets: fragmentPackets ?? this.fragmentPackets,
+    fragmentLength: fragmentLength ?? this.fragmentLength,
+    fragmentInterval: fragmentInterval ?? this.fragmentInterval,
+    noiseEnabled: noiseEnabled ?? this.noiseEnabled,
+    noiseKind: noiseKind ?? this.noiseKind,
+    noisePacket: noisePacket ?? this.noisePacket,
+    noiseRandLength: noiseRandLength ?? this.noiseRandLength,
+    noiseRandBytes: noiseRandBytes ?? this.noiseRandBytes,
+    noiseDelay: noiseDelay ?? this.noiseDelay,
+    noiseReset: noiseReset ?? this.noiseReset,
+    sniffingEnabled: sniffingEnabled ?? this.sniffingEnabled,
+    sniffingRouteOnly: sniffingRouteOnly ?? this.sniffingRouteOnly,
+    concurrentDial: concurrentDial ?? this.concurrentDial,
+    udpPerAddress: udpPerAddress ?? this.udpPerAddress,
+    dnsHosts: dnsHosts ?? this.dnsHosts,
+    dnsPolicy: dnsPolicy ?? this.dnsPolicy,
+  );
 
   static ({Map<String, List<String>> entries, List<String> dropped})
-      parseDnsHosts(String raw) {
+  parseDnsHosts(String raw) {
     final entries = <String, List<String>>{};
     final dropped = <String>[];
     for (final line in raw.split(RegExp(r'[\n;]+'))) {
@@ -383,7 +385,7 @@ class XrayCoreSettings {
   }
 
   static ({Map<String, List<String>> entries, List<String> dropped})
-      parseDnsPolicy(String raw) {
+  parseDnsPolicy(String raw) {
     final entries = <String, List<String>>{};
     final dropped = <String>[];
     for (final line in raw.split(RegExp(r'[\n;]+'))) {
@@ -439,14 +441,16 @@ class XrayCoreSettings {
 
   static String _unbracketed(String value) =>
       value.startsWith('[') && value.endsWith(']')
-          ? value.substring(1, value.length - 1)
-          : value;
+      ? value.substring(1, value.length - 1)
+      : value;
 
   // tls:// и dhcp:// понимает только mihomo, Xray пропускает их, собирая свой список
   static bool _dnsAddressForAnyCore(String address) =>
       xrayDnsEntry(address) != null ||
-      RegExp(r'^(tls|dhcp)(\+local)?://', caseSensitive: false)
-          .hasMatch(address.trim());
+      RegExp(
+        r'^(tls|dhcp)(\+local)?://',
+        caseSensitive: false,
+      ).hasMatch(address.trim());
 
   static bool _isIpAddress(String value) {
     final bare = value.startsWith('[') && value.endsWith(']')
@@ -458,8 +462,10 @@ class XrayCoreSettings {
   static bool _isHostMask(String value) {
     final bare = value.startsWith('*.') ? value.substring(2) : value;
     if (bare.isEmpty || bare.contains('/') || bare.contains(' ')) return false;
-    return RegExp(r'^[a-z0-9_-]+(\.[a-z0-9_-]+)*$', caseSensitive: false)
-        .hasMatch(bare);
+    return RegExp(
+      r'^[a-z0-9_-]+(\.[a-z0-9_-]+)*$',
+      caseSensitive: false,
+    ).hasMatch(bare);
   }
 
   static List<String> _parseServerLines(String raw) => raw
@@ -511,14 +517,19 @@ class XrayCoreSettings {
     final trimmed = raw.trim();
     if (trimmed.isEmpty) return null;
 
-    final bracketed = RegExp(r'^\[([0-9a-fA-F:.]+)\](?::(\d+))?$').firstMatch(trimmed);
+    final bracketed = RegExp(
+      r'^\[([0-9a-fA-F:.]+)\](?::(\d+))?$',
+    ).firstMatch(trimmed);
     if (bracketed != null) {
       final port = int.tryParse(bracketed.group(2) ?? '');
       return (address: bracketed.group(1)!, port: port);
     }
     final hostPort = RegExp(r'^([^:]+):(\d+)$').firstMatch(trimmed);
     if (hostPort != null) {
-      return (address: hostPort.group(1)!, port: int.tryParse(hostPort.group(2)!));
+      return (
+        address: hostPort.group(1)!,
+        port: int.tryParse(hostPort.group(2)!),
+      );
     }
     return (address: trimmed, port: null);
   }
@@ -528,7 +539,7 @@ class XrayCoreSettings {
       !dnsUseCustom || xrayDnsServers(dnsServers).servers.length != 1;
 
   static ({List<Map<String, dynamic>> servers, List<String> dropped})
-      xrayDnsServers(String raw) {
+  xrayDnsServers(String raw) {
     final servers = <Map<String, dynamic>>[];
     final dropped = <String>[];
     for (final line in _parseServerLines(raw)) {
@@ -546,9 +557,8 @@ class XrayCoreSettings {
   }
 
   // голый домен в domains xray понимает как подстроку: example.com поймал бы notexample.community
-  static String xrayDomainRule(String mask) => mask.startsWith('*.')
-      ? 'domain:${mask.substring(2)}'
-      : 'full:$mask';
+  static String xrayDomainRule(String mask) =>
+      mask.startsWith('*.') ? 'domain:${mask.substring(2)}' : 'full:$mask';
 
   // голый ключ в hosts xray сравнивает целиком, поэтому *.x переводим в domain:
   Map<String, dynamic> buildHostsMap() {
@@ -556,9 +566,10 @@ class XrayCoreSettings {
     return {
       for (final entry in parsed.entries)
         (entry.key.startsWith('*.')
-                ? 'domain:${entry.key.substring(2)}'
-                : entry.key):
-            entry.value.length == 1 ? entry.value.single : entry.value,
+            ? 'domain:${entry.key.substring(2)}'
+            : entry.key): entry.value.length == 1
+            ? entry.value.single
+            : entry.value,
     };
   }
 
@@ -611,7 +622,9 @@ class XrayCoreSettings {
 
     if (custom.isNotEmpty) {
       // length > 1: с одним сервером сплит оставил бы всё, кроме Direct, без резолвера
-      if (dnsSplitDirectDomains && directDomains.isNotEmpty && custom.length > 1) {
+      if (dnsSplitDirectDomains &&
+          directDomains.isNotEmpty &&
+          custom.length > 1) {
         if (liftedDomains.isNotEmpty) {
           for (final server in custom.skip(1)) {
             servers.add({
@@ -706,10 +719,10 @@ class XrayCoreSettings {
 
   // без этого один потерянный пакет к DoH стоил десятка секунд без новых соединений
   static Map<String, dynamic> _withDnsLimits(Map<String, dynamic> server) => {
-        ...server,
-        if (!server.containsKey('timeoutMs')) 'timeoutMs': _dnsTimeoutMs,
-        if (!server.containsKey('serveStale')) 'serveStale': true,
-      };
+    ...server,
+    if (!server.containsKey('timeoutMs')) 'timeoutMs': _dnsTimeoutMs,
+    if (!server.containsKey('serveStale')) 'serveStale': true,
+  };
 
   static const _dnsTimeoutMs = 2500;
 
@@ -786,7 +799,8 @@ class XrayCoreSettings {
     }
     // свои умолчания xray ставит только пустому xmux (transport_method.go), а незаданное поле у него без предела
     if (map.isEmpty) return map;
-    if (!map.containsKey('maxConcurrency') && !map.containsKey('maxConnections')) {
+    if (!map.containsKey('maxConcurrency') &&
+        !map.containsKey('maxConnections')) {
       map['maxConnections'] = 3;
     }
     map.putIfAbsent('hMaxRequestTimes', () => '600-900');
@@ -815,16 +829,14 @@ class XrayCoreSettings {
   // 100- ядро не принимает, поэтому регексп строгий с обеих сторон
   static Object _fragmentRange(String raw, String fallback) {
     final v = raw.trim();
-    return _parseRangeValue(
-      RegExp(r'^\d+(-\d+)?$').hasMatch(v) ? v : fallback,
-    );
+    return _parseRangeValue(RegExp(r'^\d+(-\d+)?$').hasMatch(v) ? v : fallback);
   }
 
   Map<String, dynamic> buildSniffing() => {
-        'enabled': sniffingEnabled,
-        'destOverride': ['http', 'tls', 'quic'],
-        'routeOnly': sniffingRouteOnly,
-      };
+    'enabled': sniffingEnabled,
+    'destOverride': ['http', 'tls', 'quic'],
+    'routeOnly': sniffingRouteOnly,
+  };
 
   @override
   bool operator ==(Object other) =>
@@ -869,42 +881,42 @@ class XrayCoreSettings {
 
   @override
   int get hashCode => Object.hashAll([
-        logLevel,
-        routingDomainStrategy,
-        dnsUseCustom,
-        dnsServers,
-        dnsQueryStrategy,
-        dnsDisableCache,
-        dnsSplitDirectDomains,
-        muxEnabled,
-        muxConcurrency,
-        muxXudpConcurrency,
-        muxXudpProxyUDP443,
-        xmuxEnabled,
-        xmuxMaxConcurrency,
-        xmuxMaxConnections,
-        xmuxCMaxReuseTimes,
-        xmuxHMaxRequestTimes,
-        xmuxHMaxReusableSecs,
-        xmuxHKeepAlivePeriod,
-        fragmentEnabled,
-        fragmentPackets,
-        fragmentLength,
-        fragmentInterval,
-        noiseEnabled,
-        noiseKind,
-        noisePacket,
-        noiseRandLength,
-        noiseRandBytes,
-        noiseDelay,
-        noiseReset,
-        sniffingEnabled,
-        sniffingRouteOnly,
-        concurrentDial,
-        udpPerAddress,
-        dnsHosts,
-        dnsPolicy,
-      ]);
+    logLevel,
+    routingDomainStrategy,
+    dnsUseCustom,
+    dnsServers,
+    dnsQueryStrategy,
+    dnsDisableCache,
+    dnsSplitDirectDomains,
+    muxEnabled,
+    muxConcurrency,
+    muxXudpConcurrency,
+    muxXudpProxyUDP443,
+    xmuxEnabled,
+    xmuxMaxConcurrency,
+    xmuxMaxConnections,
+    xmuxCMaxReuseTimes,
+    xmuxHMaxRequestTimes,
+    xmuxHMaxReusableSecs,
+    xmuxHKeepAlivePeriod,
+    fragmentEnabled,
+    fragmentPackets,
+    fragmentLength,
+    fragmentInterval,
+    noiseEnabled,
+    noiseKind,
+    noisePacket,
+    noiseRandLength,
+    noiseRandBytes,
+    noiseDelay,
+    noiseReset,
+    sniffingEnabled,
+    sniffingRouteOnly,
+    concurrentDial,
+    udpPerAddress,
+    dnsHosts,
+    dnsPolicy,
+  ]);
 
   String toJsonString() => jsonEncode(toJson());
 

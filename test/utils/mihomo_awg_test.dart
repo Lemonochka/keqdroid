@@ -11,7 +11,11 @@ import 'package:keqdroid/utils/socks5_credentials.dart';
 /// ядро выбрасывает молча, поэтому проверяются имена и типы полей, а не только
 /// то, что конфиг собрался.
 Map<String, dynamic> _proxy(String conf) =>
-    (MihomoConfigGen.build(conf, const AppSettings(), socksPort: 2080)['proxies']
+    (MihomoConfigGen.build(
+              conf,
+              const AppSettings(),
+              socksPort: 2080,
+            )['proxies']
             as List)
         .cast<Map<String, dynamic>>()
         .single;
@@ -68,11 +72,14 @@ void main() {
   });
 
   test('параметры AWG — полями и типами ядра, реализация v3', () {
-    final p = _proxy(_conf(
-      iface: 'Jc = 4\nJmin = 40\nJmax = 70\nS1 = 86\nS2 = 574\nS3 = 20\n'
-          'S4 = 10\nH1 = 100-200\nH2 = 2\nH3 = 3\nH4 = 4\n'
-          'I1 = <b 0xf6ab3267fa><c><t><r 10>',
-    ));
+    final p = _proxy(
+      _conf(
+        iface:
+            'Jc = 4\nJmin = 40\nJmax = 70\nS1 = 86\nS2 = 574\nS3 = 20\n'
+            'S4 = 10\nH1 = 100-200\nH2 = 2\nH3 = 3\nH4 = 4\n'
+            'I1 = <b 0xf6ab3267fa><c><t><r 10>',
+      ),
+    );
     final awg = _awg(p);
     // Только `version: 3` включает у ядра amneziawg-go v3; без неё профиль
     // уехал бы в старую реализацию.
@@ -89,11 +96,14 @@ void main() {
   });
 
   test('AWG 3.1: ключ заголовков как в профиле, флаги булевы', () {
-    final p = _proxy(_conf(
-      iface: 'Jc = 4\nHeaderProtectionKey = $_pub\n'
-          'ContentPaddingAddition = 10-20\nRekeyAfterTime = 110-130\n'
-          'RandomTrailers = yes\nDisableCookies = off',
-    ));
+    final p = _proxy(
+      _conf(
+        iface:
+            'Jc = 4\nHeaderProtectionKey = $_pub\n'
+            'ContentPaddingAddition = 10-20\nRekeyAfterTime = 110-130\n'
+            'RandomTrailers = yes\nDisableCookies = off',
+      ),
+    );
     final awg = _awg(p);
     // base64, а не hex: в hex ключ переводит само ядро.
     expect(awg['header-protection-key'], _pub);
@@ -105,18 +115,21 @@ void main() {
 
   test('keepalive диапазоном — нижняя граница, off — без keepalive', () {
     expect(
-      _proxy(_conf(peer: 'AllowedIPs = 0.0.0.0/0\nPersistentKeepalive = 22-30'))[
-          'persistent-keepalive'],
+      _proxy(
+        _conf(peer: 'AllowedIPs = 0.0.0.0/0\nPersistentKeepalive = 22-30'),
+      )['persistent-keepalive'],
       22,
     );
     expect(
-      _proxy(_conf(peer: 'AllowedIPs = 0.0.0.0/0\nPersistentKeepalive = 25'))[
-          'persistent-keepalive'],
+      _proxy(
+        _conf(peer: 'AllowedIPs = 0.0.0.0/0\nPersistentKeepalive = 25'),
+      )['persistent-keepalive'],
       25,
     );
     expect(
-      _proxy(_conf(peer: 'AllowedIPs = 0.0.0.0/0\nPersistentKeepalive = off'))
-          .containsKey('persistent-keepalive'),
+      _proxy(
+        _conf(peer: 'AllowedIPs = 0.0.0.0/0\nPersistentKeepalive = off'),
+      ).containsKey('persistent-keepalive'),
       isFalse,
     );
   });
@@ -148,7 +161,8 @@ void main() {
   });
 
   test('несколько пиров — все в peers, верхний server у первого', () {
-    final conf = '${_conf()}\n[Peer]\nPublicKey = $_priv\n'
+    final conf =
+        '${_conf()}\n[Peer]\nPublicKey = $_priv\n'
         'Endpoint = [2001:db8::1]:443\nAllowedIPs = 10.0.0.0/8\n';
     final p = _proxy(conf);
     expect(p['server'], '203.0.113.10');
@@ -160,13 +174,15 @@ void main() {
   });
 
   test('замер собирается из того же профиля', () {
-    final ping = jsonDecode(
-      MihomoConfigGen.generatePingConfig(
-        _conf(iface: 'Jc = 4'),
-        const AppSettings(),
-        socksPort: 28150,
-      ),
-    ) as Map<String, dynamic>;
+    final ping =
+        jsonDecode(
+              MihomoConfigGen.generatePingConfig(
+                _conf(iface: 'Jc = 4'),
+                const AppSettings(),
+                socksPort: 28150,
+              ),
+            )
+            as Map<String, dynamic>;
     final proxy = (ping['proxies'] as List).single as Map<String, dynamic>;
     expect(proxy['type'], 'wireguard');
     expect((proxy['amnezia-wg-option'] as Map)['version'], 3);

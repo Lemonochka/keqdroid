@@ -9,92 +9,94 @@ import 'package:keqdroid/utils/socks5_credentials.dart';
 void main() {
   const settings = AppSettings();
 
-    test('переносит vcn и pcs из ссылки в tlsSettings', () {
-      // Регрессия с живого сервера: панель отдаёт `sni` чужого домена, а
-      // сертификат велит проверять по настоящему имени и по отпечаткам. Пока мы
-      // эти два поля выбрасывали, ядро сверяло сертификат с маскировочным `sni`
-      // и роняло рукопожатие — сервер работал во всех клиентах, кроме нашего.
-      Socks5Credentials().init('u', 'p');
+  test('переносит vcn и pcs из ссылки в tlsSettings', () {
+    // Регрессия с живого сервера: панель отдаёт `sni` чужого домена, а
+    // сертификат велит проверять по настоящему имени и по отпечаткам. Пока мы
+    // эти два поля выбрасывали, ядро сверяло сертификат с маскировочным `sni`
+    // и роняло рукопожатие — сервер работал во всех клиентах, кроме нашего.
+    Socks5Credentials().init('u', 'p');
+    final config = ConfigGeneratorV2.generateConfig(
+      'vless://uuid@vps1.example.org:8443?security=tls&type=tcp'
+      '&sni=spotify.com&fp=chrome&vcn=vps1.example.org'
+      '&pcs=c88234050d72a3e9430ec7738636806deaf85c3708fee0fd9202ebd917e2c843'
+      '%2Ca2372d06431e9716365eeed47ec020351497d182fcc038e457e58168a03cac07'
+      '#demo',
+      settings,
+    );
+    final map = jsonDecode(config) as Map<String, dynamic>;
+    final outbound = (map['outbounds'] as List).first as Map<String, dynamic>;
+    final tls =
+        (outbound['streamSettings'] as Map<String, dynamic>)['tlsSettings']
+            as Map<String, dynamic>;
+
+    expect(tls['serverName'], 'spotify.com');
+    expect(tls['verifyPeerCertByName'], 'vps1.example.org');
+    // Список отпечатков ядро принимает одной строкой через запятую и само
+    // режет её на части — склеивать или разбирать нам нечего.
+    expect(
+      tls['pinnedPeerCertSha256'],
+      'c88234050d72a3e9430ec7738636806deaf85c3708fee0fd9202ebd917e2c843,'
+      'a2372d06431e9716365eeed47ec020351497d182fcc038e457e58168a03cac07',
+    );
+  });
+
+  test('без vcn и pcs пустых полей в tlsSettings не появляется', () {
+    Socks5Credentials().init('u', 'p');
+    final config = ConfigGeneratorV2.generateConfig(
+      'vless://uuid@example.com:443?security=tls&type=tcp&sni=example.com#d',
+      settings,
+    );
+    final map = jsonDecode(config) as Map<String, dynamic>;
+    final outbound = (map['outbounds'] as List).first as Map<String, dynamic>;
+    final tls =
+        (outbound['streamSettings'] as Map<String, dynamic>)['tlsSettings']
+            as Map<String, dynamic>;
+
+    expect(tls.containsKey('verifyPeerCertByName'), isFalse);
+    expect(tls.containsKey('pinnedPeerCertSha256'), isFalse);
+  });
+
+  test('type=raw получает http-заголовок так же, как type=tcp', () {
+    // `raw` — новое имя транспорта в ядре, и ссылки с ним уже ходят.
+    // mihomo-генератор считал их одним транспортом давно, xray-генератор нет:
+    // маскировка под http молча терялась.
+    Socks5Credentials().init('u', 'p');
+    Map<String, dynamic> streamFor(String type) {
       final config = ConfigGeneratorV2.generateConfig(
-        'vless://uuid@vps1.example.org:8443?security=tls&type=tcp'
-        '&sni=spotify.com&fp=chrome&vcn=vps1.example.org'
-        '&pcs=c88234050d72a3e9430ec7738636806deaf85c3708fee0fd9202ebd917e2c843'
-        '%2Ca2372d06431e9716365eeed47ec020351497d182fcc038e457e58168a03cac07'
-        '#demo',
+        'vless://uuid@example.com:443?type=$type&headerType=http'
+        '&host=cdn.example.com&security=none#d',
         settings,
       );
       final map = jsonDecode(config) as Map<String, dynamic>;
       final outbound = (map['outbounds'] as List).first as Map<String, dynamic>;
-      final tls = (outbound['streamSettings']
-          as Map<String, dynamic>)['tlsSettings'] as Map<String, dynamic>;
+      return outbound['streamSettings'] as Map<String, dynamic>;
+    }
 
-      expect(tls['serverName'], 'spotify.com');
-      expect(tls['verifyPeerCertByName'], 'vps1.example.org');
-      // Список отпечатков ядро принимает одной строкой через запятую и само
-      // режет её на части — склеивать или разбирать нам нечего.
-      expect(
-        tls['pinnedPeerCertSha256'],
-        'c88234050d72a3e9430ec7738636806deaf85c3708fee0fd9202ebd917e2c843,'
-        'a2372d06431e9716365eeed47ec020351497d182fcc038e457e58168a03cac07',
-      );
-    });
+    for (final type in ['tcp', 'raw']) {
+      final tcp = streamFor(type)['tcpSettings'] as Map<String, dynamic>?;
+      expect(tcp, isNotNull, reason: type);
+      final header = tcp!['header'] as Map<String, dynamic>;
+      expect(header['type'], 'http');
+    }
+  });
 
-    test('без vcn и pcs пустых полей в tlsSettings не появляется', () {
-      Socks5Credentials().init('u', 'p');
-      final config = ConfigGeneratorV2.generateConfig(
-        'vless://uuid@example.com:443?security=tls&type=tcp&sni=example.com#d',
-        settings,
-      );
-      final map = jsonDecode(config) as Map<String, dynamic>;
-      final outbound = (map['outbounds'] as List).first as Map<String, dynamic>;
-      final tls = (outbound['streamSettings']
-          as Map<String, dynamic>)['tlsSettings'] as Map<String, dynamic>;
+  test('reality: pqv доезжает как mldsa65Verify', () {
+    // Без ключа соединение встаёт, но без дополнительной post-quantum
+    // проверки — то есть тише, чем просил выдавший ссылку.
+    Socks5Credentials().init('u', 'p');
+    final config = ConfigGeneratorV2.generateConfig(
+      'vless://uuid@example.com:443?security=reality&pbk=pub&sid=12'
+      '&fp=chrome&sni=example.com&type=tcp&pqv=BASE64KEY#d',
+      settings,
+    );
+    final map = jsonDecode(config) as Map<String, dynamic>;
+    final outbound = (map['outbounds'] as List).first as Map<String, dynamic>;
+    final reality =
+        (outbound['streamSettings'] as Map<String, dynamic>)['realitySettings']
+            as Map<String, dynamic>;
 
-      expect(tls.containsKey('verifyPeerCertByName'), isFalse);
-      expect(tls.containsKey('pinnedPeerCertSha256'), isFalse);
-    });
-
-    test('type=raw получает http-заголовок так же, как type=tcp', () {
-      // `raw` — новое имя транспорта в ядре, и ссылки с ним уже ходят.
-      // mihomo-генератор считал их одним транспортом давно, xray-генератор нет:
-      // маскировка под http молча терялась.
-      Socks5Credentials().init('u', 'p');
-      Map<String, dynamic> streamFor(String type) {
-        final config = ConfigGeneratorV2.generateConfig(
-          'vless://uuid@example.com:443?type=$type&headerType=http'
-          '&host=cdn.example.com&security=none#d',
-          settings,
-        );
-        final map = jsonDecode(config) as Map<String, dynamic>;
-        final outbound =
-            (map['outbounds'] as List).first as Map<String, dynamic>;
-        return outbound['streamSettings'] as Map<String, dynamic>;
-      }
-
-      for (final type in ['tcp', 'raw']) {
-        final tcp = streamFor(type)['tcpSettings'] as Map<String, dynamic>?;
-        expect(tcp, isNotNull, reason: type);
-        final header = tcp!['header'] as Map<String, dynamic>;
-        expect(header['type'], 'http');
-      }
-    });
-
-    test('reality: pqv доезжает как mldsa65Verify', () {
-      // Без ключа соединение встаёт, но без дополнительной post-quantum
-      // проверки — то есть тише, чем просил выдавший ссылку.
-      Socks5Credentials().init('u', 'p');
-      final config = ConfigGeneratorV2.generateConfig(
-        'vless://uuid@example.com:443?security=reality&pbk=pub&sid=12'
-        '&fp=chrome&sni=example.com&type=tcp&pqv=BASE64KEY#d',
-        settings,
-      );
-      final map = jsonDecode(config) as Map<String, dynamic>;
-      final outbound = (map['outbounds'] as List).first as Map<String, dynamic>;
-      final reality = (outbound['streamSettings']
-          as Map<String, dynamic>)['realitySettings'] as Map<String, dynamic>;
-
-      expect(reality['mldsa65Verify'], 'BASE64KEY');
-    });
+    expect(reality['mldsa65Verify'], 'BASE64KEY');
+  });
 
   group('ConfigGeneratorV2', () {
     test('builds VLESS reality settings', () {
@@ -115,20 +117,27 @@ void main() {
 
     test('builds VMess outbound from base64 payload', () {
       Socks5Credentials().init('u', 'p');
-      final payload = base64.encode(utf8.encode(jsonEncode({
-        'v': '2',
-        'ps': 'demo',
-        'add': 'example.com',
-        'port': '443',
-        'id': '11111111-1111-1111-1111-111111111111',
-        'aid': '0',
-        'net': 'ws',
-        'type': 'none',
-        'host': 'example.com',
-        'path': '/ws',
-        'tls': 'tls',
-      })));
-      final config = ConfigGeneratorV2.generateConfig('vmess://$payload', settings);
+      final payload = base64.encode(
+        utf8.encode(
+          jsonEncode({
+            'v': '2',
+            'ps': 'demo',
+            'add': 'example.com',
+            'port': '443',
+            'id': '11111111-1111-1111-1111-111111111111',
+            'aid': '0',
+            'net': 'ws',
+            'type': 'none',
+            'host': 'example.com',
+            'path': '/ws',
+            'tls': 'tls',
+          }),
+        ),
+      );
+      final config = ConfigGeneratorV2.generateConfig(
+        'vmess://$payload',
+        settings,
+      );
       final map = jsonDecode(config) as Map<String, dynamic>;
       final outbound = (map['outbounds'] as List).first as Map<String, dynamic>;
       final settings2 = outbound['settings'] as Map<String, dynamic>;
@@ -140,36 +149,50 @@ void main() {
 
     test('VMess TLS без fp получает firefox', () {
       Socks5Credentials().init('u', 'p');
-      final payload = base64.encode(utf8.encode(jsonEncode({
-        'v': '2',
-        'add': 'example.com',
-        'port': '443',
-        'id': '11111111-1111-1111-1111-111111111111',
-        'aid': '0',
-        'net': 'tcp',
-        'tls': 'tls',
-        'sni': 'example.com',
-      })));
-      final config = ConfigGeneratorV2.generateConfig('vmess://$payload', settings);
+      final payload = base64.encode(
+        utf8.encode(
+          jsonEncode({
+            'v': '2',
+            'add': 'example.com',
+            'port': '443',
+            'id': '11111111-1111-1111-1111-111111111111',
+            'aid': '0',
+            'net': 'tcp',
+            'tls': 'tls',
+            'sni': 'example.com',
+          }),
+        ),
+      );
+      final config = ConfigGeneratorV2.generateConfig(
+        'vmess://$payload',
+        settings,
+      );
       final map = jsonDecode(config) as Map<String, dynamic>;
-      final stream = ((map['outbounds'] as List).first as Map)['streamSettings'] as Map<String, dynamic>;
+      final stream =
+          ((map['outbounds'] as List).first as Map)['streamSettings']
+              as Map<String, dynamic>;
       final tls = stream['tlsSettings'] as Map<String, dynamic>;
       expect(tls['fingerprint'], 'firefox');
     });
 
     test('builds VMess outbound from url-safe base64 payload', () {
       Socks5Credentials().init('u', 'p');
-      final raw = utf8.encode(jsonEncode({
-        'add': 'vmess.example.com',
-        'port': '443',
-        'id': '22222222-2222-2222-2222-222222222222',
-        'aid': '0',
-        'scy': 'chacha20-poly1305',
-        'net': 'tcp',
-        'tls': 'none',
-      }));
+      final raw = utf8.encode(
+        jsonEncode({
+          'add': 'vmess.example.com',
+          'port': '443',
+          'id': '22222222-2222-2222-2222-222222222222',
+          'aid': '0',
+          'scy': 'chacha20-poly1305',
+          'net': 'tcp',
+          'tls': 'none',
+        }),
+      );
       final payload = base64Url.encode(raw).replaceAll('=', '');
-      final config = ConfigGeneratorV2.generateConfig('vmess://$payload', settings);
+      final config = ConfigGeneratorV2.generateConfig(
+        'vmess://$payload',
+        settings,
+      );
       final map = jsonDecode(config) as Map<String, dynamic>;
       final outbound = (map['outbounds'] as List).first as Map<String, dynamic>;
       final settings2 = outbound['settings'] as Map<String, dynamic>;
@@ -197,7 +220,9 @@ void main() {
     test('builds Shadowsocks outbound from SIP002 base64 format', () {
       Socks5Credentials().init('u', 'p');
       // SIP002: ss://BASE64(method:password)@host:port
-      final userInfo = base64Url.encode(utf8.encode('chacha20-ietf-poly1305:secret')).replaceAll('=', '');
+      final userInfo = base64Url
+          .encode(utf8.encode('chacha20-ietf-poly1305:secret'))
+          .replaceAll('=', '');
       final config = ConfigGeneratorV2.generateConfig(
         'ss://$userInfo@example.net:443',
         settings,
@@ -283,9 +308,11 @@ void main() {
     test('ранние данные из параметра ссылки переезжают в путь', () {
       Socks5Credentials().init('u', 'p');
       Map<String, dynamic> streamOf(String link) {
-        final map = jsonDecode(ConfigGeneratorV2.generateConfig(link, settings))
-            as Map<String, dynamic>;
-        final outbound = (map['outbounds'] as List).first as Map<String, dynamic>;
+        final map =
+            jsonDecode(ConfigGeneratorV2.generateConfig(link, settings))
+                as Map<String, dynamic>;
+        final outbound =
+            (map['outbounds'] as List).first as Map<String, dynamic>;
         return outbound['streamSettings'] as Map<String, dynamic>;
       }
 
@@ -320,9 +347,11 @@ void main() {
     // конфиг целиком. Имя уходит в отдельное `host`, заголовков не остаётся.
     test('ws host goes to its own field, not to headers', () {
       Map<String, dynamic> wsOf(String link) {
-        final map = jsonDecode(
-          ConfigGeneratorV2.generateConfig(link, const AppSettings()),
-        ) as Map<String, dynamic>;
+        final map =
+            jsonDecode(
+                  ConfigGeneratorV2.generateConfig(link, const AppSettings()),
+                )
+                as Map<String, dynamic>;
         final outbound = (map['outbounds'] as List).first as Map;
         return (outbound['streamSettings'] as Map)['wsSettings']
             as Map<String, dynamic>;
@@ -349,23 +378,29 @@ void main() {
       // корпоративный диапазон в Direct: должен ловиться и по имени хоста,
       // а не только по голому IP — для этого нужен IPIfNonMatch.
       final s = AppSettings(directRules: 'ru, 10.130.0.0/16');
-      final config =
-          ConfigGeneratorV2.generateConfig('vless://uuid@example.com:443', s);
+      final config = ConfigGeneratorV2.generateConfig(
+        'vless://uuid@example.com:443',
+        s,
+      );
       final map = jsonDecode(config) as Map<String, dynamic>;
       expect((map['routing'] as Map)['domainStrategy'], 'IPIfNonMatch');
       // и сам CIDR присутствует как direct-правило
       final rules = (map['routing'] as Map)['rules'] as List;
-      final hasCidr = rules.any((r) =>
-          (r['ip'] as List?)?.contains('10.130.0.0/16') == true &&
-          r['outboundTag'] == 'direct');
+      final hasCidr = rules.any(
+        (r) =>
+            (r['ip'] as List?)?.contains('10.130.0.0/16') == true &&
+            r['outboundTag'] == 'direct',
+      );
       expect(hasCidr, true);
     });
 
     test('domainStrategy stays AsIs without custom IP rules', () {
       Socks5Credentials().init('u', 'p');
       // дефолтные правила = только доменные суффиксы + приватные LAN → AsIs
-      final config =
-          ConfigGeneratorV2.generateConfig('vless://uuid@example.com:443', settings);
+      final config = ConfigGeneratorV2.generateConfig(
+        'vless://uuid@example.com:443',
+        settings,
+      );
       final map = jsonDecode(config) as Map<String, dynamic>;
       expect((map['routing'] as Map)['domainStrategy'], 'AsIs');
     });
@@ -373,11 +408,12 @@ void main() {
     test('LAN inbounds are noauth without credentials', () {
       Socks5Credentials().init('u', 'p');
       const s = AppSettings(lanSharing: true);
-      final config =
-          ConfigGeneratorV2.generateConfig('vless://uuid@example.com:443', s);
+      final config = ConfigGeneratorV2.generateConfig(
+        'vless://uuid@example.com:443',
+        s,
+      );
       final map = jsonDecode(config) as Map<String, dynamic>;
-      final inbounds =
-          (map['inbounds'] as List).cast<Map<String, dynamic>>();
+      final inbounds = (map['inbounds'] as List).cast<Map<String, dynamic>>();
 
       final socksLan = inbounds.firstWhere((i) => i['tag'] == 'socks-lan');
       expect((socksLan['settings'] as Map)['auth'], 'noauth');
@@ -394,35 +430,40 @@ void main() {
         lanUsername: 'lan-user',
         lanPassword: 'lan-pass',
       );
-      final config =
-          ConfigGeneratorV2.generateConfig('vless://uuid@example.com:443', s);
+      final config = ConfigGeneratorV2.generateConfig(
+        'vless://uuid@example.com:443',
+        s,
+      );
       final map = jsonDecode(config) as Map<String, dynamic>;
-      final inbounds =
-          (map['inbounds'] as List).cast<Map<String, dynamic>>();
+      final inbounds = (map['inbounds'] as List).cast<Map<String, dynamic>>();
 
       final socksLan = inbounds.firstWhere((i) => i['tag'] == 'socks-lan');
       expect((socksLan['settings'] as Map)['auth'], 'password');
-      expect((socksLan['settings'] as Map)['accounts'],
-          [{'user': 'lan-user', 'pass': 'lan-pass'}]);
+      expect((socksLan['settings'] as Map)['accounts'], [
+        {'user': 'lan-user', 'pass': 'lan-pass'},
+      ]);
       // UDP-режим SOCKS сохраняется и с паролем
       expect((socksLan['settings'] as Map)['udp'], isTrue);
 
       final httpLan = inbounds.firstWhere((i) => i['tag'] == 'http-lan');
-      expect((httpLan['settings'] as Map)['accounts'],
-          [{'user': 'lan-user', 'pass': 'lan-pass'}]);
+      expect((httpLan['settings'] as Map)['accounts'], [
+        {'user': 'lan-user', 'pass': 'lan-pass'},
+      ]);
 
       // локальные loopback-инбаунды не затронуты LAN-кредами
       final socksIn = inbounds.firstWhere((i) => i['tag'] == 'socks-in');
-      final accounts =
-          ((socksIn['settings'] as Map)['accounts'] as List).cast<Map<Object?, Object?>>();
+      final accounts = ((socksIn['settings'] as Map)['accounts'] as List)
+          .cast<Map<Object?, Object?>>();
       expect(accounts.single['user'], 'u');
     });
 
     test('half-filled LAN credentials fall back to noauth', () {
       Socks5Credentials().init('u', 'p');
       const s = AppSettings(lanSharing: true, lanUsername: 'only-user');
-      final config =
-          ConfigGeneratorV2.generateConfig('vless://uuid@example.com:443', s);
+      final config = ConfigGeneratorV2.generateConfig(
+        'vless://uuid@example.com:443',
+        s,
+      );
       final map = jsonDecode(config) as Map<String, dynamic>;
       final socksLan = ((map['inbounds'] as List).cast<Map<String, dynamic>>())
           .firstWhere((i) => i['tag'] == 'socks-lan');
@@ -434,24 +475,30 @@ void main() {
       // UI обещает «по одному в строке или через запятую»; сплит только по ','
       // склеивал построчные записи в один несрабатывающий domain-токен.
       const s = AppSettings(directRules: 'yandex.ru\nvk.com\n192.168.50.0/24');
-      final config =
-          ConfigGeneratorV2.generateConfig('vless://uuid@example.com:443', s);
+      final config = ConfigGeneratorV2.generateConfig(
+        'vless://uuid@example.com:443',
+        s,
+      );
       final map = jsonDecode(config) as Map<String, dynamic>;
-      final rules =
-          ((map['routing'] as Map)['rules'] as List).cast<Map<String, dynamic>>();
+      final rules = ((map['routing'] as Map)['rules'] as List)
+          .cast<Map<String, dynamic>>();
 
-      final domainRule = rules.firstWhere((r) =>
-          r['outboundTag'] == 'direct' &&
-          (r['domain'] as List?)?.contains('domain:yandex.ru') == true);
+      final domainRule = rules.firstWhere(
+        (r) =>
+            r['outboundTag'] == 'direct' &&
+            (r['domain'] as List?)?.contains('domain:yandex.ru') == true,
+      );
       expect(domainRule['domain'], contains('domain:vk.com'));
       expect(
         (domainRule['domain'] as List).any((d) => (d as String).contains('\n')),
         isFalse,
       );
 
-      final hasCidr = rules.any((r) =>
-          r['outboundTag'] == 'direct' &&
-          (r['ip'] as List?)?.contains('192.168.50.0/24') == true);
+      final hasCidr = rules.any(
+        (r) =>
+            r['outboundTag'] == 'direct' &&
+            (r['ip'] as List?)?.contains('192.168.50.0/24') == true,
+      );
       expect(hasCidr, true);
     });
 
@@ -484,7 +531,9 @@ void main() {
         settings,
       );
       final map = jsonDecode(config) as Map<String, dynamic>;
-      final stream = ((map['outbounds'] as List).first as Map)['streamSettings'] as Map<String, dynamic>;
+      final stream =
+          ((map['outbounds'] as List).first as Map)['streamSettings']
+              as Map<String, dynamic>;
       final tls = stream['tlsSettings'] as Map<String, dynamic>;
       expect(tls.containsKey('allowInsecure'), isFalse);
       expect(tls['serverName'], 'example.com');
@@ -499,7 +548,9 @@ void main() {
         settings,
       );
       final map = jsonDecode(config) as Map<String, dynamic>;
-      final stream = ((map['outbounds'] as List).first as Map)['streamSettings'] as Map<String, dynamic>;
+      final stream =
+          ((map['outbounds'] as List).first as Map)['streamSettings']
+              as Map<String, dynamic>;
       final tls = stream['tlsSettings'] as Map<String, dynamic>;
       expect(tls['fingerprint'], 'firefox');
     });
@@ -511,7 +562,9 @@ void main() {
         settings,
       );
       final map = jsonDecode(config) as Map<String, dynamic>;
-      final stream = ((map['outbounds'] as List).first as Map)['streamSettings'] as Map<String, dynamic>;
+      final stream =
+          ((map['outbounds'] as List).first as Map)['streamSettings']
+              as Map<String, dynamic>;
       final tls = stream['tlsSettings'] as Map<String, dynamic>;
       expect(tls['fingerprint'], 'firefox');
     });
@@ -525,7 +578,9 @@ void main() {
         settings,
       );
       final map = jsonDecode(config) as Map<String, dynamic>;
-      final stream = ((map['outbounds'] as List).first as Map)['streamSettings'] as Map<String, dynamic>;
+      final stream =
+          ((map['outbounds'] as List).first as Map)['streamSettings']
+              as Map<String, dynamic>;
       final tls = stream['tlsSettings'] as Map<String, dynamic>;
       expect(tls.containsKey('fingerprint'), isFalse);
     });
@@ -540,8 +595,9 @@ void main() {
         settings,
       );
       final map = jsonDecode(config) as Map<String, dynamic>;
-      final stream = ((map['outbounds'] as List).first as Map)['streamSettings']
-          as Map<String, dynamic>;
+      final stream =
+          ((map['outbounds'] as List).first as Map)['streamSettings']
+              as Map<String, dynamic>;
       final reality = stream['realitySettings'] as Map<String, dynamic>;
       expect(reality['fingerprint'], 'firefox');
     });
@@ -554,8 +610,9 @@ void main() {
         settings,
       );
       final map = jsonDecode(config) as Map<String, dynamic>;
-      final stream = ((map['outbounds'] as List).first as Map)['streamSettings']
-          as Map<String, dynamic>;
+      final stream =
+          ((map['outbounds'] as List).first as Map)['streamSettings']
+              as Map<String, dynamic>;
       final reality = stream['realitySettings'] as Map<String, dynamic>;
       expect(reality['fingerprint'], 'chrome');
     });
@@ -563,7 +620,8 @@ void main() {
     // Скачивание по downloadSettings — отдельное подключение со своим TLS.
     test('downloadSettings без fp получает тот же отпечаток', () {
       Socks5Credentials().init('u', 'p');
-      const extra = '{"downloadSettings":{"address":"dl.example","port":443,'
+      const extra =
+          '{"downloadSettings":{"address":"dl.example","port":443,'
           '"network":"xhttp","security":"tls",'
           '"tlsSettings":{"serverName":"dl.example"}}}';
       final config = ConfigGeneratorV2.generateConfig(
@@ -572,17 +630,22 @@ void main() {
         settings,
       );
       final map = jsonDecode(config) as Map<String, dynamic>;
-      final stream = ((map['outbounds'] as List).first as Map)['streamSettings']
-          as Map<String, dynamic>;
-      final download = ((stream['xhttpSettings'] as Map)['extra']
-          as Map)['downloadSettings'] as Map;
-      expect(download['tlsSettings'],
-          {'serverName': 'dl.example', 'fingerprint': 'firefox'});
+      final stream =
+          ((map['outbounds'] as List).first as Map)['streamSettings']
+              as Map<String, dynamic>;
+      final download =
+          ((stream['xhttpSettings'] as Map)['extra'] as Map)['downloadSettings']
+              as Map;
+      expect(download['tlsSettings'], {
+        'serverName': 'dl.example',
+        'fingerprint': 'firefox',
+      });
     });
 
     test('downloadSettings с fp из ссылки его и оставляет', () {
       Socks5Credentials().init('u', 'p');
-      const extra = '{"downloadSettings":{"address":"dl.example","port":443,'
+      const extra =
+          '{"downloadSettings":{"address":"dl.example","port":443,'
           '"network":"xhttp","security":"reality",'
           '"realitySettings":{"publicKey":"pk","fingerprint":"safari"}}}';
       final config = ConfigGeneratorV2.generateConfig(
@@ -591,10 +654,12 @@ void main() {
         settings,
       );
       final map = jsonDecode(config) as Map<String, dynamic>;
-      final stream = ((map['outbounds'] as List).first as Map)['streamSettings']
-          as Map<String, dynamic>;
-      final download = ((stream['xhttpSettings'] as Map)['extra']
-          as Map)['downloadSettings'] as Map;
+      final stream =
+          ((map['outbounds'] as List).first as Map)['streamSettings']
+              as Map<String, dynamic>;
+      final download =
+          ((stream['xhttpSettings'] as Map)['extra'] as Map)['downloadSettings']
+              as Map;
       expect((download['realitySettings'] as Map)['fingerprint'], 'safari');
     });
 
@@ -605,7 +670,9 @@ void main() {
         settings,
       );
       final map = jsonDecode(config) as Map<String, dynamic>;
-      final stream = ((map['outbounds'] as List).first as Map)['streamSettings'] as Map<String, dynamic>;
+      final stream =
+          ((map['outbounds'] as List).first as Map)['streamSettings']
+              as Map<String, dynamic>;
       final tls = stream['tlsSettings'] as Map<String, dynamic>;
       expect(tls['fingerprint'], 'firefox');
     });
@@ -672,7 +739,8 @@ void main() {
       final stream = outbound['streamSettings'] as Map<String, dynamic>;
       expect(stream['network'], 'hysteria');
       expect(stream['security'], 'tls');
-      final hysteriaSettings = stream['hysteriaSettings'] as Map<String, dynamic>;
+      final hysteriaSettings =
+          stream['hysteriaSettings'] as Map<String, dynamic>;
       expect(hysteriaSettings['version'], 2);
       expect(hysteriaSettings['auth'], 'hy2secret');
     });
@@ -685,7 +753,9 @@ void main() {
       );
       final map = jsonDecode(config) as Map<String, dynamic>;
       final outbound = (map['outbounds'] as List).first as Map<String, dynamic>;
-      final hysteriaSettings = (outbound['streamSettings'] as Map)['hysteriaSettings'] as Map<String, dynamic>;
+      final hysteriaSettings =
+          (outbound['streamSettings'] as Map)['hysteriaSettings']
+              as Map<String, dynamic>;
       expect(hysteriaSettings['auth'], 'hy2secret');
     });
 
@@ -697,16 +767,14 @@ void main() {
       );
       final map = jsonDecode(config) as Map<String, dynamic>;
       final stream =
-          ((map['outbounds'] as List).first as Map)['streamSettings'] as Map<String, dynamic>;
+          ((map['outbounds'] as List).first as Map)['streamSettings']
+              as Map<String, dynamic>;
       final tls = stream['tlsSettings'] as Map<String, dynamic>;
       expect(tls['alpn'], ['h3']);
       final finalmask = stream['finalmask'] as Map<String, dynamic>;
       final udp = finalmask['udp'] as List;
       expect((udp.first as Map)['type'], 'salamander');
-      expect(
-        ((udp.first as Map)['settings'] as Map)['password'],
-        'test123',
-      );
+      expect(((udp.first as Map)['settings'] as Map)['password'], 'test123');
     });
 
     // Полоса и перебор портов в xray 26 живут в finalmask.quicParams: из
@@ -720,8 +788,10 @@ void main() {
         '&obfs=salamander&obfs-password=test123',
         settings,
       );
-      final stream = ((jsonDecode(config) as Map)['outbounds'] as List)
-          .first['streamSettings'] as Map<String, dynamic>;
+      final stream =
+          ((jsonDecode(config) as Map)['outbounds'] as List)
+                  .first['streamSettings']
+              as Map<String, dynamic>;
       final hysteria = stream['hysteriaSettings'] as Map<String, dynamic>;
       for (final key in ['up', 'down', 'udphop', 'congestion']) {
         expect(hysteria.containsKey(key), isFalse, reason: key);
@@ -745,8 +815,10 @@ void main() {
           '&hop-interval=${Uri.encodeQueryComponent(value)}',
           settings,
         );
-        final stream = ((jsonDecode(config) as Map)['outbounds'] as List)
-            .first['streamSettings'] as Map;
+        final stream =
+            ((jsonDecode(config) as Map)['outbounds'] as List)
+                    .first['streamSettings']
+                as Map;
         final quic = (stream['finalmask'] as Map)['quicParams'] as Map;
         return (quic['udpHop'] as Map)['interval'];
       }
@@ -761,24 +833,26 @@ void main() {
     // умолчанию. Ссылка старого вида едет масками mkcp-legacy — в порядке,
     // который проверен трафиком против xray 25.12.8 (PROGRESS.md, G-12).
     group('mKCP', () {
-      const base = 'vless://00000000-0000-4000-8000-000000000000'
+      const base =
+          'vless://00000000-0000-4000-8000-000000000000'
           '@198.51.100.30:443?type=kcp&security=none';
       Map<String, dynamic> streamOf(String link) {
         Socks5Credentials().init('u', 'p');
         final config = ConfigGeneratorV2.generateConfig(link, settings);
         return ((jsonDecode(config) as Map)['outbounds'] as List)
-            .first['streamSettings'] as Map<String, dynamic>;
+                .first['streamSettings']
+            as Map<String, dynamic>;
       }
 
       const orig = {'type': 'mkcp-legacy'};
       Map<String, Object> aes(String seed) => {
-            'type': 'mkcp-legacy',
-            'settings': {'value': seed},
-          };
+        'type': 'mkcp-legacy',
+        'settings': {'value': seed},
+      };
       Map<String, Object> header(String name) => {
-            'type': 'mkcp-legacy',
-            'settings': {'header': name},
-          };
+        'type': 'mkcp-legacy',
+        'settings': {'header': name},
+      };
 
       test('ни seed, ни заголовка — прежняя обфускация: без неё старый '
           'сервер молчит', () {
@@ -841,18 +915,22 @@ void main() {
       });
 
       test('vmess-json: seed лежит в path, заголовок — в type', () {
-        final vmess = base64.encode(utf8.encode(jsonEncode({
-          'v': '2',
-          'ps': 'kcp',
-          'add': '198.51.100.30',
-          'port': '443',
-          'id': '00000000-0000-4000-8000-000000000000',
-          'aid': '0',
-          'net': 'kcp',
-          'type': 'srtp',
-          'path': 's3cret',
-          'tls': '',
-        })));
+        final vmess = base64.encode(
+          utf8.encode(
+            jsonEncode({
+              'v': '2',
+              'ps': 'kcp',
+              'add': '198.51.100.30',
+              'port': '443',
+              'id': '00000000-0000-4000-8000-000000000000',
+              'aid': '0',
+              'net': 'kcp',
+              'type': 'srtp',
+              'path': 's3cret',
+              'tls': '',
+            }),
+          ),
+        );
         expect(streamOf('vmess://$vmess')['finalmask'], {
           'udp': [aes('s3cret'), header('srtp')],
         });
@@ -875,7 +953,8 @@ void main() {
       expect(tls['alpn'], ['h3']);
       expect(tls['echConfigList'], isA<String>());
       expect(tls['echConfigList'] as String, contains('AGb'));
-      final hysteriaSettings = stream['hysteriaSettings'] as Map<String, dynamic>;
+      final hysteriaSettings =
+          stream['hysteriaSettings'] as Map<String, dynamic>;
       expect(hysteriaSettings['auth'], 'fake-auth-token');
       expect(hysteriaSettings['version'], 2);
     });
@@ -922,36 +1001,42 @@ void main() {
       expect(grpcSettings['multiMode'], true);
     });
 
-    test('geoip:ru preset emits ip rule with geoip token, no bare geoip field', () {
-      Socks5Credentials().init('u', 'p');
-      final geoSettings = const AppSettings(directRules: 'geoip:ru');
-      final config = ConfigGeneratorV2.generateConfig(
-        'vless://uuid@example.com:443?type=tcp',
-        geoSettings,
-      );
-      final map = jsonDecode(config) as Map<String, dynamic>;
-      final rules = (map['routing'] as Map)['rules'] as List;
-      // xray matches geoip via the `ip` field (`geoip:ru`), never a top-level
-      // `geoip` key — a bare `geoip` rule trips "this rule has no effective fields".
-      final geoRule = rules.cast<Map<String, dynamic>>().firstWhere(
-        (r) =>
-            r['outboundTag'] == 'direct' &&
-            (r['ip'] as List?)?.contains('geoip:ru') == true,
-        orElse: () => <String, dynamic>{},
-      );
-      expect(geoRule['ip'], contains('geoip:ru'));
-      expect(geoRule['outboundTag'], 'direct');
-      // No rule may carry a bare `geoip` field — xray ignores it.
-      final badGeoRule = rules.cast<Map<String, dynamic>>().where(
-        (r) => r['geoip'] != null,
-      );
-      expect(badGeoRule, isEmpty);
-    });
+    test(
+      'geoip:ru preset emits ip rule with geoip token, no bare geoip field',
+      () {
+        Socks5Credentials().init('u', 'p');
+        final geoSettings = const AppSettings(directRules: 'geoip:ru');
+        final config = ConfigGeneratorV2.generateConfig(
+          'vless://uuid@example.com:443?type=tcp',
+          geoSettings,
+        );
+        final map = jsonDecode(config) as Map<String, dynamic>;
+        final rules = (map['routing'] as Map)['rules'] as List;
+        // xray matches geoip via the `ip` field (`geoip:ru`), never a top-level
+        // `geoip` key — a bare `geoip` rule trips "this rule has no effective fields".
+        final geoRule = rules.cast<Map<String, dynamic>>().firstWhere(
+          (r) =>
+              r['outboundTag'] == 'direct' &&
+              (r['ip'] as List?)?.contains('geoip:ru') == true,
+          orElse: () => <String, dynamic>{},
+        );
+        expect(geoRule['ip'], contains('geoip:ru'));
+        expect(geoRule['outboundTag'], 'direct');
+        // No rule may carry a bare `geoip` field — xray ignores it.
+        final badGeoRule = rules.cast<Map<String, dynamic>>().where(
+          (r) => r['geoip'] != null,
+        );
+        expect(badGeoRule, isEmpty);
+      },
+    );
 
     test('throws on unsupported protocol', () {
       Socks5Credentials().init('u', 'p');
       expect(
-        () => ConfigGeneratorV2.generateConfig('ssh://user@example.com', settings),
+        () => ConfigGeneratorV2.generateConfig(
+          'ssh://user@example.com',
+          settings,
+        ),
         throwsA(isA<ArgumentError>()),
       );
     });
@@ -959,7 +1044,10 @@ void main() {
     test('throws on VLESS without UUID', () {
       Socks5Credentials().init('u', 'p');
       expect(
-        () => ConfigGeneratorV2.generateConfig('vless://@example.com:443', settings),
+        () => ConfigGeneratorV2.generateConfig(
+          'vless://@example.com:443',
+          settings,
+        ),
         throwsA(isA<ArgumentError>()),
       );
     });
@@ -967,7 +1055,10 @@ void main() {
     test('throws on Trojan without password', () {
       Socks5Credentials().init('u', 'p');
       expect(
-        () => ConfigGeneratorV2.generateConfig('trojan://@example.com:443', settings),
+        () => ConfigGeneratorV2.generateConfig(
+          'trojan://@example.com:443',
+          settings,
+        ),
         throwsA(isA<ArgumentError>()),
       );
     });
@@ -975,7 +1066,10 @@ void main() {
     test('throws on Hysteria without auth', () {
       Socks5Credentials().init('u', 'p');
       expect(
-        () => ConfigGeneratorV2.generateConfig('hysteria://example.com:443', settings),
+        () => ConfigGeneratorV2.generateConfig(
+          'hysteria://example.com:443',
+          settings,
+        ),
         throwsA(isA<ArgumentError>()),
       );
     });
@@ -1039,23 +1133,26 @@ void main() {
       expect((map['routing'] as Map)['domainStrategy'], 'AsIs');
     });
 
-    test('generatePingConfig defaults to noauth SOCKS inbound (Android probe)', () {
-      // Android's Java probe uses Proxy.Type.SOCKS, so without httpInbound the
-      // ephemeral ping must expose a noauth SOCKS inbound.
-      Socks5Credentials().init('u', 'p');
-      const port = 28999;
-      final config = ConfigGeneratorV2.generatePingConfig(
-        'vless://uuid@example.com:443?type=tcp',
-        settings,
-        socksPort: port,
-      );
-      final map = jsonDecode(config) as Map<String, dynamic>;
-      final inbound = (map['inbounds'] as List).first as Map<String, dynamic>;
-      expect(inbound['port'], port);
-      expect(inbound['protocol'], 'socks');
-      expect((inbound['settings'] as Map)['auth'], 'noauth');
-      expect(map['inbounds'].length, 1);
-    });
+    test(
+      'generatePingConfig defaults to noauth SOCKS inbound (Android probe)',
+      () {
+        // Android's Java probe uses Proxy.Type.SOCKS, so without httpInbound the
+        // ephemeral ping must expose a noauth SOCKS inbound.
+        Socks5Credentials().init('u', 'p');
+        const port = 28999;
+        final config = ConfigGeneratorV2.generatePingConfig(
+          'vless://uuid@example.com:443?type=tcp',
+          settings,
+          socksPort: port,
+        );
+        final map = jsonDecode(config) as Map<String, dynamic>;
+        final inbound = (map['inbounds'] as List).first as Map<String, dynamic>;
+        expect(inbound['port'], port);
+        expect(inbound['protocol'], 'socks');
+        expect((inbound['settings'] as Map)['auth'], 'noauth');
+        expect(map['inbounds'].length, 1);
+      },
+    );
 
     test('injects xmux into xhttp extra when enabled', () {
       Socks5Credentials().init('u', 'p');
@@ -1079,4 +1176,3 @@ void main() {
     });
   });
 }
-

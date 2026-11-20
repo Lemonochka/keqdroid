@@ -28,56 +28,81 @@ void main() {
     } catch (_) {}
   });
 
-  test('отказ Dart проба переспрашивает у Windows, чужой сертификат не принимает', () async {
-    final p12 = base64.decode(_selfSigned);
-    final context = SecurityContext()
-      ..useCertificateChainBytes(p12, password: 'keqdroid')
-      ..usePrivateKeyBytes(p12, password: 'keqdroid');
-    final site = await SecureServerSocket.bind(InternetAddress.loopbackIPv4, 0, context);
-    site.listen(
-      (client) => client.listen(
-        (_) => client.write('HTTP/1.1 204 No Content\r\nContent-Length: 0\r\n\r\n'),
+  test(
+    'отказ Dart проба переспрашивает у Windows, чужой сертификат не принимает',
+    () async {
+      final p12 = base64.decode(_selfSigned);
+      final context = SecurityContext()
+        ..useCertificateChainBytes(p12, password: 'keqdroid')
+        ..usePrivateKeyBytes(p12, password: 'keqdroid');
+      final site = await SecureServerSocket.bind(
+        InternetAddress.loopbackIPv4,
+        0,
+        context,
+      );
+      site.listen(
+        (client) => client.listen(
+          (_) => client.write(
+            'HTTP/1.1 204 No Content\r\nContent-Length: 0\r\n\r\n',
+          ),
+          onError: (Object _) {},
+        ),
         onError: (Object _) {},
-      ),
-      onError: (Object _) {},
-    );
-    // CONNECT принимает как инбаунд ядра и дальше просто гонит байты к сайту
-    final proxy = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
-    proxy.listen((client) async {
-      final upstream = await Socket.connect(InternetAddress.loopbackIPv4, site.port);
-      var head = '';
-      var tunnelled = false;
-      upstream.listen(client.add, onDone: client.destroy, onError: (Object _) {});
-      client.listen((data) {
-        if (tunnelled) {
-          upstream.add(data);
-          return;
-        }
-        head += latin1.decode(data);
-        if (head.contains('\r\n\r\n')) {
-          tunnelled = true;
-          client.write('HTTP/1.1 200 Connection established\r\n\r\n');
-        }
-      }, onDone: upstream.destroy, onError: (Object _) {});
-    });
-    addTearDown(() async {
-      await proxy.close();
-      await site.close();
-    });
+      );
+      // CONNECT принимает как инбаунд ядра и дальше просто гонит байты к сайту
+      final proxy = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
+      proxy.listen((client) async {
+        final upstream = await Socket.connect(
+          InternetAddress.loopbackIPv4,
+          site.port,
+        );
+        var head = '';
+        var tunnelled = false;
+        upstream.listen(
+          client.add,
+          onDone: client.destroy,
+          onError: (Object _) {},
+        );
+        client.listen(
+          (data) {
+            if (tunnelled) {
+              upstream.add(data);
+              return;
+            }
+            head += latin1.decode(data);
+            if (head.contains('\r\n\r\n')) {
+              tunnelled = true;
+              client.write('HTTP/1.1 200 Connection established\r\n\r\n');
+            }
+          },
+          onDone: upstream.destroy,
+          onError: (Object _) {},
+        );
+      });
+      addTearDown(() async {
+        await proxy.close();
+        await site.close();
+      });
 
-    final result = await EphemeralXrayPing.httpProbeViaSocks(
-      testUrl: 'https://localhost:${site.port}/generate_204',
-      socksPort: proxy.port,
-      timeoutMs: 3000,
-    );
+      final result = await EphemeralXrayPing.httpProbeViaSocks(
+        testUrl: 'https://localhost:${site.port}/generate_204',
+        socksPort: proxy.port,
+        timeoutMs: 3000,
+      );
 
-    expect(result.success, isFalse);
-    expect(result.error, contains('CERTIFICATE_VERIFY_FAILED'));
-    final log = await AppLogger.instance.readFileLog();
-    if (Platform.isWindows) {
-      expect(log, contains('TLS localhost: Windows does not trust the certificate either'));
-    } else {
-      expect(log, isNot(contains('TLS localhost')));
-    }
-  });
+      expect(result.success, isFalse);
+      expect(result.error, contains('CERTIFICATE_VERIFY_FAILED'));
+      final log = await AppLogger.instance.readFileLog();
+      if (Platform.isWindows) {
+        expect(
+          log,
+          contains(
+            'TLS localhost: Windows does not trust the certificate either',
+          ),
+        );
+      } else {
+        expect(log, isNot(contains('TLS localhost')));
+      }
+    },
+  );
 }

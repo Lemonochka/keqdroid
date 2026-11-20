@@ -14,7 +14,8 @@ import '../helpers/xray_rules_sim.dart';
 
 // приложение вне VPN, привязавшее сокет к tun0: мост называет его маркером, и защита обрывает соединение
 // раньше всего, что ответило бы через сервер. выключенная защита конфиг не трогает
-const _link = 'vless://00000000-0000-4000-8000-000000000000@203.0.113.10:443'
+const _link =
+    'vless://00000000-0000-4000-8000-000000000000@203.0.113.10:443'
     '?type=tcp&security=tls&sni=nl.example#NL';
 
 const _settings = AppSettings(
@@ -36,7 +37,10 @@ const _custom = {
             'address': '203.0.113.11',
             'port': 443,
             'users': [
-              {'id': '00000000-0000-4000-8000-000000000000', 'encryption': 'none'},
+              {
+                'id': '00000000-0000-4000-8000-000000000000',
+                'encryption': 'none',
+              },
             ],
           },
         ],
@@ -81,13 +85,16 @@ Map<String, dynamic> _xray(
   DesktopTunOptions? desktopTun,
 }) {
   Socks5Credentials().init('u', 'p');
-  return jsonDecode(ConfigGeneratorV2.generateConfig(
-    input,
-    _settings,
-    nativeTunInbound: tun,
-    desktopTun: desktopTun,
-    ownerGuard: guard,
-  )) as Map<String, dynamic>;
+  return jsonDecode(
+        ConfigGeneratorV2.generateConfig(
+          input,
+          _settings,
+          nativeTunInbound: tun,
+          desktopTun: desktopTun,
+          ownerGuard: guard,
+        ),
+      )
+      as Map<String, dynamic>;
 }
 
 Map<String, dynamic> _mihomo(
@@ -114,29 +121,27 @@ String? _x(
   String ip = '93.184.216.34',
   int port = 443,
   String network = 'tcp',
-}) =>
-    simulateXray(
-      c,
-      XrayConn(
-        inbound: inbound,
-        process: process,
-        host: host,
-        ip: ip,
-        port: port,
-        network: network,
-      ),
-    );
+}) => simulateXray(
+  c,
+  XrayConn(
+    inbound: inbound,
+    process: process,
+    host: host,
+    ip: ip,
+    port: port,
+    network: network,
+  ),
+);
 
 String _m(
   Map<String, dynamic> c, {
   String process = kOutsideVpnOwner,
   String inType = 'TUN',
   int port = 443,
-}) =>
-    simulateMihomo(
-      c,
-      SimConn(process: process, ip: '93.184.216.34', inType: inType, port: port),
-    );
+}) => simulateMihomo(
+  c,
+  SimConn(process: process, ip: '93.184.216.34', inType: inType, port: port),
+);
 
 void main() {
   // переключателя нет: защита там, где сплит выводит приложения из VPN, на Android 10+ в режиме VPN
@@ -146,8 +151,12 @@ void main() {
       bool tun = true,
       AppRoutingMode mode = AppRoutingMode.allExceptSelected,
       int? sdk = 37,
-    }) =>
-        ownerGuardFor(android: android, tun: tun, routingMode: mode, sdkInt: sdk);
+    }) => ownerGuardFor(
+      android: android,
+      tun: tun,
+      routingMode: mode,
+      sdkInt: sdk,
+    );
 
     expect(on(), OwnerGuard.all);
     expect(on(mode: AppRoutingMode.onlySelected), OwnerGuard.all);
@@ -185,14 +194,17 @@ void main() {
       expect((rules.first as Map)['inboundTag'], ['tun-in']);
     });
 
-    test('чужое соединение блокируется раньше DNS, exit-ip-probe и списков', () {
-      final c = _xray(OwnerGuard.all);
-      expect(_x(c), 'block');
-      expect(_x(c, ip: '172.19.0.2', port: 53, network: 'udp'), 'block');
-      expect(_x(c, ip: '1.1.1.1', port: 53, network: 'udp'), 'block');
-      expect(_x(c, host: 'www.cloudflare.com', ip: ''), 'block');
-      expect(_x(c, host: 'mail.ru', ip: ''), 'block');
-    });
+    test(
+      'чужое соединение блокируется раньше DNS, exit-ip-probe и списков',
+      () {
+        final c = _xray(OwnerGuard.all);
+        expect(_x(c), 'block');
+        expect(_x(c, ip: '172.19.0.2', port: 53, network: 'udp'), 'block');
+        expect(_x(c, ip: '1.1.1.1', port: 53, network: 'udp'), 'block');
+        expect(_x(c, host: 'www.cloudflare.com', ip: ''), 'block');
+        expect(_x(c, host: 'mail.ru', ip: ''), 'block');
+      },
+    );
 
     test('своё приложение и молчание моста идут как без защиты', () {
       final on = _xray(OwnerGuard.all);
@@ -205,8 +217,22 @@ void main() {
           ('mail.ru', '', 443, 'tcp'),
         ]) {
           expect(
-            _x(on, process: process, host: host, ip: ip, port: port, network: network),
-            _x(off, process: process, host: host, ip: ip, port: port, network: network),
+            _x(
+              on,
+              process: process,
+              host: host,
+              ip: ip,
+              port: port,
+              network: network,
+            ),
+            _x(
+              off,
+              process: process,
+              host: host,
+              ip: ip,
+              port: port,
+              network: network,
+            ),
           );
         }
       }
@@ -239,8 +265,10 @@ void main() {
       final c = _xray(OwnerGuard.all, input: jsonEncode(_custom));
       expect(_x(c), 'keq-block');
       expect(_x(c, ip: '1.1.1.1', port: 53, network: 'udp'), 'keq-block');
-      expect(_x(c, process: _chrome, ip: '1.1.1.1', port: 53, network: 'udp'),
-          'direct');
+      expect(
+        _x(c, process: _chrome, ip: '1.1.1.1', port: 53, network: 'udp'),
+        'direct',
+      );
       expect(
         (c['outbounds'] as List).where((o) => (o as Map)['tag'] == 'keq-block'),
         hasLength(1),

@@ -47,41 +47,50 @@ void main() {
     final iss = File('windows/installer/keqdroid.iss').readAsStringSync();
 
     test('AppId записи Uninstall тот же, что ищет апдейтер', () {
-      final id = RegExp(r'^AppId=\{\{([0-9A-F-]{36})\}', multiLine: true)
-          .firstMatch(iss)!
-          .group(1)!;
-      final dart =
-          File('lib/services/windows_install.dart').readAsStringSync();
+      final id = RegExp(
+        r'^AppId=\{\{([0-9A-F-]{36})\}',
+        multiLine: true,
+      ).firstMatch(iss)!.group(1)!;
+      final dart = File('lib/services/windows_install.dart').readAsStringSync();
       expect(dart, contains('{$id}_is1'));
     });
 
     test('AppMutex тот же, что держит раннер', () {
-      final mutex =
-          RegExp(r'^AppMutex=(.+)$', multiLine: true).firstMatch(iss)!.group(1)!;
+      final mutex = RegExp(
+        r'^AppMutex=(.+)$',
+        multiLine: true,
+      ).firstMatch(iss)!.group(1)!;
       final main = File('windows/runner/main.cpp').readAsStringSync();
       expect(
         main,
-        contains('kSingleInstanceMutex[] = L"${mutex.trim().replaceAll(r'\', r'\\')}"'),
+        contains(
+          'kSingleInstanceMutex[] = L"${mutex.trim().replaceAll(r'\', r'\\')}"',
+        ),
       );
     });
 
     test('имя файла установщика апдейтер узнаёт', () {
-      final base = RegExp(r'^OutputBaseFilename=(.+)$', multiLine: true)
-          .firstMatch(iss)!
-          .group(1)!
-          .trim();
+      final base = RegExp(
+        r'^OutputBaseFilename=(.+)$',
+        multiLine: true,
+      ).firstMatch(iss)!.group(1)!.trim();
       expect('$base.exe', endsWith(WindowsInstall.setupSuffix));
       expect(base, startsWith('keqdroid-windows-x64-'));
     });
   });
 
   group('скрипт тихой установки', () {
-    test('только ASCII: Windows PowerShell 5.1 читает .ps1 в кодировке системы', () {
-      expect(
-        WindowsSetupUpdater.script.codeUnits.where((c) => c > 0x7e && c != 0x0a),
-        isEmpty,
-      );
-    });
+    test(
+      'только ASCII: Windows PowerShell 5.1 читает .ps1 в кодировке системы',
+      () {
+        expect(
+          WindowsSetupUpdater.script.codeUnits.where(
+            (c) => c > 0x7e && c != 0x0a,
+          ),
+          isEmpty,
+        );
+      },
+    );
 
     test('ставит молча и возвращает приложение при любом исходе', () {
       const s = WindowsSetupUpdater.script;

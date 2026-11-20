@@ -83,10 +83,7 @@ void main() {
     test('допуск в один шаг на канал', () {
       final r = (aospDefaultAccent >> 16) & 0xFF;
       final rest = aospDefaultAccent & 0x0000FFFF;
-      expect(
-        looksLikeAospDefault(0xFF000000 | ((r + 1) << 16) | rest),
-        isTrue,
-      );
+      expect(looksLikeAospDefault(0xFF000000 | ((r + 1) << 16) | rest), isTrue);
       expect(
         looksLikeAospDefault(0xFF000000 | ((r + 40) << 16) | rest),
         isFalse,

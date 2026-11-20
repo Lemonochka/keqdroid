@@ -11,9 +11,12 @@ import 'package:keqdroid/services/windows_tray_menu.dart';
 import 'package:path/path.dart' as p;
 
 List<int> _icoSizes(ByteData ico) => [
-      for (var i = 0; i < ico.getUint16(4, Endian.little); i++)
-        switch (ico.getUint8(6 + i * 16)) { 0 => 256, final s => s },
-    ];
+  for (var i = 0; i < ico.getUint16(4, Endian.little); i++)
+    switch (ico.getUint8(6 + i * 16)) {
+      0 => 256,
+      final s => s,
+    },
+];
 
 class _Vpn extends VpnStateNotifier {
   @override
@@ -50,39 +53,41 @@ void main() {
 
   tearDown(() => messenger.setMockMethodCallHandler(trayChannel, null));
 
-  test('Windows: точка появляется при подключении и гаснет при любом другом',
-      () async {
-    final menu = Provider<WindowsTrayMenu>((ref) {
-      final menu = WindowsTrayMenu(ref);
-      menu.init();
-      return menu;
-    });
-    final container = ProviderContainer(
-      overrides: [vpnStateProvider.overrideWith(_Vpn.new)],
-    );
-    addTearDown(container.dispose);
-    container.listen(menu, (_, _) {});
-    await pumpEventQueue();
-    final vpn = container.read(vpnStateProvider.notifier) as _Vpn;
-
-    for (final status in [
-      VpnStatus.connecting,
-      VpnStatus.connected,
-      VpnStatus.disconnecting,
-      VpnStatus.disconnected,
-      VpnStatus.connecting,
-      VpnStatus.error,
-    ]) {
-      vpn.emit(status);
+  test(
+    'Windows: точка появляется при подключении и гаснет при любом другом',
+    () async {
+      final menu = Provider<WindowsTrayMenu>((ref) {
+        final menu = WindowsTrayMenu(ref);
+        menu.init();
+        return menu;
+      });
+      final container = ProviderContainer(
+        overrides: [vpnStateProvider.overrideWith(_Vpn.new)],
+      );
+      addTearDown(container.dispose);
+      container.listen(menu, (_, _) {});
       await pumpEventQueue();
-    }
+      final vpn = container.read(vpnStateProvider.notifier) as _Vpn;
 
-    expect(icons, [
-      'tray_icon.ico',
-      'tray_icon_connected.ico',
-      'tray_icon.ico',
-    ]);
-  });
+      for (final status in [
+        VpnStatus.connecting,
+        VpnStatus.connected,
+        VpnStatus.disconnecting,
+        VpnStatus.disconnected,
+        VpnStatus.connecting,
+        VpnStatus.error,
+      ]) {
+        vpn.emit(status);
+        await pumpEventQueue();
+      }
+
+      expect(icons, [
+        'tray_icon.ico',
+        'tray_icon_connected.ico',
+        'tray_icon.ico',
+      ]);
+    },
+  );
 
   test('Linux: тот же значок с точкой, под прежним id', () async {
     final service = LinuxBackgroundService.forTesting();
@@ -103,7 +108,9 @@ void main() {
 
     // панель задач рисует 24 x масштаб, заголовок окна 16 x масштаб
     test('app_icon.ico в exe: кадры под панель задач и заголовок окна', () {
-      final ico = File('windows/runner/resources/app_icon.ico').readAsBytesSync();
+      final ico = File(
+        'windows/runner/resources/app_icon.ico',
+      ).readAsBytesSync();
       expect(
         _icoSizes(ByteData.sublistView(ico)),
         containsAll([16, 20, 24, 28, 30, 32, 36, 40, 42, 48, 256]),

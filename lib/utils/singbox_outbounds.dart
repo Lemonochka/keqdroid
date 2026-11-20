@@ -9,7 +9,8 @@ class SingboxOutbounds {
 
   static const _service = {'selector', 'urltest', 'direct', 'block', 'dns'};
 
-  static const noServers = 'The sing-box config has no servers in it. From a '
+  static const noServers =
+      'The sing-box config has no servers in it. From a '
       'subscription this is usually a provider stub: check subscription status '
       'and HWID binding in the provider panel.';
 
@@ -183,8 +184,9 @@ class SingboxOutbounds {
     final plugin = _str(o['plugin']);
     final opts = _str(o['plugin_opts']);
     final uot = _uotVersion(o['udp_over_tcp']);
-    final userInfo =
-        base64Url.encode(utf8.encode('$method:$password')).replaceAll('=', '');
+    final userInfo = base64Url
+        .encode(utf8.encode('$method:$password'))
+        .replaceAll('=', '');
     return _uri('ss', userInfo, server, port, _str(o['tag']), {
       if (plugin.isNotEmpty) 'plugin': opts.isEmpty ? plugin : '$plugin;$opts',
       if (uot != null) 'uot': '1',
@@ -265,7 +267,8 @@ class SingboxOutbounds {
     final relay = _str(o['udp_relay_mode']);
     final disableSni = _map(o['tls'])?['disable_sni'] == true;
     // кодируем сами: генератор раскодирует, и % в пароле приехал бы чужим символом
-    final userInfo = '${Uri.encodeComponent(uuid)}:'
+    final userInfo =
+        '${Uri.encodeComponent(uuid)}:'
         '${Uri.encodeComponent(_str(o['password']))}';
     return _uri('tuic', userInfo, server, port, _str(o['tag']), {
       if (security['sni'] != null) 'sni': security['sni']!,
@@ -276,10 +279,7 @@ class SingboxOutbounds {
     });
   }
 
-  static String? _anytls(
-    Map<String, dynamic> o,
-    Map<String, String> security,
-  ) {
+  static String? _anytls(Map<String, dynamic> o, Map<String, String> security) {
     final password = _str(o['password']);
     final server = _str(o['server']);
     final port = _int(o['server_port']);
@@ -394,9 +394,9 @@ class SingboxOutbounds {
       'µs': 1e-6,
       'ns': 1e-9,
     };
-    final parts = RegExp(r'(\d+(?:\.\d+)?)(ms|us|µs|ns|h|m|s)')
-        .allMatches(text)
-        .toList();
+    final parts = RegExp(
+      r'(\d+(?:\.\d+)?)(ms|us|µs|ns|h|m|s)',
+    ).allMatches(text).toList();
     if (parts.isEmpty || parts.map((m) => m.group(0)).join() != text) {
       return '';
     }
@@ -415,15 +415,14 @@ class SingboxOutbounds {
     int port,
     String name,
     Map<String, String> query,
-  ) =>
-      Uri(
-        scheme: scheme,
-        userInfo: userInfoForUri(userInfo),
-        host: host,
-        port: port,
-        queryParameters: query.isEmpty ? null : query,
-        fragment: name.isEmpty ? null : name,
-      ).toString();
+  ) => Uri(
+    scheme: scheme,
+    userInfo: userInfoForUri(userInfo),
+    host: host,
+    port: port,
+    queryParameters: query.isEmpty ? null : query,
+    fragment: name.isEmpty ? null : name,
+  ).toString();
 
   static Map<String, dynamic>? _config(String raw) {
     final text = raw.trim();
@@ -504,7 +503,9 @@ class SingboxOutbounds {
           'server': _str(p['address']).isNotEmpty
               ? _str(p['address'])
               : _str(p['server']),
-          'port': _int(p['port']) > 0 ? _int(p['port']) : _int(p['server_port']),
+          'port': _int(p['port']) > 0
+              ? _int(p['port'])
+              : _int(p['server_port']),
           'public-key': _str(p['public_key']).isNotEmpty
               ? _str(p['public_key'])
               : _str(p['peer_public_key']),
@@ -561,24 +562,24 @@ class SingboxOutbounds {
   }
 
   static String _str(Object? value) => switch (value) {
-        null => '',
-        final String s => s,
-        _ => '$value',
-      };
+    null => '',
+    final String s => s,
+    _ => '$value',
+  };
 
   static int _int(Object? value) => switch (value) {
-        final int n => n,
-        _ => int.tryParse(_str(value)) ?? 0,
-      };
+    final int n => n,
+    _ => int.tryParse(_str(value)) ?? 0,
+  };
 
   static Map<String, dynamic>? _map(Object? value) =>
       value is Map ? value.cast<String, dynamic>() : null;
 
   static List<Map<String, dynamic>> _maps(Object? value) => [
-        if (value is List)
-          for (final item in value)
-            if (item is Map) item.cast<String, dynamic>(),
-      ];
+    if (value is List)
+      for (final item in value)
+        if (item is Map) item.cast<String, dynamic>(),
+  ];
 
   static List<String> _list(Object? value) {
     if (value is List) {

@@ -22,7 +22,9 @@ class _DesktopSettingsScreenState
   Future<void> _save(AppSettings next) async {
     await ref.read(settingsNotifierProvider.notifier).save(next);
     await WindowsDesktopService.applySettings(next);
-    if (Platform.isLinux) await LinuxAutostart.setStartInTray(next.autostartInTray);
+    if (Platform.isLinux) {
+      await LinuxAutostart.setStartInTray(next.autostartInTray);
+    }
   }
 
   Future<void> _syncWithSystem() async {
@@ -56,9 +58,9 @@ class _DesktopSettingsScreenState
     if (Platform.isLinux) {
       await LinuxAutostart.setEnabled(next.launchAtStartup);
       if (!mounted) return;
-      await ref.read(settingsNotifierProvider.notifier).save(
-            next.copyWith(launchAtStartup: LinuxAutostart.isEnabled()),
-          );
+      await ref
+          .read(settingsNotifierProvider.notifier)
+          .save(next.copyWith(launchAtStartup: LinuxAutostart.isEnabled()));
       return;
     }
     // allowElevation нужен выключению: старую задачу с правами без окна UAC не снять
@@ -73,7 +75,9 @@ class _DesktopSettingsScreenState
     final blocked = await WindowsDesktopService.isLaunchAtStartupBlocked();
     if (!mounted) return;
     setState(() => _blockedByWindows = blocked && !elevated);
-    await ref.read(settingsNotifierProvider.notifier).save(
+    await ref
+        .read(settingsNotifierProvider.notifier)
+        .save(
           next.copyWith(
             launchAtStartup: elevated || run,
             launchAtStartupElevated: elevated,
@@ -82,7 +86,9 @@ class _DesktopSettingsScreenState
     if (ok || !mounted) return;
     AppSnack.of(context).showSnackBar(
       SnackBar(
-        content: Text(AppLocalizations.of(context)!.settingsAutostartAdminFailed),
+        content: Text(
+          AppLocalizations.of(context)!.settingsAutostartAdminFailed,
+        ),
       ),
     );
   }
@@ -94,15 +100,14 @@ class _DesktopSettingsScreenState
         ref.watch(settingsNotifierProvider).value ?? const AppSettings();
 
     Widget note(String text) => Padding(
-          padding: const EdgeInsets.only(top: 6, left: 4, right: 4),
-          child: Text(
-            text,
-            style: Theme.of(context)
-                .textTheme
-                .bodySmall
-                ?.copyWith(color: AppTheme.textLight(context)),
-          ),
-        );
+      padding: const EdgeInsets.only(top: 6, left: 4, right: 4),
+      child: Text(
+        text,
+        style: Theme.of(
+          context,
+        ).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
+      ),
+    );
 
     final linux = Platform.isLinux;
     final autostart = settings.launchAtStartup && !_blockedByWindows;
@@ -147,9 +152,11 @@ class _DesktopSettingsScreenState
           ],
         ),
         if (!autostart)
-          note(linux
-              ? l10n.settingsAutoConnectRequiresLogin
-              : l10n.settingsAutoConnectRequiresAutostart),
+          note(
+            linux
+                ? l10n.settingsAutoConnectRequiresLogin
+                : l10n.settingsAutoConnectRequiresAutostart,
+          ),
       ],
     );
   }

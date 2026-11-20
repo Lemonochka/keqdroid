@@ -30,15 +30,15 @@ class BackupTransferLink {
   static const _linkHost = 'backup';
 
   String toLink() => Uri(
-        scheme: 'keqdroid',
-        host: _linkHost,
-        queryParameters: {
-          'h': host,
-          'p': '$port',
-          'd': direction == BackupTransferDirection.receive ? 'r' : 'g',
-          'k': base64Url.encode(key).replaceAll('=', ''),
-        },
-      ).toString();
+    scheme: 'keqdroid',
+    host: _linkHost,
+    queryParameters: {
+      'h': host,
+      'p': '$port',
+      'd': direction == BackupTransferDirection.receive ? 'r' : 'g',
+      'k': base64Url.encode(key).replaceAll('=', ''),
+    },
+  ).toString();
 
   // только частный IPv4: подложенный код иначе увёл бы копию на любой сервер
   static BackupTransferLink? parse(String raw) {
@@ -110,9 +110,9 @@ class BackupTransferServer {
     BackupReceiveHandler? onReceived,
     BackupProvider? provide,
     void Function()? onGiven,
-  })  : _onReceived = onReceived,
-        _provide = provide,
-        _onGiven = onGiven {
+  }) : _onReceived = onReceived,
+       _provide = provide,
+       _onGiven = onGiven {
     _server.listen(
       (request) => unawaited(_handle(request).catchError((Object _) {})),
       onError: (Object _) {},
@@ -142,8 +142,10 @@ class BackupTransferServer {
           ? onReceived != null
           : provide != null,
     );
-    final server =
-        await HttpServer.bind(bindAddress ?? InternetAddress.anyIPv4, 0);
+    final server = await HttpServer.bind(
+      bindAddress ?? InternetAddress.anyIPv4,
+      0,
+    );
     return BackupTransferServer._(
       server,
       BackupTransferLink(
@@ -210,10 +212,11 @@ class BackupTransferServer {
   static const proofHeader = 'x-keqdroid-proof';
 
   static String giveProof(List<int> key) => base64Url.encode(
-        hashes.Hmac(hashes.sha256, key)
-            .convert(utf8.encode('keqdroid backup give'))
-            .bytes,
-      );
+    hashes.Hmac(
+      hashes.sha256,
+      key,
+    ).convert(utf8.encode('keqdroid backup give')).bytes,
+  );
 
   // без раннего выхода, чтобы ключ не подобрать по времени ответа
   static bool _sameProof(String? got, String want) {
@@ -326,8 +329,5 @@ void _check(int status) {
   if (status == HttpStatus.gone || status == HttpStatus.forbidden) {
     throw const BackupTransferException(BackupTransferFailure.expired);
   }
-  throw BackupTransferException(
-    BackupTransferFailure.rejected,
-    'HTTP $status',
-  );
+  throw BackupTransferException(BackupTransferFailure.rejected, 'HTTP $status');
 }

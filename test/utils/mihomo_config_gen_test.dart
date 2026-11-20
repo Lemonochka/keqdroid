@@ -16,11 +16,15 @@ List<String> _rules(Map<String, dynamic> config) =>
 
 /// `download-settings` у xhttp-ссылки [link] с таким [extra].
 Map<String, dynamic> _download(String link, String extra) =>
-    (_proxy(MihomoConfigGen.build(
-      '$link&extra=${Uri.encodeQueryComponent(extra)}',
-      const AppSettings(),
-      socksPort: 2080,
-    ))['xhttp-opts'] as Map)['download-settings'] as Map<String, dynamic>;
+    (_proxy(
+              MihomoConfigGen.build(
+                '$link&extra=${Uri.encodeQueryComponent(extra)}',
+                const AppSettings(),
+                socksPort: 2080,
+              ),
+            )['xhttp-opts']
+            as Map)['download-settings']
+        as Map<String, dynamic>;
 
 void main() {
   setUp(() => Socks5Credentials().init('u', 'p'));
@@ -80,13 +84,15 @@ void main() {
       // То же, что делает xray-генератор со своими `verifyPeerCertByName` и
       // `pinnedPeerCertSha256`: у ядра эта настройка описана как «меняет только
       // цель проверки DNSName, не трогая SNI».
-      final p = _proxy(MihomoConfigGen.build(
-        'vless://uuid@vps1.example.org:8443?type=tcp&security=tls'
-        '&sni=spotify.com&vcn=vps1.example.org'
-        '&pcs=c88234050d72a3e9430ec7738636806deaf85c3708fee0fd9202ebd917e2c843',
-        const AppSettings(),
-        socksPort: 2080,
-      ));
+      final p = _proxy(
+        MihomoConfigGen.build(
+          'vless://uuid@vps1.example.org:8443?type=tcp&security=tls'
+          '&sni=spotify.com&vcn=vps1.example.org'
+          '&pcs=c88234050d72a3e9430ec7738636806deaf85c3708fee0fd9202ebd917e2c843',
+          const AppSettings(),
+          socksPort: 2080,
+        ),
+      );
       expect(p['servername'], 'spotify.com');
       expect(p['name-cert-verify'], 'vps1.example.org');
       expect(
@@ -99,37 +105,43 @@ void main() {
       // `fingerprint` у ядра — одна строка, а какой из отпечатков относится к
       // листу цепочки, из ссылки не видно. Взятый наугад чужой отпечаток
       // закрыл бы соединение совсем.
-      final p = _proxy(MihomoConfigGen.build(
-        'vless://uuid@vps1.example.org:8443?type=tcp&security=tls'
-        '&sni=spotify.com&vcn=vps1.example.org'
-        '&pcs=c88234050d72a3e9430ec7738636806deaf85c3708fee0fd9202ebd917e2c843'
-        '%2Ca2372d06431e9716365eeed47ec020351497d182fcc038e457e58168a03cac07',
-        const AppSettings(),
-        socksPort: 2080,
-      ));
+      final p = _proxy(
+        MihomoConfigGen.build(
+          'vless://uuid@vps1.example.org:8443?type=tcp&security=tls'
+          '&sni=spotify.com&vcn=vps1.example.org'
+          '&pcs=c88234050d72a3e9430ec7738636806deaf85c3708fee0fd9202ebd917e2c843'
+          '%2Ca2372d06431e9716365eeed47ec020351497d182fcc038e457e58168a03cac07',
+          const AppSettings(),
+          socksPort: 2080,
+        ),
+      );
       expect(p['name-cert-verify'], 'vps1.example.org');
       expect(p.containsKey('fingerprint'), isFalse);
     });
 
     test('у reality пиннинга сертификата не появляется', () {
       // Сертификат там подставной, подлинность сервера проверяет сам REALITY.
-      final p = _proxy(MihomoConfigGen.build(
-        'vless://uuid@nl.example:443?type=tcp&security=reality&sni=decoy.example'
-        '&pbk=publickey&sid=aabb&vcn=nl.example&pcs=deadbeef',
-        const AppSettings(),
-        socksPort: 2080,
-      ));
+      final p = _proxy(
+        MihomoConfigGen.build(
+          'vless://uuid@nl.example:443?type=tcp&security=reality&sni=decoy.example'
+          '&pbk=publickey&sid=aabb&vcn=nl.example&pcs=deadbeef',
+          const AppSettings(),
+          socksPort: 2080,
+        ),
+      );
       expect(p.containsKey('name-cert-verify'), isFalse);
       expect(p.containsKey('fingerprint'), isFalse);
     });
 
     test('vless + reality + vision', () {
-      final p = _proxy(MihomoConfigGen.build(
-        'vless://uuid@nl.example:443?type=tcp&security=reality&sni=decoy.example'
-        '&pbk=publickey&sid=aabb&fp=chrome&flow=xtls-rprx-vision',
-        const AppSettings(),
-        socksPort: 2080,
-      ));
+      final p = _proxy(
+        MihomoConfigGen.build(
+          'vless://uuid@nl.example:443?type=tcp&security=reality&sni=decoy.example'
+          '&pbk=publickey&sid=aabb&fp=chrome&flow=xtls-rprx-vision',
+          const AppSettings(),
+          socksPort: 2080,
+        ),
+      );
       expect(p['type'], 'vless');
       expect(p['server'], 'nl.example');
       expect(p['port'], 443);
@@ -158,20 +170,14 @@ void main() {
         'trojan://pass@nl.example:443?type=tcp&security=reality'
             '&sni=decoy.example&pbk=publickey&sid=aabb&fp=chrome',
       ]) {
-        final p = _proxy(MihomoConfigGen.build(
-          link,
-          const AppSettings(),
-          socksPort: 2080,
-        ));
-        expect(
-          p['reality-opts'],
-          {
-            'public-key': 'publickey',
-            'short-id': 'aabb',
-            'support-x25519mlkem768': true,
-          },
-          reason: link,
+        final p = _proxy(
+          MihomoConfigGen.build(link, const AppSettings(), socksPort: 2080),
         );
+        expect(p['reality-opts'], {
+          'public-key': 'publickey',
+          'short-id': 'aabb',
+          'support-x25519mlkem768': true,
+        }, reason: link);
       }
     });
 
@@ -179,37 +185,47 @@ void main() {
     // xray, — поэтому подставляем явно, и тот же, что xray-генератор
     // (`defaultTlsFingerprint`).
     test('vless без fp получает firefox', () {
-      final p = _proxy(MihomoConfigGen.build(
-        'vless://uuid@e.example:443?type=tcp&security=tls&sni=e.example',
-        const AppSettings(),
-        socksPort: 2080,
-      ));
+      final p = _proxy(
+        MihomoConfigGen.build(
+          'vless://uuid@e.example:443?type=tcp&security=tls&sni=e.example',
+          const AppSettings(),
+          socksPort: 2080,
+        ),
+      );
       expect(p['client-fingerprint'], 'firefox');
     });
 
     test('vmess и trojan без fp получают тот же firefox', () {
-      final vmess = base64.encode(utf8.encode(jsonEncode({
-        'v': '2',
-        'add': 'v.example',
-        'port': '443',
-        'id': 'uuid',
-        'aid': '0',
-        'net': 'tcp',
-        'tls': 'tls',
-        'sni': 'v.example',
-      })));
-      final v = _proxy(MihomoConfigGen.build(
-        'vmess://$vmess',
-        const AppSettings(),
-        socksPort: 2080,
-      ));
+      final vmess = base64.encode(
+        utf8.encode(
+          jsonEncode({
+            'v': '2',
+            'add': 'v.example',
+            'port': '443',
+            'id': 'uuid',
+            'aid': '0',
+            'net': 'tcp',
+            'tls': 'tls',
+            'sni': 'v.example',
+          }),
+        ),
+      );
+      final v = _proxy(
+        MihomoConfigGen.build(
+          'vmess://$vmess',
+          const AppSettings(),
+          socksPort: 2080,
+        ),
+      );
       expect(v['client-fingerprint'], 'firefox');
 
-      final t = _proxy(MihomoConfigGen.build(
-        'trojan://password@t.example:443?sni=t.example&type=tcp',
-        const AppSettings(),
-        socksPort: 2080,
-      ));
+      final t = _proxy(
+        MihomoConfigGen.build(
+          'trojan://password@t.example:443?sni=t.example&type=tcp',
+          const AppSettings(),
+          socksPort: 2080,
+        ),
+      );
       expect(t['client-fingerprint'], 'firefox');
     });
 
@@ -219,32 +235,38 @@ void main() {
     test('vless переносит постквантовое шифрование', () {
       const encryption =
           'mlkem768x25519plus.xorpub.0rtt.TQWG00S9SOQfvBRqDpXGzHBAagxTkExzd';
-      final p = _proxy(MihomoConfigGen.build(
-        'vless://uuid@e.example:443?type=tcp&security=tls&sni=e.example'
-        '&encryption=$encryption',
-        const AppSettings(),
-        socksPort: 2080,
-      ));
+      final p = _proxy(
+        MihomoConfigGen.build(
+          'vless://uuid@e.example:443?type=tcp&security=tls&sni=e.example'
+          '&encryption=$encryption',
+          const AppSettings(),
+          socksPort: 2080,
+        ),
+      );
       expect(p['encryption'], encryption);
     });
 
     test('encryption=none в конфиг не попадает', () {
-      final p = _proxy(MihomoConfigGen.build(
-        'vless://uuid@e.example:443?type=tcp&security=tls&sni=e.example'
-        '&encryption=none',
-        const AppSettings(),
-        socksPort: 2080,
-      ));
+      final p = _proxy(
+        MihomoConfigGen.build(
+          'vless://uuid@e.example:443?type=tcp&security=tls&sni=e.example'
+          '&encryption=none',
+          const AppSettings(),
+          socksPort: 2080,
+        ),
+      );
       expect(p.containsKey('encryption'), isFalse);
     });
 
     test('vless + ws переносит path и Host', () {
-      final p = _proxy(MihomoConfigGen.build(
-        'vless://uuid@w.example:443?type=ws&security=tls&sni=w.example'
-        '&path=%2Fpath&host=w.example',
-        const AppSettings(),
-        socksPort: 2080,
-      ));
+      final p = _proxy(
+        MihomoConfigGen.build(
+          'vless://uuid@w.example:443?type=ws&security=tls&sni=w.example'
+          '&path=%2Fpath&host=w.example',
+          const AppSettings(),
+          socksPort: 2080,
+        ),
+      );
       expect(p['network'], 'ws');
       expect(p['ws-opts'], {
         'path': '/path',
@@ -253,33 +275,41 @@ void main() {
     });
 
     test('vless + grpc', () {
-      final p = _proxy(MihomoConfigGen.build(
-        'vless://uuid@g.example:443?type=grpc&security=tls&serviceName=svc',
-        const AppSettings(),
-        socksPort: 2080,
-      ));
+      final p = _proxy(
+        MihomoConfigGen.build(
+          'vless://uuid@g.example:443?type=grpc&security=tls&serviceName=svc',
+          const AppSettings(),
+          socksPort: 2080,
+        ),
+      );
       expect(p['network'], 'grpc');
       expect(p['grpc-opts'], {'grpc-service-name': 'svc'});
     });
 
     test('vmess из base64-json', () {
-      final payload = base64.encode(utf8.encode(jsonEncode({
-        'v': '2',
-        'add': 'v.example',
-        'port': '443',
-        'id': '11111111-1111-1111-1111-111111111111',
-        'aid': '0',
-        'net': 'ws',
-        'tls': 'tls',
-        'sni': 'v.example',
-        'path': '/vmess',
-        'host': 'v.example',
-      })));
-      final p = _proxy(MihomoConfigGen.build(
-        'vmess://$payload',
-        const AppSettings(),
-        socksPort: 2080,
-      ));
+      final payload = base64.encode(
+        utf8.encode(
+          jsonEncode({
+            'v': '2',
+            'add': 'v.example',
+            'port': '443',
+            'id': '11111111-1111-1111-1111-111111111111',
+            'aid': '0',
+            'net': 'ws',
+            'tls': 'tls',
+            'sni': 'v.example',
+            'path': '/vmess',
+            'host': 'v.example',
+          }),
+        ),
+      );
+      final p = _proxy(
+        MihomoConfigGen.build(
+          'vmess://$payload',
+          const AppSettings(),
+          socksPort: 2080,
+        ),
+      );
       expect(p['type'], 'vmess');
       expect(p['server'], 'v.example');
       expect(p['port'], 443);
@@ -291,11 +321,13 @@ void main() {
     });
 
     test('trojan', () {
-      final p = _proxy(MihomoConfigGen.build(
-        'trojan://secret@t.example:8443?sni=t.example',
-        const AppSettings(),
-        socksPort: 2080,
-      ));
+      final p = _proxy(
+        MihomoConfigGen.build(
+          'trojan://secret@t.example:8443?sni=t.example',
+          const AppSettings(),
+          socksPort: 2080,
+        ),
+      );
       expect(p['type'], 'trojan');
       expect(p['password'], 'secret');
       expect(p['sni'], 't.example');
@@ -303,11 +335,13 @@ void main() {
 
     test('shadowsocks sip002', () {
       final userInfo = base64.encode(utf8.encode('aes-256-gcm:pass'));
-      final p = _proxy(MihomoConfigGen.build(
-        'ss://$userInfo@s.example:8388#node',
-        const AppSettings(),
-        socksPort: 2080,
-      ));
+      final p = _proxy(
+        MihomoConfigGen.build(
+          'ss://$userInfo@s.example:8388#node',
+          const AppSettings(),
+          socksPort: 2080,
+        ),
+      );
       expect(p['type'], 'ss');
       expect(p['server'], 's.example');
       expect(p['port'], 8388);
@@ -316,12 +350,14 @@ void main() {
     });
 
     test('hysteria2 с obfs', () {
-      final p = _proxy(MihomoConfigGen.build(
-        'hysteria2://token@hy.example:443?sni=hy.example&obfs=salamander'
-        '&obfs-password=xyz&up=50&down=200',
-        const AppSettings(),
-        socksPort: 2080,
-      ));
+      final p = _proxy(
+        MihomoConfigGen.build(
+          'hysteria2://token@hy.example:443?sni=hy.example&obfs=salamander'
+          '&obfs-password=xyz&up=50&down=200',
+          const AppSettings(),
+          socksPort: 2080,
+        ),
+      );
       expect(p['type'], 'hysteria2');
       expect(p['password'], 'token');
       expect(p['obfs'], 'salamander');
@@ -332,11 +368,13 @@ void main() {
 
     // Тот же принцип, что и у xray: доверять любому сертификату мы не даём.
     test('insecure=1 не превращается в skip-cert-verify', () {
-      final p = _proxy(MihomoConfigGen.build(
-        'vless://uuid@e.example:443?type=tcp&security=tls&insecure=1',
-        const AppSettings(),
-        socksPort: 2080,
-      ));
+      final p = _proxy(
+        MihomoConfigGen.build(
+          'vless://uuid@e.example:443?type=tcp&security=tls&insecure=1',
+          const AppSettings(),
+          socksPort: 2080,
+        ),
+      );
       expect(p.containsKey('skip-cert-verify'), isFalse);
     });
 
@@ -347,11 +385,13 @@ void main() {
           const AppSettings(),
           socksPort: 2080,
         ),
-        throwsA(isA<ArgumentError>().having(
-          (e) => e.message.toString(),
-          'message',
-          allOf(contains('wireguard'), isNot(contains('secret'))),
-        )),
+        throwsA(
+          isA<ArgumentError>().having(
+            (e) => e.message.toString(),
+            'message',
+            allOf(contains('wireguard'), isNot(contains('secret'))),
+          ),
+        ),
       );
     });
   });
@@ -361,13 +401,15 @@ void main() {
     // в ключах REALITY: ядро поднималось, конфиг был «валидным», а описывал
     // другой сервер.
     test('xhttp переносится целиком, а не сводится к tcp', () {
-      final p = _proxy(MihomoConfigGen.build(
-        'vless://uuid@x.example:443?type=xhttp&security=reality'
-        '&pbk=key&sid=ab&sni=cdn.example&mode=auto&path=%2Fpath'
-        '&x_padding_bytes=92-1412',
-        const AppSettings(),
-        socksPort: 2080,
-      ));
+      final p = _proxy(
+        MihomoConfigGen.build(
+          'vless://uuid@x.example:443?type=xhttp&security=reality'
+          '&pbk=key&sid=ab&sni=cdn.example&mode=auto&path=%2Fpath'
+          '&x_padding_bytes=92-1412',
+          const AppSettings(),
+          socksPort: 2080,
+        ),
+      );
       expect(p['network'], 'xhttp');
       expect(p['xhttp-opts'], {
         'path': '/path',
@@ -377,31 +419,38 @@ void main() {
     });
 
     test('splithttp — то же самое под старым именем', () {
-      final p = _proxy(MihomoConfigGen.build(
-        'vless://uuid@x.example:443?type=splithttp&security=tls&sni=x.example',
-        const AppSettings(),
-        socksPort: 2080,
-      ));
+      final p = _proxy(
+        MihomoConfigGen.build(
+          'vless://uuid@x.example:443?type=splithttp&security=tls&sni=x.example',
+          const AppSettings(),
+          socksPort: 2080,
+        ),
+      );
       expect(p['network'], 'xhttp');
       expect((p['xhttp-opts'] as Map)['path'], '/');
     });
 
     test('extra отдаёт то, чего нет в query, вместе с xmux', () {
-      const extra = '{"mode":"packet-up","xPaddingBytes":"100-1000",'
+      const extra =
+          '{"mode":"packet-up","xPaddingBytes":"100-1000",'
           '"xmux":{"maxConcurrency":"16-32","hKeepAlivePeriod":45}}';
-      final p = _proxy(MihomoConfigGen.build(
-        'vless://uuid@x.example:443?type=xhttp&security=tls&sni=x.example'
-        '&extra=${Uri.encodeQueryComponent(extra)}',
-        const AppSettings(),
-        socksPort: 2080,
-      ));
+      final p = _proxy(
+        MihomoConfigGen.build(
+          'vless://uuid@x.example:443?type=xhttp&security=tls&sni=x.example'
+          '&extra=${Uri.encodeQueryComponent(extra)}',
+          const AppSettings(),
+          socksPort: 2080,
+        ),
+      );
       final opts = p['xhttp-opts'] as Map;
       expect(opts['mode'], 'packet-up');
       expect(opts['x-padding-bytes'], '100-1000');
       // hKeepAlivePeriod у mihomo число, остальное — строки: они принимают
       // диапазоны вида `16-32`.
-      expect(opts['reuse-settings'],
-          {'max-concurrency': '16-32', 'h-keep-alive-period': 45});
+      expect(opts['reuse-settings'], {
+        'max-concurrency': '16-32',
+        'h-keep-alive-period': 45,
+      });
     });
 
     // Живая подписка: узел «белые списки» работал на xray и не работал на
@@ -409,17 +458,20 @@ void main() {
     // каким методом и куда уходят данные вверх; пока мы это выбрасывали,
     // mihomo слал запрос своего вида, и сервер отвечал 400.
     test('extra переносит форму запроса целиком', () {
-      const extra = '{"seqKey":"offset","seqPlacement":"query",'
+      const extra =
+          '{"seqKey":"offset","seqPlacement":"query",'
           '"sessionKey":"media_sid","sessionPlacement":"cookie",'
           '"uplinkHTTPMethod":"GET","uplinkDataPlacement":"header",'
           '"uplinkDataKey":"X-Playback-Token","noGRPCHeader":true}';
-      final p = _proxy(MihomoConfigGen.build(
-        'vless://uuid@x.example:443?type=xhttp&security=tls&sni=x.example'
-        '&path=%2Fupload%2F&mode=packet-up'
-        '&extra=${Uri.encodeQueryComponent(extra)}',
-        const AppSettings(),
-        socksPort: 2080,
-      ));
+      final p = _proxy(
+        MihomoConfigGen.build(
+          'vless://uuid@x.example:443?type=xhttp&security=tls&sni=x.example'
+          '&path=%2Fupload%2F&mode=packet-up'
+          '&extra=${Uri.encodeQueryComponent(extra)}',
+          const AppSettings(),
+          socksPort: 2080,
+        ),
+      );
       expect(p['xhttp-opts'], {
         'path': '/upload/',
         'mode': 'packet-up',
@@ -437,14 +489,19 @@ void main() {
     // Второе написание тех же настроек: панели пишут то `sessionKey`, то
     // `sessionIDKey`, xray понимает оба.
     test('extra принимает sessionID-написание', () {
-      const extra = '{"sessionIDKey":"sid","sessionIDPlacement":"query",'
+      const extra =
+          '{"sessionIDKey":"sid","sessionIDPlacement":"query",'
           '"sessionIDTable":"Base62","sessionIDLength":"16-32"}';
-      final opts = _proxy(MihomoConfigGen.build(
-        'vless://uuid@x.example:443?type=xhttp&security=tls&sni=x.example'
-        '&extra=${Uri.encodeQueryComponent(extra)}',
-        const AppSettings(),
-        socksPort: 2080,
-      ))['xhttp-opts'] as Map;
+      final opts =
+          _proxy(
+                MihomoConfigGen.build(
+                  'vless://uuid@x.example:443?type=xhttp&security=tls&sni=x.example'
+                  '&extra=${Uri.encodeQueryComponent(extra)}',
+                  const AppSettings(),
+                  socksPort: 2080,
+                ),
+              )['xhttp-opts']
+              as Map;
       expect(opts['session-key'], 'sid');
       expect(opts['session-placement'], 'query');
       expect(opts['session-table'], 'Base62');
@@ -457,12 +514,16 @@ void main() {
     // mihomo без явного размещения не набивает вовсе.
     test('обфускация набивки получает дефолты xray', () {
       const extra = '{"xPaddingObfsMode":true}';
-      final opts = _proxy(MihomoConfigGen.build(
-        'vless://uuid@x.example:443?type=xhttp&security=tls&sni=x.example'
-        '&extra=${Uri.encodeQueryComponent(extra)}',
-        const AppSettings(),
-        socksPort: 2080,
-      ))['xhttp-opts'] as Map;
+      final opts =
+          _proxy(
+                MihomoConfigGen.build(
+                  'vless://uuid@x.example:443?type=xhttp&security=tls&sni=x.example'
+                  '&extra=${Uri.encodeQueryComponent(extra)}',
+                  const AppSettings(),
+                  socksPort: 2080,
+                ),
+              )['xhttp-opts']
+              as Map;
       expect(opts['x-padding-obfs-mode'], isTrue);
       expect(opts['x-padding-placement'], 'queryInHeader');
       expect(opts['x-padding-header'], 'X-Padding');
@@ -470,15 +531,20 @@ void main() {
     });
 
     test('своё размещение набивки дефолтами не перебивается', () {
-      const extra = '{"xPaddingObfsMode":true,"xPaddingPlacement":"header",'
+      const extra =
+          '{"xPaddingObfsMode":true,"xPaddingPlacement":"header",'
           '"xPaddingHeader":"X-Api-Key","xPaddingMethod":"tokenish",'
           '"xPaddingBytes":"50-150"}';
-      final opts = _proxy(MihomoConfigGen.build(
-        'vless://uuid@x.example:443?type=xhttp&security=tls&sni=x.example'
-        '&extra=${Uri.encodeQueryComponent(extra)}',
-        const AppSettings(),
-        socksPort: 2080,
-      ))['xhttp-opts'] as Map;
+      final opts =
+          _proxy(
+                MihomoConfigGen.build(
+                  'vless://uuid@x.example:443?type=xhttp&security=tls&sni=x.example'
+                  '&extra=${Uri.encodeQueryComponent(extra)}',
+                  const AppSettings(),
+                  socksPort: 2080,
+                ),
+              )['xhttp-opts']
+              as Map;
       expect(opts['x-padding-placement'], 'header');
       expect(opts['x-padding-header'], 'X-Api-Key');
       expect(opts['x-padding-method'], 'tokenish');
@@ -488,12 +554,16 @@ void main() {
     });
 
     test('без обфускации набивку размещать нечем — дефолтов не появляется', () {
-      final opts = _proxy(MihomoConfigGen.build(
-        'vless://uuid@x.example:443?type=xhttp&security=tls&sni=x.example'
-        '&x_padding_bytes=100-1000',
-        const AppSettings(),
-        socksPort: 2080,
-      ))['xhttp-opts'] as Map;
+      final opts =
+          _proxy(
+                MihomoConfigGen.build(
+                  'vless://uuid@x.example:443?type=xhttp&security=tls&sni=x.example'
+                  '&x_padding_bytes=100-1000',
+                  const AppSettings(),
+                  socksPort: 2080,
+                ),
+              )['xhttp-opts']
+              as Map;
       expect(opts['x-padding-bytes'], '100-1000');
       expect(opts.containsKey('x-padding-placement'), isFalse);
       expect(opts.containsKey('x-padding-header'), isFalse);
@@ -501,14 +571,19 @@ void main() {
 
     // Панели кладут эти поля и внутрь `xmux`, и рядом с ним.
     test('reuse-settings собирается и из полей рядом с xmux', () {
-      const extra = '{"hKeepAlivePeriod":30,"hMaxRequestTimes":"600-900",'
+      const extra =
+          '{"hKeepAlivePeriod":30,"hMaxRequestTimes":"600-900",'
           '"hMaxReusableSecs":1800}';
-      final opts = _proxy(MihomoConfigGen.build(
-        'vless://uuid@x.example:443?type=xhttp&security=tls&sni=x.example'
-        '&extra=${Uri.encodeQueryComponent(extra)}',
-        const AppSettings(),
-        socksPort: 2080,
-      ))['xhttp-opts'] as Map;
+      final opts =
+          _proxy(
+                MihomoConfigGen.build(
+                  'vless://uuid@x.example:443?type=xhttp&security=tls&sni=x.example'
+                  '&extra=${Uri.encodeQueryComponent(extra)}',
+                  const AppSettings(),
+                  socksPort: 2080,
+                ),
+              )['xhttp-opts']
+              as Map;
       expect(opts['reuse-settings'], {
         'h-max-request-times': '600-900',
         'h-max-reusable-secs': '1800',
@@ -518,12 +593,16 @@ void main() {
 
     test('свои заголовки запроса из extra переносятся', () {
       const extra = '{"headers":{"X-Token":"abc"}}';
-      final opts = _proxy(MihomoConfigGen.build(
-        'vless://uuid@x.example:443?type=xhttp&security=tls&sni=x.example'
-        '&extra=${Uri.encodeQueryComponent(extra)}',
-        const AppSettings(),
-        socksPort: 2080,
-      ))['xhttp-opts'] as Map;
+      final opts =
+          _proxy(
+                MihomoConfigGen.build(
+                  'vless://uuid@x.example:443?type=xhttp&security=tls&sni=x.example'
+                  '&extra=${Uri.encodeQueryComponent(extra)}',
+                  const AppSettings(),
+                  socksPort: 2080,
+                ),
+              )['xhttp-opts']
+              as Map;
       expect(opts['headers'], {'X-Token': 'abc'});
     });
 
@@ -531,7 +610,8 @@ void main() {
     // Незаданное mihomo берёт у основного подключения, так что без явных
     // полей скачивание ушло бы с его REALITY и SNI.
     test('downloadSettings: скачивание через CDN не наследует основное', () {
-      const extra = '{"downloadSettings":{"address":"cdn.example","port":443,'
+      const extra =
+          '{"downloadSettings":{"address":"cdn.example","port":443,'
           '"network":"xhttp","security":"tls",'
           '"tlsSettings":{"serverName":"front.example","alpn":["h2"]},'
           '"xhttpSettings":{"path":"/down","host":"front.example"}}}';
@@ -556,7 +636,8 @@ void main() {
     });
 
     test('downloadSettings: скачивание через REALITY получает свои ключи', () {
-      const extra = '{"downloadSettings":{"address":"direct.example",'
+      const extra =
+          '{"downloadSettings":{"address":"direct.example",'
           '"port":8443,"security":"reality","realitySettings":'
           '{"serverName":"decoy.example","publicKey":"pk","shortId":"cd",'
           '"fingerprint":"safari"}}}';
@@ -578,7 +659,8 @@ void main() {
     });
 
     test('downloadSettings без serverName: SNI — адрес скачивания', () {
-      const extra = '{"downloadSettings":{"address":"dl.example","port":443,'
+      const extra =
+          '{"downloadSettings":{"address":"dl.example","port":443,'
           '"security":"tls"}}';
       final ds = _download(
         'vless://uuid@x.example:443?type=xhttp&security=tls&sni=x.example',
@@ -605,7 +687,8 @@ void main() {
     });
 
     test('downloadSettings: свой пин скачивания переносится, если он один', () {
-      const extra = '{"downloadSettings":{"address":"dl.example","port":443,'
+      const extra =
+          '{"downloadSettings":{"address":"dl.example","port":443,'
           '"security":"tls","tlsSettings":{"pinnedPeerCertSha256":"ab12",'
           '"verifyPeerCertByName":"real.example"}}}';
       final ds = _download(
@@ -617,7 +700,8 @@ void main() {
     });
 
     test('downloadSettings: заголовки и xmux скачивания — из его extra', () {
-      const extra = '{"downloadSettings":{"address":"dl.example","port":443,'
+      const extra =
+          '{"downloadSettings":{"address":"dl.example","port":443,'
           '"security":"tls","xhttpSettings":{"path":"/d","extra":'
           '{"headers":{"X-Cdn":"1"},"xmux":{"maxConcurrency":"4-8"}}}}}';
       final ds = _download(
@@ -630,22 +714,26 @@ void main() {
     });
 
     test('битый extra не роняет ссылку целиком', () {
-      final p = _proxy(MihomoConfigGen.build(
-        'vless://uuid@x.example:443?type=xhttp&security=tls&sni=x.example'
-        '&extra=%7Bnot-json',
-        const AppSettings(),
-        socksPort: 2080,
-      ));
+      final p = _proxy(
+        MihomoConfigGen.build(
+          'vless://uuid@x.example:443?type=xhttp&security=tls&sni=x.example'
+          '&extra=%7Bnot-json',
+          const AppSettings(),
+          socksPort: 2080,
+        ),
+      );
       expect(p['network'], 'xhttp');
       expect(p['xhttp-opts'], {'path': '/'});
     });
 
     test('raw — это tcp под новым именем', () {
-      final p = _proxy(MihomoConfigGen.build(
-        'vless://uuid@x.example:443?type=raw&security=none',
-        const AppSettings(),
-        socksPort: 2080,
-      ));
+      final p = _proxy(
+        MihomoConfigGen.build(
+          'vless://uuid@x.example:443?type=raw&security=none',
+          const AppSettings(),
+          socksPort: 2080,
+        ),
+      );
       expect(p['network'], 'tcp');
     });
 
@@ -656,40 +744,49 @@ void main() {
           const AppSettings(),
           socksPort: 2080,
         ),
-        throwsA(isA<ArgumentError>().having(
-          (e) => e.message.toString(),
-          'message',
-          allOf(contains('kcp'), isNot(contains('uuid'))),
-        )),
+        throwsA(
+          isA<ArgumentError>().having(
+            (e) => e.message.toString(),
+            'message',
+            allOf(contains('kcp'), isNot(contains('uuid'))),
+          ),
+        ),
       );
     });
   });
 
   group('правила', () {
-    test('порядок повторяет xray: блок → сервер → обход → приватные → прокси', () {
-      final rules = _rules(MihomoConfigGen.build(
-        'vless://uuid@nl.example:443?type=tcp&security=none',
-        settings,
-        socksPort: 2080,
-        resolvedServerIp: '203.0.113.7',
-      ));
+    test(
+      'порядок повторяет xray: блок → сервер → обход → приватные → прокси',
+      () {
+        final rules = _rules(
+          MihomoConfigGen.build(
+            'vless://uuid@nl.example:443?type=tcp&security=none',
+            settings,
+            socksPort: 2080,
+            resolvedServerIp: '203.0.113.7',
+          ),
+        );
 
-      int at(String needle) => rules.indexWhere((r) => r.contains(needle));
+        int at(String needle) => rules.indexWhere((r) => r.contains(needle));
 
-      expect(at('doubleclick.net'), lessThan(at('nl.example')));
-      expect(at('nl.example'), lessThan(at('vk.com')));
-      expect(at('vk.com'), lessThan(at('192.168.0.0/16')));
-      expect(at('192.168.0.0/16'), lessThan(at('youtube.com')));
-      expect(rules.last, 'MATCH,proxy');
-    });
+        expect(at('doubleclick.net'), lessThan(at('nl.example')));
+        expect(at('nl.example'), lessThan(at('vk.com')));
+        expect(at('vk.com'), lessThan(at('192.168.0.0/16')));
+        expect(at('192.168.0.0/16'), lessThan(at('youtube.com')));
+        expect(rules.last, 'MATCH,proxy');
+      },
+    );
 
     test('типы правил переводятся в синтаксис mihomo', () {
-      final rules = _rules(MihomoConfigGen.build(
-        'vless://uuid@nl.example:443?type=tcp&security=none',
-        settings,
-        socksPort: 2080,
-        resolvedServerIp: '203.0.113.7',
-      ));
+      final rules = _rules(
+        MihomoConfigGen.build(
+          'vless://uuid@nl.example:443?type=tcp&security=none',
+          settings,
+          socksPort: 2080,
+          resolvedServerIp: '203.0.113.7',
+        ),
+      );
       expect(rules, contains('DOMAIN-SUFFIX,doubleclick.net,REJECT'));
       expect(rules, contains('DOMAIN,nl.example,DIRECT'));
       expect(rules, contains('IP-CIDR,203.0.113.7/32,DIRECT,no-resolve'));
@@ -705,43 +802,51 @@ void main() {
     });
 
     test('«остальное» уважает выбор пользователя', () {
-      String finalOf(String mode) => _rules(MihomoConfigGen.build(
-            'vless://uuid@nl.example:443?type=tcp&security=none',
-            AppSettings(finalOutbound: mode),
-            socksPort: 2080,
-          )).last;
+      String finalOf(String mode) => _rules(
+        MihomoConfigGen.build(
+          'vless://uuid@nl.example:443?type=tcp&security=none',
+          AppSettings(finalOutbound: mode),
+          socksPort: 2080,
+        ),
+      ).last;
 
       expect(finalOf(AppSettings.finalOutboundProxy), 'MATCH,proxy');
       expect(finalOf(AppSettings.finalOutboundDirect), 'MATCH,DIRECT');
       expect(finalOf(AppSettings.finalOutboundBlock), 'MATCH,REJECT');
     });
 
-    test('сервер и приватные сети не резолвят домен ни при какой стратегии',
-        () {
-      for (final strategy in ['AsIs', 'IPIfNonMatch', 'IPOnDemand']) {
-        final rules = _rules(MihomoConfigGen.build(
-          'vless://uuid@nl.example:443?type=tcp&security=none',
-          AppSettings(
-            directRules: '10.130.0.0/16',
-            xrayCore: XrayCoreSettings(routingDomainStrategy: strategy),
-          ),
-          socksPort: 2080,
-          resolvedServerIp: '203.0.113.7',
-        ));
-        // Резолв ради правила, защищающего от круга, — тот же круг.
-        expect(rules, contains('IP-CIDR,203.0.113.7/32,DIRECT,no-resolve'));
-        expect(rules, isNot(contains('IP-CIDR,203.0.113.7/32,DIRECT')));
-        expect(rules, contains('IP-CIDR,192.168.0.0/16,DIRECT,no-resolve'));
-      }
-    });
+    test(
+      'сервер и приватные сети не резолвят домен ни при какой стратегии',
+      () {
+        for (final strategy in ['AsIs', 'IPIfNonMatch', 'IPOnDemand']) {
+          final rules = _rules(
+            MihomoConfigGen.build(
+              'vless://uuid@nl.example:443?type=tcp&security=none',
+              AppSettings(
+                directRules: '10.130.0.0/16',
+                xrayCore: XrayCoreSettings(routingDomainStrategy: strategy),
+              ),
+              socksPort: 2080,
+              resolvedServerIp: '203.0.113.7',
+            ),
+          );
+          // Резолв ради правила, защищающего от круга, — тот же круг.
+          expect(rules, contains('IP-CIDR,203.0.113.7/32,DIRECT,no-resolve'));
+          expect(rules, isNot(contains('IP-CIDR,203.0.113.7/32,DIRECT')));
+          expect(rules, contains('IP-CIDR,192.168.0.0/16,DIRECT,no-resolve'));
+        }
+      },
+    );
 
     // Голый адрес mihomo у IP-CIDR не примет — нужен префикс.
     test('голому IP дописывается префикс', () {
-      final rules = _rules(MihomoConfigGen.build(
-        'vless://uuid@203.0.113.9:443?type=tcp&security=none',
-        const AppSettings(directRules: '1.2.3.4'),
-        socksPort: 2080,
-      ));
+      final rules = _rules(
+        MihomoConfigGen.build(
+          'vless://uuid@203.0.113.9:443?type=tcp&security=none',
+          const AppSettings(directRules: '1.2.3.4'),
+          socksPort: 2080,
+        ),
+      );
       expect(rules, contains('IP-CIDR,203.0.113.9/32,DIRECT,no-resolve'));
       // no-resolve тут нет по той же причине, что и выше: умолчание — подмена
       // адреса. Проверяем префикс, а не суффикс правила.
@@ -752,16 +857,21 @@ void main() {
     // слово xray и sing-box. `DOMAIN-KEYWORD` ловил буквы в любом месте: `su`
     // уводил напрямую AI Studio (alkalimakersuite-pa.clients6.google.com).
     test('голое слово — суффикс домена, а не буквы где угодно', () {
-      final rules = _rules(MihomoConfigGen.build(
-        'vless://uuid@nl.example:443?type=tcp&security=none',
-        const AppSettings(directRules: 'ru, su, xn--p1ai'),
-        socksPort: 2080,
-      ));
-      expect(rules, containsAll([
-        'DOMAIN-SUFFIX,ru,DIRECT',
-        'DOMAIN-SUFFIX,su,DIRECT',
-        'DOMAIN-SUFFIX,xn--p1ai,DIRECT',
-      ]));
+      final rules = _rules(
+        MihomoConfigGen.build(
+          'vless://uuid@nl.example:443?type=tcp&security=none',
+          const AppSettings(directRules: 'ru, su, xn--p1ai'),
+          socksPort: 2080,
+        ),
+      );
+      expect(
+        rules,
+        containsAll([
+          'DOMAIN-SUFFIX,ru,DIRECT',
+          'DOMAIN-SUFFIX,su,DIRECT',
+          'DOMAIN-SUFFIX,xn--p1ai,DIRECT',
+        ]),
+      );
       expect(rules.where((r) => r.startsWith('DOMAIN-KEYWORD')), isEmpty);
     });
 
@@ -769,17 +879,18 @@ void main() {
       String direct = 'vk.com, geoip:ru',
       String proxy = '',
       String strategy = 'AsIs',
-    }) =>
-        _rules(MihomoConfigGen.build(
-          'vless://uuid@nl.example:443?type=tcp&security=none',
-          AppSettings(
-            directRules: direct,
-            proxyRules: proxy,
-            xrayCore: XrayCoreSettings(routingDomainStrategy: strategy),
-          ),
-          socksPort: 2080,
-          resolvedServerIp: '203.0.113.7',
-        ));
+    }) => _rules(
+      MihomoConfigGen.build(
+        'vless://uuid@nl.example:443?type=tcp&security=none',
+        AppSettings(
+          directRules: direct,
+          proxyRules: proxy,
+          xrayCore: XrayCoreSettings(routingDomainStrategy: strategy),
+        ),
+        socksPort: 2080,
+        resolvedServerIp: '203.0.113.7',
+      ),
+    );
 
     // Под `AsIs` xray не резолвит домен ради geoip. mihomo резолвил всегда, и
     // TikTok уходил напрямую: DNS из дома отдавал кэш Akamai внутри сети
@@ -818,12 +929,15 @@ void main() {
     // не срабатывал бы для соединений по домену (браузер через прокси).
     test('свой CIDR поднимает AsIs до IPIfNonMatch', () {
       final rules = rulesFor(direct: '10.130.0.0/16, geoip:ru');
-      expect(rules, containsAll([
-        'IP-CIDR,10.130.0.0/16,DIRECT,no-resolve',
-        'GEOIP,ru,DIRECT,no-resolve',
-        'IP-CIDR,10.130.0.0/16,DIRECT',
-        'GEOIP,ru,DIRECT',
-      ]));
+      expect(
+        rules,
+        containsAll([
+          'IP-CIDR,10.130.0.0/16,DIRECT,no-resolve',
+          'GEOIP,ru,DIRECT,no-resolve',
+          'IP-CIDR,10.130.0.0/16,DIRECT',
+          'GEOIP,ru,DIRECT',
+        ]),
+      );
     });
   });
 
@@ -832,11 +946,13 @@ void main() {
     // локальный SOCKS приезжает голый IP, сравнивать GEOSITE/DOMAIN-SUFFIX не с чем,
     // и всё уходит в MATCH.
     test('включён и нюхает чистые IP — иначе домены не матчатся вовсе', () {
-      final s = MihomoConfigGen.build(
-        'vless://uuid@nl.example:443?type=tcp&security=none',
-        const AppSettings(),
-        socksPort: 2080,
-      )['sniffer'] as Map<String, dynamic>;
+      final s =
+          MihomoConfigGen.build(
+                'vless://uuid@nl.example:443?type=tcp&security=none',
+                const AppSettings(),
+                socksPort: 2080,
+              )['sniffer']
+              as Map<String, dynamic>;
 
       expect(s['enable'], isTrue);
       expect(s['parse-pure-ip'], isTrue);
@@ -848,25 +964,29 @@ void main() {
     test('override-destination — зеркало sniffingRouteOnly', () {
       bool overrideFor({required bool routeOnly}) =>
           (MihomoConfigGen.build(
-            'vless://uuid@nl.example:443?type=tcp&security=none',
-            AppSettings(
-              xrayCore: XrayCoreSettings(sniffingRouteOnly: routeOnly),
-            ),
-            socksPort: 2080,
-          )['sniffer'] as Map<String, dynamic>)['override-destination'] as bool;
+                    'vless://uuid@nl.example:443?type=tcp&security=none',
+                    AppSettings(
+                      xrayCore: XrayCoreSettings(sniffingRouteOnly: routeOnly),
+                    ),
+                    socksPort: 2080,
+                  )['sniffer']
+                  as Map<String, dynamic>)['override-destination']
+              as bool;
 
       expect(overrideFor(routeOnly: true), isFalse);
       expect(overrideFor(routeOnly: false), isTrue);
     });
 
     test('выключенный в настройках sniffing выключен и здесь', () {
-      final s = MihomoConfigGen.build(
-        'vless://uuid@nl.example:443?type=tcp&security=none',
-        const AppSettings(
-          xrayCore: XrayCoreSettings(sniffingEnabled: false),
-        ),
-        socksPort: 2080,
-      )['sniffer'] as Map<String, dynamic>;
+      final s =
+          MihomoConfigGen.build(
+                'vless://uuid@nl.example:443?type=tcp&security=none',
+                const AppSettings(
+                  xrayCore: XrayCoreSettings(sniffingEnabled: false),
+                ),
+                socksPort: 2080,
+              )['sniffer']
+              as Map<String, dynamic>;
 
       expect(s['enable'], isFalse);
     });
@@ -876,11 +996,13 @@ void main() {
     // Системного резолвера на Android нет (/etc/resolv.conf отсутствует), и без
     // своего DNS домен сервера из ссылки не разрешается вовсе.
     test('ядро резолвит само, подмена адресов по умолчанию выключена', () {
-      final dns = MihomoConfigGen.build(
-        'vless://uuid@nl.example:443?type=tcp&security=none',
-        const AppSettings(),
-        socksPort: 2080,
-      )['dns'] as Map<String, dynamic>;
+      final dns =
+          MihomoConfigGen.build(
+                'vless://uuid@nl.example:443?type=tcp&security=none',
+                const AppSettings(),
+                socksPort: 2080,
+              )['dns']
+              as Map<String, dynamic>;
 
       expect(dns['enable'], isTrue);
       expect(dns['enhanced-mode'], 'normal');
@@ -894,10 +1016,11 @@ void main() {
     test('глобал-прокси гонит DNS по правилам', () {
       Map<String, dynamic> dnsFor(String finalOutbound) =>
           MihomoConfigGen.build(
-            'vless://uuid@nl.example:443?type=tcp&security=none',
-            AppSettings(finalOutbound: finalOutbound),
-            socksPort: 2080,
-          )['dns'] as Map<String, dynamic>;
+                'vless://uuid@nl.example:443?type=tcp&security=none',
+                AppSettings(finalOutbound: finalOutbound),
+                socksPort: 2080,
+              )['dns']
+              as Map<String, dynamic>;
 
       expect(dnsFor(AppSettings.finalOutboundProxy)['respect-rules'], isTrue);
       expect(
@@ -911,7 +1034,8 @@ void main() {
         MihomoConfigGen.dnsServers(
           const XrayCoreSettings(
             dnsUseCustom: true,
-            dnsServers: 'https+local://1.1.1.1/dns-query\n'
+            dnsServers:
+                'https+local://1.1.1.1/dns-query\n'
                 'tcp://9.9.9.9\n'
                 '8.8.4.4\n'
                 'localhost\n'
@@ -951,21 +1075,27 @@ void main() {
       // опрашиваются параллельно и отвечают первыми.
       group('запасной обычный DNS', () {
         List<String> fallback(String servers) =>
-            MihomoConfigGen.directPlainFallback(MihomoConfigGen.dnsServers(
-              XrayCoreSettings(dnsUseCustom: true, dnsServers: servers),
-            ));
+            MihomoConfigGen.directPlainFallback(
+              MihomoConfigGen.dnsServers(
+                XrayCoreSettings(dnsUseCustom: true, dnsServers: servers),
+              ),
+            );
 
         test('те же резолверы, что выбрал человек', () {
           expect(fallback('https://9.9.9.9/dns-query'), ['9.9.9.9']);
-          expect(fallback('tls://1.1.1.1\nquic://8.8.8.8:853'),
-              ['1.1.1.1', '8.8.8.8']);
-          expect(fallback('https://9.9.9.9/dns-query\nhttps://9.9.9.9/dns'),
-              ['9.9.9.9']);
+          expect(fallback('tls://1.1.1.1\nquic://8.8.8.8:853'), [
+            '1.1.1.1',
+            '8.8.8.8',
+          ]);
+          expect(fallback('https://9.9.9.9/dns-query\nhttps://9.9.9.9/dns'), [
+            '9.9.9.9',
+          ]);
         });
 
         test('IPv6 — в скобках, иначе ядро не разберёт адрес', () {
-          expect(fallback('https://[2606:4700::1111]/dns-query'),
-              ['[2606:4700::1111]']);
+          expect(fallback('https://[2606:4700::1111]/dns-query'), [
+            '[2606:4700::1111]',
+          ]);
         });
 
         test('обычный резолвер уже в списке — добавлять нечего', () {
@@ -982,36 +1112,41 @@ void main() {
           // Обычный DNS отвечает быстрее DoH и выигрывал бы гонку, а
           // провайдер вправе подменить в нём адрес заблокированного сервера.
           final dns = dnsOf(const AppSettings());
-          expect(dns['nameserver'], MihomoConfigGen.dnsServers(
-            const XrayCoreSettings(),
-          ));
+          expect(
+            dns['nameserver'],
+            MihomoConfigGen.dnsServers(const XrayCoreSettings()),
+          );
           expect(dns['proxy-server-nameserver'], dns['nameserver']);
         });
       });
 
       test('лишнего не пишем, когда DNS и так из дома', () {
-        final local = dnsOf(const AppSettings(
-          xrayCore: XrayCoreSettings(
-            dnsUseCustom: true,
-            dnsServers: 'https+local://8.8.8.8/dns-query',
+        final local = dnsOf(
+          const AppSettings(
+            xrayCore: XrayCoreSettings(
+              dnsUseCustom: true,
+              dnsServers: 'https+local://8.8.8.8/dns-query',
+            ),
           ),
-        ));
+        );
         expect(local.containsKey('direct-nameserver'), isFalse);
 
         // Без глобал-прокси respect-rules нет, и DNS идёт напрямую сам.
-        final direct = dnsOf(const AppSettings(
-          finalOutbound: AppSettings.finalOutboundDirect,
-        ));
+        final direct = dnsOf(
+          const AppSettings(finalOutbound: AppSettings.finalOutboundDirect),
+        );
         expect(direct.containsKey('direct-nameserver'), isFalse);
       });
 
       test('системный резолвер переносится как есть', () {
-        final dns = dnsOf(const AppSettings(
-          xrayCore: XrayCoreSettings(
-            dnsUseCustom: true,
-            dnsServers: 'localhost\nhttps://9.9.9.9/dns-query',
+        final dns = dnsOf(
+          const AppSettings(
+            xrayCore: XrayCoreSettings(
+              dnsUseCustom: true,
+              dnsServers: 'localhost\nhttps://9.9.9.9/dns-query',
+            ),
           ),
-        ));
+        );
         expect(dns['direct-nameserver'], [
           'system',
           'https://9.9.9.9/dns-query',
@@ -1021,9 +1156,11 @@ void main() {
       // Иначе домен со своим резолвером (корпоративный) напрямую не открылся бы:
       // у резолвера прямых соединений своей политики нет.
       test('резолверы для отдельных доменов действуют и на прямые', () {
-        final dns = dnsOf(const AppSettings(
-          xrayCore: XrayCoreSettings(dnsPolicy: 'corp.example: 10.0.0.53'),
-        ));
+        final dns = dnsOf(
+          const AppSettings(
+            xrayCore: XrayCoreSettings(dnsPolicy: 'corp.example: 10.0.0.53'),
+          ),
+        );
         expect(dns['nameserver-policy'], isNotEmpty);
         expect(dns['direct-nameserver-follow-policy'], isTrue);
       });
@@ -1035,12 +1172,13 @@ void main() {
       // прокси во фрагменте эту подстановку перебивает.
       const core = XrayCoreSettings(
         dnsUseCustom: true,
-        dnsServers: 'https+local://9.9.9.9/dns-query\nhttps://1.1.1.1/dns-query',
+        dnsServers:
+            'https+local://9.9.9.9/dns-query\nhttps://1.1.1.1/dns-query',
       );
-      expect(
-        MihomoConfigGen.dnsServers(core),
-        ['https://9.9.9.9/dns-query#DIRECT', 'https://1.1.1.1/dns-query'],
-      );
+      expect(MihomoConfigGen.dnsServers(core), [
+        'https://9.9.9.9/dns-query#DIRECT',
+        'https://1.1.1.1/dns-query',
+      ]);
       final dns = MihomoConfigGen.buildDns(
         const AppSettings(
           finalOutbound: AppSettings.finalOutboundProxy,
@@ -1060,26 +1198,31 @@ void main() {
     // провайдер, поэтому чужих адресов там быть не должно.
     group('bootstrap', () {
       List<String> bootstrapFor(String servers) =>
-          MihomoConfigGen.buildDns(AppSettings(
-            xrayCore: XrayCoreSettings(
-              dnsUseCustom: true,
-              dnsServers: servers,
-            ),
-          ))['default-nameserver'] as List<String>;
+          MihomoConfigGen.buildDns(
+                AppSettings(
+                  xrayCore: XrayCoreSettings(
+                    dnsUseCustom: true,
+                    dnsServers: servers,
+                  ),
+                ),
+              )['default-nameserver']
+              as List<String>;
 
       test('свой резолвер, а не Google с Cloudflare', () {
         // Ровно та жалоба, ради которой правка: выбран Quad9, а имя его
         // DoH-сервера уходило спрашивать у чужой пары.
-        expect(
-          bootstrapFor('https://9.9.9.9/dns-query'),
-          ['https://9.9.9.9/dns-query'],
-        );
+        expect(bootstrapFor('https://9.9.9.9/dns-query'), [
+          'https://9.9.9.9/dns-query',
+        ]);
       });
 
       test('запись переносится со схемой, а не голым адресом', () {
         // Голый `9.9.9.9` — это UDP-53 мимо туннеля, то есть запрошенное имя
         // открытым текстом. У DoH провайдер видит только TLS к 9.9.9.9.
-        expect(bootstrapFor('https://9.9.9.9/dns-query').single, startsWith('https://'));
+        expect(
+          bootstrapFor('https://9.9.9.9/dns-query').single,
+          startsWith('https://'),
+        );
         // Умолчание — те же два адреса, что и были, но теперь тоже DoH.
         expect(
           MihomoConfigGen.buildDns(const AppSettings())['default-nameserver'],
@@ -1091,8 +1234,10 @@ void main() {
         // Им самим нужен резолв — ядро такую запись и не примет («default
         // nameserver should be pure IP»). Берём из списка только адресные.
         expect(
-          bootstrapFor('https://dns.quad9.net/dns-query, '
-              'https+local://9.9.9.9/dns-query'),
+          bootstrapFor(
+            'https://dns.quad9.net/dns-query, '
+            'https+local://9.9.9.9/dns-query',
+          ),
           ['https://9.9.9.9/dns-query#DIRECT'],
         );
       });
@@ -1100,18 +1245,17 @@ void main() {
       test('список без единого адреса остаётся на прежней паре', () {
         // Подставить туда нечего: без bootstrap имена DoH-серверов не
         // разрешаются вовсе, и DNS умирает целиком.
-        expect(
-          bootstrapFor('https://dns.quad9.net/dns-query, localhost'),
-          ['1.1.1.1', '8.8.8.8'],
-        );
+        expect(bootstrapFor('https://dns.quad9.net/dns-query, localhost'), [
+          '1.1.1.1',
+          '8.8.8.8',
+        ]);
       });
 
       test('порт и IPv6 адрес адресом быть не перестают', () {
         expect(bootstrapFor('tls://9.9.9.9:853'), ['tls://9.9.9.9:853']);
-        expect(
-          bootstrapFor('https://[2620:fe::fe]/dns-query'),
-          ['https://[2620:fe::fe]/dns-query'],
-        );
+        expect(bootstrapFor('https://[2620:fe::fe]/dns-query'), [
+          'https://[2620:fe::fe]/dns-query',
+        ]);
         // Имя с портом — всё ещё имя.
         expect(bootstrapFor('tls://dns.quad9.net:853'), ['1.1.1.1', '8.8.8.8']);
       });
@@ -1129,12 +1273,10 @@ void main() {
     // Семейство адресов у обоих ядер берётся из одной настройки.
     test('queryStrategy решает судьбу AAAA', () {
       Map<String, dynamic> configFor(String strategy) => MihomoConfigGen.build(
-            'vless://uuid@nl.example:443?type=tcp&security=none',
-            AppSettings(
-              xrayCore: XrayCoreSettings(dnsQueryStrategy: strategy),
-            ),
-            socksPort: 2080,
-          );
+        'vless://uuid@nl.example:443?type=tcp&security=none',
+        AppSettings(xrayCore: XrayCoreSettings(dnsQueryStrategy: strategy)),
+        socksPort: 2080,
+      );
 
       final v4 = configFor('UseIPv4');
       expect(v4['ipv6'], isFalse);
@@ -1147,27 +1289,29 @@ void main() {
   });
 
   group('api ядра', () {
-    test('external-controller поднимается только с портом и всегда с токеном',
-        () {
-      final withApi = MihomoConfigGen.build(
-        'vless://uuid@nl.example:443?type=tcp&security=none',
-        const AppSettings(),
-        socksPort: 2080,
-        apiPort: 9971,
-        apiSecret: 's3cr3t',
-      );
-      expect(withApi['external-controller'], '127.0.0.1:9971');
-      expect(withApi['secret'], 's3cr3t');
+    test(
+      'external-controller поднимается только с портом и всегда с токеном',
+      () {
+        final withApi = MihomoConfigGen.build(
+          'vless://uuid@nl.example:443?type=tcp&security=none',
+          const AppSettings(),
+          socksPort: 2080,
+          apiPort: 9971,
+          apiSecret: 's3cr3t',
+        );
+        expect(withApi['external-controller'], '127.0.0.1:9971');
+        expect(withApi['secret'], 's3cr3t');
 
-      // Пинг и спидтест поднимают ядро без API — управлять там нечем.
-      final withoutApi = MihomoConfigGen.build(
-        'vless://uuid@nl.example:443?type=tcp&security=none',
-        const AppSettings(),
-        socksPort: 2080,
-      );
-      expect(withoutApi.containsKey('external-controller'), isFalse);
-      expect(withoutApi.containsKey('secret'), isFalse);
-    });
+        // Пинг и спидтест поднимают ядро без API — управлять там нечем.
+        final withoutApi = MihomoConfigGen.build(
+          'vless://uuid@nl.example:443?type=tcp&security=none',
+          const AppSettings(),
+          socksPort: 2080,
+        );
+        expect(withoutApi.containsKey('external-controller'), isFalse);
+        expect(withoutApi.containsKey('secret'), isFalse);
+      },
+    );
   });
 
   group('раздача в локалку', () {
@@ -1189,12 +1333,14 @@ void main() {
     });
 
     test('листенеры слушают сеть и ходят по своему набору правил', () {
-      final listeners = (MihomoConfigGen.build(
-        'vless://uuid@nl.example:443?type=tcp&security=none',
-        lanOn,
-        socksPort: 2080,
-      )['listeners'] as List)
-          .cast<Map<String, dynamic>>();
+      final listeners =
+          (MihomoConfigGen.build(
+                    'vless://uuid@nl.example:443?type=tcp&security=none',
+                    lanOn,
+                    socksPort: 2080,
+                  )['listeners']
+                  as List)
+              .cast<Map<String, dynamic>>();
 
       expect(listeners.map((l) => l['type']), ['socks', 'http']);
       for (final l in listeners) {
@@ -1211,12 +1357,14 @@ void main() {
     // подставит глобальный `authentication`, то есть случайные креды
     // приложения, и в раздачу не зайдёт никто.
     test('без пароля users пустой, но присутствует', () {
-      final listeners = (MihomoConfigGen.build(
-        'vless://uuid@nl.example:443?type=tcp&security=none',
-        lanOn,
-        socksPort: 2080,
-      )['listeners'] as List)
-          .cast<Map<String, dynamic>>();
+      final listeners =
+          (MihomoConfigGen.build(
+                    'vless://uuid@nl.example:443?type=tcp&security=none',
+                    lanOn,
+                    socksPort: 2080,
+                  )['listeners']
+                  as List)
+              .cast<Map<String, dynamic>>();
 
       for (final l in listeners) {
         expect(l.containsKey('users'), isTrue);
@@ -1253,39 +1401,43 @@ void main() {
     const link = 'vless://uuid@nl.example:443?type=tcp&security=none';
 
     MihomoTunOptions desktopTun() => const MihomoTunOptions(
-          device: 'tun-keqdis',
-          stack: 'gvisor',
-          mtu: 9000,
-        );
+      device: 'tun-keqdis',
+      stack: 'gvisor',
+      mtu: 9000,
+    );
 
     test('mips уезжает в ядро как есть: свой стек у mihomo есть', () {
       // Обратная сторона подмены в singbox_tun_config: там mips подменяется
       // на gvisor, а здесь обязан доехать до ядра нетронутым.
-      final tun = MihomoConfigGen.build(
-        link,
-        settings,
-        socksPort: 2080,
-        httpPort: 2081,
-        tun: const MihomoTunOptions(
-          device: 'tun-keqdis',
-          stack: 'mips',
-          mtu: 9000,
-        ),
-        windows: true,
-      )['tun'] as Map<String, dynamic>;
+      final tun =
+          MihomoConfigGen.build(
+                link,
+                settings,
+                socksPort: 2080,
+                httpPort: 2081,
+                tun: const MihomoTunOptions(
+                  device: 'tun-keqdis',
+                  stack: 'mips',
+                  mtu: 9000,
+                ),
+                windows: true,
+              )['tun']
+              as Map<String, dynamic>;
 
       expect(tun['stack'], 'mips');
     });
 
     test('десктоп: ядро создаёт устройство само', () {
-      final tun = MihomoConfigGen.build(
-        link,
-        settings,
-        socksPort: 2080,
-        httpPort: 2081,
-        tun: desktopTun(),
-        windows: true,
-      )['tun'] as Map<String, dynamic>;
+      final tun =
+          MihomoConfigGen.build(
+                link,
+                settings,
+                socksPort: 2080,
+                httpPort: 2081,
+                tun: desktopTun(),
+                windows: true,
+              )['tun']
+              as Map<String, dynamic>;
 
       expect(tun['enable'], isTrue);
       // Имя своё: без него mihomo берёт `Meta`, а wintun считает GUID
@@ -1328,8 +1480,7 @@ void main() {
     });
 
     test('HTTP-инбаунд поднимается только там, где его просят', () {
-      final android =
-          MihomoConfigGen.build(link, settings, socksPort: 2080);
+      final android = MihomoConfigGen.build(link, settings, socksPort: 2080);
       expect(android.containsKey('port'), isFalse);
 
       final desktop = MihomoConfigGen.build(
@@ -1342,13 +1493,15 @@ void main() {
     });
 
     test('подсеть своего интерфейса — мимо туннеля', () {
-      final rules = MihomoConfigGen.build(
-        link,
-        settings,
-        socksPort: 2080,
-        tun: desktopTun(),
-        windows: true,
-      )['rules'] as List;
+      final rules =
+          MihomoConfigGen.build(
+                link,
+                settings,
+                socksPort: 2080,
+                tun: desktopTun(),
+                windows: true,
+              )['rules']
+              as List;
 
       expect(rules, contains('IP-CIDR,198.18.0.0/30,DIRECT,no-resolve'));
     });
@@ -1360,13 +1513,14 @@ void main() {
 
     Map<String, dynamic> dnsOf(AppSettings s, {MihomoTunOptions? tun}) =>
         MihomoConfigGen.build(
-          link,
-          s,
-          socksPort: 2080,
-          httpPort: 2081,
-          tun: tun,
-          windows: true,
-        )['dns'] as Map<String, dynamic>;
+              link,
+              s,
+              socksPort: 2080,
+              httpPort: 2081,
+              tun: tun,
+              windows: true,
+            )['dns']
+            as Map<String, dynamic>;
 
     test('включённая настройка со своим туннелем подменяет адреса', () {
       final dns = dnsOf(
@@ -1403,17 +1557,22 @@ void main() {
     // промахивается всегда. Свой CIDR держится на копии с резолвом, которую
     // приносит подъём стратегии до IPIfNonMatch.
     test('свой CIDR работает и с подменными адресами', () {
-      final rules = (MihomoConfigGen.build(
-        link,
-        on.copyWith(
-          directRules: '10.8.0.0/24',
-          xrayCore: const XrayCoreSettings(sniffingRouteOnly: true),
-        ),
-        socksPort: 2080,
-        tun: const MihomoTunOptions(device: 'tun-keqdis', stack: 'gvisor'),
-        windows: true,
-      )['rules'] as List)
-          .cast<String>();
+      final rules =
+          (MihomoConfigGen.build(
+                    link,
+                    on.copyWith(
+                      directRules: '10.8.0.0/24',
+                      xrayCore: const XrayCoreSettings(sniffingRouteOnly: true),
+                    ),
+                    socksPort: 2080,
+                    tun: const MihomoTunOptions(
+                      device: 'tun-keqdis',
+                      stack: 'gvisor',
+                    ),
+                    windows: true,
+                  )['rules']
+                  as List)
+              .cast<String>();
 
       final resolving = rules.indexOf('IP-CIDR,10.8.0.0/24,DIRECT');
       expect(resolving, isNonNegative);
@@ -1423,15 +1582,20 @@ void main() {
     // Правило против круга обязано решать без резолва при любых настройках:
     // резолв ради него — это тот же круг, только на шаг раньше.
     test('правило про сам сервер no-resolve не теряет', () {
-      final rules = (MihomoConfigGen.build(
-        link,
-        on,
-        socksPort: 2080,
-        resolvedServerIp: '203.0.113.7',
-        tun: const MihomoTunOptions(device: 'tun-keqdis', stack: 'gvisor'),
-        windows: true,
-      )['rules'] as List)
-          .cast<String>();
+      final rules =
+          (MihomoConfigGen.build(
+                    link,
+                    on,
+                    socksPort: 2080,
+                    resolvedServerIp: '203.0.113.7',
+                    tun: const MihomoTunOptions(
+                      device: 'tun-keqdis',
+                      stack: 'gvisor',
+                    ),
+                    windows: true,
+                  )['rules']
+                  as List)
+              .cast<String>();
 
       expect(rules, contains('IP-CIDR,203.0.113.7/32,DIRECT,no-resolve'));
     });
@@ -1445,16 +1609,20 @@ void main() {
       List<String> managed = const [],
     }) =>
         (MihomoConfigGen.build(
-          link,
-          settings,
-          socksPort: 2080,
-          httpPort: 2081,
-          tun: const MihomoTunOptions(device: 'tun-keqdis', stack: 'gvisor'),
-          routingMode: mode,
-          managedProcessNames: managed,
-          appProcessName: 'keqdroid.exe',
-          windows: true,
-        )['rules'] as List)
+                  link,
+                  settings,
+                  socksPort: 2080,
+                  httpPort: 2081,
+                  tun: const MihomoTunOptions(
+                    device: 'tun-keqdis',
+                    stack: 'gvisor',
+                  ),
+                  routingMode: mode,
+                  managedProcessNames: managed,
+                  appProcessName: 'keqdroid.exe',
+                  windows: true,
+                )['rules']
+                as List)
             .cast<String>();
 
     // Иначе tcp-пинг мерил бы локальный конец туннеля вместо сервера. Раньше
@@ -1583,17 +1751,21 @@ void main() {
     });
 
     test('vmess: заголовок лежит в поле type, а не в net', () {
-      final payload = base64.encode(utf8.encode(jsonEncode({
-        'v': '2',
-        'ps': 'n',
-        'add': '198.51.100.10',
-        'port': '443',
-        'id': 'uuid',
-        'net': 'tcp',
-        'type': 'http',
-        'host': 'masqvmess.example',
-        'path': '/masqvmess',
-      })));
+      final payload = base64.encode(
+        utf8.encode(
+          jsonEncode({
+            'v': '2',
+            'ps': 'n',
+            'add': '198.51.100.10',
+            'port': '443',
+            'id': 'uuid',
+            'net': 'tcp',
+            'type': 'http',
+            'host': 'masqvmess.example',
+            'path': '/masqvmess',
+          }),
+        ),
+      );
       final proxy = MihomoConfigGen.buildProxy('vmess://$payload');
       expect(proxy['network'], 'http');
       final opts = proxy['http-opts'] as Map<String, dynamic>;
@@ -1661,8 +1833,9 @@ void main() {
 
     test('UDP внутри TCP включается обоими написаниями', () {
       for (final query in ['uot=1', 'udp-over-tcp=true']) {
-        final proxy =
-            MihomoConfigGen.buildProxy('ss://$user@198.51.100.10:8388?$query');
+        final proxy = MihomoConfigGen.buildProxy(
+          'ss://$user@198.51.100.10:8388?$query',
+        );
         expect(proxy['udp-over-tcp'], isTrue, reason: query);
       }
       final versioned = MihomoConfigGen.buildProxy(
@@ -1679,9 +1852,9 @@ void main() {
   // `packet-addr` всё равно включает xudp сам.
   group('packetEncoding', () {
     Map<String, dynamic> proxyFor(String value) => MihomoConfigGen.buildProxy(
-          'vless://uuid@198.51.100.10:443?type=tcp&security=none'
-          '${value.isEmpty ? '' : '&packetEncoding=$value'}',
-        );
+      'vless://uuid@198.51.100.10:443?type=tcp&security=none'
+      '${value.isEmpty ? '' : '&packetEncoding=$value'}',
+    );
 
     test('xudp и packet-addr', () {
       expect(proxyFor('xudp')['xudp'], isTrue);
@@ -1851,8 +2024,9 @@ void main() {
     });
 
     test('v4: один токен', () {
-      final proxy =
-          MihomoConfigGen.buildProxy('tuic://sometoken@198.51.100.30:443');
+      final proxy = MihomoConfigGen.buildProxy(
+        'tuic://sometoken@198.51.100.30:443',
+      );
       expect(proxy['token'], 'sometoken');
       expect(proxy.containsKey('uuid'), isFalse);
       expect(proxy.containsKey('password'), isFalse);
@@ -1885,8 +2059,9 @@ void main() {
       expect(pair['type'], 'anytls');
       expect(pair['password'], 'secret');
 
-      final single =
-          MihomoConfigGen.buildProxy('anytls://secret@198.51.100.31:443');
+      final single = MihomoConfigGen.buildProxy(
+        'anytls://secret@198.51.100.31:443',
+      );
       expect(single['password'], 'secret');
     });
 
@@ -1921,7 +2096,8 @@ void main() {
         base64Url.encode(utf8.encode(value)).replaceAll('=', '');
 
     test('собирается со всеми полями', () {
-      final payload = '198.51.100.32:8388:auth_aes128_md5:aes-256-cfb:'
+      final payload =
+          '198.51.100.32:8388:auth_aes128_md5:aes-256-cfb:'
           'tls1.2_ticket_auth:${b64('secret')}/?'
           'obfsparam=${b64('cdn.example')}&protoparam=${b64('32')}';
       final proxy = MihomoConfigGen.buildProxy('ssr://${b64(payload)}');
@@ -2030,14 +2206,17 @@ void main() {
       expect(proxy.containsKey('hop-interval'), isFalse);
     });
 
-    test('hysteria:// с параметрами второй версии собирается как hysteria2', () {
-      final proxy = MihomoConfigGen.buildProxy(
-        'hysteria://password@198.51.100.16:443?sni=hy2.example'
-        '&obfs=salamander&obfs-password=obfspass',
-      );
-      expect(proxy['type'], 'hysteria2');
-      expect(proxy['sni'], 'hy2.example');
-      expect(proxy['obfs'], 'salamander');
-    });
+    test(
+      'hysteria:// с параметрами второй версии собирается как hysteria2',
+      () {
+        final proxy = MihomoConfigGen.buildProxy(
+          'hysteria://password@198.51.100.16:443?sni=hy2.example'
+          '&obfs=salamander&obfs-password=obfspass',
+        );
+        expect(proxy['type'], 'hysteria2');
+        expect(proxy['sni'], 'hy2.example');
+        expect(proxy['obfs'], 'salamander');
+      },
+    );
   });
 }

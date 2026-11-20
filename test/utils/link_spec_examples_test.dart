@@ -19,12 +19,15 @@ const _sip002PlainKey = 'YctPZ6U7xPPcU+gp3u+0tx/tRizJN9K8y+uKlW2qjlI=';
 const _hy2Doc =
     'hysteria2://letmein@example.com/?insecure=1&obfs=salamander&obfs-password=gawrgura&pinSHA256=deadbeef&sni=real.example.com';
 
-Map<String, dynamic> _mihomo(String link) => MihomoConfigGen.buildProxies(link).first;
+Map<String, dynamic> _mihomo(String link) =>
+    MihomoConfigGen.buildProxies(link).first;
 
 Map<String, dynamic> _xray(String link) =>
     ((jsonDecode(ConfigGeneratorV2.generateConfig(link, const AppSettings()))
-            as Map)['outbounds'] as List)
-        .first as Map<String, dynamic>;
+                    as Map)['outbounds']
+                as List)
+            .first
+        as Map<String, dynamic>;
 
 void main() {
   setUp(() => Socks5Credentials().init('user', 'pass'));
@@ -44,7 +47,10 @@ void main() {
     test('явный порт и явный ноль остаются как есть', () {
       expect(_mihomo('hysteria2://pw@hy2.example:8443/')['port'], 8443);
       expect(_mihomo('hysteria2://pw@hy2.example:0/')['port'], 0);
-      expect((_xray('hysteria2://pw@hy2.example:0/')['settings'] as Map)['port'], 0);
+      expect(
+        (_xray('hysteria2://pw@hy2.example:0/')['settings'] as Map)['port'],
+        0,
+      );
     });
   });
 
@@ -57,7 +63,10 @@ void main() {
 
     test('незакодированный пароль 2022 раскодирован в обоих ядрах', () {
       expect(_mihomo(_sip002Plain)['password'], _sip002PlainKey);
-      expect((_xray(_sip002Plain)['settings'] as Map)['password'], _sip002PlainKey);
+      expect(
+        (_xray(_sip002Plain)['settings'] as Map)['password'],
+        _sip002PlainKey,
+      );
     });
   });
 
@@ -99,26 +108,27 @@ void main() {
 
     test('включён по умолчанию, как у xray (cone в proxy/vmess/outbound)', () {
       final aead = 'vmess://$uuid@vm.example:443?type=tcp&security=none';
-      final json = 'vmess://${base64.encode(utf8.encode(jsonEncode({
-            'v': '2',
-            'add': 'vm.example',
-            'port': '443',
-            'id': uuid,
-            'aid': '0',
-            'net': 'tcp',
-          })))}';
+      final json =
+          'vmess://${base64.encode(utf8.encode(jsonEncode({'v': '2', 'add': 'vm.example', 'port': '443', 'id': uuid, 'aid': '0', 'net': 'tcp'})))}';
       expect(_mihomo(aead)['xudp'], isTrue);
       expect(_mihomo(json)['xudp'], isTrue);
     });
 
-    test('packetEncoding из ссылки сильнее умолчания, у VLESS ключа нет: ядро включает само', () {
-      final packet = _mihomo(
-          'vmess://$uuid@vm.example:443?type=tcp&security=none&packetEncoding=packet');
-      expect(packet['packet-addr'], isTrue);
-      expect(packet.containsKey('xudp'), isFalse);
-      expect(
-          _mihomo('vless://$uuid@vl.example:443?type=tcp&security=none').containsKey('xudp'),
-          isFalse);
-    });
+    test(
+      'packetEncoding из ссылки сильнее умолчания, у VLESS ключа нет: ядро включает само',
+      () {
+        final packet = _mihomo(
+          'vmess://$uuid@vm.example:443?type=tcp&security=none&packetEncoding=packet',
+        );
+        expect(packet['packet-addr'], isTrue);
+        expect(packet.containsKey('xudp'), isFalse);
+        expect(
+          _mihomo(
+            'vless://$uuid@vl.example:443?type=tcp&security=none',
+          ).containsKey('xudp'),
+          isFalse,
+        );
+      },
+    );
   });
 }

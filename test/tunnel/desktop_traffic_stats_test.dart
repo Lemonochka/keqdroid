@@ -39,33 +39,44 @@ void main() {
   setUp(() async => core = await StallingClashApi.start());
   tearDown(() => core.close());
 
-  test('одна неудача снимает сотни висящих запросов без переполнения стека',
-      () async {
-    final stats = _Stats();
-    final base = ConnectionsPollStats.instance.inFlight;
-    const hung = 300;
-    final requests = [
-      for (var i = 0; i < hung; i++) stats.queryClashTraffic(core.port),
-    ];
-    await _waitFor(() => ConnectionsPollStats.instance.inFlight - base >= hung);
+  test(
+    'одна неудача снимает сотни висящих запросов без переполнения стека',
+    () async {
+      final stats = _Stats();
+      final base = ConnectionsPollStats.instance.inFlight;
+      const hung = 300;
+      final requests = [
+        for (var i = 0; i < hung; i++) stats.queryClashTraffic(core.port),
+      ];
+      await _waitFor(
+        () => ConnectionsPollStats.instance.inFlight - base >= hung,
+      );
 
-    // Отказ на соединении — тот же клиент сбрасывается и рвёт висящие.
-    expect(await stats.queryClashTraffic(await closedLoopbackPort()), isNull);
+      // Отказ на соединении — тот же клиент сбрасывается и рвёт висящие.
+      expect(await stats.queryClashTraffic(await closedLoopbackPort()), isNull);
 
-    final results = await Future.wait(requests).timeout(const Duration(seconds: 5));
-    expect(results, everyElement(isNull));
-    expect(ConnectionsPollStats.instance.inFlight, base);
-    stats.stopStatsLoop();
-  }, timeout: const Timeout(Duration(seconds: 60)));
+      final results = await Future.wait(
+        requests,
+      ).timeout(const Duration(seconds: 5));
+      expect(results, everyElement(isNull));
+      expect(ConnectionsPollStats.instance.inFlight, base);
+      stats.stopStatsLoop();
+    },
+    timeout: const Timeout(Duration(seconds: 60)),
+  );
 
-  test('недосланное тело — отказ по сроку, а не вечное ожидание', () async {
-    final stats = _Stats();
-    final result = await stats
-        .queryClashTraffic(core.port)
-        .timeout(connectionsBodyTimeout + const Duration(seconds: 5));
-    expect(result, isNull);
-    stats.stopStatsLoop();
-  }, timeout: const Timeout(Duration(seconds: 60)));
+  test(
+    'недосланное тело — отказ по сроку, а не вечное ожидание',
+    () async {
+      final stats = _Stats();
+      final result = await stats
+          .queryClashTraffic(core.port)
+          .timeout(connectionsBodyTimeout + const Duration(seconds: 5));
+      expect(result, isNull);
+      stats.stopStatsLoop();
+    },
+    timeout: const Timeout(Duration(seconds: 60)),
+  );
 
   test('секундный опрос ждёт прошлый, а не шлёт вдогонку', () async {
     final stats = _Stats()..hold = Completer<void>();

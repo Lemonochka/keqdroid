@@ -51,17 +51,22 @@ class _Ipv6ExitBackend extends FakeTunnelBackend {
 }
 
 ServerItem _server(String id, {DateTime? checkedAt, bool? ipv6}) => ServerItem(
-      id: id,
-      config: 'vless://00000000-0000-4000-8000-000000000000@192.0.2.${id.codeUnitAt(0) % 200}:443'
-          '?type=tcp&security=none#$id',
-      type: ServerItemType.manual,
-      addedAt: DateTime(2026),
-      ipv6CheckedAt: checkedAt,
-      ipv6Exit: ipv6,
-    );
+  id: id,
+  config:
+      'vless://00000000-0000-4000-8000-000000000000@192.0.2.${id.codeUnitAt(0) % 200}:443'
+      '?type=tcp&security=none#$id',
+  type: ServerItemType.manual,
+  addedAt: DateTime(2026),
+  ipv6CheckedAt: checkedAt,
+  ipv6Exit: ipv6,
+);
 
-PingResult _ping(String id, {bool ok = true}) =>
-    PingResult(serverId: id, serverName: id, success: ok, latencyMs: ok ? 90 : null);
+PingResult _ping(String id, {bool ok = true}) => PingResult(
+  serverId: id,
+  serverName: id,
+  success: ok,
+  latencyMs: ok ? 90 : null,
+);
 
 void main() {
   const viaVpn = AppSettings(tun: TunSettings(ipv6: TunSettings.ipv6Vpn));
@@ -82,53 +87,64 @@ void main() {
       }
     });
 
-    test('живых, ни разу не проверенных или проверенных больше суток назад', () {
-      final servers = [
-        _server('a'),
-        _server('b', checkedAt: now.subtract(const Duration(hours: 2))),
-        _server('c', checkedAt: now.subtract(const Duration(hours: 25))),
-        _server('d'),
-      ];
-      final due = PingService.dueForIpv6Probe(
-        servers,
-        [_ping('a'), _ping('b'), _ping('c'), _ping('d', ok: false)],
-        viaVpn,
-        now,
-      );
-      // упавший замер про IPv6 не говорит ничего, его прежний ответ остаётся
-      expect([for (final s in due) s.id], ['a', 'c']);
-    });
-  });
-
-  test('проверка ходит на адрес только с IPv6 и отдаёт ответ по серверу', () async {
-    final backend = _Ipv6ExitBackend({'a'});
-    PingService.debugMultiPingSupported = true;
-    PingService.debugEngine = VpnEngine.withBackend(backend);
-    addTearDown(() {
-      PingService.debugMultiPingSupported = null;
-      PingService.debugEngine = null;
-    });
-
-    final probed = await PingService.probeIpv6Exits(
-      [_server('a'), _server('b')],
-      viaVpn,
+    test(
+      'живых, ни разу не проверенных или проверенных больше суток назад',
+      () {
+        final servers = [
+          _server('a'),
+          _server('b', checkedAt: now.subtract(const Duration(hours: 2))),
+          _server('c', checkedAt: now.subtract(const Duration(hours: 25))),
+          _server('d'),
+        ];
+        final due = PingService.dueForIpv6Probe(
+          servers,
+          [_ping('a'), _ping('b'), _ping('c'), _ping('d', ok: false)],
+          viaVpn,
+          now,
+        );
+        // упавший замер про IPv6 не говорит ничего, его прежний ответ остаётся
+        expect([for (final s in due) s.id], ['a', 'c']);
+      },
     );
-    expect(probed, {'a': true, 'b': false});
-    expect(backend.urls, everyElement(PingService.ipv6ProbeUrl));
   });
+
+  test(
+    'проверка ходит на адрес только с IPv6 и отдаёт ответ по серверу',
+    () async {
+      final backend = _Ipv6ExitBackend({'a'});
+      PingService.debugMultiPingSupported = true;
+      PingService.debugEngine = VpnEngine.withBackend(backend);
+      addTearDown(() {
+        PingService.debugMultiPingSupported = null;
+        PingService.debugEngine = null;
+      });
+
+      final probed = await PingService.probeIpv6Exits([
+        _server('a'),
+        _server('b'),
+      ], viaVpn);
+      expect(probed, {'a': true, 'b': false});
+      expect(backend.urls, everyElement(PingService.ipv6ProbeUrl));
+    },
+  );
 
   test('адрес проверки по https: http замер сам переделывает в https', () {
     expect(
       PingService.ipv6ProbeUrl,
       startsWith('https://'),
-      reason: 'с http://ipv6.msftconnecttest.com проверка молча отвечала «нет IPv6» '
+      reason:
+          'с http://ipv6.msftconnecttest.com проверка молча отвечала «нет IPv6» '
           'у каждого сервера: https он не держит',
     );
   });
 
   test('ответ ложится на сервер и переживает запись', () async {
     final storage = await buildStorageService();
-    await storage.saveServers([_server('a'), _server('b'), _server('c', ipv6: true)]);
+    await storage.saveServers([
+      _server('a'),
+      _server('b'),
+      _server('c', ipv6: true),
+    ]);
 
     final out = await storage.applyIpv6Probe({'a': true, 'b': false}, now);
     final byId = {for (final s in out) s.id: s};

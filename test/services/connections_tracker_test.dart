@@ -12,30 +12,28 @@ ConnectionEntry _entry({
   String process = '',
   bool closed = false,
   DateTime? startedAt,
-}) =>
-    ConnectionEntry(
-      id: '$source>$network:$host:$port',
-      network: network,
-      host: host,
-      destPort: port,
-      source: source,
-      process: process,
-      inbound: 'socks-in',
-      outbound: outbound,
-      rule: rule,
-      closed: closed,
-      startedAt: startedAt,
-    );
+}) => ConnectionEntry(
+  id: '$source>$network:$host:$port',
+  network: network,
+  host: host,
+  destPort: port,
+  source: source,
+  process: process,
+  inbound: 'socks-in',
+  outbound: outbound,
+  rule: rule,
+  closed: closed,
+  startedAt: startedAt,
+);
 
 ConnectionsSnapshot _log(
   List<ConnectionEntry> entries, {
   bool ruleInfoAvailable = true,
-}) =>
-    ConnectionsSnapshot(
-      entries: entries,
-      source: ConnectionsSource.coreLog,
-      ruleInfoAvailable: ruleInfoAvailable,
-    );
+}) => ConnectionsSnapshot(
+  entries: entries,
+  source: ConnectionsSource.coreLog,
+  ruleInfoAvailable: ruleInfoAvailable,
+);
 
 void main() {
   final t0 = DateTime(2026, 8, 11, 6, 14);
@@ -46,8 +44,14 @@ void main() {
       final snapshot = tracker.merge(
         _log([
           _entry(source: '127.0.0.1:53182', startedAt: t0),
-          _entry(source: '127.0.0.1:53183', startedAt: t0.add(const Duration(seconds: 1))),
-          _entry(source: '127.0.0.1:53184', startedAt: t0.add(const Duration(seconds: 2))),
+          _entry(
+            source: '127.0.0.1:53183',
+            startedAt: t0.add(const Duration(seconds: 1)),
+          ),
+          _entry(
+            source: '127.0.0.1:53184',
+            startedAt: t0.add(const Duration(seconds: 2)),
+          ),
           _entry(source: '127.0.0.1:53190', host: 'vk.com', outbound: 'direct'),
         ]),
         sessionToken: 'log:',
@@ -55,8 +59,9 @@ void main() {
       );
 
       expect(snapshot.entries.length, 2);
-      final youtube =
-          snapshot.entries.firstWhere((e) => e.host == 'www.youtube.com');
+      final youtube = snapshot.entries.firstWhere(
+        (e) => e.host == 'www.youtube.com',
+      );
       expect(youtube.count, 3);
       // Время начала — самое раннее из свёрнутых, а не последнее увиденное.
       expect(youtube.startedAt, t0);
@@ -115,23 +120,29 @@ void main() {
       expect(snapshot.entries.single.download, 980);
     });
 
-    test('a group row takes the first known rule and inbound, no bytes when nobody counted them', () {
-      final tracker = ConnectionsTracker();
-      final snapshot = tracker.merge(
-        _log([
-          _entry(source: 'a:1', rule: '', startedAt: t0),
-          _entry(source: 'a:2', startedAt: t0.add(const Duration(seconds: 1))),
-        ]),
-        sessionToken: 'log:',
-        now: t0.add(const Duration(seconds: 2)),
-      );
-      final row = snapshot.entries.single;
-      expect(row.id, startsWith('group:'));
-      expect(row.rule, 'proxy-geosite');
-      expect(row.inbound, 'socks-in');
-      expect(row.upload, isNull);
-      expect(row.download, isNull);
-    });
+    test(
+      'a group row takes the first known rule and inbound, no bytes when nobody counted them',
+      () {
+        final tracker = ConnectionsTracker();
+        final snapshot = tracker.merge(
+          _log([
+            _entry(source: 'a:1', rule: '', startedAt: t0),
+            _entry(
+              source: 'a:2',
+              startedAt: t0.add(const Duration(seconds: 1)),
+            ),
+          ]),
+          sessionToken: 'log:',
+          now: t0.add(const Duration(seconds: 2)),
+        );
+        final row = snapshot.entries.single;
+        expect(row.id, startsWith('group:'));
+        expect(row.rule, 'proxy-geosite');
+        expect(row.inbound, 'socks-in');
+        expect(row.upload, isNull);
+        expect(row.download, isNull);
+      },
+    );
 
     test('a group row keeps its connections, newest first', () {
       final tracker = ConnectionsTracker();
@@ -183,31 +194,34 @@ void main() {
       expect(later.entries.single.host, 'www.youtube.com');
     });
 
-    test('drops it once the core reported the closure and the linger passed', () {
-      final tracker = ConnectionsTracker(
-        closedLinger: const Duration(seconds: 45),
-      );
-      tracker.merge(
-        _log([_entry(source: 'a:1')]),
-        sessionToken: 'log:',
-        now: t0,
-      );
-      final closed = tracker.merge(
-        _log([_entry(source: 'a:1', closed: true)]),
-        sessionToken: 'log:',
-        now: t0.add(const Duration(seconds: 5)),
-      );
-      expect(closed.entries.single.closed, isTrue);
+    test(
+      'drops it once the core reported the closure and the linger passed',
+      () {
+        final tracker = ConnectionsTracker(
+          closedLinger: const Duration(seconds: 45),
+        );
+        tracker.merge(
+          _log([_entry(source: 'a:1')]),
+          sessionToken: 'log:',
+          now: t0,
+        );
+        final closed = tracker.merge(
+          _log([_entry(source: 'a:1', closed: true)]),
+          sessionToken: 'log:',
+          now: t0.add(const Duration(seconds: 5)),
+        );
+        expect(closed.entries.single.closed, isTrue);
 
-      final gone = tracker.merge(
-        // Строка о закрытии всё ещё в хвосте лога — это не повод показывать её
-        // вечно: отсчёт идёт от момента закрытия.
-        _log([_entry(source: 'a:1', closed: true)]),
-        sessionToken: 'log:',
-        now: t0.add(const Duration(seconds: 55)),
-      );
-      expect(gone.entries, isEmpty);
-    });
+        final gone = tracker.merge(
+          // Строка о закрытии всё ещё в хвосте лога — это не повод показывать её
+          // вечно: отсчёт идёт от момента закрытия.
+          _log([_entry(source: 'a:1', closed: true)]),
+          sessionToken: 'log:',
+          now: t0.add(const Duration(seconds: 55)),
+        );
+        expect(gone.entries, isEmpty);
+      },
+    );
 
     test('first poll shows live connections, not the whole log history', () {
       final tracker = ConnectionsTracker(
@@ -236,7 +250,10 @@ void main() {
       );
 
       final hosts = snapshot.entries.map((e) => e.host).toList();
-      expect(hosts, containsAll(<String>['live.example.com', 'just.example.com']));
+      expect(
+        hosts,
+        containsAll(<String>['live.example.com', 'just.example.com']),
+      );
       expect(hosts, isNot(contains('ancient.example.com')));
     });
 
@@ -265,10 +282,7 @@ void main() {
     test('a group stays alive while at least one of its connections is', () {
       final tracker = ConnectionsTracker();
       final snapshot = tracker.merge(
-        _log([
-          _entry(source: 'a:1', closed: true),
-          _entry(source: 'a:2'),
-        ]),
+        _log([_entry(source: 'a:1', closed: true), _entry(source: 'a:2')]),
         sessionToken: 'log:',
         now: t0,
       );
@@ -303,7 +317,9 @@ void main() {
     });
 
     test('drops a connection the log stopped mentioning long ago', () {
-      final tracker = ConnectionsTracker(silentTtl: const Duration(minutes: 10));
+      final tracker = ConnectionsTracker(
+        silentTtl: const Duration(minutes: 10),
+      );
       tracker.merge(
         _log([_entry(source: 'a:1')]),
         sessionToken: 'log:',

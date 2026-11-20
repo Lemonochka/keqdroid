@@ -46,10 +46,9 @@ void main() {
       // забираем managed-параметры, как это делает редактор
       final sni = uri.takeParam('sni');
       final security = uri.takeParam('security');
-      final rebuilt = uri.build(managedParams: [
-        MapEntry('security', security),
-        MapEntry('sni', sni),
-      ]);
+      final rebuilt = uri.build(
+        managedParams: [MapEntry('security', security), MapEntry('sni', sni)],
+      );
       // неизвестные токены (weird, flag) — сырыми; fragment не тронут
       expect(rebuilt, contains('weird=%2Fkeep%20me'));
       expect(rebuilt, contains('flag'));
@@ -59,8 +58,7 @@ void main() {
     });
 
     test('takeParam removes every occurrence of the key', () {
-      final uri =
-          RawShareUri.parse('vless://u@h.com:1?sni=a&sni=b&other=1#n')!;
+      final uri = RawShareUri.parse('vless://u@h.com:1?sni=a&sni=b&other=1#n')!;
       expect(uri.takeParam('sni'), 'a');
       expect(uri.hasParam('sni'), isFalse);
       expect(uri.hasParam('other'), isTrue);
@@ -68,10 +66,12 @@ void main() {
 
     test('empty managed values are omitted from the query', () {
       final uri = RawShareUri.parse('vless://u@h.com:1#n')!;
-      final rebuilt = uri.build(managedParams: const [
-        MapEntry('sni', ''),
-        MapEntry('security', 'none'),
-      ]);
+      final rebuilt = uri.build(
+        managedParams: const [
+          MapEntry('sni', ''),
+          MapEntry('security', 'none'),
+        ],
+      );
       expect(rebuilt, 'vless://u@h.com:1?security=none#n');
     });
 
@@ -98,9 +98,9 @@ void main() {
 
     test('managed values are query-encoded on rebuild', () {
       final uri = RawShareUri.parse('vless://u@h.com:1#n')!;
-      final rebuilt = uri.build(managedParams: const [
-        MapEntry('spx', '/path with space'),
-      ]);
+      final rebuilt = uri.build(
+        managedParams: const [MapEntry('spx', '/path with space')],
+      );
       expect(rebuilt, 'vless://u@h.com:1?spx=%2Fpath+with+space#n');
       // и парсится обратно в то же значение
       final again = RawShareUri.parse(rebuilt)!;

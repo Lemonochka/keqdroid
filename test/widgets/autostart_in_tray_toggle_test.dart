@@ -41,7 +41,8 @@ Future<(StorageService, List<MethodCall>)> _openDesktopSettings(
 
   final calls = <MethodCall>[];
   var blocked = blockedByWindows;
-  final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+  final messenger =
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
   messenger.setMockMethodCallHandler(_channel, (call) async {
     calls.add(call);
     if (call.method == 'setLaunchAtStartup' &&
@@ -59,23 +60,33 @@ Future<(StorageService, List<MethodCall>)> _openDesktopSettings(
   });
   addTearDown(() => messenger.setMockMethodCallHandler(_channel, null));
 
-  final storage = (await tester.runAsync(() => buildStorageService(
-        initialValues: {
-          'keqdis_settings':
-              AppSettings(launchAtStartup: autostart).toJsonString(),
-        },
-      )))!;
+  final storage = (await tester.runAsync(
+    () => buildStorageService(
+      initialValues: {
+        'keqdis_settings': AppSettings(
+          launchAtStartup: autostart,
+        ).toJsonString(),
+      },
+    ),
+  ))!;
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
         storageProvider.overrideWithValue(storage),
-        vpnEngineProvider.overrideWithValue(VpnEngine.withBackend(FakeTunnelBackend())),
+        vpnEngineProvider.overrideWithValue(
+          VpnEngine.withBackend(FakeTunnelBackend()),
+        ),
       ],
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         locale: const Locale('en'),
-        theme: buildAppTheme(buildPresetScheme(themePresetFor(const AppSettings()), Brightness.light)),
+        theme: buildAppTheme(
+          buildPresetScheme(
+            themePresetFor(const AppSettings()),
+            Brightness.light,
+          ),
+        ),
         home: const SettingsTab(),
       ),
     ),
@@ -101,18 +112,30 @@ void main() {
   }, skip: skip);
 
   // TUN без прав поднимает служба, задача планировщика с правами больше не заводится
-  testWidgets('переключателя прав нет, автозапуск включается обычный', (tester) async {
-    final (storage, calls) = await _openDesktopSettings(tester, autostart: false);
+  testWidgets('переключателя прав нет, автозапуск включается обычный', (
+    tester,
+  ) async {
+    final (storage, calls) = await _openDesktopSettings(
+      tester,
+      autostart: false,
+    );
     expect(find.text('Start with admin rights'), findsNothing);
     expect(find.byIcon(Icons.admin_panel_settings_rounded), findsNothing);
 
     await tester.tap(find.text('Start with Windows'));
-    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 100)),
+    );
     await _frames(tester);
 
     expect(
       calls.where((c) => c.method == 'setLaunchAtStartup').last.arguments,
-      {'enabled': true, 'elevated': false, 'allowElevation': true, 'approve': true},
+      {
+        'enabled': true,
+        'elevated': false,
+        'allowElevation': true,
+        'approve': true,
+      },
     );
     final saved = (await tester.runAsync(storage.getSettings))!;
     expect(saved.launchAtStartupElevated, isFalse);
@@ -120,15 +143,21 @@ void main() {
 
   group('выключен в Диспетчере задач', () {
     Switch switchOf(WidgetTester tester, String title) => tester.widget<Switch>(
-          find.descendant(
-            of: find.widgetWithText(ExpressiveGroupTile, title),
-            matching: find.byType(Switch),
-          ),
-        );
+      find.descendant(
+        of: find.widgetWithText(ExpressiveGroupTile, title),
+        matching: find.byType(Switch),
+      ),
+    );
 
     // ключ Run на месте, но Windows его не запускает: переключатель не должен говорить «вкл»
-    testWidgets('показан выключенным, зависящие от него недоступны', (tester) async {
-      await _openDesktopSettings(tester, autostart: true, blockedByWindows: true);
+    testWidgets('показан выключенным, зависящие от него недоступны', (
+      tester,
+    ) async {
+      await _openDesktopSettings(
+        tester,
+        autostart: true,
+        blockedByWindows: true,
+      );
 
       expect(switchOf(tester, 'Start with Windows').value, isFalse);
       expect(switchOf(tester, _title).onChanged, isNull);
@@ -137,29 +166,49 @@ void main() {
     }, skip: skip);
 
     testWidgets('нажатие включает и выключатель Windows', (tester) async {
-      final (storage, calls) =
-          await _openDesktopSettings(tester, autostart: true, blockedByWindows: true);
+      final (storage, calls) = await _openDesktopSettings(
+        tester,
+        autostart: true,
+        blockedByWindows: true,
+      );
 
       await tester.tap(find.text('Start with Windows'));
-      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 100)),
+      );
       await _frames(tester);
 
       expect(
         calls.where((c) => c.method == 'setLaunchAtStartup').last.arguments,
-        {'enabled': true, 'elevated': false, 'allowElevation': true, 'approve': true},
+        {
+          'enabled': true,
+          'elevated': false,
+          'allowElevation': true,
+          'approve': true,
+        },
       );
       expect(switchOf(tester, 'Start with Windows').value, isTrue);
       expect(switchOf(tester, _title).onChanged, isNotNull);
-      expect((await tester.runAsync(storage.getSettings))!.launchAtStartup, isTrue);
+      expect(
+        (await tester.runAsync(storage.getSettings))!.launchAtStartup,
+        isTrue,
+      );
     }, skip: skip);
 
     // выбор в Диспетчере задач мог сделать сам человек: другие настройки его не снимают
-    testWidgets('другие переключатели выключатель Windows не трогают', (tester) async {
-      final (storage, calls) =
-          await _openDesktopSettings(tester, autostart: true, blockedByWindows: true);
+    testWidgets('другие переключатели выключатель Windows не трогают', (
+      tester,
+    ) async {
+      final (storage, calls) = await _openDesktopSettings(
+        tester,
+        autostart: true,
+        blockedByWindows: true,
+      );
 
       await tester.tap(find.text('Minimize to tray on close'));
-      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 100)),
+      );
       await _frames(tester);
 
       final launches = calls.where((c) => c.method == 'setLaunchAtStartup');
@@ -167,32 +216,50 @@ void main() {
       expect(launches.every((c) => c.arguments['approve'] == false), isTrue);
       expect(switchOf(tester, 'Start with Windows').value, isFalse);
       // ключ Run не снимается, запись в Диспетчере задач остаётся
-      expect((await tester.runAsync(storage.getSettings))!.launchAtStartup, isTrue);
+      expect(
+        (await tester.runAsync(storage.getSettings))!.launchAtStartup,
+        isTrue,
+      );
     }, skip: skip);
   });
 
   testWidgets('без автозапуска нажатие ничего не меняет', (tester) async {
-    final (storage, calls) = await _openDesktopSettings(tester, autostart: false);
+    final (storage, calls) = await _openDesktopSettings(
+      tester,
+      autostart: false,
+    );
 
     await tester.tap(find.text(_title));
     // хранилище собрано в runAsync, и его запись дожидается настоящего времени
-    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 100)),
+    );
     await _frames(tester);
 
     final saved = (await tester.runAsync(storage.getSettings))!;
     expect(saved.autostartInTray, isFalse);
     expect(
-      calls.where((c) => c.method == 'setAutostartInTray' && c.arguments['enabled'] == true),
+      calls.where(
+        (c) =>
+            c.method == 'setAutostartInTray' && c.arguments['enabled'] == true,
+      ),
       isEmpty,
     );
   }, skip: skip);
 
-  testWidgets('с автозапуском включается и сразу уходит в раннер', (tester) async {
-    final (storage, calls) = await _openDesktopSettings(tester, autostart: true);
+  testWidgets('с автозапуском включается и сразу уходит в раннер', (
+    tester,
+  ) async {
+    final (storage, calls) = await _openDesktopSettings(
+      tester,
+      autostart: true,
+    );
 
     await tester.tap(find.text(_title));
     // хранилище собрано в runAsync, и его запись дожидается настоящего времени
-    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 100)),
+    );
     await _frames(tester);
 
     final saved = (await tester.runAsync(storage.getSettings))!;
@@ -208,18 +275,24 @@ void main() {
     final skip = !Platform.isLinux;
     late Directory dir;
 
-    File inTray() =>
-        File(p.join(dir.path, 'data', 'com.keqdroid.keqdroid', 'autostart-in-tray'));
+    File inTray() => File(
+      p.join(dir.path, 'data', 'com.keqdroid.keqdroid', 'autostart-in-tray'),
+    );
 
     // экран сверяет переключатель автозапуска с ярлыком на диске
-    void loginEntry() => File(p.join(dir.path, 'config', 'autostart', 'keqdroid.desktop'))
-      ..createSync(recursive: true)
-      ..writeAsStringSync(LinuxAutostart.contentFor('/opt/keqdroid/keqdroid'));
+    void loginEntry() =>
+        File(p.join(dir.path, 'config', 'autostart', 'keqdroid.desktop'))
+          ..createSync(recursive: true)
+          ..writeAsStringSync(
+            LinuxAutostart.contentFor('/opt/keqdroid/keqdroid'),
+          );
 
     // каждый шаг записи ждёт настоящего ввода-вывода, а продолжение после него идёт только на кадре
     Future<void> settle(WidgetTester tester) async {
       for (var i = 0; i < 10; i++) {
-        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 30)),
+        );
         await tester.pump();
       }
       await _frames(tester);
@@ -237,7 +310,9 @@ void main() {
       dir.deleteSync(recursive: true);
     });
 
-    testWidgets('стоит между запуском при входе и подключением', (tester) async {
+    testWidgets('стоит между запуском при входе и подключением', (
+      tester,
+    ) async {
       loginEntry();
       await _openDesktopSettings(tester, autostart: true);
 
@@ -259,18 +334,26 @@ void main() {
       expect(inTray().existsSync(), isFalse);
     }, skip: skip);
 
-    testWidgets('включение кладёт файл для раннера, выключение убирает', (tester) async {
+    testWidgets('включение кладёт файл для раннера, выключение убирает', (
+      tester,
+    ) async {
       loginEntry();
       final (storage, _) = await _openDesktopSettings(tester, autostart: true);
 
       await tester.tap(find.text(_title));
       await settle(tester);
-      expect((await tester.runAsync(storage.getSettings))!.autostartInTray, isTrue);
+      expect(
+        (await tester.runAsync(storage.getSettings))!.autostartInTray,
+        isTrue,
+      );
       expect(inTray().existsSync(), isTrue);
 
       await tester.tap(find.text(_title));
       await settle(tester);
-      expect((await tester.runAsync(storage.getSettings))!.autostartInTray, isFalse);
+      expect(
+        (await tester.runAsync(storage.getSettings))!.autostartInTray,
+        isFalse,
+      );
       expect(inTray().existsSync(), isFalse);
     }, skip: skip);
   });

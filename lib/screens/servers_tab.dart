@@ -132,9 +132,7 @@ Widget _serversStatusText(
     textAlign: TextAlign.center,
     maxLines: 2,
     overflow: TextOverflow.ellipsis,
-    style: textTheme.bodyMedium?.copyWith(
-      color: AppTheme.textLight(context),
-    ),
+    style: textTheme.bodyMedium?.copyWith(color: AppTheme.textLight(context)),
   );
 }
 
@@ -197,14 +195,16 @@ class _ConnectHeader extends ConsumerWidget {
     );
 
     // в состоянии connecting нажатие отменяет попытку
-    final VoidCallback? onTap =
-        vpnStatus == VpnStatus.disconnecting ? null : () => onToggle(vpnStatus);
+    final VoidCallback? onTap = vpnStatus == VpnStatus.disconnecting
+        ? null
+        : () => onToggle(vpnStatus);
     final halloween = ref.watch(halloweenActiveProvider);
 
     final isDesktop = PlatformBootstrap.isDesktop;
     final topPad = isDesktop ? 20.0 : MediaQuery.of(context).padding.top + 24;
-    final shownStatus =
-        serverSwitchInProgress ? VpnStatus.connecting : vpnStatus;
+    final shownStatus = serverSwitchInProgress
+        ? VpnStatus.connecting
+        : vpnStatus;
     // вода догасает ниже шапки, потому что под плашкой места мало и она обрывалась; снизу пустой отступ списка
     // или ничего, а непрозрачные карточки ложатся поверх
     const overhang = 44.0;
@@ -226,9 +226,9 @@ class _ConnectHeader extends ConsumerWidget {
           ),
         ),
         Padding(
-      padding: EdgeInsets.fromLTRB(24, topPad, 24, 8),
-      child: Column(
-        children: [
+          padding: EdgeInsets.fromLTRB(24, topPad, 24, 8),
+          child: Column(
+            children: [
               RepaintBoundary(
                 child: halloween
                     // ошибку показывает только тыква, при смене сервера она ложная
@@ -236,7 +236,9 @@ class _ConnectHeader extends ConsumerWidget {
                         child: PumpkinConnectButton(
                           isConnected: isConnected,
                           isConnecting: isConnecting,
-                          isError: vpnStatus == VpnStatus.error && !serverSwitchInProgress,
+                          isError:
+                              vpnStatus == VpnStatus.error &&
+                              !serverSwitchInProgress,
                           onTap: onTap,
                         ),
                       )
@@ -253,8 +255,8 @@ class _ConnectHeader extends ConsumerWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: AnimatedSwitcher(
                     duration: ExpressiveMotion.durationFast,
-                    child: activeServer != null &&
-                            shownStatus != VpnStatus.error
+                    child:
+                        activeServer != null && shownStatus != VpnStatus.error
                         ? Center(
                             key: const ValueKey('plaque'),
                             child: _StatusServerPlaque(
@@ -284,7 +286,9 @@ class _ConnectHeader extends ConsumerWidget {
                     textAlign: TextAlign.center,
                     maxLines: 5,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.red(context)),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppTheme.red(context),
+                    ),
                   ),
                 ),
               _StatsBud(
@@ -296,11 +300,11 @@ class _ConnectHeader extends ConsumerWidget {
                     : Theme.of(context).colorScheme.surfaceContainerHighest,
                 child: const _ConnectionStats(),
               ),
-          // место под воду у дна шапки
-          const SizedBox(height: 24),
-        ],
-      ),
-    ),
+              // место под воду у дна шапки
+              const SizedBox(height: 24),
+            ],
+          ),
+        ),
       ],
     );
   }
@@ -409,7 +413,8 @@ class _ServersTabState extends ConsumerState<ServersTab>
     // на десктопе inactive приходит, когда окно видно без фокуса, и Windows при развороте из трея часто шлёт только его
     final isDesktop =
         Platform.isWindows || Platform.isLinux || Platform.isMacOS;
-    final background = state == AppLifecycleState.paused ||
+    final background =
+        state == AppLifecycleState.paused ||
         state == AppLifecycleState.hidden ||
         (!isDesktop && state == AppLifecycleState.inactive);
 
@@ -474,7 +479,8 @@ class _ServersTabState extends ConsumerState<ServersTab>
         status == VpnStatus.disconnecting ||
         status == VpnStatus.connected;
     // ровную волну не крутим: на Linux без GPU такая анимация ела почти половину ядра
-    final settled = !vpnActive &&
+    final settled =
+        !vpnActive &&
         _stateCtrl.isDismissed &&
         _waveSettleTimer?.isActive != true;
     final run =
@@ -506,7 +512,11 @@ class _ServersTabState extends ConsumerState<ServersTab>
         if (!mounted) return;
         _syncConnectButtonAnimation();
       } catch (e, st) {
-        AppLogger.instance.debug('Failed to sync VPN state from native', error: e, stackTrace: st);
+        AppLogger.instance.debug(
+          'Failed to sync VPN state from native',
+          error: e,
+          stackTrace: st,
+        );
       }
     }
   }
@@ -748,10 +758,16 @@ class _ServersTabState extends ConsumerState<ServersTab>
       );
     }
 
-    return HalloweenIconScope(child: _withListChrome(context, body, bottomInset));
+    return HalloweenIconScope(
+      child: _withListChrome(context, body, bottomInset),
+    );
   }
 
-  Widget _withListChrome(BuildContext context, Widget child, double bottomInset) {
+  Widget _withListChrome(
+    BuildContext context,
+    Widget child,
+    double bottomInset,
+  ) {
     final isDesktop = PlatformBootstrap.isDesktop;
     final floating = FloatingBar.shown(context);
     final owned = FloatingBar.owns(context);
@@ -761,13 +777,13 @@ class _ServersTabState extends ConsumerState<ServersTab>
     return ValueListenableBuilder<double>(
       valueListenable: FloatingBar.bottomInset,
       builder: (context, barInset, child) => ScrollJumpOverlay(
-      enabled: !isDesktop,
-      endLabel: context.l10n.serversScrollToEnd,
-      topLabel: context.l10n.serversScrollToTop,
-      bottomInset: floating
-          ? FloatingBar.clearance(context) + 12
-          : 20 + bottomInset,
-      child: SizedBox.expand(
+        enabled: !isDesktop,
+        endLabel: context.l10n.serversScrollToEnd,
+        topLabel: context.l10n.serversScrollToTop,
+        bottomInset: floating
+            ? FloatingBar.clearance(context) + 12
+            : 20 + bottomInset,
+        child: SizedBox.expand(
           child: floating
               ? FloatingBarHideOnScroll(child: child!)
               : owned
@@ -836,7 +852,8 @@ class _ServersTabState extends ConsumerState<ServersTab>
                   onTap: () async {
                     Navigator.pop(ctx2);
                     // на телевизоре буфер пуст, и ссылку можно только набрать в поле
-                    if (!await pasteLinksFromClipboard(ctx, ref) && ctx.mounted) {
+                    if (!await pasteLinksFromClipboard(ctx, ref) &&
+                        ctx.mounted) {
                       _showPasteLinksSheet(ctx);
                     }
                   },
@@ -1004,7 +1021,11 @@ class _ServersTabState extends ConsumerState<ServersTab>
       return;
     } catch (e, st) {
       // битый файл или не картинка: движок не декодирует, и пользователь видит то же, что при отсутствии кода
-      AppLogger.instance.warn('QR picture could not be read', error: e, stackTrace: st);
+      AppLogger.instance.warn(
+        'QR picture could not be read',
+        error: e,
+        stackTrace: st,
+      );
     }
     if (!ctx.mounted) return;
     if (text == null) {
@@ -1044,15 +1065,17 @@ class _ServersTabState extends ConsumerState<ServersTab>
     if (result.firstError != null) {
       _showImportSummary(
         ctx,
-        summary: AppLocalizations.of(ctx)!
-            .serversImportedSummary(result.added, configs.length),
+        summary: AppLocalizations.of(
+          ctx,
+        )!.serversImportedSummary(result.added, configs.length),
         anyAdded: result.added > 0,
         error: result.firstError!,
       );
     } else {
       _showSnack(
-        AppLocalizations.of(ctx)!
-            .serversImportedSummary(result.added, configs.length),
+        AppLocalizations.of(
+          ctx,
+        )!.serversImportedSummary(result.added, configs.length),
       );
     }
   }
@@ -1099,8 +1122,9 @@ class _ServersTabState extends ConsumerState<ServersTab>
     if (result.firstError != null) {
       _showImportSummary(
         ctx,
-        summary: AppLocalizations.of(ctx)!
-            .serversImportedSummary(result.added, configs.length),
+        summary: AppLocalizations.of(
+          ctx,
+        )!.serversImportedSummary(result.added, configs.length),
         anyAdded: result.added > 0,
         error: result.firstError!,
       );
@@ -1136,7 +1160,9 @@ class _ServersTabState extends ConsumerState<ServersTab>
         ),
         backgroundColor: AppTheme.red(ctx),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ExpressiveShape.medium)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(ExpressiveShape.medium),
+        ),
         action: action,
         duration: Duration(seconds: action != null ? 10 : 5),
       ),
@@ -1154,7 +1180,9 @@ class _ServersTabState extends ConsumerState<ServersTab>
         content: Text('$summary\n${_shortError(error, ctx)}'),
         backgroundColor: anyAdded ? AppTheme.orange(ctx) : AppTheme.red(ctx),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ExpressiveShape.medium)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(ExpressiveShape.medium),
+        ),
         duration: const Duration(seconds: 5),
       ),
     );
@@ -1184,12 +1212,16 @@ class _ServersTabState extends ConsumerState<ServersTab>
             children: [
               Text(
                 l10n.serversAddServerTitle,
-                style: Theme.of(ctx).textTheme.titleLarge?.copyWith(color: AppTheme.text(ctx)),
+                style: Theme.of(
+                  ctx,
+                ).textTheme.titleLarge?.copyWith(color: AppTheme.text(ctx)),
               ),
               const SizedBox(height: 6),
               Text(
                 l10n.serversPasteVlessHint,
-                style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(ctx)),
+                style: Theme.of(
+                  ctx,
+                ).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(ctx)),
               ),
               const SizedBox(height: 16),
               TextField(
@@ -1197,7 +1229,9 @@ class _ServersTabState extends ConsumerState<ServersTab>
                 textDirection: technicalInputDirection,
                 autofocus: true,
                 maxLines: 4,
-                style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(color: AppTheme.text(ctx)),
+                style: Theme.of(
+                  ctx,
+                ).textTheme.bodyMedium?.copyWith(color: AppTheme.text(ctx)),
                 decoration: InputDecoration(
                   hintText: l10n.serversPasteHint,
                   hintStyle: TextStyle(
@@ -1222,7 +1256,9 @@ class _ServersTabState extends ConsumerState<ServersTab>
                 const SizedBox(height: 8),
                 Text(
                   sheetError!,
-                  style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: AppTheme.red(ctx)),
+                  style: Theme.of(
+                    ctx,
+                  ).textTheme.bodySmall?.copyWith(color: AppTheme.red(ctx)),
                 ),
               ],
               const SizedBox(height: 16),
@@ -1234,7 +1270,9 @@ class _ServersTabState extends ConsumerState<ServersTab>
                     backgroundColor: AppTheme.accentContainer(ctx),
                     foregroundColor: AppTheme.onAccentContainer(ctx),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(ExpressiveShape.large),
+                      borderRadius: BorderRadius.circular(
+                        ExpressiveShape.large,
+                      ),
                     ),
                   ),
                   onPressed: loading
@@ -1318,7 +1356,6 @@ class _ServersTabState extends ConsumerState<ServersTab>
     );
   }
 
-
   Widget _emptyState() {
     final l10n = AppLocalizations.of(context)!;
     // окно 480x580 и крупный шрифт Windows: без прокрутки кнопки внизу обрезались
@@ -1341,7 +1378,9 @@ class _ServersTabState extends ConsumerState<ServersTab>
             Text(
               l10n.serversEmptyHint,
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppTheme.textLight(context),
+              ),
             ),
             const SizedBox(height: 20),
             FilledButton.icon(
@@ -1384,7 +1423,9 @@ class _ServersTabState extends ConsumerState<ServersTab>
     }
     final subs = ref.read(subscriptionsProvider).value ?? const [];
     if (subs.any((s) => s.autoSelect)) {
-      unawaited(ref.read(subscriptionsProvider.notifier).handAutoSelectTo(null));
+      unawaited(
+        ref.read(subscriptionsProvider.notifier).handAutoSelectTo(null),
+      );
     }
     await ref.read(serversProvider.notifier).setActive(server);
     if (tunnelActive) {
@@ -1474,9 +1515,10 @@ class _ServersTabState extends ConsumerState<ServersTab>
         content: Text(msg),
         backgroundColor: AppTheme.text(context),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ExpressiveShape.medium)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(ExpressiveShape.medium),
+        ),
       ),
     );
   }
 }
-

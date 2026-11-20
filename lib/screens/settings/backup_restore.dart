@@ -4,7 +4,8 @@ class _BackupRestoreScreen extends ConsumerStatefulWidget {
   const _BackupRestoreScreen();
 
   @override
-  ConsumerState<_BackupRestoreScreen> createState() => _BackupRestoreScreenState();
+  ConsumerState<_BackupRestoreScreen> createState() =>
+      _BackupRestoreScreenState();
 }
 
 class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
@@ -31,18 +32,25 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
       if (_exportSubs) sections.add(BackupSection.subscriptions);
       if (_exportServers) sections.add(BackupSection.servers);
       if (_exportSettings) sections.add(BackupSection.appSettings);
-        if (sections.isEmpty) {
-          if (mounted) setState(() => _busy = false);
-          AppSnack.of(context).showSnackBar(
-            SnackBar(content: Text(l10n.settingsSelectAtLeastOne)),
-          );
-          return;
-        }
+      if (sections.isEmpty) {
+        if (mounted) setState(() => _busy = false);
+        AppSnack.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.settingsSelectAtLeastOne)));
+        return;
+      }
 
-      final backup = await SettingsBackupService.buildBackup(storage, sections: sections);
+      final backup = await SettingsBackupService.buildBackup(
+        storage,
+        sections: sections,
+      );
       final bytes = await SettingsBackupService.encodeFile(backup);
 
-      final stamp = DateTime.now().toIso8601String().replaceAll(':', '-').split('.').first;
+      final stamp = DateTime.now()
+          .toIso8601String()
+          .replaceAll(':', '-')
+          .split('.')
+          .first;
       final fileName =
           'keqdroid-backup-$stamp.${SettingsBackupService.fileExtension}';
 
@@ -63,13 +71,18 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
           content: Text(l10n.settingsBackupSaved),
           backgroundColor: AppTheme.green(context),
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ExpressiveShape.medium)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(ExpressiveShape.medium),
+          ),
         ),
       );
     } catch (e) {
       if (!mounted) return;
       AppSnack.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.settingsExportFailed(_failureReason(e))), backgroundColor: AppTheme.red(context)),
+        SnackBar(
+          content: Text(l10n.settingsExportFailed(_failureReason(e))),
+          backgroundColor: AppTheme.red(context),
+        ),
       );
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -91,14 +104,18 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
       );
       if (res == null) return;
 
-      final backup =
-          await SettingsBackupService.decodeFile(await res.readAsBytes());
+      final backup = await SettingsBackupService.decodeFile(
+        await res.readAsBytes(),
+      );
       if (!mounted) return;
       await _restore(backup);
     } catch (e) {
       if (!mounted) return;
       AppSnack.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.settingsImportFailed(_failureReason(e))), backgroundColor: AppTheme.red(context)),
+        SnackBar(
+          content: Text(l10n.settingsImportFailed(_failureReason(e))),
+          backgroundColor: AppTheme.red(context),
+        ),
       );
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -121,7 +138,10 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
     } catch (e) {
       if (!mounted) return;
       AppSnack.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.settingsImportFailed(_failureReason(e))), backgroundColor: AppTheme.red(context)),
+        SnackBar(
+          content: Text(l10n.settingsImportFailed(_failureReason(e))),
+          backgroundColor: AppTheme.red(context),
+        ),
       );
     }
   }
@@ -132,64 +152,66 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
 
   // вид шторки тот же, что у меню «Добавить» на вкладке серверов
   void _showTransferSheet() {
-    unawaited(showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (sheetCtx) => SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Text(
-                l10n.backupTransferTitle,
-                textAlign: TextAlign.center,
-                style: Theme.of(sheetCtx).textTheme
-                    .emphasized(Theme.of(sheetCtx).textTheme.titleLarge)
-                    ?.copyWith(color: AppTheme.text(sheetCtx)),
+    unawaited(
+      showModalBottomSheet<void>(
+        context: context,
+        showDragHandle: true,
+        isScrollControlled: true,
+        builder: (sheetCtx) => SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Text(
+                  l10n.backupTransferTitle,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(sheetCtx).textTheme
+                      .emphasized(Theme.of(sheetCtx).textTheme.titleLarge)
+                      ?.copyWith(color: AppTheme.text(sheetCtx)),
+                ),
               ),
-            ),
-            ExpressiveGroup(
-              children: [
-                ExpressiveActionTile(
-                  icon: Icons.download_for_offline_rounded,
-                  title: l10n.backupTransferReceive,
-                  subtitle: l10n.backupTransferReceiveHint,
-                  accent: ExpressiveAccent.primary,
-                  onTap: () {
-                    Navigator.pop(sheetCtx);
-                    unawaited(_openTransfer(BackupTransferDirection.receive));
-                  },
-                ),
-                ExpressiveActionTile(
-                  icon: Icons.ios_share_rounded,
-                  title: l10n.backupTransferGive,
-                  subtitle: l10n.backupTransferGiveHint,
-                  onTap: () {
-                    Navigator.pop(sheetCtx);
-                    unawaited(_openTransfer(BackupTransferDirection.give));
-                  },
-                ),
-                if (_canScan)
+              ExpressiveGroup(
+                children: [
                   ExpressiveActionTile(
-                    icon: Icons.qr_code_scanner_rounded,
-                    title: l10n.backupTransferScan,
-                    subtitle: l10n.backupTransferScanHint,
-                    accent: ExpressiveAccent.tertiary,
+                    icon: Icons.download_for_offline_rounded,
+                    title: l10n.backupTransferReceive,
+                    subtitle: l10n.backupTransferReceiveHint,
+                    accent: ExpressiveAccent.primary,
                     onTap: () {
                       Navigator.pop(sheetCtx);
-                      unawaited(scanBackupCode(context, ref));
+                      unawaited(_openTransfer(BackupTransferDirection.receive));
                     },
                   ),
-              ],
-            ),
-          ],
+                  ExpressiveActionTile(
+                    icon: Icons.ios_share_rounded,
+                    title: l10n.backupTransferGive,
+                    subtitle: l10n.backupTransferGiveHint,
+                    onTap: () {
+                      Navigator.pop(sheetCtx);
+                      unawaited(_openTransfer(BackupTransferDirection.give));
+                    },
+                  ),
+                  if (_canScan)
+                    ExpressiveActionTile(
+                      icon: Icons.qr_code_scanner_rounded,
+                      title: l10n.backupTransferScan,
+                      subtitle: l10n.backupTransferScanHint,
+                      accent: ExpressiveAccent.tertiary,
+                      onTap: () {
+                        Navigator.pop(sheetCtx);
+                        unawaited(scanBackupCode(context, ref));
+                      },
+                    ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
-    ));
+    );
   }
 
   @override
@@ -197,110 +219,135 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
     return ExpressivePage(
       title: l10n.settingsBackupRestore,
       children: [
-          ExpressiveGroup(
+        ExpressiveGroup(
+          children: [
+            ExpressiveActionTile(
+              icon: Icons.devices_rounded,
+              title: l10n.backupTransferOpen,
+              accent: ExpressiveAccent.primary,
+              onTap: _showTransferSheet,
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        ExpressiveCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              ExpressiveActionTile(
-                icon: Icons.devices_rounded,
-                title: l10n.backupTransferOpen,
-                accent: ExpressiveAccent.primary,
-                onTap: _showTransferSheet,
+              Text(
+                l10n.settingsExport,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: AppTheme.text(context),
+                ),
+              ),
+              const SizedBox(height: 10),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                value: _exportSplit,
+                activeThumbColor: AppTheme.accent(context),
+                title: Text(l10n.settingsSplitTunnelingApps),
+                onChanged: _busy
+                    ? null
+                    : (v) => setState(() => _exportSplit = v),
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                value: _exportSubs,
+                activeThumbColor: AppTheme.accent(context),
+                title: Text(l10n.settingsSubscriptions),
+                onChanged: _busy
+                    ? null
+                    : (v) => setState(() => _exportSubs = v),
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                value: _exportServers,
+                activeThumbColor: AppTheme.accent(context),
+                title: Text(l10n.settingsServersActive),
+                onChanged: _busy
+                    ? null
+                    : (v) => setState(() => _exportServers = v),
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                value: _exportSettings,
+                activeThumbColor: AppTheme.accent(context),
+                title: Text(l10n.settingsAppSettings),
+                onChanged: _busy
+                    ? null
+                    : (v) => setState(() => _exportSettings = v),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.accentContainer(context),
+                    foregroundColor: AppTheme.onAccentContainer(context),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(
+                        ExpressiveShape.medium,
+                      ),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  onPressed: _busy ? null : _export,
+                  icon: _busy
+                      ? ShapeLoadingIndicator(
+                          size: 16,
+                          color: AppTheme.onAccentContainer(context),
+                        )
+                      : const Icon(Icons.download_rounded),
+                  label: Text(
+                    _busy ? l10n.settingsWorking : l10n.settingsExportFile,
+                  ),
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          ExpressiveCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.settingsExport,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppTheme.text(context)),
+        ),
+        const SizedBox(height: 12),
+        ExpressiveCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                l10n.settingsImport,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: AppTheme.text(context),
                 ),
-                const SizedBox(height: 10),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  value: _exportSplit,
-                  activeThumbColor: AppTheme.accent(context),
-                  title: Text(l10n.settingsSplitTunnelingApps),
-                  onChanged: _busy ? null : (v) => setState(() => _exportSplit = v),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                l10n.settingsPickExportedFile,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppTheme.textLight(context),
+                  height: 1.35,
                 ),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  value: _exportSubs,
-                  activeThumbColor: AppTheme.accent(context),
-                  title: Text(l10n.settingsSubscriptions),
-                  onChanged: _busy ? null : (v) => setState(() => _exportSubs = v),
-                ),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  value: _exportServers,
-                  activeThumbColor: AppTheme.accent(context),
-                  title: Text(l10n.settingsServersActive),
-                  onChanged: _busy ? null : (v) => setState(() => _exportServers = v),
-                ),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  value: _exportSettings,
-                  activeThumbColor: AppTheme.accent(context),
-                  title: Text(l10n.settingsAppSettings),
-                  onChanged: _busy ? null : (v) => setState(() => _exportSettings = v),
-                ),
-                const SizedBox(height: 8),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.accentContainer(context),
-                      foregroundColor: AppTheme.onAccentContainer(context),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ExpressiveShape.medium)),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppTheme.text(context),
+                    side: BorderSide(color: AppTheme.divider(context)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(
+                        ExpressiveShape.medium,
+                      ),
                     ),
-                    onPressed: _busy ? null : _export,
-                    icon: _busy
-                        ? ShapeLoadingIndicator(
-                            size: 16,
-                            color: AppTheme.onAccentContainer(context),
-                          )
-                        : const Icon(Icons.download_rounded),
-                    label: Text(_busy ? l10n.settingsWorking : l10n.settingsExportFile),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
+                  onPressed: _busy ? null : _import,
+                  icon: const Icon(Icons.upload_rounded),
+                  label: Text(l10n.settingsImportFile),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-          const SizedBox(height: 12),
-          ExpressiveCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.settingsImport,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppTheme.text(context)),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  l10n.settingsPickExportedFile,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context), height: 1.35),
-                ),
-                const SizedBox(height: 10),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppTheme.text(context),
-                      side: BorderSide(color: AppTheme.divider(context)),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ExpressiveShape.medium)),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                    onPressed: _busy ? null : _import,
-                    icon: const Icon(Icons.upload_rounded),
-                    label: Text(l10n.settingsImportFile),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+        ),
+      ],
     );
   }
 }

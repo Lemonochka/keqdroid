@@ -12,13 +12,7 @@ import 'backup_crypto.dart';
 import 'card_image_service.dart';
 import 'storage_service.dart';
 
-enum BackupSection {
-  splitTunneling,
-  subscriptions,
-  servers,
-
-  appSettings,
-}
+enum BackupSection { splitTunneling, subscriptions, servers, appSettings }
 
 class KeqdroidBackup {
   final int version;
@@ -32,11 +26,11 @@ class KeqdroidBackup {
   });
 
   Map<String, dynamic> toJson() => {
-        'format': 'keqdis_backup',
-        'version': version,
-        'exportedAt': exportedAt.toIso8601String(),
-        'data': data,
-      };
+    'format': 'keqdis_backup',
+    'version': version,
+    'exportedAt': exportedAt.toIso8601String(),
+    'data': data,
+  };
 
   String toJsonString({bool pretty = true}) {
     final obj = toJson();
@@ -128,7 +122,8 @@ class SettingsBackupService {
 
   static const fileExtension = 'keqdroid';
 
-  static Future<Uint8List> encodeFile(KeqdroidBackup backup) => BackupCrypto.seal(
+  static Future<Uint8List> encodeFile(KeqdroidBackup backup) =>
+      BackupCrypto.seal(
         utf8.encode(backup.toJsonString(pretty: false)),
         keyId: BackupKeys.writeKeyId,
         key: BackupKeys.writeKey,
@@ -239,8 +234,12 @@ class SettingsBackupService {
 
   static Set<BackupSection> detectSections(KeqdroidBackup backup) {
     final s = <BackupSection>{};
-    if (backup.data['splitTunneling'] is Map) s.add(BackupSection.splitTunneling);
-    if (backup.data['subscriptions'] is List) s.add(BackupSection.subscriptions);
+    if (backup.data['splitTunneling'] is Map) {
+      s.add(BackupSection.splitTunneling);
+    }
+    if (backup.data['subscriptions'] is List) {
+      s.add(BackupSection.subscriptions);
+    }
     if (backup.data['servers'] is Map) s.add(BackupSection.servers);
     if (backup.data['appSettings'] is Map) s.add(BackupSection.appSettings);
     return s;
@@ -254,8 +253,12 @@ class SettingsBackupService {
     if (sections.contains(BackupSection.splitTunneling)) {
       final raw = backup.data['splitTunneling'];
       if (raw is! Map) throw FormatException('Invalid splitTunneling section');
-      final exclude = (raw['excludePackages'] as List?)?.whereType<String>().toList() ?? <String>[];
-      final include = (raw['includePackages'] as List?)?.whereType<String>().toList() ?? <String>[];
+      final exclude =
+          (raw['excludePackages'] as List?)?.whereType<String>().toList() ??
+          <String>[];
+      final include =
+          (raw['includePackages'] as List?)?.whereType<String>().toList() ??
+          <String>[];
       await storage.setExcludePackages(exclude);
       await storage.setIncludePackages(include);
     }
@@ -283,7 +286,9 @@ class SettingsBackupService {
       final raw = backup.data['servers'];
       if (raw is! Map) throw FormatException('Invalid servers section');
       final items = raw['items'];
-      if (items is! List) throw FormatException('Invalid servers.items section');
+      if (items is! List) {
+        throw FormatException('Invalid servers.items section');
+      }
 
       final servers = items
           .whereType<Map<Object?, Object?>>()

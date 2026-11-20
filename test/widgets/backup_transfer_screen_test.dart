@@ -31,8 +31,7 @@ const _sub = Subscription(
 
 BackupTransferLink _shownLink(WidgetTester tester) {
   final qr = tester.widget<QrImageView>(find.byType(QrImageView));
-  final link =
-      BackupTransferLink.parse((qr.key! as ValueKey<String>).value)!;
+  final link = BackupTransferLink.parse((qr.key! as ValueKey<String>).value)!;
   return BackupTransferLink(
     host: '127.0.0.1',
     port: link.port,
@@ -69,7 +68,9 @@ Future<void> _pump(WidgetTester tester, Widget home) async {
 
 Future<void> _settle(WidgetTester tester) async {
   for (var i = 0; i < 10; i++) {
-    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 20)),
+    );
     await tester.pump(const Duration(milliseconds: 50));
   }
 }
@@ -80,13 +81,14 @@ Future<T> _exchange<T>(WidgetTester tester, Future<T> Function() run) async {
   Object? error;
   var done = false;
   unawaited(
-    run().then(
-      (v) => value = v,
-      onError: (Object e) => error = e,
-    ).whenComplete(() => done = true),
+    run()
+        .then((v) => value = v, onError: (Object e) => error = e)
+        .whenComplete(() => done = true),
   );
   for (var i = 0; i < 200 && !done; i++) {
-    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 10)));
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 10)),
+    );
     await tester.pump(const Duration(milliseconds: 10));
   }
   if (error != null) throw error!;
@@ -108,14 +110,14 @@ class _OpenerState extends State<_Opener> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        body: TextButton(
-          onPressed: () async {
-            final got = await BackupTransferScreen.open(context, widget.direction);
-            setState(() => result = got);
-          },
-          child: const Text('open'),
-        ),
-      );
+    body: TextButton(
+      onPressed: () async {
+        final got = await BackupTransferScreen.open(context, widget.direction);
+        setState(() => result = got);
+      },
+      child: const Text('open'),
+    ),
+  );
 }
 
 void main() {
@@ -156,7 +158,9 @@ void main() {
       expect(find.text(_en.backupTransferScan), findsOneWidget);
     });
 
-    testWidgets('a computer only shows the code, it has no camera', (tester) async {
+    testWidgets('a computer only shows the code, it has no camera', (
+      tester,
+    ) async {
       PlatformBootstrap.debugIsDesktopOverride = true;
       await openTransferSheet(tester);
       expect(find.text(_en.backupTransferReceive), findsOneWidget);
@@ -164,7 +168,9 @@ void main() {
       expect(find.text(_en.backupTransferScan), findsNothing);
     });
 
-    testWidgets('a tile in the sheet closes it and opens the code', (tester) async {
+    testWidgets('a tile in the sheet closes it and opens the code', (
+      tester,
+    ) async {
       PlatformBootstrap.debugIsDesktopOverride = true;
       await openTransferSheet(tester);
       await tester.tap(find.text(_en.backupTransferReceive));
@@ -175,8 +181,9 @@ void main() {
     });
   });
 
-  testWidgets('a backup sent to the receive screen comes back for restoring',
-      (tester) async {
+  testWidgets('a backup sent to the receive screen comes back for restoring', (
+    tester,
+  ) async {
     await _pump(tester, const _Opener(BackupTransferDirection.receive));
     await tester.tap(find.text('open'));
     await _settle(tester);
@@ -186,7 +193,9 @@ void main() {
     final payload = KeqdroidBackup(
       version: 1,
       exportedAt: DateTime.utc(2026, 11, 18),
-      data: {'subscriptions': [_sub.toJson()]},
+      data: {
+        'subscriptions': [_sub.toJson()],
+      },
     );
     await _exchange(
       tester,
@@ -199,8 +208,9 @@ void main() {
     expect(find.byType(BackupTransferScreen), findsNothing);
   });
 
-  testWidgets('the give screen hands over this device and says it was taken',
-      (tester) async {
+  testWidgets('the give screen hands over this device and says it was taken', (
+    tester,
+  ) async {
     await _pump(tester, const _Opener(BackupTransferDirection.give));
     await tester.tap(find.text('open'));
     await _settle(tester);
@@ -217,7 +227,9 @@ void main() {
     expect(find.byType(QrImageView), findsNothing, reason: 'the code is spent');
   });
 
-  testWidgets('a scanned receive code asks before this device sends', (tester) async {
+  testWidgets('a scanned receive code asks before this device sends', (
+    tester,
+  ) async {
     final received = Completer<Uint8List>();
     final server = (await tester.runAsync(
       () => BackupTransferServer.start(
@@ -248,7 +260,10 @@ void main() {
     );
     await tester.tap(find.text('scan'));
     await tester.pumpAndSettle();
-    expect(find.text(_en.backupTransferSendMessage('127.0.0.1')), findsOneWidget);
+    expect(
+      find.text(_en.backupTransferSendMessage('127.0.0.1')),
+      findsOneWidget,
+    );
     expect(received.isCompleted, isFalse, reason: 'nothing leaves before Send');
 
     await tester.tap(find.text(_en.backupTransferSendAction));

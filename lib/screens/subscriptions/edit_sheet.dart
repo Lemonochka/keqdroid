@@ -37,18 +37,17 @@ void _showSubscriptionEditSheet(
             controller: ctrl,
             maxLines: maxLines,
             textDirection: technical ? technicalInputDirection : null,
-            style: Theme.of(context)
-                .textTheme
-                .bodyMedium
-                ?.copyWith(color: textColor),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: textColor),
             decoration: InputDecoration(
               labelText: label,
               hintText: hint,
               suffixIcon: suffix,
               labelStyle: TextStyle(color: textLightColor),
               hintStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: textLightColor.withValues(alpha: 0.5),
-                  ),
+                color: textLightColor.withValues(alpha: 0.5),
+              ),
               filled: true,
               fillColor: cardColor,
               contentPadding: const EdgeInsets.symmetric(
@@ -113,8 +112,9 @@ void _showSubscriptionEditSheet(
                         backgroundColor: textColor,
                         behavior: SnackBarBehavior.floating,
                         shape: RoundedRectangleBorder(
-                          borderRadius:
-                              BorderRadius.circular(ExpressiveShape.medium),
+                          borderRadius: BorderRadius.circular(
+                            ExpressiveShape.medium,
+                          ),
                         ),
                         duration: const Duration(seconds: 2),
                       ),
@@ -126,8 +126,10 @@ void _showSubscriptionEditSheet(
               _IdentityTile(
                 identity: identity,
                 onTap: () async {
-                  final picked =
-                      await _showIdentitySheet(ctx, initial: identity);
+                  final picked = await _showIdentitySheet(
+                    ctx,
+                    initial: identity,
+                  );
                   if (picked == null) return;
                   setSheet(() => identity = picked);
                 },
@@ -158,10 +160,9 @@ void _showSubscriptionEditSheet(
                 const SizedBox(height: 8),
                 Text(
                   editError!,
-                  style: Theme.of(ctx)
-                      .textTheme
-                      .bodySmall
-                      ?.copyWith(color: AppTheme.red(ctx)),
+                  style: Theme.of(
+                    ctx,
+                  ).textTheme.bodySmall?.copyWith(color: AppTheme.red(ctx)),
                 ),
               ],
               const SizedBox(height: 16),
@@ -199,9 +200,9 @@ void _showSubscriptionEditSheet(
                   },
                   child: Text(
                     l10n.subscriptionsSave,
-                    style: Theme.of(ctx)
-                        .textTheme
-                        .emphasized(Theme.of(ctx).textTheme.labelLarge),
+                    style: Theme.of(
+                      ctx,
+                    ).textTheme.emphasized(Theme.of(ctx).textTheme.labelLarge),
                   ),
                 ),
               ),

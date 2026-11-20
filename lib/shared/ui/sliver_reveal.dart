@@ -7,7 +7,7 @@ import 'package:flutter/widgets.dart';
 // все её плитки разом, а так ленивый список внутри строит только видимые
 class SliverReveal extends SingleChildRenderObjectWidget {
   const SliverReveal({super.key, required this.factor, required Widget sliver})
-      : super(child: sliver);
+    : super(child: sliver);
 
   final double factor;
 
@@ -19,8 +19,7 @@ class SliverReveal extends SingleChildRenderObjectWidget {
   void updateRenderObject(
     BuildContext context,
     RenderSliverReveal renderObject,
-  ) =>
-      renderObject.factor = factor;
+  ) => renderObject.factor = factor;
 }
 
 class RenderSliverReveal extends RenderProxySliver {
@@ -70,7 +69,8 @@ class RenderSliverReveal extends RenderProxySliver {
       _clip.layer = null;
       return;
     }
-    final downward = applyGrowthDirectionToAxisDirection(
+    final downward =
+        applyGrowthDirectionToAxisDirection(
           constraints.axisDirection,
           constraints.growthDirection,
         ) ==

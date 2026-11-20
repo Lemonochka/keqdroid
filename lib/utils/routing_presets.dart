@@ -59,31 +59,16 @@ class RoutingPresets {
   ];
 
   // Re-filter (1andrevich) доклеен в базы через tool/fetch_xray_geo.ps1; оба кода, потому что часть сервисов ходит по IP без домена
-  static const List<String> reFilter = [
-    'geosite:refilter',
-    'geoip:refilter',
-  ];
+  static const List<String> reFilter = ['geosite:refilter', 'geoip:refilter'];
 
   // hxehex/russia-mobile-internet-whitelist, доклеен тем же скриптом. Подсети оттуда не берём: под TUN правило по подсети
   // пустит напрямую любой сайт в диапазоне, а на net4people в октябре 2026 их списки ошибались в обе стороны
   static const List<String> whitelist = ['geosite:ru-whitelist'];
 
   static const List<RoutingPreset> all = [
-    RoutingPreset(
-      id: 'ru',
-      field: RoutingField.direct,
-      values: russia,
-    ),
-    RoutingPreset(
-      id: 'ir',
-      field: RoutingField.direct,
-      values: iran,
-    ),
-    RoutingPreset(
-      id: 'ads',
-      field: RoutingField.blocked,
-      values: ads,
-    ),
+    RoutingPreset(id: 'ru', field: RoutingField.direct, values: russia),
+    RoutingPreset(id: 'ir', field: RoutingField.direct, values: iran),
+    RoutingPreset(id: 'ads', field: RoutingField.blocked, values: ads),
     RoutingPreset(
       id: 'refilter',
       field: RoutingField.proxy,

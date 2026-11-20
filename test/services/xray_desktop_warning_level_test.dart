@@ -34,8 +34,9 @@ final class _Session {
 
 // как _appendCoreLine в бэкендах Windows и Linux
 _Session _run(String level, [String output = _coreOutput]) {
-  final threshold =
-      XraySessionLog.raise('{"log":{"loglevel":"$level"}}').threshold;
+  final threshold = XraySessionLog.raise(
+    '{"log":{"loglevel":"$level"}}',
+  ).threshold;
   final session = _Session();
   for (final line in output.split('\n')) {
     XrayRouteDecisions.observe(line);
@@ -47,17 +48,18 @@ _Session _run(String level, [String output = _coreOutput]) {
 }
 
 List<String> _seen(ConnectionsSnapshot s) => [
-      for (final e in s.entries)
-        '${e.host} ${e.destIp} ${e.rule} ${e.outbound} ${e.closed}',
-    ];
+  for (final e in s.entries)
+    '${e.host} ${e.destIp} ${e.rule} ${e.outbound} ${e.closed}',
+];
 
 void main() {
   setUp(XrayRouteDecisions.reset);
 
   group('Соединения на ПК при Warning', () {
     test('видны правило, домен в TUN и закрытие', () {
-      final snapshot =
-          XrayAccessLogParser.parse(_run('warning').connectionLines.text);
+      final snapshot = XrayAccessLogParser.parse(
+        _run('warning').connectionLines.text,
+      );
 
       expect(snapshot.ruleInfoAvailable, isTrue);
       final byHost = {for (final e in snapshot.entries) e.host: e};
@@ -73,14 +75,17 @@ void main() {
       expect(byHost['www.google.com']!.destIp, '142.250.74.46');
       expect(byHost['www.google.com']!.rule, 'proxy-geosite');
       expect(byHost['www.google.com']!.verdict, ConnectionVerdict.proxied);
-      expect(XrayAccessLogParser.isDefaultRoute(byHost['1.1.1.1']!.rule),
-          isTrue);
+      expect(
+        XrayAccessLogParser.isDefaultRoute(byHost['1.1.1.1']!.rule),
+        isTrue,
+      );
     });
 
     test('экран получает то же, что раньше давал журнал при Info', () {
       final atInfo = XrayAccessLogParser.parse(_run('info').journal.toString());
-      final atWarning =
-          XrayAccessLogParser.parse(_run('warning').connectionLines.text);
+      final atWarning = XrayAccessLogParser.parse(
+        _run('warning').connectionLines.text,
+      );
       expect(_seen(atWarning), _seen(atInfo));
     });
 
@@ -126,8 +131,10 @@ void main() {
     test('новая сессия начинается с пустого буфера', () {
       final lines = _run('warning').connectionLines..clear();
       expect(lines.text, isEmpty);
-      lines.add('2026/11/04 12:00:00.000000 from tcp:127.0.0.1:1 accepted '
-          'tcp:a.example:443 [socks-in -> proxy]');
+      lines.add(
+        '2026/11/04 12:00:00.000000 from tcp:127.0.0.1:1 accepted '
+        'tcp:a.example:443 [socks-in -> proxy]',
+      );
       expect(lines.text, contains('a.example'));
     });
   });

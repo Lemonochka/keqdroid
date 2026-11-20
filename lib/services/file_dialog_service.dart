@@ -146,16 +146,14 @@ abstract final class AppFileDialogs {
     String title = 'Open file',
     FileType type = FileType.any,
     List<String>? allowedExtensions,
-  }) =>
-      _openArgs(tool, title, _filterFor(type, allowedExtensions));
+  }) => _openArgs(tool, title, _filterFor(type, allowedExtensions));
 
   @visibleForTesting
   static List<String> cliSaveArgs(
     String tool, {
     String title = 'Save file',
     required String fileName,
-  }) =>
-      _saveArgs(tool, title, fileName);
+  }) => _saveArgs(tool, title, fileName);
 
   static List<String> _openArgs(String tool, String title, _Filter? filter) {
     if (tool == 'kdialog') {
@@ -193,10 +191,14 @@ abstract final class AppFileDialogs {
   static _Filter? _filterFor(FileType type, List<String>? allowedExtensions) {
     switch (type) {
       case FileType.image:
-        return const _Filter(
-          'Images',
-          ['*.png', '*.jpg', '*.jpeg', '*.gif', '*.webp', '*.bmp'],
-        );
+        return const _Filter('Images', [
+          '*.png',
+          '*.jpg',
+          '*.jpeg',
+          '*.gif',
+          '*.webp',
+          '*.bmp',
+        ]);
       case FileType.custom:
         if (allowedExtensions == null || allowedExtensions.isEmpty) return null;
         final patterns = allowedExtensions.map((e) => '*.$e').toList();

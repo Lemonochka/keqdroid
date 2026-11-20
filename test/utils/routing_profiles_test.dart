@@ -34,14 +34,15 @@ const _work = RoutingProfile(
 );
 
 ServerItem _server({String? subscriptionId}) => ServerItem(
-      id: 's',
-      type: subscriptionId == null
-          ? ServerItemType.manual
-          : ServerItemType.subscription,
-      subscriptionId: subscriptionId,
-      config: 'vless://00000000-0000-4000-8000-000000000000@a.example:443'
-          '?type=tcp&security=tls#a',
-    );
+  id: 's',
+  type: subscriptionId == null
+      ? ServerItemType.manual
+      : ServerItemType.subscription,
+  subscriptionId: subscriptionId,
+  config:
+      'vless://00000000-0000-4000-8000-000000000000@a.example:443'
+      '?type=tcp&security=tls#a',
+);
 
 class _FakeVpn extends VpnStateNotifier {
   @override
@@ -79,8 +80,10 @@ void main() {
 
     test('подписка с включённым профилем берёт его', () {
       expect(
-        profileForServer(const [_work, _games], _server(subscriptionId: 'sub-b'))
-            ?.id,
+        profileForServer(const [
+          _work,
+          _games,
+        ], _server(subscriptionId: 'sub-b'))?.id,
         'games',
       );
     });
@@ -99,32 +102,36 @@ void main() {
     expect(moved.firstWhere((p) => p.id == 'work').subscriptionIds, ['sub-b']);
   });
 
-  test('маршрут заменяется на месте или добавляется в конец, удаляется по id',
-      () {
-    const a = TrafficRoute(id: 'a', sites: 'a.example');
-    const b = TrafficRoute(id: 'b', sites: 'b.example');
-    const a2 = TrafficRoute(id: 'a', sites: 'a2.example');
-    expect(withRoute(const [a, b], a2), const [a2, b]);
-    expect(withRoute(const [a], b), const [a, b]);
-    expect(withoutRoute(const [a, b], 'a'), const [b]);
-  });
+  test(
+    'маршрут заменяется на месте или добавляется в конец, удаляется по id',
+    () {
+      const a = TrafficRoute(id: 'a', sites: 'a.example');
+      const b = TrafficRoute(id: 'b', sites: 'b.example');
+      const a2 = TrafficRoute(id: 'a', sites: 'a2.example');
+      expect(withRoute(const [a, b], a2), const [a2, b]);
+      expect(withRoute(const [a], b), const [a, b]);
+      expect(withoutRoute(const [a, b], 'a'), const [b]);
+    },
+  );
 
-  test('профиль переживает запись и чтение, пропущенные поля по умолчанию',
-      () async {
-    final storage = await buildStorageService();
-    await storage.saveRoutingProfiles(const [_games, _work]);
-    final back = await storage.getRoutingProfiles();
-    expect(
-      [for (final p in back) p.toJson()],
-      [_games.toJson(), _work.toJson()],
-    );
+  test(
+    'профиль переживает запись и чтение, пропущенные поля по умолчанию',
+    () async {
+      final storage = await buildStorageService();
+      await storage.saveRoutingProfiles(const [_games, _work]);
+      final back = await storage.getRoutingProfiles();
+      expect(
+        [for (final p in back) p.toJson()],
+        [_games.toJson(), _work.toJson()],
+      );
 
-    final bare = RoutingProfile.fromJson({'id': 'x'});
-    expect(bare.enabled, isTrue);
-    expect(bare.finalOutbound, AppSettings.finalOutboundProxy);
-    expect(bare.subscriptionIds, isEmpty);
-    expect(bare.routes, isEmpty);
-  });
+      final bare = RoutingProfile.fromJson({'id': 'x'});
+      expect(bare.enabled, isTrue);
+      expect(bare.finalOutbound, AppSettings.finalOutboundProxy);
+      expect(bare.subscriptionIds, isEmpty);
+      expect(bare.routes, isEmpty);
+    },
+  );
 
   test('без профилей хранилище отдаёт пустой список', () async {
     final storage = await buildStorageService();
@@ -138,9 +145,9 @@ void main() {
       overrides: [storageProvider.overrideWithValue(storage)],
     );
     addTearDown(container.dispose);
-    await container.read(routingProfilesProvider.notifier).add(
-          RoutingProfile.create(name: 'Новый', subscriptionIds: ['sub-a']),
-        );
+    await container
+        .read(routingProfilesProvider.notifier)
+        .add(RoutingProfile.create(name: 'Новый', subscriptionIds: ['sub-a']));
     final saved = await storage.getRoutingProfiles();
     expect(saved.first.subscriptionIds, ['sub-b']);
     expect(saved.last.subscriptionIds, ['sub-a']);
@@ -184,9 +191,7 @@ void main() {
     const rules = ProviderRoutingRules(
       name: 'Провайдер',
       finalOutbound: AppSettings.finalOutboundDirect,
-      routes: [
-        TrafficRoute(id: 'provider-proxy', sites: 'geosite:youtube'),
-      ],
+      routes: [TrafficRoute(id: 'provider-proxy', sites: 'geosite:youtube')],
     );
 
     test('подписка без профиля получает профиль провайдера', () {
@@ -236,21 +241,24 @@ void main() {
       expect(next.first.name, 'Провайдер');
     });
 
-    test('свой профиль подписки провайдер не трогает, а свой профиль провайдера уходит', () {
-      const orphan = RoutingProfile(
-        id: 'provider-sub-a',
-        name: 'Провайдер',
-        providerSubscriptionId: 'sub-a',
-      );
-      final next = withProviderRouting(
-        const [_games, orphan],
-        subscriptionId: 'sub-a',
-        fallbackName: 'Подписка',
-        routing: rules,
-      );
-      expect(next.map((p) => p.id), ['games']);
-      expect(next.single.subscriptionIds, ['sub-a', 'sub-b']);
-    });
+    test(
+      'свой профиль подписки провайдер не трогает, а свой профиль провайдера уходит',
+      () {
+        const orphan = RoutingProfile(
+          id: 'provider-sub-a',
+          name: 'Провайдер',
+          providerSubscriptionId: 'sub-a',
+        );
+        final next = withProviderRouting(
+          const [_games, orphan],
+          subscriptionId: 'sub-a',
+          fallbackName: 'Подписка',
+          routing: rules,
+        );
+        expect(next.map((p) => p.id), ['games']);
+        expect(next.single.subscriptionIds, ['sub-a', 'sub-b']);
+      },
+    );
 
     test('off убирает профиль провайдера и только его', () {
       const provider = RoutingProfile(
@@ -267,7 +275,10 @@ void main() {
       );
       expect(next.map((p) => p.id), ['games', 'work']);
       expect(
-        withoutProviderProfileOf(const [_games, provider], 'sub-x').map((p) => p.id),
+        withoutProviderProfileOf(const [
+          _games,
+          provider,
+        ], 'sub-x').map((p) => p.id),
         ['games'],
       );
     });

@@ -41,7 +41,8 @@ class _Backend extends FakeTunnelBackend {
 final _server = ServerItem(
   id: 'srv-1',
   type: ServerItemType.manual,
-  config: 'vless://00000000-0000-4000-8000-000000000000@198.51.100.10:443'
+  config:
+      'vless://00000000-0000-4000-8000-000000000000@198.51.100.10:443'
       '?type=tcp&security=none#test',
 );
 
@@ -54,11 +55,13 @@ void main() {
       final storage = await buildStorageService();
       await storage.saveServers([_server]);
       await storage.setActiveServerId(_server.id);
-      await storage.saveSettings(AppSettings(
-        connectionMode: ConnectionMode.tun.storageValue,
-        directRules: 'vk.com',
-        blockedRules: 'doubleclick.net',
-      ));
+      await storage.saveSettings(
+        AppSettings(
+          connectionMode: ConnectionMode.tun.storageValue,
+          directRules: 'vk.com',
+          blockedRules: 'doubleclick.net',
+        ),
+      );
       await storage.saveRules(const [
         RoutingRule(
           id: 'r1',
@@ -87,8 +90,11 @@ void main() {
 
       final saved = await storage.getSettings();
       expect(saved.connectionMode, ConnectionMode.proxy.storageValue);
-      expect(saved.directRules, 'vk.com',
-          reason: 'структурное правило осталось правилом, а не записью поля');
+      expect(
+        saved.directRules,
+        'vk.com',
+        reason: 'структурное правило осталось правилом, а не записью поля',
+      );
       expect(saved.blockedRules, 'doubleclick.net');
       expect(
         container.read(settingsNotifierProvider).value?.directRules,

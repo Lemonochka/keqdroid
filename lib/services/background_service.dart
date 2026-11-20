@@ -13,12 +13,12 @@ import 'notification_service.dart';
 import 'storage_service.dart';
 import 'subscription_service.dart';
 
-const _kTaskName       = 'subscription_update';
+const _kTaskName = 'subscription_update';
 const _kTaskUniqueName = 'keqdis_sub_update_periodic';
 
-const _kNotifChannelId   = 'keqdis_subscription';
+const _kNotifChannelId = 'keqdis_subscription';
 const _kNotifChannelName = 'Subscription Updates';
-const _kNotifId          = 42;
+const _kNotifId = 42;
 
 // без pragma tree-shaker выкинет функцию из релиза
 @pragma('vm:entry-point')
@@ -53,9 +53,9 @@ void callbackDispatcher() {
           eagerError: false,
         );
 
-        final ok      = results.where((r) => r.success).length;
-        final failed  = results.length - ok;
-        final total   = results.fold(0, (sum, r) => sum + r.serverCount);
+        final ok = results.where((r) => r.success).length;
+        final failed = results.length - ok;
+        final total = results.fold(0, (sum, r) => sum + r.serverCount);
 
         final settings = await storage.getSettings();
         if (settings.notifySubscriptionUpdates) {
@@ -73,10 +73,10 @@ void callbackDispatcher() {
         now: DateTime.now(),
         show: (sub, title, body) =>
             NotificationService.showSubscriptionNoticeInBackground(
-          subscriptionId: sub.id,
-          title: title,
-          body: body,
-        ),
+              subscriptionId: sub.id,
+              title: title,
+              body: body,
+            ),
       );
 
       await AppLogger.instance.flush();
@@ -101,20 +101,24 @@ Future<void> _showUpdateNotification({
 }) async {
   final plugin = FlutterLocalNotificationsPlugin();
 
-  const androidInit =
-      AndroidInitializationSettings('@drawable/ic_notification');
-  await plugin.initialize(settings: const InitializationSettings(android: androidInit));
+  const androidInit = AndroidInitializationSettings(
+    '@drawable/ic_notification',
+  );
+  await plugin.initialize(
+    settings: const InitializationSettings(android: androidInit),
+  );
 
   String title;
   String body;
 
   if (ok > 0 && failed == 0) {
     title = 'Subscriptions updated';
-    body  = '$ok subscription${ok > 1 ? 's' : ''} refreshed'
+    body =
+        '$ok subscription${ok > 1 ? 's' : ''} refreshed'
         '${totalServers > 0 ? ' · $totalServers servers' : ''}';
   } else if (ok > 0 && failed > 0) {
     title = 'Subscriptions partially updated';
-    body  = '$ok updated, $failed failed';
+    body = '$ok updated, $failed failed';
   } else {
     return;
   }
@@ -139,15 +143,14 @@ Future<void> _showUpdateNotification({
 }
 
 class BackgroundService {
-
   static Future<void> init() async {
-    await Workmanager().initialize(
-      callbackDispatcher,
-    );
+    await Workmanager().initialize(callbackDispatcher);
 
     final plugin = FlutterLocalNotificationsPlugin();
-    final android = plugin.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
+    final android = plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
     await android?.requestNotificationsPermission();
   }
 
@@ -158,9 +161,7 @@ class BackgroundService {
       _kTaskName,
       frequency: const Duration(hours: 1),
       initialDelay: const Duration(minutes: 15),
-      constraints: Constraints(
-        networkType: NetworkType.connected,
-      ),
+      constraints: Constraints(networkType: NetworkType.connected),
       existingWorkPolicy: ExistingPeriodicWorkPolicy.update,
       backoffPolicy: BackoffPolicy.exponential,
     );

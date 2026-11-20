@@ -110,16 +110,18 @@ void main() {
       expect(d.gnome, before);
     });
 
-    test('a second connect after a crash keeps the original snapshot',
-        () async {
-      final d = _FakeDesktop();
-      final before = Map.of(d.gnome);
-      await proxyFor(d).enable(httpPort: 2081, socksPort: 2080);
-      await proxyFor(d).enable(httpPort: 3081, socksPort: 3080);
-      await proxyFor(d).disable();
+    test(
+      'a second connect after a crash keeps the original snapshot',
+      () async {
+        final d = _FakeDesktop();
+        final before = Map.of(d.gnome);
+        await proxyFor(d).enable(httpPort: 2081, socksPort: 2080);
+        await proxyFor(d).enable(httpPort: 3081, socksPort: 3080);
+        await proxyFor(d).disable();
 
-      expect(d.gnome, before);
-    });
+        expect(d.gnome, before);
+      },
+    );
 
     test('leaves alone a proxy the user set while connected', () async {
       final d = _FakeDesktop();
@@ -161,8 +163,7 @@ void main() {
   });
 
   group('KDE', () {
-    test('writes kioslaverc in a KDE session and tells KIO about it',
-        () async {
+    test('writes kioslaverc in a KDE session and tells KIO about it', () async {
       final d = _FakeDesktop(hasKde: true);
       await proxyFor(d, desktop: 'KDE').enable(httpPort: 2081, socksPort: 2080);
 
@@ -172,35 +173,43 @@ void main() {
       expect(d.calls.any((c) => c.startsWith('dbus-send')), isTrue);
     });
 
-    test('restores the previous KDE settings, dropping keys it added',
-        () async {
-      final d = _FakeDesktop(hasKde: true);
-      d.kde['ProxyType'] = '0';
-      final proxy = proxyFor(d, desktop: 'KDE');
+    test(
+      'restores the previous KDE settings, dropping keys it added',
+      () async {
+        final d = _FakeDesktop(hasKde: true);
+        d.kde['ProxyType'] = '0';
+        final proxy = proxyFor(d, desktop: 'KDE');
 
-      await proxy.enable(httpPort: 2081, socksPort: 2080);
-      await proxy.disable();
+        await proxy.enable(httpPort: 2081, socksPort: 2080);
+        await proxy.disable();
 
-      expect(d.kde, {'ProxyType': '0'});
-    });
+        expect(d.kde, {'ProxyType': '0'});
+      },
+    );
 
     test('is not touched outside a KDE session', () async {
       final d = _FakeDesktop(hasKde: true);
-      await proxyFor(d, desktop: 'Hyprland')
-          .enable(httpPort: 2081, socksPort: 2080);
+      await proxyFor(
+        d,
+        desktop: 'Hyprland',
+      ).enable(httpPort: 2081, socksPort: 2080);
 
       expect(d.calls.where((c) => c.startsWith('kwriteconfig')), isEmpty);
     });
   });
 
-  test('reports failure and keeps no snapshot when no desktop takes it',
-      () async {
-    final d = _FakeDesktop(hasGsettings: false);
-    expect(
-      await proxyFor(d, desktop: 'Hyprland')
-          .enable(httpPort: 2081, socksPort: 2080),
-      isFalse,
-    );
-    expect(backup.existsSync(), isFalse);
-  });
+  test(
+    'reports failure and keeps no snapshot when no desktop takes it',
+    () async {
+      final d = _FakeDesktop(hasGsettings: false);
+      expect(
+        await proxyFor(
+          d,
+          desktop: 'Hyprland',
+        ).enable(httpPort: 2081, socksPort: 2080),
+        isFalse,
+      );
+      expect(backup.existsSync(), isFalse);
+    },
+  );
 }

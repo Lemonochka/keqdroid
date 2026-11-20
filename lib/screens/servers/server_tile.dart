@@ -62,11 +62,8 @@ class _AutoSkipBadgeState extends State<_AutoSkipBadge>
     super.dispose();
   }
 
-  Widget _icon(double scale) => Icon(
-        Icons.remove_rounded,
-        size: 13 * scale,
-        color: Colors.white,
-      );
+  Widget _icon(double scale) =>
+      Icon(Icons.remove_rounded, size: 13 * scale, color: Colors.white);
 
   @override
   Widget build(BuildContext context) {
@@ -93,7 +90,9 @@ class _AutoSkipBadgeState extends State<_AutoSkipBadge>
         final v = _c.value;
         final shallow = _depth < 7;
         final drop = _DropGeometry(v, rtl: rtl, depth: _depth);
-        final icon = shallow ? const Interval(0.35, 0.8) : const Interval(0.6, 1);
+        final icon = shallow
+            ? const Interval(0.35, 0.8)
+            : const Interval(0.6, 1);
         return SizedBox.square(
           dimension: _AutoSkipBadge.size,
           child: CustomPaint(
@@ -114,7 +113,7 @@ class _AutoSkipBadgeState extends State<_AutoSkipBadge>
 
 class _DropGeometry {
   _DropGeometry(this.v, {required bool rtl, required double depth})
-      : origin = home + Offset(rtl ? depth : -depth, -depth);
+    : origin = home + Offset(rtl ? depth : -depth, -depth);
 
   final double v;
   final Offset origin;
@@ -224,7 +223,9 @@ class _ServerTile extends ConsumerWidget {
       pingingServerIdsProvider.select((ids) => ids.contains(server.id)),
     );
     final autoSkip = ref.watch(
-      serversProvider.select((s) => s.byId[server.id]?.autoSkip ?? server.autoSkip),
+      serversProvider.select(
+        (s) => s.byId[server.id]?.autoSkip ?? server.autoSkip,
+      ),
     );
     final autoSkipShown = autoSkip && (picking || autoOn);
     final (pingMs, lastTestedAt, lastPingType) = ref.watch(
@@ -468,176 +469,174 @@ class _ServerTile extends ConsumerWidget {
       builder: (_) => SafeArea(
         child: SmoothScroll(
           builder: (_, controller) => SingleChildScrollView(
-          controller: controller,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                ServerNameUtils.formatForDisplay(
-                  ServerNameUtils.cleanDisplayName(server.displayName),
-                ),
-                style: Theme.of(context).textTheme
-                    .emphasized(Theme.of(context).textTheme.titleMedium)
-                    ?.copyWith(color: AppTheme.text(context)),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-              ),
-              if (server.protocol == 'chain')
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
+            controller: controller,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  ServerNameUtils.formatForDisplay(
+                    ServerNameUtils.cleanDisplayName(server.displayName),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
+                  style: Theme.of(context).textTheme
+                      .emphasized(Theme.of(context).textTheme.titleMedium)
+                      ?.copyWith(color: AppTheme.text(context)),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                ),
+                if (server.protocol == 'chain')
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ChainRouteStrip(
+                          hops: server.chainHopItems,
+                          arrowColor: AppTheme.textLight(context),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          l10n.chainNodesCount(server.chainConfig!.hops.length),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: AppTheme.textLight(context)),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  _CopyableAddress(
+                    text: '${server.address}:${server.port}',
+                    onCopied: () => Navigator.pop(context),
+                  ),
+                const SizedBox(height: 16),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: ExpressiveGroup(
                     children: [
-                      ChainRouteStrip(
-                        hops: server.chainHopItems,
-                        arrowColor: AppTheme.textLight(context),
+                      ExpressiveActionTile(
+                        icon: Icons.network_ping_rounded,
+                        title: l10n.serversPingServer,
+                        accent: ExpressiveAccent.primary,
+                        onTap: () async {
+                          Navigator.pop(context);
+                          try {
+                            await onPing();
+                          } catch (e) {
+                            if (!context.mounted) return;
+                            AppSnack.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(_shortError(e)),
+                                backgroundColor: AppTheme.red(context),
+                              ),
+                            );
+                          }
+                        },
                       ),
-                      const SizedBox(width: 8),
-                      Text(
-                        l10n.chainNodesCount(server.chainConfig!.hops.length),
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: AppTheme.textLight(context),
-                            ),
+                      ExpressiveActionTile(
+                        icon: server.isPinned
+                            ? Icons.push_pin_rounded
+                            : Icons.push_pin_rounded,
+                        title: server.isPinned
+                            ? l10n.serversUnpin
+                            : l10n.serversPin,
+                        accent: ExpressiveAccent.tertiary,
+                        onTap: () {
+                          Navigator.pop(context);
+                          unawaited(
+                            ref
+                                .read(serversProvider.notifier)
+                                .togglePin(server.id),
+                          );
+                        },
                       ),
                     ],
                   ),
-                )
-              else
-                _CopyableAddress(
-                  text: '${server.address}:${server.port}',
-                  onCopied: () => Navigator.pop(context),
                 ),
-              const SizedBox(height: 16),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: ExpressiveGroup(
-                  children: [
-                    ExpressiveActionTile(
-                      icon: Icons.network_ping_rounded,
-                      title: l10n.serversPingServer,
-                      accent: ExpressiveAccent.primary,
-                      onTap: () async {
-                        Navigator.pop(context);
-                        try {
-                          await onPing();
-                        } catch (e) {
-                          if (!context.mounted) return;
-                          AppSnack.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(_shortError(e)),
-                              backgroundColor: AppTheme.red(context),
-                            ),
-                          );
-                        }
-                      },
-                    ),
-                    ExpressiveActionTile(
-                      icon: server.isPinned
-                          ? Icons.push_pin_rounded
-                          : Icons.push_pin_rounded,
-                      title: server.isPinned
-                          ? l10n.serversUnpin
-                          : l10n.serversPin,
-                      accent: ExpressiveAccent.tertiary,
-                      onTap: () {
-                        Navigator.pop(context);
-                        unawaited(
-                          ref
-                              .read(serversProvider.notifier)
-                              .togglePin(server.id),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: ExpressiveGroup(
-                  children: [
-                    ExpressiveActionTile(
-                      icon: Icons.drive_file_rename_outline_rounded,
-                      title: l10n.serversRename,
-                      onTap: () {
-                        Navigator.pop(context);
-                        _showRenameDialog(context, ref);
-                      },
-                    ),
-                    if (server.protocol == 'chain')
+                const SizedBox(height: 12),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: ExpressiveGroup(
+                    children: [
                       ExpressiveActionTile(
-                        icon: Icons.route_rounded,
-                        title: l10n.chainEdit,
-                        subtitle: l10n.chainRouteLabel,
+                        icon: Icons.drive_file_rename_outline_rounded,
+                        title: l10n.serversRename,
                         onTap: () {
                           Navigator.pop(context);
-                          Navigator.of(context).push(
-                            MaterialPageRoute<void>(
-                              fullscreenDialog: true,
-                              builder: (_) => ChainEditorScreen(
-                                serverId: server.id,
-                              ),
-                            ),
-                          );
+                          _showRenameDialog(context, ref);
                         },
-                      )
-                    else
-                      ExpressiveActionTile(
-                        icon: Icons.tune_rounded,
-                        title: l10n.serversEditConfig,
-                        onTap: () {
-                          Navigator.pop(context);
-                          Navigator.of(context).push(
-                            MaterialPageRoute<void>(
-                              fullscreenDialog: true,
-                              builder: (_) => ServerConfigEditorScreen(
-                                serverId: server.id,
+                      ),
+                      if (server.protocol == 'chain')
+                        ExpressiveActionTile(
+                          icon: Icons.route_rounded,
+                          title: l10n.chainEdit,
+                          subtitle: l10n.chainRouteLabel,
+                          onTap: () {
+                            Navigator.pop(context);
+                            Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                fullscreenDialog: true,
+                                builder: (_) =>
+                                    ChainEditorScreen(serverId: server.id),
                               ),
-                            ),
+                            );
+                          },
+                        )
+                      else
+                        ExpressiveActionTile(
+                          icon: Icons.tune_rounded,
+                          title: l10n.serversEditConfig,
+                          onTap: () {
+                            Navigator.pop(context);
+                            Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                fullscreenDialog: true,
+                                builder: (_) => ServerConfigEditorScreen(
+                                  serverId: server.id,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ExpressiveActionTile(
+                        icon: Icons.link_rounded,
+                        title: l10n.serversCopyConfig,
+                        subtitle: server.protocol.toUpperCase(),
+                        onTap: () {
+                          Clipboard.setData(ClipboardData(text: server.config));
+                          Navigator.pop(context);
+                          AppSnack.of(context).showSnackBar(
+                            SnackBar(content: Text(l10n.serversConfigCopied)),
                           );
                         },
                       ),
-                    ExpressiveActionTile(
-                      icon: Icons.link_rounded,
-                      title: l10n.serversCopyConfig,
-                      subtitle: server.protocol.toUpperCase(),
-                      onTap: () {
-                        Clipboard.setData(ClipboardData(text: server.config));
-                        Navigator.pop(context);
-                        AppSnack.of(context).showSnackBar(
-                          SnackBar(content: Text(l10n.serversConfigCopied)),
-                        );
-                      },
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: ExpressiveGroup(
-                  children: [
-                    ExpressiveActionTile(
-                      icon: Icons.delete_outline_rounded,
-                      title: server.protocol == 'chain'
-                          ? l10n.chainDelete
-                          : l10n.serversDeleteServer,
-                      danger: true,
-                      onTap: () {
-                        Navigator.pop(context);
-                        _showDeleteConfirmation(context);
-                      },
-                    ),
-                  ],
+                const SizedBox(height: 12),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: ExpressiveGroup(
+                    children: [
+                      ExpressiveActionTile(
+                        icon: Icons.delete_outline_rounded,
+                        title: server.protocol == 'chain'
+                            ? l10n.chainDelete
+                            : l10n.serversDeleteServer,
+                        danger: true,
+                        onTap: () {
+                          Navigator.pop(context);
+                          _showDeleteConfirmation(context);
+                        },
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-            ],
-          ),
+                const SizedBox(height: 12),
+              ],
+            ),
           ),
         ),
       ),
@@ -659,12 +658,18 @@ class _ServerTile extends ConsumerWidget {
         backgroundColor: cardColor,
         title: Row(
           children: [
-            Icon(Icons.drive_file_rename_outline_rounded, color: accentColor, size: 26),
+            Icon(
+              Icons.drive_file_rename_outline_rounded,
+              color: accentColor,
+              size: 26,
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
                 l10n.serversRenameTitle,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(color: textColor),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(color: textColor),
               ),
             ),
           ],
@@ -677,7 +682,9 @@ class _ServerTile extends ConsumerWidget {
               controller: ctrl,
               autofocus: true,
               maxLines: 1,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: textColor),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: textColor),
               decoration: InputDecoration(
                 hintText: l10n.serversRenameHint,
                 hintStyle: TextStyle(
@@ -704,7 +711,9 @@ class _ServerTile extends ConsumerWidget {
                     ServerNameUtils.cleanDisplayName(server.derivedName),
                   ),
                 ),
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: textLightColor),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: textLightColor),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -784,7 +793,9 @@ class _ServerTile extends ConsumerWidget {
             Expanded(
               child: Text(
                 isChain ? l10n.chainDelete : l10n.serversDeleteServer,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(color: textColor),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(color: textColor),
               ),
             ),
           ],
@@ -825,7 +836,6 @@ class _ServerTile extends ConsumerWidget {
       ),
     );
   }
-
 }
 
 String _shortError(Object e, [BuildContext? context]) {
@@ -846,9 +856,9 @@ class _CopyableAddress extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final textLight = AppTheme.textLight(context);
-    final style = Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: textLight,
-        );
+    final style = Theme.of(
+      context,
+    ).textTheme.bodySmall?.copyWith(color: textLight);
 
     return Tooltip(
       message: l10n.serversCopyAddress,
@@ -887,4 +897,3 @@ class _CopyableAddress extends StatelessWidget {
     );
   }
 }
-

@@ -94,8 +94,10 @@ class QrImageDecoder {
         GlobalHistogramBinarizer.new,
       ]) {
         try {
-          final result = QRCodeReader()
-              .decode(BinaryBitmap(binarizer(candidate)), hints: hints);
+          final result = QRCodeReader().decode(
+            BinaryBitmap(binarizer(candidate)),
+            hints: hints,
+          );
           final text = restoreByteSegments(
             result.text,
             result.resultMetadata[ResultMetadataType.byteSegments],
@@ -149,12 +151,12 @@ class QrImageDecoder {
 // PlanarYUVLuminanceSource пакет не экспортирует, а серый кадр и есть плоскость Y
 class _GraySource extends LuminanceSource {
   _GraySource(GrayImage image)
-      : _data = Int8List.view(
-          image.pixels.buffer,
-          image.pixels.offsetInBytes,
-          image.pixels.lengthInBytes,
-        ),
-        super(image.width, image.height);
+    : _data = Int8List.view(
+        image.pixels.buffer,
+        image.pixels.offsetInBytes,
+        image.pixels.lengthInBytes,
+      ),
+      super(image.width, image.height);
 
   final Int8List _data;
 

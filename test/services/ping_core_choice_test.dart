@@ -30,27 +30,34 @@ void main() {
       );
     });
 
-    test('сервер подписки с шаблоном mihomo меряется mihomo при любом ядре', () {
-      expect(
-        PingService.pingCoreFor(
-          link,
-          const AppSettings(vpnCore: AppSettings.vpnCoreXray),
-          viaTemplate: true,
-        ),
-        VpnBackend.mihomo,
-      );
-    });
+    test(
+      'сервер подписки с шаблоном mihomo меряется mihomo при любом ядре',
+      () {
+        expect(
+          PingService.pingCoreFor(
+            link,
+            const AppSettings(vpnCore: AppSettings.vpnCoreXray),
+            viaTemplate: true,
+          ),
+          VpnBackend.mihomo,
+        );
+      },
+    );
 
     test('по умолчанию на ссылке xray, как и на подключении', () {
       // Не «замер решает сам»: он повторяет решение подключения, иначе снова
       // мерил бы не то ядро.
-      expect(PingService.pingCoreFor(link, const AppSettings()), VpnBackend.xray);
+      expect(
+        PingService.pingCoreFor(link, const AppSettings()),
+        VpnBackend.xray,
+      );
     });
 
     test('формат ядра перебивает выбор', () {
       // Готовый конфиг Clash исполняет только mihomo — тут выбирать нечего, и
       // мерить его xray было бы заведомо красным.
-      const clash = 'proxies:\n'
+      const clash =
+          'proxies:\n'
           '  - name: a\n'
           '    type: vless\n'
           '    server: nl.example\n'
@@ -67,7 +74,8 @@ void main() {
     test('AmneziaWG меряется mihomo, как и едет', () {
       // Раньше профиль уходил в xray, который `.conf` не разбирает, и замер
       // краснел всегда.
-      const awg = '[Interface]\n'
+      const awg =
+          '[Interface]\n'
           'PrivateKey = AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEA=\n'
           'Address = 10.8.1.2/32\n'
           '[Peer]\n'
@@ -86,13 +94,14 @@ void main() {
   group('конфиг замера у mihomo', () {
     Map<String, dynamic> pingConfig({bool httpInbound = false}) =>
         jsonDecode(
-          MihomoConfigGen.generatePingConfig(
-            link,
-            const AppSettings(),
-            socksPort: 28150,
-            httpInbound: httpInbound,
-          ),
-        ) as Map<String, dynamic>;
+              MihomoConfigGen.generatePingConfig(
+                link,
+                const AppSettings(),
+                socksPort: 28150,
+                httpInbound: httpInbound,
+              ),
+            )
+            as Map<String, dynamic>;
 
     test('один прокси, одно правило, петля', () {
       final config = pingConfig();

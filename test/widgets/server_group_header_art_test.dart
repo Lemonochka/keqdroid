@@ -18,17 +18,18 @@ import '../helpers/test_storage.dart';
 class _Servers extends ServersNotifier {
   @override
   ServersState build() => ServersState(
-        servers: [
-          for (var i = 0; i < 3; i++)
-            ServerItem(
-              id: 'n$i',
-              config: 'vless://00000000-0000-0000-0000-000000000000@n$i'
-                  '.example.com:443?security=reality&type=tcp#Node%20$i',
-              type: ServerItemType.subscription,
-              subscriptionId: 's1',
-            ),
-        ],
-      );
+    servers: [
+      for (var i = 0; i < 3; i++)
+        ServerItem(
+          id: 'n$i',
+          config:
+              'vless://00000000-0000-0000-0000-000000000000@n$i'
+              '.example.com:443?security=reality&type=tcp#Node%20$i',
+          type: ServerItemType.subscription,
+          subscriptionId: 's1',
+        ),
+    ],
+  );
 }
 
 class _Subs extends SubscriptionsNotifier {
@@ -49,16 +50,15 @@ Subscription _sub(
   String theme, {
   bool inServers = true,
   CardVeil veil = CardVeil.medium,
-}) =>
-    Subscription(
-      id: 's1',
-      name: 'Group',
-      url: 'https://example.com/s1',
-      serverCount: 3,
-      cardThemeId: theme,
-      cardThemeInServers: inServers,
-      cardVeil: veil,
-    );
+}) => Subscription(
+  id: 's1',
+  name: 'Group',
+  url: 'https://example.com/s1',
+  serverCount: 3,
+  cardThemeId: theme,
+  cardThemeInServers: inServers,
+  cardVeil: veil,
+);
 
 final _header = find.byType(ServerGroupAnchor).first;
 
@@ -105,7 +105,9 @@ Future<void> _pump(WidgetTester tester, Subscription sub) async {
 void main() {
   // жалоба 19.11: после смены градиентов на рисунки группа на главной стала
   // неотличима от группы без оформления, в шапку шли только картинки
-  testWidgets('рисунок подписки виден в шапке группы на главной', (tester) async {
+  testWidgets('рисунок подписки виден в шапке группы на главной', (
+    tester,
+  ) async {
     final arts = [
       for (final t in kSubscriptionCardThemes)
         if (t.art != null) t.id,

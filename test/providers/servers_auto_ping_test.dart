@@ -49,13 +49,15 @@ void main() {
     expect(spy.calls, isEmpty);
   });
 
-  test('включённый пингует всё при открытии и подписку после обновления',
-      () async {
-    final spy = await _seed(autoPing: true);
-    await spy.autoPingAll();
-    await spy.autoPingSubscription('s1');
-    expect(spy.calls, ['all', 'sub:s1']);
-  });
+  test(
+    'включённый пингует всё при открытии и подписку после обновления',
+    () async {
+      final spy = await _seed(autoPing: true);
+      await spy.autoPingAll();
+      await spy.autoPingSubscription('s1');
+      expect(spy.calls, ['all', 'sub:s1']);
+    },
+  );
 
   test('возврат в приложение пингует не чаще раза в 15 минут', () async {
     final spy = await _seed(autoPing: true);

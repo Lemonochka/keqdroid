@@ -62,11 +62,7 @@ void main() {
 
     test('без TLS на самом TCP тоже не работает', () {
       expect(
-        visionWorksWith(
-          transport: 'tcp',
-          security: 'none',
-          encryption: 'none',
-        ),
+        visionWorksWith(transport: 'tcp', security: 'none', encryption: 'none'),
         isFalse,
       );
     });
@@ -238,11 +234,7 @@ void main() {
 
     test('у vmess своё шифрование, к нему претензии нет', () {
       expect(
-        serverRuleIssues(
-          protocol: 'vmess',
-          transport: 'tcp',
-          security: 'none',
-        ),
+        serverRuleIssues(protocol: 'vmess', transport: 'tcp', security: 'none'),
         isEmpty,
       );
     });

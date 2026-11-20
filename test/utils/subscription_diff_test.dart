@@ -32,10 +32,7 @@ void main() {
     });
 
     test('different length is a change', () {
-      expect(
-        subscriptionsDiffer([_sub('a')], [_sub('a'), _sub('b')]),
-        isTrue,
-      );
+      expect(subscriptionsDiffer([_sub('a')], [_sub('a'), _sub('b')]), isTrue);
     });
 
     test('same length but different ids is a change', () {
@@ -57,10 +54,7 @@ void main() {
 
     test('a changed name on a matching id is a change', () {
       expect(
-        subscriptionsDiffer(
-          [_sub('a', name: 'old')],
-          [_sub('a', name: 'new')],
-        ),
+        subscriptionsDiffer([_sub('a', name: 'old')], [_sub('a', name: 'new')]),
         isTrue,
       );
     });

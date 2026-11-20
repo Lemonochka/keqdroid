@@ -59,7 +59,8 @@ Subscription _sub(String id, String name) =>
 ServerItem _server(String id, String name, {String? subscriptionId}) =>
     ServerItem(
       id: id,
-      config: 'vless://uuid-$id@$id.example.com:443?security=tls&type=tcp#$name',
+      config:
+          'vless://uuid-$id@$id.example.com:443?security=tls&type=tcp#$name',
       type: subscriptionId == null
           ? ServerItemType.manual
           : ServerItemType.subscription,
@@ -148,7 +149,10 @@ void main() {
 
     final node = tester.widget<Container>(
       find
-          .ancestor(of: find.byIcon(Icons.add_rounded), matching: find.byType(Container))
+          .ancestor(
+            of: find.byIcon(Icons.add_rounded),
+            matching: find.byType(Container),
+          )
           .first,
     );
     expect((node.decoration as BoxDecoration).color!.a, 1.0);
@@ -178,7 +182,8 @@ void main() {
   });
 
   group('узлы по выбранному ядру', () {
-    const awg = '[Interface]\n'
+    const awg =
+        '[Interface]\n'
         'PrivateKey = AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEA=\n'
         'Address = 10.8.1.2/32\n'
         '\n'
@@ -226,7 +231,9 @@ void main() {
       expect(find.text('TUIC-1'), findsNothing);
     });
 
-    testWidgets('пустой выбор говорит, какое ядро и где сменить', (tester) async {
+    testWidgets('пустой выбор говорит, какое ядро и где сменить', (
+      tester,
+    ) async {
       await _pumpEditor(tester, servers: [servers[1]]);
       await tester.tap(find.text('Add node'));
       await tester.pumpAndSettle();

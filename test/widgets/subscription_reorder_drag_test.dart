@@ -20,9 +20,9 @@ import '../helpers/test_storage.dart';
 class _FakeSubs extends SubscriptionsNotifier {
   @override
   Future<List<Subscription>> build() async => const [
-        Subscription(id: 'a', name: 'Gaming VPN', url: 'https://a.example'),
-        Subscription(id: 'b', name: 'Work VPN', url: 'https://b.example'),
-      ];
+    Subscription(id: 'a', name: 'Gaming VPN', url: 'https://a.example'),
+    Subscription(id: 'b', name: 'Work VPN', url: 'https://b.example'),
+  ];
 }
 
 class _FakeSettings extends SettingsNotifier {
@@ -106,7 +106,10 @@ void main() {
     }))!;
     int luma(Offset p) {
       final i = (p.dy.round() * width + p.dx.round()) * 4;
-      return (bytes.getUint8(i) + bytes.getUint8(i + 1) + bytes.getUint8(i + 2)) ~/ 3;
+      return (bytes.getUint8(i) +
+              bytes.getUint8(i + 1) +
+              bytes.getUint8(i + 2)) ~/
+          3;
     }
 
     // карточка ушла за пальцем на 40 вниз: начало заголовка там, левее него фон карточки

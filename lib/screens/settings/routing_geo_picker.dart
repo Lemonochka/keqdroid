@@ -21,13 +21,13 @@ class _GeoCodePickerSheetState extends State<_GeoCodePickerSheet> {
   }
 
   List<String> get _codes {
-    final source =
-        _geosite ? widget.index.geositeCodes : widget.index.geoipCodes;
+    final source = _geosite
+        ? widget.index.geositeCodes
+        : widget.index.geoipCodes;
     final needle = _query.trim().toLowerCase();
-    final list = source
-        .where((c) => needle.isEmpty || c.contains(needle))
-        .toList()
-      ..sort();
+    final list =
+        source.where((c) => needle.isEmpty || c.contains(needle)).toList()
+          ..sort();
     return list;
   }
 
@@ -51,24 +51,25 @@ class _GeoCodePickerSheetState extends State<_GeoCodePickerSheet> {
             children: [
               Row(
                 children: [
-                  Icon(Icons.travel_explore_rounded,
-                      size: 18, color: AppTheme.accent(context)),
+                  Icon(
+                    Icons.travel_explore_rounded,
+                    size: 18,
+                    color: AppTheme.accent(context),
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       l10n.settingsRoutingGeoPickerTitle,
-                      style: Theme.of(context)
-                          .textTheme
+                      style: Theme.of(context).textTheme
                           .emphasized(Theme.of(context).textTheme.titleMedium)
                           ?.copyWith(color: AppTheme.text(context)),
                     ),
                   ),
                   Text(
                     l10n.settingsRoutingItemCount(codes.length),
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodySmall
-                        ?.copyWith(color: AppTheme.textLight(context)),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppTheme.textLight(context),
+                    ),
                   ),
                 ],
               ),
@@ -92,10 +93,9 @@ class _GeoCodePickerSheetState extends State<_GeoCodePickerSheet> {
                 controller: _search,
                 textDirection: technicalInputDirection,
                 autofocus: true,
-                style: Theme.of(context)
-                .textTheme
-                .bodyMedium
-                ?.copyWith(color: AppTheme.text(context)),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: AppTheme.text(context)),
                 decoration: InputDecoration(
                   prefixIcon: const Icon(Icons.search_rounded),
                   hintText: l10n.settingsRoutingGeoPickerSearchHint,
@@ -108,9 +108,7 @@ class _GeoCodePickerSheetState extends State<_GeoCodePickerSheet> {
                     ? Center(
                         child: Text(
                           l10n.settingsRoutingGeoPickerEmpty,
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodySmall
+                          style: Theme.of(context).textTheme.bodySmall
                               ?.copyWith(color: AppTheme.textLight(context)),
                         ),
                       )
@@ -122,16 +120,17 @@ class _GeoCodePickerSheetState extends State<_GeoCodePickerSheet> {
                             dense: true,
                             title: Text(
                               '$prefix$code',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodySmall
+                              style: Theme.of(context).textTheme.bodySmall
                                   ?.copyWith(
                                     fontFamily: 'monospace',
                                     color: AppTheme.text(context),
                                   ),
                             ),
-                            trailing: Icon(Icons.add_rounded,
-                                size: 16, color: AppTheme.accent(context)),
+                            trailing: Icon(
+                              Icons.add_rounded,
+                              size: 16,
+                              color: AppTheme.accent(context),
+                            ),
                             onTap: () =>
                                 Navigator.of(context).pop('$prefix$code'),
                           );

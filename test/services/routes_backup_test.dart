@@ -51,8 +51,7 @@ void main() {
     expect(await to.getRoutes(), const [_app, _server, _general]);
   });
 
-  test('профили маршрутизации уезжают в копию и возвращаются из неё',
-      () async {
+  test('профили маршрутизации уезжают в копию и возвращаются из неё', () async {
     const profile = RoutingProfile(
       id: 'games',
       name: 'Игры',
@@ -100,41 +99,47 @@ void main() {
     expect([for (final p in await to.getRoutingProfiles()) p.id], ['p']);
   });
 
-  test('копия до маршрутов: списки становятся маршрутами, свои остаются',
-      () async {
-    final backup = KeqdroidBackup(
-      version: 1,
-      exportedAt: DateTime(2026, 9),
-      data: {
-        'appSettings': {
-          'directRules': 'vk.com',
-          'proxyRules': 'discord.com',
-          'blockedRules': '',
-          'finalOutbound': AppSettings.finalOutboundProxy,
+  test(
+    'копия до маршрутов: списки становятся маршрутами, свои остаются',
+    () async {
+      final backup = KeqdroidBackup(
+        version: 1,
+        exportedAt: DateTime(2026, 9),
+        data: {
+          'appSettings': {
+            'directRules': 'vk.com',
+            'proxyRules': 'discord.com',
+            'blockedRules': '',
+            'finalOutbound': AppSettings.finalOutboundProxy,
+          },
         },
-      },
-    );
-    final to = await buildStorageService();
-    await to.saveRoutes(const [_app, _server, _general]);
-    await SettingsBackupService.applyBackup(
-      to,
-      backup: backup,
-      sections: {BackupSection.appSettings},
-    );
+      );
+      final to = await buildStorageService();
+      await to.saveRoutes(const [_app, _server, _general]);
+      await SettingsBackupService.applyBackup(
+        to,
+        backup: backup,
+        sections: {BackupSection.appSettings},
+      );
 
-    final routes = await to.getRoutes();
-    expect(
-      [
-        for (final r in routes)
-          if (r.allApps && r.target != RouteTarget.server) (r.sites, r.target),
-      ],
-      [('vk.com', RouteTarget.direct), ('discord.com', RouteTarget.vpn)],
-      reason: 'общие маршруты копия заменяет своими списками',
-    );
-    expect(routes, containsAll(const [_app, _server]),
-        reason: 'отдельных приложений и других серверов в старой копии нет');
-    expect(routes, isNot(contains(_general)));
-  });
+      final routes = await to.getRoutes();
+      expect(
+        [
+          for (final r in routes)
+            if (r.allApps && r.target != RouteTarget.server)
+              (r.sites, r.target),
+        ],
+        [('vk.com', RouteTarget.direct), ('discord.com', RouteTarget.vpn)],
+        reason: 'общие маршруты копия заменяет своими списками',
+      );
+      expect(
+        routes,
+        containsAll(const [_app, _server]),
+        reason: 'отдельных приложений и других серверов в старой копии нет',
+      );
+      expect(routes, isNot(contains(_general)));
+    },
+  );
 
   test('копия без списков маршрутов не трогает', () async {
     final backup = KeqdroidBackup(

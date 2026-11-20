@@ -41,7 +41,8 @@ class _PermissionsScreenState extends ConsumerState<_PermissionsScreen>
   AndroidFlutterLocalNotificationsPlugin? get _androidNotif =>
       FlutterLocalNotificationsPlugin()
           .resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>();
+            AndroidFlutterLocalNotificationsPlugin
+          >();
 
   Future<void> _refreshNotifStatus() async {
     if (!Platform.isAndroid) return;
@@ -57,7 +58,10 @@ class _PermissionsScreenState extends ConsumerState<_PermissionsScreen>
     try {
       await _androidNotif?.requestNotificationsPermission();
     } catch (e) {
-      AppLogger.instance.debug('Notification permission request failed', error: e);
+      AppLogger.instance.debug(
+        'Notification permission request failed',
+        error: e,
+      );
     }
     await _refreshNotifStatus();
   }
@@ -207,7 +211,9 @@ class _PermissionsScreenState extends ConsumerState<_PermissionsScreen>
         padding: const EdgeInsets.fromLTRB(8, 0, 8, 4),
         child: Text(
           l10n.settingsPermRevokeHint,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
         ),
       ),
     ];
@@ -236,7 +242,9 @@ class _PermissionsScreenState extends ConsumerState<_PermissionsScreen>
         border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Text(
-        granted ? l10n.settingsPermStatusGranted : l10n.settingsPermStatusDenied,
+        granted
+            ? l10n.settingsPermStatusGranted
+            : l10n.settingsPermStatusDenied,
         style: Theme.of(context).textTheme.labelMedium?.copyWith(color: color),
       ),
     );
@@ -269,7 +277,11 @@ class _PermissionInfoTile extends StatelessWidget {
       ),
       title: Text(title),
       subtitle: Text(subtitle),
-      trailing: Icon(Icons.open_in_new_rounded, size: 18, color: AppTheme.textLight(context)),
+      trailing: Icon(
+        Icons.open_in_new_rounded,
+        size: 18,
+        color: AppTheme.textLight(context),
+      ),
       onTap: onTap,
     );
   }
@@ -305,8 +317,8 @@ class _LinuxTunPasswordlessTileState
         content: Text(
           ok
               ? (enable
-                  ? l10n.tunRememberInstalled
-                  : l10n.settingsPermTunDisabled)
+                    ? l10n.tunRememberInstalled
+                    : l10n.settingsPermTunDisabled)
               : l10n.tunRememberFailed,
         ),
         backgroundColor: ok ? AppTheme.green(context) : AppTheme.red(context),

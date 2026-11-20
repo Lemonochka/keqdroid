@@ -27,14 +27,20 @@ void main() {
   });
 
   Future<List<(String, int)>> freeProbes(List<String> ids) async => [
-        for (final id in ids)
-          (id, await () async {
-            final socket = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
-            final port = socket.port;
-            await socket.close();
-            return port;
-          }()),
-      ];
+    for (final id in ids)
+      (
+        id,
+        await () async {
+          final socket = await ServerSocket.bind(
+            InternetAddress.loopbackIPv4,
+            0,
+          );
+          final port = socket.port;
+          await socket.close();
+          return port;
+        }(),
+      ),
+  ];
 
   test('ядра нет: у каждой пробы отказ с причиной, делить нечего', () async {
     EphemeralXrayPing.debugResolveCore = (_) async => null;
@@ -54,9 +60,8 @@ void main() {
 
   test('ядро вышло сразу: null, чтобы пачку поделили', () async {
     // так выглядит ядро, не принявшее конфиг; вместо него программа, которая выходит сама
-    EphemeralXrayPing.debugResolveCore = (_) async => Platform.isWindows
-        ? r'C:\Windows\System32\where.exe'
-        : '/bin/false';
+    EphemeralXrayPing.debugResolveCore = (_) async =>
+        Platform.isWindows ? r'C:\Windows\System32\where.exe' : '/bin/false';
 
     final results = await EphemeralXrayPing.urlTestMulti(
       configJson: '{}',
@@ -90,6 +95,9 @@ void main() {
     // ядра стартуют пачкой и делят диск с антивирусом: 5 с не хватало уже при
     // шести разом. До 14.11.2026 срок обрезался таймаутом пробы (8 с у «пинга
     // всех», 4 у автовыбора), и записанные 12 с не действовали никогда
-    expect(EphemeralXrayPing.coreStartupBudget.inSeconds, greaterThanOrEqualTo(12));
+    expect(
+      EphemeralXrayPing.coreStartupBudget.inSeconds,
+      greaterThanOrEqualTo(12),
+    );
   });
 }

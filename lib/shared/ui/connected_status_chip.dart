@@ -103,10 +103,11 @@ class _ConnectedStatusChipState extends State<ConnectedStatusChip> {
     final flag = exit?.flag;
     final revealed = _revealed && flag != null;
     final shape = RoundedRectangleBorder(
-      borderRadius: widget.borderRadius ??
-          ExpressiveShape.radius(ExpressiveShape.full),
+      borderRadius:
+          widget.borderRadius ?? ExpressiveShape.radius(ExpressiveShape.full),
     );
-    final fallback = flag == null &&
+    final fallback =
+        flag == null &&
             (widget.fallbackFlag != null || widget.fallbackProtocol.isNotEmpty)
         ? Padding(
             padding: const EdgeInsets.all(3),
@@ -127,8 +128,7 @@ class _ConnectedStatusChipState extends State<ConnectedStatusChip> {
       overflow: TextOverflow.ellipsis,
       style: widget.textStyle?.copyWith(
         color: widget.foregroundColor ?? scheme.onSecondaryContainer,
-        fontFeatures:
-            revealed ? const [FontFeature.tabularFigures()] : null,
+        fontFeatures: revealed ? const [FontFeature.tabularFigures()] : null,
       ),
     );
     final rtl = Directionality.of(context) == TextDirection.rtl;
@@ -233,7 +233,7 @@ class _ConnectedStatusChipState extends State<ConnectedStatusChip> {
 
 class _RevealFromStart extends CustomClipper<Rect> {
   _RevealFromStart(this.progress, {required this.rtl})
-      : super(reclip: progress);
+    : super(reclip: progress);
 
   final Animation<double> progress;
   final bool rtl;

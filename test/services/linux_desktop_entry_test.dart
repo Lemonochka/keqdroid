@@ -37,17 +37,17 @@ void main() {
 
     test('the packages declare the same link schemes', () {
       final script = File('tool/package_linux.sh').readAsStringSync();
-      final declared = RegExp(r'^MimeType=(.*)$', multiLine: true)
-          .allMatches(script)
-          .map((m) => m.group(1))
-          .toList();
+      final declared = RegExp(
+        r'^MimeType=(.*)$',
+        multiLine: true,
+      ).allMatches(script).map((m) => m.group(1)).toList();
       // ярлык deb/rpm/AppImage и отдельный в PKGBUILD для AUR
       expect(declared, hasLength(2));
       expect(declared, everyElement(LinuxDesktopEntry.mimeTypes));
-      final execs = RegExp(r'^Exec=(.*)$', multiLine: true)
-          .allMatches(script)
-          .map((m) => m.group(1)!)
-          .toList();
+      final execs = RegExp(
+        r'^Exec=(.*)$',
+        multiLine: true,
+      ).allMatches(script).map((m) => m.group(1)!).toList();
       // те же два ярлыка и два их скрытых двойника для KWin
       expect(execs, hasLength(4));
       expect(execs, everyElement(endsWith(' %u')));
@@ -55,15 +55,16 @@ void main() {
 
     test('the packages ship a hidden twin named after the app id', () {
       final script = File('tool/package_linux.sh').readAsStringSync();
-      final twins = RegExp(
-        r'^\[Desktop Entry\]\n(.*?)\n(?:EOF|DESKTOP)$',
-        multiLine: true,
-        dotAll: true,
-      )
-          .allMatches(script)
-          .map((m) => m.group(1)!)
-          .where((body) => body.contains('NoDisplay=true'))
-          .toList();
+      final twins =
+          RegExp(
+                r'^\[Desktop Entry\]\n(.*?)\n(?:EOF|DESKTOP)$',
+                multiLine: true,
+                dotAll: true,
+              )
+              .allMatches(script)
+              .map((m) => m.group(1)!)
+              .where((body) => body.contains('NoDisplay=true'))
+              .toList();
       expect(twins, hasLength(2));
       for (final twin in twins) {
         expect(twin, contains('Icon='));
@@ -77,8 +78,10 @@ void main() {
         ),
       );
       expect(
-        RegExp(r'^/usr/share/applications/\$APP_ID\.desktop$', multiLine: true)
-            .hasMatch(script),
+        RegExp(
+          r'^/usr/share/applications/\$APP_ID\.desktop$',
+          multiLine: true,
+        ).hasMatch(script),
         isTrue,
         reason: 'rpm %files',
       );
@@ -99,28 +102,40 @@ void main() {
     File twin() => File(p.join(apps.path, 'com.keqdroid.keqdroid.desktop'));
 
     test('is named after the window app id', () {
-      expect(LinuxDesktopEntry.windowEntryFileName, 'com.keqdroid.keqdroid.desktop');
+      expect(
+        LinuxDesktopEntry.windowEntryFileName,
+        'com.keqdroid.keqdroid.desktop',
+      );
     });
 
-    test('carries the icon and stays out of menus, link handlers and window matching', () {
-      final text = LinuxDesktopEntry.windowEntryFor(appImage);
-      expect(text, contains('Icon=keqdroid\n'));
-      expect(text, contains('NoDisplay=true\n'));
-      expect(text, contains('TryExec=$appImage\n'));
-      expect(text, contains(LinuxDesktopEntry.marker));
-      expect(text, isNot(contains('StartupWMClass')));
-      expect(text, isNot(contains('MimeType')));
-    });
+    test(
+      'carries the icon and stays out of menus, link handlers and window matching',
+      () {
+        final text = LinuxDesktopEntry.windowEntryFor(appImage);
+        expect(text, contains('Icon=keqdroid\n'));
+        expect(text, contains('NoDisplay=true\n'));
+        expect(text, contains('TryExec=$appImage\n'));
+        expect(text, contains(LinuxDesktopEntry.marker));
+        expect(text, isNot(contains('StartupWMClass')));
+        expect(text, isNot(contains('MimeType')));
+      },
+    );
 
     test('is written when running from an AppImage', () {
       LinuxDesktopEntry.syncWindowEntry(apps.path, appImage);
-      expect(twin().readAsStringSync(), LinuxDesktopEntry.windowEntryFor(appImage));
+      expect(
+        twin().readAsStringSync(),
+        LinuxDesktopEntry.windowEntryFor(appImage),
+      );
     });
 
     test('follows the AppImage when it moves', () {
       LinuxDesktopEntry.syncWindowEntry(apps.path, '/old/keqdroid.AppImage');
       LinuxDesktopEntry.syncWindowEntry(apps.path, appImage);
-      expect(twin().readAsStringSync(), LinuxDesktopEntry.windowEntryFor(appImage));
+      expect(
+        twin().readAsStringSync(),
+        LinuxDesktopEntry.windowEntryFor(appImage),
+      );
     });
 
     // перешли с AppImage на пакет: двойник из пакета лежит в /usr/share, свой в ~/.local больше не нужен
@@ -131,7 +146,8 @@ void main() {
     });
 
     test('leaves a file it did not write alone', () {
-      const own = '[Desktop Entry]\nType=Application\nIcon=keqdroid\nNoDisplay=true\n';
+      const own =
+          '[Desktop Entry]\nType=Application\nIcon=keqdroid\nNoDisplay=true\n';
       twin().writeAsStringSync(own);
       LinuxDesktopEntry.syncWindowEntry(apps.path, appImage);
       expect(twin().readAsStringSync(), own);

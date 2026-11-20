@@ -15,9 +15,12 @@ void main() {
 
     test('API отвечает tun.enable: true — туннель его', () {
       expect(
-        mihomoTunState(coreOutput: '', configs: {
-          'tun': {'enable': true, 'device': 'tun-keqdis'},
-        }),
+        mihomoTunState(
+          coreOutput: '',
+          configs: {
+            'tun': {'enable': true, 'device': 'tun-keqdis'},
+          },
+        ),
         MihomoTunState.up,
       );
     });
@@ -25,9 +28,12 @@ void main() {
     // API открывается раньше TUN: первый ответ в ВМ пришёл на 135 мс, адаптер на 499 мс
     test('пока адаптер создаётся, enable false без device — ждём', () {
       expect(
-        mihomoTunState(coreOutput: '', configs: {
-          'tun': {'enable': false, 'device': '', 'stack': 'gVisor'},
-        }),
+        mihomoTunState(
+          coreOutput: '',
+          configs: {
+            'tun': {'enable': false, 'device': '', 'stack': 'gVisor'},
+          },
+        ),
         MihomoTunState.pending,
       );
       expect(
@@ -39,9 +45,12 @@ void main() {
     // так mihomo ответил на ПК без прав: туннель не поднялся, а сам он остался жить
     test('enable false с именем устройства — туннеля нет', () {
       expect(
-        mihomoTunState(coreOutput: '', configs: {
-          'tun': {'enable': false, 'device': 'tun-keqdis', 'stack': 'gVisor'},
-        }),
+        mihomoTunState(
+          coreOutput: '',
+          configs: {
+            'tun': {'enable': false, 'device': 'tun-keqdis', 'stack': 'gVisor'},
+          },
+        ),
         MihomoTunState.failed,
       );
     });
@@ -49,7 +58,8 @@ void main() {
     test('ошибка TUN в выводе сильнее всего остального', () {
       expect(
         mihomoTunState(
-          coreOutput: 'level=error msg="Start TUN listening error: '
+          coreOutput:
+              'level=error msg="Start TUN listening error: '
               'configure tun interface: Cannot create a file"',
           configs: {
             'tun': {'enable': true},
@@ -62,7 +72,8 @@ void main() {
     test('строка «Tun adapter listening at» при подробном логе — готово', () {
       expect(
         mihomoTunState(
-          coreOutput: 'level=info msg="[TUN] Tun adapter listening at: '
+          coreOutput:
+              'level=info msg="[TUN] Tun adapter listening at: '
               'tun-keqdis([198.18.0.1/30],[])"',
         ),
         MihomoTunState.up,
@@ -86,9 +97,11 @@ void main() {
           await request.response.close();
           return;
         }
-        request.response.write(jsonEncode({
-          'tun': {'enable': true},
-        }));
+        request.response.write(
+          jsonEncode({
+            'tun': {'enable': true},
+          }),
+        );
         await request.response.close();
       });
     });
@@ -97,8 +110,10 @@ void main() {
 
     test('с токеном отдаёт ответ ядра', () async {
       final configs = await fetchMihomoConfigs(server.port, 's3cret');
-      expect(mihomoTunState(coreOutput: '', configs: configs),
-          MihomoTunState.up);
+      expect(
+        mihomoTunState(coreOutput: '', configs: configs),
+        MihomoTunState.up,
+      );
       expect(auth, ['Bearer s3cret']);
     });
 

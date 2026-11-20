@@ -16,7 +16,8 @@ Future<void> sendSubscriptionToTv(
 ) async {
   final l10n = AppLocalizations.of(context)!;
   final messenger = AppSnack.of(context);
-  final subscriptions = ref.read(subscriptionsProvider).value ??
+  final subscriptions =
+      ref.read(subscriptionsProvider).value ??
       await ref.read(storageProvider).getSubscriptions();
   if (!context.mounted) return;
   if (subscriptions.isEmpty) {
@@ -94,8 +95,9 @@ class _TvSendDialogState extends State<TvSendDialog> {
         children: [
           Text(
             l10n.tvSendPick,
-            style: textTheme.bodyMedium
-                ?.copyWith(color: AppTheme.textLight(context)),
+            style: textTheme.bodyMedium?.copyWith(
+              color: AppTheme.textLight(context),
+            ),
           ),
           const SizedBox(height: 8),
           RadioGroup<String>(
@@ -122,8 +124,9 @@ class _TvSendDialogState extends State<TvSendDialog> {
             const SizedBox(height: 8),
             Text(
               _error!,
-              style: textTheme.bodySmall
-                  ?.copyWith(color: AppTheme.red(context)),
+              style: textTheme.bodySmall?.copyWith(
+                color: AppTheme.red(context),
+              ),
             ),
           ],
         ],

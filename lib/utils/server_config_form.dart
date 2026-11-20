@@ -114,8 +114,7 @@ class ServerConfigForm {
         _ctrl('userInfo', uri.userInfo);
         // у trojan пустой security подразумевает tls, ссылки его обычно не пишут
         final trojanSecurity = uri.takeParam('security');
-        _drop['security'] =
-            trojanSecurity.isEmpty ? 'tls' : trojanSecurity;
+        _drop['security'] = trojanSecurity.isEmpty ? 'tls' : trojanSecurity;
         break;
       case 'ss':
         final userInfo = uri.userInfo;
@@ -128,8 +127,7 @@ class ServerConfigForm {
         } else {
           _ssBase64 = true;
           try {
-            var normalized =
-                userInfo.replaceAll('-', '+').replaceAll('_', '/');
+            var normalized = userInfo.replaceAll('-', '+').replaceAll('_', '/');
             while (normalized.length % 4 != 0) {
               normalized += '=';
             }
@@ -262,7 +260,8 @@ class ServerConfigForm {
   String? _initVmess(String config) {
     try {
       var payload = config.substring('vmess://'.length).trim();
-      payload = payload.replaceAll(RegExp(r'\s+'), '')
+      payload = payload
+          .replaceAll(RegExp(r'\s+'), '')
           .replaceAll('-', '+')
           .replaceAll('_', '/');
       while (payload.length % 4 != 0) {
@@ -289,7 +288,10 @@ class ServerConfigForm {
       // ключи как в _vmessStreamParams config_gen: имя сервиса gRPC и seed mKCP лежат в path, заголовок в type.
       // serviceName писал прежний редактор, генераторы его не читают
       final net = normalizeTransport(_drop['type']!);
-      _ctrl('serviceName', net == 'grpc' && s('path').isNotEmpty ? s('path') : s('serviceName'));
+      _ctrl(
+        'serviceName',
+        net == 'grpc' && s('path').isNotEmpty ? s('path') : s('serviceName'),
+      );
       _ctrl('seed', net == 'kcp' ? s('path') : '');
       _drop['headerType'] = s('type');
       _drop['mode'] = s('mode');
@@ -300,7 +302,10 @@ class ServerConfigForm {
       _ctrl('method', s('method'));
       final extra = json['extra'];
       _vmessExtraIsObject = extra is Map;
-      _ctrl('extra', extra is Map || extra is List ? jsonEncode(extra) : s('extra'));
+      _ctrl(
+        'extra',
+        extra is Map || extra is List ? jsonEncode(extra) : s('extra'),
+      );
       _ctrl('x_padding_bytes', s('x_padding_bytes'));
       _paddingIntoExtra();
       _outerFromExtra();

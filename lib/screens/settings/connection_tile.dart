@@ -31,32 +31,34 @@ class ConnectionTile extends StatelessWidget {
         ConnectionVerdict.unknown => AppTheme.textLight(context),
       };
 
-  static String verdictLabel(AppLocalizations l10n, ConnectionVerdict verdict) =>
-      switch (verdict) {
-        ConnectionVerdict.proxied => l10n.connectionsVerdictProxy,
-        ConnectionVerdict.direct => l10n.connectionsVerdictDirect,
-        ConnectionVerdict.blocked => l10n.connectionsVerdictBlock,
-        ConnectionVerdict.viaCore => l10n.connectionsVerdictCore,
-        ConnectionVerdict.unknown => '—',
-      };
+  static String verdictLabel(
+    AppLocalizations l10n,
+    ConnectionVerdict verdict,
+  ) => switch (verdict) {
+    ConnectionVerdict.proxied => l10n.connectionsVerdictProxy,
+    ConnectionVerdict.direct => l10n.connectionsVerdictDirect,
+    ConnectionVerdict.blocked => l10n.connectionsVerdictBlock,
+    ConnectionVerdict.viaCore => l10n.connectionsVerdictCore,
+    ConnectionVerdict.unknown => '—',
+  };
 
   static String ruleLabel(
     AppLocalizations l10n,
     ConnectionEntry entry, {
     required bool ruleInfoAvailable,
-  }) =>
-      entry.decidedByCore
-          ? (ruleInfoAvailable
-              ? l10n.connectionsRuleViaCoreUnseen
-              : l10n.connectionsRuleViaCore)
-          : switch (entry.rule) {
-              '' => ruleInfoAvailable && entry.outbound.isNotEmpty
-                  ? l10n.connectionsRuleDefault
-                  : '',
-              final r when XrayAccessLogParser.isDefaultRoute(r) =>
-                l10n.connectionsRuleDefault,
-              final r => r,
-            };
+  }) => entry.decidedByCore
+      ? (ruleInfoAvailable
+            ? l10n.connectionsRuleViaCoreUnseen
+            : l10n.connectionsRuleViaCore)
+      : switch (entry.rule) {
+          '' =>
+            ruleInfoAvailable && entry.outbound.isNotEmpty
+                ? l10n.connectionsRuleDefault
+                : '',
+          final r when XrayAccessLogParser.isDefaultRoute(r) =>
+            l10n.connectionsRuleDefault,
+          final r => r,
+        };
 
   static String formatBytes(int value) {
     if (value < 1024) return '$value B';
@@ -91,8 +93,7 @@ class ConnectionTile extends StatelessWidget {
         ),
         child: Text(
           label,
-          style: Theme.of(context)
-              .textTheme
+          style: Theme.of(context).textTheme
               .emphasized(Theme.of(context).textTheme.labelSmall)
               ?.copyWith(color: color),
         ),
@@ -117,10 +118,9 @@ class ConnectionTile extends StatelessWidget {
                   entry.target,
                   maxLines: 1,
                   onTap: onTap,
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleSmall
-                      ?.copyWith(color: AppTheme.text(context)),
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: AppTheme.text(context),
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
@@ -128,8 +128,11 @@ class ConnectionTile extends StatelessWidget {
                 chip(context, '×${entry.count}', AppTheme.accent(context)),
                 const SizedBox(width: 6),
               ],
-              chip(context, entry.network.toUpperCase(),
-                  AppTheme.textLight(context)),
+              chip(
+                context,
+                entry.network.toUpperCase(),
+                AppTheme.textLight(context),
+              ),
               const SizedBox(width: 6),
               chip(context, verdictLabel(l10n, entry.verdict), color),
             ],
@@ -139,9 +142,9 @@ class ConnectionTile extends StatelessWidget {
             Text(
               entry.destIp,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontFamily: 'monospace',
-                    color: AppTheme.textLight(context),
-                  ),
+                fontFamily: 'monospace',
+                color: AppTheme.textLight(context),
+              ),
             ),
           ],
           const SizedBox(height: 8),
@@ -186,22 +189,21 @@ class ConnectionTile extends StatelessWidget {
   }
 
   Widget _meta(BuildContext context, IconData icon, String text) => Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 13, color: AppTheme.textLight(context)),
-          const SizedBox(width: 4),
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 260),
-            child: Text(
-              text,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: AppTheme.textLight(context)),
-            ),
-          ),
-        ],
-      );
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Icon(icon, size: 13, color: AppTheme.textLight(context)),
+      const SizedBox(width: 4),
+      ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 260),
+        child: Text(
+          text,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
+        ),
+      ),
+    ],
+  );
 }

@@ -18,7 +18,8 @@ import '../helpers/test_storage.dart';
 
 final _server = ServerItem(
   id: 'n1',
-  config: 'vless://00000000-0000-0000-0000-000000000000@n1.example.com:443'
+  config:
+      'vless://00000000-0000-0000-0000-000000000000@n1.example.com:443'
       '?security=reality&type=tcp#Node%201',
   type: ServerItemType.manual,
 );
@@ -40,7 +41,9 @@ class _NoHalloween extends HalloweenActiveNotifier {
 
 ScrollController? _outerController(WidgetTester tester, Finder scope) => tester
     .widget<SingleChildScrollView>(
-      find.descendant(of: scope, matching: find.byType(SingleChildScrollView)).first,
+      find
+          .descendant(of: scope, matching: find.byType(SingleChildScrollView))
+          .first,
     )
     .controller;
 

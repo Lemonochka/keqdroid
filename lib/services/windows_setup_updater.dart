@@ -24,30 +24,26 @@ class WindowsSetupUpdater {
     await File(scriptPath).writeAsString('\u{FEFF}$script', flush: true);
 
     // вне нашего дерева процессов, чтобы пережил exit; права у скрипта наши, с ними же он и вернёт приложение
-    await Process.start(
-      'cmd.exe',
-      [
-        '/c',
-        'start',
-        '""',
-        '/min',
-        'powershell.exe',
-        '-NoProfile',
-        '-ExecutionPolicy',
-        'Bypass',
-        '-WindowStyle',
-        'Hidden',
-        '-File',
-        scriptPath,
-        '-Setup',
-        setupPath,
-        '-ExePath',
-        Platform.resolvedExecutable,
-        '-AppPid',
-        '$pid',
-      ],
-      mode: ProcessStartMode.detached,
-    );
+    await Process.start('cmd.exe', [
+      '/c',
+      'start',
+      '""',
+      '/min',
+      'powershell.exe',
+      '-NoProfile',
+      '-ExecutionPolicy',
+      'Bypass',
+      '-WindowStyle',
+      'Hidden',
+      '-File',
+      scriptPath,
+      '-Setup',
+      setupPath,
+      '-ExePath',
+      Platform.resolvedExecutable,
+      '-AppPid',
+      '$pid',
+    ], mode: ProcessStartMode.detached);
 
     await beforeRestart?.call();
     await WindowsDesktopService.clearSessionCoreProcesses();

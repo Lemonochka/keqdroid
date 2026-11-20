@@ -63,7 +63,8 @@ abstract final class ExitIpService {
       }
     }
     if (ip == null || InternetAddress.tryParse(ip) == null) return null;
-    final known = loc != null && RegExp(r'^[A-Z]{2}$').hasMatch(loc) && loc != 'XX';
+    final known =
+        loc != null && RegExp(r'^[A-Z]{2}$').hasMatch(loc) && loc != 'XX';
     return ExitIp(ip: ip, countryCode: known ? loc : null);
   }
 }

@@ -13,37 +13,36 @@ Widget _screen(
   List<ConnectionEntry> entries, {
   bool showProcess = false,
   bool ruleInfoAvailable = true,
-}) =>
-    MaterialApp(
-      locale: const Locale('ru'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF7B61FF),
-          brightness: Brightness.dark,
-        ),
-      ),
-      home: Scaffold(
-        body: Column(
-          children: [
-            const Padding(padding: EdgeInsets.all(12), child: Text('фильтр')),
-            Expanded(
-              child: ListView.separated(
-                padding: const EdgeInsets.fromLTRB(12, 6, 12, 24),
-                itemCount: entries.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 8),
-                itemBuilder: (_, i) => ConnectionTile(
-                  entry: entries[i],
-                  showProcess: showProcess,
-                  ruleInfoAvailable: ruleInfoAvailable,
-                ),
-              ),
+}) => MaterialApp(
+  locale: const Locale('ru'),
+  localizationsDelegates: AppLocalizations.localizationsDelegates,
+  supportedLocales: AppLocalizations.supportedLocales,
+  theme: ThemeData(
+    colorScheme: ColorScheme.fromSeed(
+      seedColor: const Color(0xFF7B61FF),
+      brightness: Brightness.dark,
+    ),
+  ),
+  home: Scaffold(
+    body: Column(
+      children: [
+        const Padding(padding: EdgeInsets.all(12), child: Text('фильтр')),
+        Expanded(
+          child: ListView.separated(
+            padding: const EdgeInsets.fromLTRB(12, 6, 12, 24),
+            itemCount: entries.length,
+            separatorBuilder: (_, _) => const SizedBox(height: 8),
+            itemBuilder: (_, i) => ConnectionTile(
+              entry: entries[i],
+              showProcess: showProcess,
+              ruleInfoAvailable: ruleInfoAvailable,
             ),
-          ],
+          ),
         ),
-      ),
-    );
+      ],
+    ),
+  ),
+);
 
 ConnectionEntry _entry({
   required String host,
@@ -57,49 +56,49 @@ ConnectionEntry _entry({
   String destIp = '',
   bool rejected = false,
   bool decidedByCore = false,
-}) =>
-    ConnectionEntry(
-      id: '$source>$network:$host:$port',
-      network: network,
-      host: host,
-      destPort: port,
-      destIp: destIp,
-      source: source,
-      process: process,
-      inbound: inbound,
-      outbound: outbound,
-      rule: rule,
-      startedAt: DateTime(2026, 8, 9, 9, 58, 12),
-      rejected: rejected,
-      decidedByCore: decidedByCore,
-    );
+}) => ConnectionEntry(
+  id: '$source>$network:$host:$port',
+  network: network,
+  host: host,
+  destPort: port,
+  destIp: destIp,
+  source: source,
+  process: process,
+  inbound: inbound,
+  outbound: outbound,
+  rule: rule,
+  startedAt: DateTime(2026, 8, 9, 9, 58, 12),
+  rejected: rejected,
+  decidedByCore: decidedByCore,
+);
 
 /// Ровно тот набор, что бывает на живом экране: все вердикты, оба состояния
 /// правила, длинные значения и запись без части полей.
 List<ConnectionEntry> _sevenConnections() => [
-      _entry(host: 'www.google.com'),
-      _entry(host: 'ya.ru', outbound: 'direct', rule: 'direct-ru'),
-      _entry(
-        host: 'ads.doubleclick.net',
-        outbound: 'block',
-        rule: 'block-ads',
-        rejected: true,
-      ),
-      _entry(host: '104.244.42.129', outbound: 'proxy', decidedByCore: true),
-      _entry(host: 'dns.google', network: 'udp', port: 53, rule: ''),
-      _entry(
-        host: 'very-long-subdomain.example-of-a-really-long-hostname.co.uk',
-        process: 'C:\\Program Files\\Mozilla Firefox\\firefox.exe',
-        destIp: '2606:4700:4700::1111',
-      ),
-      _entry(host: 'telegram.org', inbound: '', source: '', rule: '*'),
-    ];
+  _entry(host: 'www.google.com'),
+  _entry(host: 'ya.ru', outbound: 'direct', rule: 'direct-ru'),
+  _entry(
+    host: 'ads.doubleclick.net',
+    outbound: 'block',
+    rule: 'block-ads',
+    rejected: true,
+  ),
+  _entry(host: '104.244.42.129', outbound: 'proxy', decidedByCore: true),
+  _entry(host: 'dns.google', network: 'udp', port: 53, rule: ''),
+  _entry(
+    host: 'very-long-subdomain.example-of-a-really-long-hostname.co.uk',
+    process: 'C:\\Program Files\\Mozilla Firefox\\firefox.exe',
+    destIp: '2606:4700:4700::1111',
+  ),
+  _entry(host: 'telegram.org', inbound: '', source: '', rule: '*'),
+];
 
 void main() {
   group('ConnectionTile in a list', () {
     // при логах Info просить их включить нечестно: решения просто нет в логе
-    testWidgets('решение ядра не найдено — без просьбы включить Info',
-        (tester) async {
+    testWidgets('решение ядра не найдено — без просьбы включить Info', (
+      tester,
+    ) async {
       final undecided = [
         _entry(host: 'dns-shop.ru', outbound: 'proxy', decidedByCore: true),
       ];
@@ -126,8 +125,9 @@ void main() {
       expect(find.text('ЯДРО'), findsOneWidget);
     });
 
-    testWidgets('every tile gets a finite, content-sized height',
-        (tester) async {
+    testWidgets('every tile gets a finite, content-sized height', (
+      tester,
+    ) async {
       await tester.pumpWidget(_screen(_sevenConnections()));
 
       final sizes = tester
@@ -144,8 +144,9 @@ void main() {
       }
     });
 
-    testWidgets('process name is shown only where the source knows it',
-        (tester) async {
+    testWidgets('process name is shown only where the source knows it', (
+      tester,
+    ) async {
       await tester.pumpWidget(_screen(_sevenConnections(), showProcess: true));
       expect(find.text('firefox.exe'), findsOneWidget);
 

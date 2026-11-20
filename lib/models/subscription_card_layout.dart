@@ -18,9 +18,7 @@ enum SubscriptionCardElement {
 
   static Set<SubscriptionCardElement> setFromJson(Object? raw) {
     if (raw is! List) return const {};
-    return {
-      for (final item in raw) ?byName(item is String ? item : null),
-    };
+    return {for (final item in raw) ?byName(item is String ? item : null)};
   }
 }
 

@@ -12,13 +12,12 @@ ConnectionTraffic _c(
   required List<String> chains,
   int download = 0,
   int upload = 0,
-}) =>
-    ConnectionTraffic(
-      id: id,
-      chains: chains,
-      download: download,
-      upload: upload,
-    );
+}) => ConnectionTraffic(
+  id: id,
+  chains: chains,
+  download: download,
+  upload: upload,
+);
 
 void main() {
   group('куда ушло соединение', () {
@@ -49,7 +48,10 @@ void main() {
     // mihomo пишет соединение звена цепочки отдельно, и трафик выхода посчитался бы дважды
     test('соединение звена цепочки не считается', () {
       expect(channelOfChains(['keq-chain-0']), TrafficChannel.unknown);
-      expect(channelOfChains(['keq-chain-keq-srv-0-0']), TrafficChannel.unknown);
+      expect(
+        channelOfChains(['keq-chain-keq-srv-0-0']),
+        TrafficChannel.unknown,
+      );
     });
   });
 
@@ -102,10 +104,9 @@ void main() {
       final tracker = TrafficSplitTracker();
       // Соединение живёт с прошлого часа: приняв его счётчик за разницу,
       // полоса показала бы весь скачанный за сессию гигабайт как скорость.
-      final split = tracker.add(
-        [_c('a', chains: ['proxy'], download: 1000000)],
-        session: 's1',
-      );
+      final split = tracker.add([
+        _c('a', chains: ['proxy'], download: 1000000),
+      ], session: 's1');
       expect(split, TrafficSplit.zero);
     });
 
@@ -132,18 +133,21 @@ void main() {
       // не увидела бы вообще ничего из мелкого трафика.
       final tracker = TrafficSplitTracker();
       tracker.add([], session: 's1');
-      final split = tracker.add(
-        [_c('new', chains: ['DIRECT'], download: 42, upload: 7)],
-        session: 's1',
-      );
+      final split = tracker.add([
+        _c('new', chains: ['DIRECT'], download: 42, upload: 7),
+      ], session: 's1');
       expect(split.direct.downloadSpeed, 42);
       expect(split.direct.uploadSpeed, 7);
     });
 
     test('закрывшееся соединение больше не капает', () {
       final tracker = TrafficSplitTracker();
-      tracker.add([_c('a', chains: ['proxy'], download: 100)], session: 's1');
-      tracker.add([_c('a', chains: ['proxy'], download: 300)], session: 's1');
+      tracker.add([
+        _c('a', chains: ['proxy'], download: 100),
+      ], session: 's1');
+      tracker.add([
+        _c('a', chains: ['proxy'], download: 300),
+      ], session: 's1');
       final split = tracker.add([], session: 's1');
       expect(split.vpn.downloadSpeed, 0);
       // Объём при этом остаётся: соединение закрылось, а принятое по нему за
@@ -153,11 +157,12 @@ void main() {
 
     test('счётчик, поехавший назад, не даёт отрицательной скорости', () {
       final tracker = TrafficSplitTracker();
-      tracker.add([_c('a', chains: ['proxy'], download: 500)], session: 's1');
-      final split = tracker.add(
-        [_c('a', chains: ['proxy'], download: 100)],
-        session: 's1',
-      );
+      tracker.add([
+        _c('a', chains: ['proxy'], download: 500),
+      ], session: 's1');
+      final split = tracker.add([
+        _c('a', chains: ['proxy'], download: 100),
+      ], session: 's1');
       expect(split.vpn.downloadSpeed, 0);
     });
 
@@ -178,11 +183,12 @@ void main() {
       // Идентификаторы соединений у новой сессии свои, и разница со старыми
       // была бы разницей между несвязанными числами.
       final tracker = TrafficSplitTracker();
-      tracker.add([_c('a', chains: ['proxy'], download: 100)], session: 's1');
-      final split = tracker.add(
-        [_c('a', chains: ['proxy'], download: 100000)],
-        session: 's2',
-      );
+      tracker.add([
+        _c('a', chains: ['proxy'], download: 100),
+      ], session: 's1');
+      final split = tracker.add([
+        _c('a', chains: ['proxy'], download: 100000),
+      ], session: 's2');
       expect(split, TrafficSplit.zero);
     });
 
@@ -190,12 +196,13 @@ void main() {
       // Иначе первая разница после часа в трее схлопнула бы весь скрытый
       // период в одну секунду.
       final tracker = TrafficSplitTracker();
-      tracker.add([_c('a', chains: ['proxy'], download: 100)], session: 's1');
+      tracker.add([
+        _c('a', chains: ['proxy'], download: 100),
+      ], session: 's1');
       tracker.reset();
-      final split = tracker.add(
-        [_c('a', chains: ['proxy'], download: 999999)],
-        session: 's1',
-      );
+      final split = tracker.add([
+        _c('a', chains: ['proxy'], download: 999999),
+      ], session: 's1');
       expect(split, TrafficSplit.zero);
     });
 
@@ -226,24 +233,30 @@ void main() {
       // окна: обнуляясь на каждом возврате из трея, она врала бы куда сильнее,
       // чем недосчитывая скрытый период.
       final tracker = TrafficSplitTracker();
-      tracker.add([_c('a', chains: ['proxy'], download: 0)], session: 's1');
-      tracker.add([_c('a', chains: ['proxy'], download: 700)], session: 's1');
+      tracker.add([
+        _c('a', chains: ['proxy'], download: 0),
+      ], session: 's1');
+      tracker.add([
+        _c('a', chains: ['proxy'], download: 700),
+      ], session: 's1');
       tracker.reset();
-      final split = tracker.add(
-        [_c('a', chains: ['proxy'], download: 900)],
-        session: 's1',
-      );
+      final split = tracker.add([
+        _c('a', chains: ['proxy'], download: 900),
+      ], session: 's1');
       expect(split.vpn.totalDownload, 700);
     });
 
     test('новая сессия начинает объём заново', () {
       final tracker = TrafficSplitTracker();
-      tracker.add([_c('a', chains: ['proxy'], download: 0)], session: 's1');
-      tracker.add([_c('a', chains: ['proxy'], download: 700)], session: 's1');
-      final split = tracker.add(
-        [_c('a', chains: ['proxy'], download: 700)],
-        session: 's2',
-      );
+      tracker.add([
+        _c('a', chains: ['proxy'], download: 0),
+      ], session: 's1');
+      tracker.add([
+        _c('a', chains: ['proxy'], download: 700),
+      ], session: 's1');
+      final split = tracker.add([
+        _c('a', chains: ['proxy'], download: 700),
+      ], session: 's2');
       expect(split.vpn.totalDownload, 0);
     });
 
@@ -252,14 +265,12 @@ void main() {
       // приёма стоял бы на месте при живом трафике, и маршрут выглядел бы
       // мёртвым.
       final tracker = TrafficSplitTracker();
-      tracker.add(
-        [_c('a', chains: ['DIRECT'], download: 0, upload: 0)],
-        session: 's1',
-      );
-      final split = tracker.add(
-        [_c('a', chains: ['DIRECT'], download: 1000, upload: 20000000)],
-        session: 's1',
-      );
+      tracker.add([
+        _c('a', chains: ['DIRECT'], download: 0, upload: 0),
+      ], session: 's1');
+      final split = tracker.add([
+        _c('a', chains: ['DIRECT'], download: 1000, upload: 20000000),
+      ], session: 's1');
       expect(split.direct.totalDownload, 1000);
       expect(split.direct.totalUpload, 20000000);
       expect(split.direct.total, 20001000);
@@ -272,10 +283,9 @@ void main() {
       final tracker = TrafficSplitTracker();
       tracker.add([_c('a', chains: [], download: 0)], session: 's1');
       tracker.add([_c('a', chains: [], download: 500)], session: 's1');
-      final split = tracker.add(
-        [_c('a', chains: ['proxy'], download: 800)],
-        session: 's1',
-      );
+      final split = tracker.add([
+        _c('a', chains: ['proxy'], download: 800),
+      ], session: 's1');
       expect(split.vpn.downloadSpeed, 800);
     });
   });
@@ -285,8 +295,12 @@ void main() {
     // «a» стоит на счётчике 700.
     TrafficSplitTracker counted() {
       final tracker = TrafficSplitTracker();
-      tracker.add([_c('a', chains: ['proxy'], download: 100)], session: 's1');
-      tracker.add([_c('a', chains: ['proxy'], download: 700)], session: 's1');
+      tracker.add([
+        _c('a', chains: ['proxy'], download: 100),
+      ], session: 's1');
+      tracker.add([
+        _c('a', chains: ['proxy'], download: 700),
+      ], session: 's1');
       return tracker;
     }
 
@@ -296,10 +310,9 @@ void main() {
       expect(saved.connections['a'], (700, 0));
 
       final restarted = TrafficSplitTracker()..restore(saved);
-      final split = restarted.add(
-        [_c('a', chains: ['proxy'], download: 700)],
-        session: 's1',
-      );
+      final split = restarted.add([
+        _c('a', chains: ['proxy'], download: 700),
+      ], session: 's1');
       expect(split.vpn.totalDownload, 600);
     });
 
@@ -308,26 +321,23 @@ void main() {
       // само: 5000 байт между 700 и 5700 прошли, пока смотреть было некому.
       final saved = counted().stateFor(coreDownload: 700, coreUpload: 0)!;
       final restarted = TrafficSplitTracker()..restore(saved);
-      final split = restarted.add(
-        [_c('a', chains: ['proxy'], download: 5700)],
-        session: 's1',
-      );
+      final split = restarted.add([
+        _c('a', chains: ['proxy'], download: 5700),
+      ], session: 's1');
       expect(split.vpn.totalDownload, 5600);
     });
 
     test('но не в скорость: это часы, а не один такт', () {
       final saved = counted().stateFor(coreDownload: 700, coreUpload: 0)!;
       final restarted = TrafficSplitTracker()..restore(saved);
-      final first = restarted.add(
-        [_c('a', chains: ['proxy'], download: 5700)],
-        session: 's1',
-      );
+      final first = restarted.add([
+        _c('a', chains: ['proxy'], download: 5700),
+      ], session: 's1');
       expect(first.vpn.downloadSpeed, 0);
       // А следующий такт — уже настоящая секунда.
-      final second = restarted.add(
-        [_c('a', chains: ['proxy'], download: 5900)],
-        session: 's1',
-      );
+      final second = restarted.add([
+        _c('a', chains: ['proxy'], download: 5900),
+      ], session: 's1');
       expect(second.vpn.downloadSpeed, 200);
     });
 
@@ -393,18 +403,22 @@ void main() {
         isNull,
       );
       expect(
-        TrafficSplitState.fromJson(jsonDecode(
-          '{"v":1,"session":"s1","core":[1,2],"vpn":[1,2],"direct":[1,2],'
-          '"conns":{"a":[1]}}',
-        )),
+        TrafficSplitState.fromJson(
+          jsonDecode(
+            '{"v":1,"session":"s1","core":[1,2],"vpn":[1,2],"direct":[1,2],'
+            '"conns":{"a":[1]}}',
+          ),
+        ),
         isNull,
       );
       // Формат сменится — старую запись читать нечем, счёт начнётся заново.
       expect(
-        TrafficSplitState.fromJson(jsonDecode(
-          '{"v":2,"session":"s1","core":[1,2],"vpn":[1,2],"direct":[1,2],'
-          '"conns":{}}',
-        )),
+        TrafficSplitState.fromJson(
+          jsonDecode(
+            '{"v":2,"session":"s1","core":[1,2],"vpn":[1,2],"direct":[1,2],'
+            '"conns":{}}',
+          ),
+        ),
         isNull,
       );
     });
@@ -416,34 +430,47 @@ void main() {
     setUp(() async => core = await StallingClashApi.start());
     tearDown(() => core.close());
 
-    test('одна неудача снимает сотни висящих запросов без переполнения стека',
-        () async {
-      final base = ConnectionsPollStats.instance.inFlight;
-      const hung = 300;
-      final requests = [
-        for (var i = 0; i < hung; i++)
-          TrafficSplitSource.fetch(port: core.port, secret: ''),
-      ];
-      final deadline = DateTime.now().add(const Duration(seconds: 20));
-      while (ConnectionsPollStats.instance.inFlight - base < hung) {
-        if (DateTime.now().isAfter(deadline)) fail('requests did not hang');
-        await Future<void>.delayed(const Duration(milliseconds: 50));
-      }
+    test(
+      'одна неудача снимает сотни висящих запросов без переполнения стека',
+      () async {
+        final base = ConnectionsPollStats.instance.inFlight;
+        const hung = 300;
+        final requests = [
+          for (var i = 0; i < hung; i++)
+            TrafficSplitSource.fetch(port: core.port, secret: ''),
+        ];
+        final deadline = DateTime.now().add(const Duration(seconds: 20));
+        while (ConnectionsPollStats.instance.inFlight - base < hung) {
+          if (DateTime.now().isAfter(deadline)) fail('requests did not hang');
+          await Future<void>.delayed(const Duration(milliseconds: 50));
+        }
 
-      expect(
-        await TrafficSplitSource.fetch(port: await closedLoopbackPort(), secret: ''),
-        isNull,
-      );
-      final results =
-          await Future.wait(requests).timeout(const Duration(seconds: 5));
-      expect(results, everyElement(isNull));
-      expect(ConnectionsPollStats.instance.inFlight, base);
-    }, timeout: const Timeout(Duration(seconds: 60)));
+        expect(
+          await TrafficSplitSource.fetch(
+            port: await closedLoopbackPort(),
+            secret: '',
+          ),
+          isNull,
+        );
+        final results = await Future.wait(
+          requests,
+        ).timeout(const Duration(seconds: 5));
+        expect(results, everyElement(isNull));
+        expect(ConnectionsPollStats.instance.inFlight, base);
+      },
+      timeout: const Timeout(Duration(seconds: 60)),
+    );
 
-    test('недосланное тело — отказ по сроку, а не вечное ожидание', () async {
-      final snapshot = await TrafficSplitSource.fetch(port: core.port, secret: '')
-          .timeout(connectionsBodyTimeout + const Duration(seconds: 5));
-      expect(snapshot, isNull);
-    }, timeout: const Timeout(Duration(seconds: 60)));
+    test(
+      'недосланное тело — отказ по сроку, а не вечное ожидание',
+      () async {
+        final snapshot = await TrafficSplitSource.fetch(
+          port: core.port,
+          secret: '',
+        ).timeout(connectionsBodyTimeout + const Duration(seconds: 5));
+        expect(snapshot, isNull);
+      },
+      timeout: const Timeout(Duration(seconds: 60)),
+    );
   });
 }

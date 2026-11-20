@@ -50,8 +50,10 @@ class MihomoGroupsApi {
 
     final own = field(await _call('GET', '/proxies'), 'proxies');
     if (own is Map) own.values.forEach(take);
-    final providers =
-        field(await _call('GET', '/providers/proxies'), 'providers');
+    final providers = field(
+      await _call('GET', '/providers/proxies'),
+      'providers',
+    );
     if (providers is Map) {
       for (final provider in providers.values) {
         final proxies = provider is Map ? provider['proxies'] : null;
@@ -83,7 +85,11 @@ class MihomoGroupsApi {
   static Future<bool> unfix(String group) async =>
       await _call('DELETE', '/proxies/${Uri.encodeComponent(group)}') != null;
 
-  static Future<String?> _call(String method, String path, {String? body}) async {
+  static Future<String?> _call(
+    String method,
+    String path, {
+    String? body,
+  }) async {
     final port = ConnectionsService.activeClashPort();
     if (port == null) return null;
     final client = HttpClient()..connectionTimeout = const Duration(seconds: 2);

@@ -25,11 +25,8 @@ void main() {
   File touch(String name) =>
       File(p.join(dir.path, name))..writeAsBytesSync(const [0]);
 
-  List<String> names() => dir
-      .listSync()
-      .map((e) => p.basename(e.path))
-      .toList()
-    ..sort();
+  List<String> names() =>
+      dir.listSync().map((e) => p.basename(e.path)).toList()..sort();
 
   test('уборка оставляет выбранную картинку и уносит прошлую', () async {
     touch('sub1-100.jpg');
@@ -87,8 +84,10 @@ void main() {
   test('путь отдаётся только для своей и существующей картинки', () async {
     touch('sub1-100.jpg');
 
-    expect(await CardImageService.resolvePath('file:sub1-100.jpg'),
-        p.join(dir.path, 'sub1-100.jpg'));
+    expect(
+      await CardImageService.resolvePath('file:sub1-100.jpg'),
+      p.join(dir.path, 'sub1-100.jpg'),
+    );
     // Картинку удалили мимо приложения — слайдер покажет кнопку выбора, а не
     // сломанную миниатюру.
     expect(await CardImageService.resolvePath('file:sub1-999.jpg'), isNull);
@@ -96,16 +95,19 @@ void main() {
     expect(await CardImageService.resolvePath('depth'), isNull);
   });
 
-  test('видео живёт вместе со своим постером, прошлое уходит целиком', () async {
-    touch('sub1-100.mp4');
-    touch('sub1-100.mp4.png');
-    touch('sub1-200.mp4');
-    touch('sub1-200.mp4.png');
+  test(
+    'видео живёт вместе со своим постером, прошлое уходит целиком',
+    () async {
+      touch('sub1-100.mp4');
+      touch('sub1-100.mp4.png');
+      touch('sub1-200.mp4');
+      touch('sub1-200.mp4.png');
 
-    await CardImageService.prune('sub1', 'file:sub1-200.mp4');
+      await CardImageService.prune('sub1', 'file:sub1-200.mp4');
 
-    expect(names(), ['sub1-200.mp4', 'sub1-200.mp4.png']);
-  });
+      expect(names(), ['sub1-200.mp4', 'sub1-200.mp4.png']);
+    },
+  );
 
   test('в бэкап видео уезжает вместе с постером', () async {
     touch('sub1-200.mp4');

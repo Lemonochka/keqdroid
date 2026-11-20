@@ -13,27 +13,19 @@ import '../models/subscription_card_theme.dart';
 import 'card_video.dart';
 import 'file_dialog_service.dart';
 
-enum CardImageRejection {
-  aspect,
-
-  tooSmall,
-
-  tooLarge,
-
-  unreadable,
-}
+enum CardImageRejection { aspect, tooSmall, tooLarge, unreadable }
 
 class CardImageResult {
   const CardImageResult.picked(this.theme)
-      : rejection = null,
-        cancelled = false;
+    : rejection = null,
+      cancelled = false;
   const CardImageResult.rejected(this.rejection)
-      : theme = null,
-        cancelled = false;
+    : theme = null,
+      cancelled = false;
   const CardImageResult.cancelled()
-      : theme = null,
-        rejection = null,
-        cancelled = true;
+    : theme = null,
+      rejection = null,
+      cancelled = true;
 
   final SubscriptionCardTheme? theme;
   final CardImageRejection? rejection;
@@ -183,7 +175,10 @@ class CardImageService {
       try {
         await tried.create(recursive: true);
       } catch (e) {
-        AppLogger.instance.debug('Card video conversion marker not created', error: e);
+        AppLogger.instance.debug(
+          'Card video conversion marker not created',
+          error: e,
+        );
       }
     }
     return video?.id;
@@ -248,12 +243,16 @@ class CardImageService {
         if (SubscriptionCardTheme.isVideoFile(name)) {
           final poster = File(SubscriptionCardTheme.posterFor(path));
           if (poster.existsSync()) {
-            out[SubscriptionCardTheme.posterFor(name)] =
-                base64.encode(await poster.readAsBytes());
+            out[SubscriptionCardTheme.posterFor(name)] = base64.encode(
+              await poster.readAsBytes(),
+            );
           }
         }
       } catch (e) {
-        AppLogger.instance.warn('Card image not added to backup: $name', error: e);
+        AppLogger.instance.warn(
+          'Card image not added to backup: $name',
+          error: e,
+        );
       }
     }
     return out;
@@ -273,10 +272,15 @@ class CardImageService {
       }
       if (bytes.isEmpty || bytes.length > maxRestoredBytes) continue;
       try {
-        await File(p.join(dir.path, entry.key)).writeAsBytes(bytes, flush: true);
+        await File(
+          p.join(dir.path, entry.key),
+        ).writeAsBytes(bytes, flush: true);
         SubscriptionCardTheme.customFiles?.add(entry.key);
       } catch (e) {
-        AppLogger.instance.warn('Card image not restored: ${entry.key}', error: e);
+        AppLogger.instance.warn(
+          'Card image not restored: ${entry.key}',
+          error: e,
+        );
       }
     }
   }
@@ -291,7 +295,8 @@ class CardImageService {
   }
 
   static Future<void> prune(String subscriptionId, String? keepThemeId) async {
-    final keep = keepThemeId != null &&
+    final keep =
+        keepThemeId != null &&
             keepThemeId.startsWith(SubscriptionCardTheme.filePrefix)
         ? keepThemeId.substring(SubscriptionCardTheme.filePrefix.length)
         : null;

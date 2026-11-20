@@ -107,25 +107,26 @@ void main() {
     await unmount(tester);
   });
 
-  testWidgets('на чужой вкладке плеер встаёт и через 2 с закрывается, без таймера', (
-    tester,
-  ) async {
-    await host(tester);
-    final player = created.single;
+  testWidgets(
+    'на чужой вкладке плеер встаёт и через 2 с закрывается, без таймера',
+    (tester) async {
+      await host(tester);
+      final player = created.single;
 
-    ticking.value = false;
-    await tester.pump();
-    expect(player.pauses, greaterThan(0));
-    expect(player.disposed, isFalse);
-    expect(CardVideoView.debugRecheckTimers, 0);
+      ticking.value = false;
+      await tester.pump();
+      expect(player.pauses, greaterThan(0));
+      expect(player.disposed, isFalse);
+      expect(CardVideoView.debugRecheckTimers, 0);
 
-    await tester.pump(const Duration(milliseconds: 2100));
-    expect(player.disposed, isTrue);
+      await tester.pump(const Duration(milliseconds: 2100));
+      expect(player.disposed, isTrue);
 
-    await tester.pump(const Duration(minutes: 1));
-    expect(created, hasLength(1));
-    await unmount(tester);
-  });
+      await tester.pump(const Duration(minutes: 1));
+      expect(created, hasLength(1));
+      await unmount(tester);
+    },
+  );
 
   testWidgets('вернулись на вкладку быстрее 2 с: тот же плеер играет дальше', (
     tester,

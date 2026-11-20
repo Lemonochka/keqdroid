@@ -36,7 +36,7 @@ extension TunnelModeX on TunnelMode {
     TunnelMode.excludeOnly => l10n.splitModeAllExceptSelected,
   };
   IconData get icon => switch (this) {
-    TunnelMode.all         => Icons.public_rounded,
+    TunnelMode.all => Icons.public_rounded,
     TunnelMode.includeOnly => Icons.shield_rounded,
     TunnelMode.excludeOnly => Icons.alt_route_rounded,
   };
@@ -45,12 +45,12 @@ extension TunnelModeX on TunnelMode {
 class SplitTunnelingScreen extends ConsumerStatefulWidget {
   const SplitTunnelingScreen({super.key});
   @override
-  ConsumerState<SplitTunnelingScreen> createState() => _SplitTunnelingScreenState();
+  ConsumerState<SplitTunnelingScreen> createState() =>
+      _SplitTunnelingScreenState();
 }
 
 class _SplitTunnelingScreenState extends ConsumerState<SplitTunnelingScreen>
     with SingleTickerProviderStateMixin {
-
   final _searchCtrl = TextEditingController();
   String _query = '';
   TunnelMode _mode = TunnelMode.excludeOnly;
@@ -80,10 +80,14 @@ class _SplitTunnelingScreenState extends ConsumerState<SplitTunnelingScreen>
       if (_query.isEmpty) {
         _displayList = List.of(_allApps);
       } else {
-        _displayList = _allApps.where((a) =>
-        a.appName.toLowerCase().contains(_query) ||
-            a.packageName.toLowerCase().contains(_query) ||
-            (a.installPath?.toLowerCase().contains(_query) ?? false)).toList();
+        _displayList = _allApps
+            .where(
+              (a) =>
+                  a.appName.toLowerCase().contains(_query) ||
+                  a.packageName.toLowerCase().contains(_query) ||
+                  (a.installPath?.toLowerCase().contains(_query) ?? false),
+            )
+            .toList();
       }
     });
   }
@@ -98,7 +102,9 @@ class _SplitTunnelingScreenState extends ConsumerState<SplitTunnelingScreen>
     } else {
       mode = TunnelMode.all;
     }
-    setState(() { _mode = mode; });
+    setState(() {
+      _mode = mode;
+    });
   }
 
   // через splitEntryMatches: сырой строкой discord.exe не находил Discord.exe
@@ -126,14 +132,18 @@ class _SplitTunnelingScreenState extends ConsumerState<SplitTunnelingScreen>
     if (_query.isEmpty) {
       _displayList = List.of(_allApps);
     } else {
-      _displayList = _allApps.where((a) =>
-      a.appName.toLowerCase().contains(_query) ||
-          a.packageName.toLowerCase().contains(_query)).toList();
+      _displayList = _allApps
+          .where(
+            (a) =>
+                a.appName.toLowerCase().contains(_query) ||
+                a.packageName.toLowerCase().contains(_query),
+          )
+          .toList();
     }
   }
 
   Set<String> _checkedSet(SplitTunnelingState split) => switch (_mode) {
-    TunnelMode.all         => {},
+    TunnelMode.all => {},
     TunnelMode.includeOnly => split.includePackages,
     TunnelMode.excludeOnly => split.excludePackages,
   };
@@ -166,9 +176,9 @@ class _SplitTunnelingScreenState extends ConsumerState<SplitTunnelingScreen>
       _allApps = _mergeCustomApps(_allApps);
       _onSearch();
     });
-    AppSnack.of(context).showSnackBar(
-      SnackBar(content: Text(l10n.splitAddAppAdded(name))),
-    );
+    AppSnack.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(l10n.splitAddAppAdded(name))));
   }
 
   Future<void> _addRussianApps() async {
@@ -198,17 +208,21 @@ class _SplitTunnelingScreenState extends ConsumerState<SplitTunnelingScreen>
         if (_allApps.isNotEmpty) _applyInitialSort(_allApps);
       });
       if (addedTotal > 0) {
-        messenger.showSnackBar(SnackBar(
-          content: Text(l10n.splitAddedRussianApps(addedTotal)),
-          duration: const Duration(seconds: 3),
-          behavior: SnackBarBehavior.floating,
-        ));
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(l10n.splitAddedRussianApps(addedTotal)),
+            duration: const Duration(seconds: 3),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       } else if (quickRussian.isNotEmpty) {
-        messenger.showSnackBar(SnackBar(
-          content: Text(l10n.splitRussianAppsAlreadyAdded),
-          duration: const Duration(seconds: 3),
-          behavior: SnackBarBehavior.floating,
-        ));
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(l10n.splitRussianAppsAlreadyAdded),
+            duration: const Duration(seconds: 3),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
     }
 
@@ -230,16 +244,20 @@ class _SplitTunnelingScreenState extends ConsumerState<SplitTunnelingScreen>
       setState(() {
         if (_allApps.isNotEmpty) _applyInitialSort(_allApps);
       });
-      messenger.showSnackBar(SnackBar(
-        content: Text(l10n.splitAddedRussianApps(addedTotal)),
-        duration: const Duration(seconds: 3),
-        behavior: SnackBarBehavior.floating,
-      ));
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(l10n.splitAddedRussianApps(addedTotal)),
+          duration: const Duration(seconds: 3),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     } else if (addedTotal == 0 && quickRussian.isEmpty) {
-      messenger.showSnackBar(SnackBar(
-        content: Text(l10n.splitNoRussianAppsFound),
-        behavior: SnackBarBehavior.floating,
-      ));
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(l10n.splitNoRussianAppsFound),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 
@@ -265,7 +283,10 @@ class _SplitTunnelingScreenState extends ConsumerState<SplitTunnelingScreen>
     try {
       await ref.read(vpnStateProvider.notifier).reconnectToActiveServer();
     } catch (e) {
-      AppLogger.instance.warn('Reconnect after split tunneling change failed', error: e);
+      AppLogger.instance.warn(
+        'Reconnect after split tunneling change failed',
+        error: e,
+      );
     }
   }
 
@@ -276,10 +297,7 @@ class _SplitTunnelingScreenState extends ConsumerState<SplitTunnelingScreen>
         .toggleApp(app, include: _mode == TunnelMode.includeOnly);
   }
 
-  int _checkedCount(
-    Set<String> includePackages,
-    Set<String> excludePackages,
-  ) =>
+  int _checkedCount(Set<String> includePackages, Set<String> excludePackages) =>
       switch (_mode) {
         TunnelMode.all => 0,
         TunnelMode.includeOnly => includePackages.length,
@@ -311,14 +329,14 @@ class _SplitTunnelingScreenState extends ConsumerState<SplitTunnelingScreen>
     );
     final settings = ref.watch(settingsNotifierProvider).value;
     final checked = _checkedCount(includePackages, excludePackages);
-    final proxyModeOnDesktop = _isDesktop &&
-        settings?.connectionModeEnum == ConnectionMode.proxy;
+    final proxyModeOnDesktop =
+        _isDesktop && settings?.connectionModeEnum == ConnectionMode.proxy;
     final appsLoaded = appsAsync.hasValue;
     final vpnStatus = ref.watch(
       vpnStateProvider.select((a) => a.value?.status),
     );
-    final tunnelActive = vpnStatus == VpnStatus.connected ||
-        vpnStatus == VpnStatus.connecting;
+    final tunnelActive =
+        vpnStatus == VpnStatus.connected || vpnStatus == VpnStatus.connecting;
 
     final l10n = AppLocalizations.of(context)!;
 
@@ -343,9 +361,13 @@ class _SplitTunnelingScreenState extends ConsumerState<SplitTunnelingScreen>
             slivers: [
               ExpressiveScrolledUnderBuilder(
                 builder: (context, background) {
-                  final actions =
-                      _appBarActions(l10n, checked, appsLoaded: appsLoaded);
-                  return MediaQuery.sizeOf(context).height >= _largeTitleMinHeight
+                  final actions = _appBarActions(
+                    l10n,
+                    checked,
+                    appsLoaded: appsLoaded,
+                  );
+                  return MediaQuery.sizeOf(context).height >=
+                          _largeTitleMinHeight
                       ? SliverAppBar.large(
                           title: Text(l10n.splitTunnelingTitle),
                           backgroundColor: background,
@@ -423,13 +445,15 @@ class _SplitTunnelingScreenState extends ConsumerState<SplitTunnelingScreen>
                   hasScrollBody: false,
                   child: Center(
                     child: Padding(
-                      padding: const EdgeInsets.all(ExpressiveSpacing.extraLarge),
+                      padding: const EdgeInsets.all(
+                        ExpressiveSpacing.extraLarge,
+                      ),
                       child: Text(
                         l10n.splitFailedLoadApps(e.toString()),
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppTheme.textLight(context),
-                            ),
+                          color: AppTheme.textLight(context),
+                        ),
                       ),
                     ),
                   ),
@@ -470,8 +494,9 @@ class _SplitTunnelingScreenState extends ConsumerState<SplitTunnelingScreen>
   }) {
     return [
       IconButton(
-        tooltip:
-            _showSystem ? l10n.splitHideSystemApps : l10n.splitShowSystemApps,
+        tooltip: _showSystem
+            ? l10n.splitHideSystemApps
+            : l10n.splitShowSystemApps,
         isSelected: _showSystem,
         icon: Icon(
           _isDesktop ? Icons.computer_outlined : Icons.android_outlined,
@@ -539,8 +564,9 @@ class _ModeSelector extends StatelessWidget {
     final scheme = theme.colorScheme;
     final mode = modes[index];
     final selected = mode == current;
-    final foreground =
-        selected ? scheme.onSecondaryContainer : scheme.onSurfaceVariant;
+    final foreground = selected
+        ? scheme.onSecondaryContainer
+        : scheme.onSurfaceVariant;
 
     return Padding(
       padding: ExpressiveListSegment.segmentMargin(
@@ -582,10 +608,13 @@ class _ModeSelector extends StatelessWidget {
                 textAlign: TextAlign.center,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: (selected
-                        ? theme.textTheme.emphasized(theme.textTheme.labelMedium)
-                        : theme.textTheme.labelMedium)
-                    ?.copyWith(color: foreground),
+                style:
+                    (selected
+                            ? theme.textTheme.emphasized(
+                                theme.textTheme.labelMedium,
+                              )
+                            : theme.textTheme.labelMedium)
+                        ?.copyWith(color: foreground),
               ),
             ],
           ),
@@ -711,10 +740,10 @@ class _AppList extends StatelessWidget {
   });
 
   SplitSelection _selection() => SplitSelection(switch (mode) {
-        TunnelMode.all => const <String>{},
-        TunnelMode.includeOnly => includePackages,
-        TunnelMode.excludeOnly => excludePackages,
-      });
+    TunnelMode.all => const <String>{},
+    TunnelMode.includeOnly => includePackages,
+    TunnelMode.excludeOnly => excludePackages,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -737,8 +766,8 @@ class _AppList extends StatelessWidget {
               Text(
                 l10n.splitNoAppsFound,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
+                  color: scheme.onSurfaceVariant,
+                ),
               ),
             ],
           ),
@@ -802,10 +831,10 @@ class _AppListBody extends ConsumerWidget {
             index: i,
             count: apps.length,
           ).resolve(Directionality.of(context)),
-          margin: ExpressiveListSegment.segmentMargin(index: i)
-              .resolve(Directionality.of(context)),
-          onTap:
-              mode == TunnelMode.all ? null : () => onToggle(app),
+          margin: ExpressiveListSegment.segmentMargin(
+            index: i,
+          ).resolve(Directionality.of(context)),
+          onTap: mode == TunnelMode.all ? null : () => onToggle(app),
         );
       },
     );

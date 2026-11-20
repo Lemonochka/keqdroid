@@ -64,15 +64,14 @@ class RoutingRule {
     required List<String> values,
     required RuleAction action,
     int priority = 50,
-  }) =>
-      RoutingRule(
-        id: const Uuid().v4(),
-        name: name,
-        type: type,
-        values: values,
-        action: action,
-        priority: priority,
-      );
+  }) => RoutingRule(
+    id: const Uuid().v4(),
+    name: name,
+    type: type,
+    values: values,
+    action: action,
+    priority: priority,
+  );
 
   factory RoutingRule.fromJson(Map<String, dynamic> json) => RoutingRule(
     id: json['id'] as String,
@@ -102,14 +101,13 @@ class RoutingRule {
     RuleAction? action,
     bool? enabled,
     int? priority,
-  }) =>
-      RoutingRule(
-        id: id ?? this.id,
-        name: name ?? this.name,
-        type: type ?? this.type,
-        values: values ?? this.values,
-        action: action ?? this.action,
-        enabled: enabled ?? this.enabled,
-        priority: priority ?? this.priority,
-      );
+  }) => RoutingRule(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    type: type ?? this.type,
+    values: values ?? this.values,
+    action: action ?? this.action,
+    enabled: enabled ?? this.enabled,
+    priority: priority ?? this.priority,
+  );
 }

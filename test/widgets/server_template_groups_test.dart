@@ -20,9 +20,9 @@ import '../helpers/test_storage.dart';
 
 // подписка с шаблоном mihomo: вкладка групп, выбор пункта в шторке
 
-final _body =
-    File('test/fixtures/subscription_payloads/clash-template-groups.txt')
-        .readAsStringSync();
+final _body = File(
+  'test/fixtures/subscription_payloads/clash-template-groups.txt',
+).readAsStringSync();
 
 final _servers = [
   for (final c in SubscriptionService.parseBodyForTest(_body))
@@ -69,13 +69,15 @@ Future<ProviderContainer> _pump(
   tester.view.physicalSize = const Size(412, 900);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
-  final storage = await tester.runAsync(() => buildStorageService(
-        initialValues: {
-          'keqdis_subscriptions':
-              '[{"id":"s1","name":"Kequinq","url":"https://example.com/s1"}]',
-          'keqdis_clash_template_s1': ClashTemplate.fromBody(_body)!.encode(),
-        },
-      ));
+  final storage = await tester.runAsync(
+    () => buildStorageService(
+      initialValues: {
+        'keqdis_subscriptions':
+            '[{"id":"s1","name":"Kequinq","url":"https://example.com/s1"}]',
+        'keqdis_clash_template_s1': ClashTemplate.fromBody(_body)!.encode(),
+      },
+    ),
+  );
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -110,8 +112,9 @@ Future<void> _settle(WidgetTester tester) async {
 }
 
 void main() {
-  testWidgets('группы вместо серверов, выбор в шторке сохраняется в подписке',
-      (tester) async {
+  testWidgets('группы вместо серверов, выбор в шторке сохраняется в подписке', (
+    tester,
+  ) async {
     final container = await _pump(tester);
     expect(find.text('Группы · 2'), findsOneWidget);
     expect(find.text('YouTube'), findsNothing);
@@ -123,30 +126,33 @@ void main() {
 
     await tester.tap(find.text('YouTube'));
     await _settle(tester);
-    expect(find.text('Только для этих сайтов, остальное не меняется'),
-        findsOneWidget);
+    expect(
+      find.text('Только для этих сайтов, остальное не меняется'),
+      findsOneWidget,
+    );
     await tester.tap(find.text('Finland', findRichText: true).last);
     // очередь хранилища стоит за операцией экрана с настоящим вводом-выводом: в фальшивом времени она не идёт
     await tester.runAsync(
       () => Future<void>.delayed(const Duration(milliseconds: 500)),
     );
     await _settle(tester);
-    expect(find.text('Finland'), findsOneWidget,
-        reason: 'строка YouTube показывает выбранный сервер');
+    expect(
+      find.text('Finland'),
+      findsOneWidget,
+      reason: 'строка YouTube показывает выбранный сервер',
+    );
 
     final sub = container.read(subscriptionsProvider).value!.single;
     expect(sub.groupChoices, {'YouTube': '🇫🇮 Finland'});
-    final saved = (await container.read(storageProvider).getSubscriptions())
-        .single;
+    final saved =
+        (await container.read(storageProvider).getSubscriptions()).single;
     expect(saved.groupChoices, {'YouTube': '🇫🇮 Finland'});
   });
 
-  testWidgets('с «Не учитывать правила провайдера» карточка как раньше',
-      (tester) async {
-    await _pump(
-      tester,
-      settings: _mihomo.copyWith(ignoreProviderRules: true),
-    );
+  testWidgets('с «Не учитывать правила провайдера» карточка как раньше', (
+    tester,
+  ) async {
+    await _pump(tester, settings: _mihomo.copyWith(ignoreProviderRules: true));
     expect(find.textContaining('Группы'), findsNothing);
     expect(find.text('Germany'), findsWidgets);
   });
@@ -158,7 +164,9 @@ void main() {
   });
 
   // по ядру прячутся настройки: активный сервер шаблона на xray-настройках обязан считаться mihomo
-  testWidgets('активный сервер шаблона идёт через mihomo и для настроек', (tester) async {
+  testWidgets('активный сервер шаблона идёт через mihomo и для настроек', (
+    tester,
+  ) async {
     final onXray = await _pump(tester, settings: const AppSettings());
     expect(onXray.read(activeVpnBackendProvider), VpnBackend.mihomo);
   });
@@ -171,7 +179,9 @@ void main() {
     expect(ignored.read(activeVpnBackendProvider), VpnBackend.xray);
   });
 
-  testWidgets('с «Не учитывать правила провайдера» карточка как раньше', (tester) async {
+  testWidgets('с «Не учитывать правила провайдера» карточка как раньше', (
+    tester,
+  ) async {
     await _pump(tester, settings: const AppSettings(ignoreProviderRules: true));
     expect(find.textContaining('Группы'), findsNothing);
     expect(find.text('Germany'), findsWidgets);

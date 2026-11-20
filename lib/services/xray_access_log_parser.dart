@@ -63,10 +63,7 @@ class XrayAccessLogParser {
     caseSensitive: false,
   );
 
-  static final _sessionEnded = RegExp(
-    r'connection ends',
-    caseSensitive: false,
-  );
+  static final _sessionEnded = RegExp(r'connection ends', caseSensitive: false);
 
   // всё, что читает parse: новый образец разбора добавлять и сюда
   static bool isConnectionLine(String line) =>
@@ -90,8 +87,11 @@ class XrayAccessLogParser {
     for (final line in log.split('\n')) {
       final detour = _detour.firstMatch(line);
       if (detour != null) {
-        final target =
-            _targetKey(detour.group(3), detour.group(4), detour.group(5));
+        final target = _targetKey(
+          detour.group(3),
+          detour.group(4),
+          detour.group(5),
+        );
         byTarget[target] = XrayRouteDecision(
           rule: detour.group(1)?.trim() ?? '',
           outbound: detour.group(2)?.trim() ?? '',
@@ -119,10 +119,7 @@ class XrayAccessLogParser {
     for (final raw in log.split('\n')) {
       final match = _sessionLine.firstMatch(raw.trimRight());
       if (match == null) continue;
-      final trace = sessions.putIfAbsent(
-        match.group(1)!,
-        XraySessionTrace.new,
-      );
+      final trace = sessions.putIfAbsent(match.group(1)!, XraySessionTrace.new);
       final rest = match.group(2)!;
 
       if (_sessionEnded.hasMatch(rest)) {
@@ -147,8 +144,7 @@ class XrayAccessLogParser {
       }
       final dest = _sessionDest.firstMatch(rest);
       if (dest != null) {
-        trace.destKey =
-            _targetKey(dest.group(1), dest.group(2), dest.group(3));
+        trace.destKey = _targetKey(dest.group(1), dest.group(2), dest.group(3));
         continue;
       }
       final detour = _detour.firstMatch(rest);
@@ -192,13 +188,13 @@ class XrayAccessLogParser {
     for (final line in lines) {
       final access = _accessLine(line);
       if (access == null) continue;
-      final (:source, :rejected, :network, :host, :port, :detourField) =
-          access;
+      final (:source, :rejected, :network, :host, :port, :detourField) = access;
       if (host.isEmpty) continue;
 
       final (inbound, outbound) = _splitDetour(detourField);
       final target = _targetKey(network, host, '$port');
-      final trace = byClient[source.toLowerCase()] ??
+      final trace =
+          byClient[source.toLowerCase()] ??
           _nextTraceForDest(byDest[target], target, destCursor);
 
       final domain = trace?.domain ?? '';
@@ -215,8 +211,8 @@ class XrayAccessLogParser {
         outbound: outbound.isNotEmpty
             ? outbound
             : (trace?.outbound.isNotEmpty ?? false)
-                ? trace!.outbound
-                : (outboundByTarget[target] ?? ''),
+            ? trace!.outbound
+            : (outboundByTarget[target] ?? ''),
         rule: (trace?.rule.isNotEmpty ?? false)
             ? trace!.rule
             : (rulesByTarget[target] ?? ''),
@@ -245,7 +241,8 @@ class XrayAccessLogParser {
     String host,
     int port,
     String detourField,
-  })? _accessLine(String line) {
+  })?
+  _accessLine(String line) {
     final url = _accessUrl.firstMatch(line);
     if (url != null) {
       final authority = url.group(4)!;
@@ -359,7 +356,6 @@ class XraySessionTrace {
 
   bool closed = false;
 }
-
 
 class XrayRouteDecision {
   const XrayRouteDecision({required this.rule, required this.outbound});

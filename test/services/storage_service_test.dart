@@ -11,7 +11,10 @@ void main() {
   group('StorageService', () {
     test('upsertSubscription inserts and updates by id', () async {
       final storage = await buildStorageService();
-      final sub = Subscription.create(name: 'A', url: 'https://example.com/sub');
+      final sub = Subscription.create(
+        name: 'A',
+        url: 'https://example.com/sub',
+      );
 
       await storage.upsertSubscription(sub);
       await storage.upsertSubscription(sub.copyWith(name: 'B'));
@@ -42,7 +45,10 @@ void main() {
       expect(storage.getActiveLocalHttpCredentials(), none);
 
       await storage.setActiveLocalHttpPort(2081, username: 'u', password: 'p');
-      expect(storage.getActiveLocalHttpCredentials(), (username: 'u', password: 'p'));
+      expect(storage.getActiveLocalHttpCredentials(), (
+        username: 'u',
+        password: 'p',
+      ));
 
       // Новая сессия без пароля: прошлый не должен её пережить.
       await storage.setActiveLocalHttpPort(2081);
@@ -56,18 +62,30 @@ void main() {
 
     test('replaceServersBySubscription keeps other subscriptions', () async {
       final storage = await buildStorageService();
-      final s1 = ServerItem.fromRaw('vless://id@one.com:443', subscriptionId: 'sub-a');
-      final s2 = ServerItem.fromRaw('vless://id@two.com:443', subscriptionId: 'sub-b');
+      final s1 = ServerItem.fromRaw(
+        'vless://id@one.com:443',
+        subscriptionId: 'sub-a',
+      );
+      final s2 = ServerItem.fromRaw(
+        'vless://id@two.com:443',
+        subscriptionId: 'sub-b',
+      );
       await storage.saveServers([s1, s2]);
 
-      final replacement =
-          ServerItem.fromRaw('vless://id@new.com:443', subscriptionId: 'sub-a');
+      final replacement = ServerItem.fromRaw(
+        'vless://id@new.com:443',
+        subscriptionId: 'sub-a',
+      );
       await storage.replaceServersBySubscription('sub-a', [replacement]);
       final all = await storage.getServers();
 
       expect(all.any((s) => s.subscriptionId == 'sub-b'), isTrue);
       expect(
-        all.where((s) => s.subscriptionId == 'sub-a').single.config.contains('new.com'),
+        all
+            .where((s) => s.subscriptionId == 'sub-a')
+            .single
+            .config
+            .contains('new.com'),
         isTrue,
       );
     });
@@ -94,33 +112,36 @@ void main() {
       expect(settings, const AppSettings());
     });
 
-    test('getServers skips a corrupt entry instead of losing the whole list',
-        () async {
-      // One valid record, one missing the required `config` field, one with a
-      // malformed `addedAt`. The two bad ones must be dropped, the good one kept.
-      final raw = jsonEncode([
-        {
-          'id': 'good',
-          'config': 'vless://id@good.com:443',
-          'type': 'manual',
-          'addedAt': DateTime.now().toIso8601String(),
-        },
-        {'id': 'no-config', 'type': 'manual'},
-        {
-          'id': 'bad-date',
-          'config': 'vless://id@bad.com:443',
-          'type': 'manual',
-          'addedAt': 'not-a-date',
-        },
-      ]);
-      final storage =
-          await buildStorageService(initialValues: {'keqdis_servers_v2': raw});
+    test(
+      'getServers skips a corrupt entry instead of losing the whole list',
+      () async {
+        // One valid record, one missing the required `config` field, one with a
+        // malformed `addedAt`. The two bad ones must be dropped, the good one kept.
+        final raw = jsonEncode([
+          {
+            'id': 'good',
+            'config': 'vless://id@good.com:443',
+            'type': 'manual',
+            'addedAt': DateTime.now().toIso8601String(),
+          },
+          {'id': 'no-config', 'type': 'manual'},
+          {
+            'id': 'bad-date',
+            'config': 'vless://id@bad.com:443',
+            'type': 'manual',
+            'addedAt': 'not-a-date',
+          },
+        ]);
+        final storage = await buildStorageService(
+          initialValues: {'keqdis_servers_v2': raw},
+        );
 
-      final servers = await storage.getServers();
+        final servers = await storage.getServers();
 
-      expect(servers.length, 1);
-      expect(servers.single.id, 'good');
-    });
+        expect(servers.length, 1);
+        expect(servers.single.id, 'good');
+      },
+    );
 
     test('setActiveServerId(null) clears active id', () async {
       final storage = await buildStorageService();
@@ -130,5 +151,3 @@ void main() {
     });
   });
 }
-
-

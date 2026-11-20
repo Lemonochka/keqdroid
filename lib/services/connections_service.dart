@@ -63,8 +63,12 @@ class ConnectionsService {
       Platform.isWindows || Platform.isLinux || Platform.isAndroid;
 
   static int? activeClashPort() {
-    if (Platform.isWindows) return WindowsTunnelBackend.activeInstance?.clashApiPort;
-    if (Platform.isLinux) return LinuxTunnelBackend.activeInstance?.clashApiPort;
+    if (Platform.isWindows) {
+      return WindowsTunnelBackend.activeInstance?.clashApiPort;
+    }
+    if (Platform.isLinux) {
+      return LinuxTunnelBackend.activeInstance?.clashApiPort;
+    }
     if (Platform.isAndroid) return MihomoApiSession().port;
     return null;
   }
@@ -138,14 +142,16 @@ class ConnectionsService {
       // у mihomo правило в ответе уже настоящее, а аутбаунд тоже зовётся proxy:
       // через _resolveEngineVerdicts оно затёрлось бы
       final needsEngineVerdicts = !MihomoApiSession().isActive;
-      final resolved =
-          needsEngineVerdicts ? _resolveEngineVerdicts(entries) : entries;
+      final resolved = needsEngineVerdicts
+          ? _resolveEngineVerdicts(entries)
+          : entries;
       return ConnectionsSnapshot(
         entries: resolved,
         source: ConnectionsSource.coreApi,
         // ни одного решения за сессию при соединениях через движок: ядро их не
         // печатает, уровень логов ниже Info
-        ruleInfoAvailable: !resolved.any((e) => e.decidedByCore) ||
+        ruleInfoAvailable:
+            !resolved.any((e) => e.decidedByCore) ||
             !XrayRouteDecisions.isEmpty,
       );
     } catch (e) {
@@ -156,8 +162,12 @@ class ConnectionsService {
         note: 'Core API unreachable: $e',
       );
     } finally {
-      ConnectionsPollStats.instance
-          .end(poll, ok: ok, bodyChars: chars, connections: connections);
+      ConnectionsPollStats.instance.end(
+        poll,
+        ok: ok,
+        bodyChars: chars,
+        connections: connections,
+      );
     }
   }
 
@@ -237,7 +247,8 @@ class ConnectionsService {
       _ => rulePayload.isEmpty ? ruleType : '$ruleType($rulePayload)',
     };
 
-    final id = json['id']?.toString() ??
+    final id =
+        json['id']?.toString() ??
         '${str('sourceIP')}:${str('sourcePort')}>$host:${str('destinationPort')}';
 
     return ConnectionEntry(
@@ -261,7 +272,8 @@ class ConnectionsService {
   }
 
   static Future<ConnectionsSnapshot> _fromAccessLog() async {
-    final text = _desktopConnectionLines() ??
+    final text =
+        _desktopConnectionLines() ??
         await DebugLogService.getXrayLogs(maxLines: _androidLogLines);
     if (text.trim().isEmpty) {
       return const ConnectionsSnapshot(
@@ -287,12 +299,11 @@ class ConnectionsService {
 
   static Future<ConnectionsSnapshot> _withAndroidAppNamesFromSource(
     ConnectionsSnapshot snapshot,
-  ) async =>
-      withAppNamesFromSource(
-        snapshot,
-        resolve: VpnNativeBridge.resolveConnectionOwners,
-        cache: _appNames,
-      );
+  ) async => withAppNamesFromSource(
+    snapshot,
+    resolve: VpnNativeBridge.resolveConnectionOwners,
+    cache: _appNames,
+  );
 
   @visibleForTesting
   static Future<ConnectionsSnapshot> withAppNamesFromSource(
@@ -329,9 +340,7 @@ class ConnectionsService {
     if (requests.isEmpty && !fromCache) {
       return entries.isEmpty ? snapshot : _withoutAppNames(snapshot);
     }
-    final names = requests.isEmpty
-        ? const <String>[]
-        : await resolve(requests);
+    final names = requests.isEmpty ? const <String>[] : await resolve(requests);
     for (var i = 0; i < indexes.length && i < names.length; i++) {
       final name = names[i];
       if (name.isEmpty) continue;
@@ -372,5 +381,4 @@ class ConnectionsService {
 
   static final Map<String, String> _appNames = {};
   static const _appNamesLimit = 300;
-
 }

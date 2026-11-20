@@ -5,7 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:keqdroid/models/icon_shape.dart';
 import 'package:keqdroid/shared/ui/expressive.dart';
 
-class ExpressiveIconShapeTheme extends ThemeExtension<ExpressiveIconShapeTheme> {
+class ExpressiveIconShapeTheme
+    extends ThemeExtension<ExpressiveIconShapeTheme> {
   const ExpressiveIconShapeTheme({this.shape = IconShape.circle});
 
   final IconShape shape;

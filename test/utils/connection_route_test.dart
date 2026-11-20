@@ -15,17 +15,16 @@ ConnectionEntry _conn(
   String network = 'tcp',
   int port = 443,
   bool decidedByCore = false,
-}) =>
-    ConnectionEntry(
-      id: host,
-      network: network,
-      host: host,
-      destPort: port,
-      destIp: destIp,
-      outbound: outbound,
-      rule: rule,
-      decidedByCore: decidedByCore,
-    );
+}) => ConnectionEntry(
+  id: host,
+  network: network,
+  host: host,
+  destPort: port,
+  destIp: destIp,
+  outbound: outbound,
+  rule: rule,
+  decidedByCore: decidedByCore,
+);
 
 TrafficRoute _route(
   String id, {
@@ -37,18 +36,17 @@ TrafficRoute _route(
   int? order,
   RouteNetwork network = RouteNetwork.any,
   bool enabled = true,
-}) =>
-    TrafficRoute(
-      id: id,
-      target: target,
-      content: content,
-      sites: sites,
-      presetId: presetId,
-      apps: apps,
-      order: order,
-      network: network,
-      enabled: enabled,
-    );
+}) => TrafficRoute(
+  id: id,
+  target: target,
+  content: content,
+  sites: sites,
+  presetId: presetId,
+  apps: apps,
+  order: order,
+  network: network,
+  enabled: enabled,
+);
 
 final _geo = PreloadedGeoLookup(
   sites: {
@@ -110,7 +108,10 @@ void main() {
         matchToken('geosite:category-ru', _t('drinkit.dodois.io'), _geo),
         isTrue,
       );
-      expect(matchToken('geosite:ru-whitelist', _t('api.vk.com'), _geo), isTrue);
+      expect(
+        matchToken('geosite:ru-whitelist', _t('api.vk.com'), _geo),
+        isTrue,
+      );
       expect(matchToken('geosite:ru-whitelist', _t('vk.com'), _geo), isFalse);
       expect(
         matchToken('geosite:category-ads-all', _t('banners.adfox.ru'), _geo),
@@ -130,7 +131,11 @@ void main() {
     test('ip entries check the destination address', () {
       expect(matchToken('geoip:refilter', _t('149.154.167.41'), _geo), isTrue);
       expect(
-        matchToken('geoip:refilter', _t('telegram.org', '149.154.167.99'), _geo),
+        matchToken(
+          'geoip:refilter',
+          _t('telegram.org', '149.154.167.99'),
+          _geo,
+        ),
         isTrue,
       );
       expect(matchToken('geoip:refilter', _t('telegram.org'), _geo), isFalse);
@@ -166,28 +171,34 @@ void main() {
       List<TrafficRoute> routes, {
       bool ruleInfoAvailable = true,
       Map<String, bool?> appMatch = const {},
-    }) =>
-        explainRoute(
-          entry: entry,
-          routes: routes,
-          ruleInfoAvailable: ruleInfoAvailable,
-          geo: _geo,
-          appMatch: appMatch,
-        );
+    }) => explainRoute(
+      entry: entry,
+      routes: routes,
+      ruleInfoAvailable: ruleInfoAvailable,
+      geo: _geo,
+      appMatch: appMatch,
+    );
 
     String? routeOf(RouteExplanation e) => switch (e) {
-          ByRoute(:final route) => route.id,
-          _ => null,
-        };
+      ByRoute(:final route) => route.id,
+      _ => null,
+    };
 
     test('a dragged route is found by its tag exactly', () {
       final routes = [
         _route('first', sites: 'example.com', order: 0),
-        _route('second', content: RouteContent.preset, presetId: 'ru', order: 1),
+        _route(
+          'second',
+          content: RouteContent.preset,
+          presetId: 'ru',
+          order: 1,
+        ),
       ];
       final e = explain(
-        _conn('drinkit-mobile-api.drinkit.dodois.io',
-            rule: 'keq-route-1-domains'),
+        _conn(
+          'drinkit-mobile-api.drinkit.dodois.io',
+          rule: 'keq-route-1-domains',
+        ),
         routes,
       );
       expect(routeOf(e), 'second');
@@ -196,8 +207,12 @@ void main() {
     test('an app route is found by its tag exactly', () {
       final routes = [
         _vk,
-        _route('chrome', apps: ['com.android.chrome'],
-            content: RouteContent.allTraffic, target: RouteTarget.vpn),
+        _route(
+          'chrome',
+          apps: ['com.android.chrome'],
+          content: RouteContent.allTraffic,
+          target: RouteTarget.vpn,
+        ),
       ];
       final e = explain(
         _conn('example.com', rule: 'keq-app-0', outbound: 'proxy'),
@@ -227,11 +242,9 @@ void main() {
 
     test('without Info logs an empty rule is not taken for the final row', () {
       expect(
-        explain(
-          _conn('x.com', outbound: 'proxy'),
-          [_ru],
-          ruleInfoAvailable: false,
-        ),
+        explain(_conn('x.com', outbound: 'proxy'), [
+          _ru,
+        ], ruleInfoAvailable: false),
         isA<Unexplained>(),
       );
     });
@@ -239,18 +252,28 @@ void main() {
     test('xray folded lists: the route whose sites match', () {
       final routes = [_vk, _ru];
       expect(
-        routeOf(explain(_conn('lenta.ru', rule: 'user-direct-domains'), routes)),
+        routeOf(
+          explain(_conn('lenta.ru', rule: 'user-direct-domains'), routes),
+        ),
         'ru',
       );
       expect(
-        routeOf(explain(_conn('m.vk.com', rule: 'user-direct-domains'), routes)),
+        routeOf(
+          explain(_conn('m.vk.com', rule: 'user-direct-domains'), routes),
+        ),
         'vk',
       );
       expect(
-        routeOf(explain(
-          _conn('mc.yandex.ru', rule: 'user-block-domains', outbound: 'block'),
-          [_ru, _ads],
-        )),
+        routeOf(
+          explain(
+            _conn(
+              'mc.yandex.ru',
+              rule: 'user-block-domains',
+              outbound: 'block',
+            ),
+            [_ru, _ads],
+          ),
+        ),
         'ads',
       );
     });
@@ -268,11 +291,11 @@ void main() {
     test('mihomo rule payload points at the route without the base', () {
       final empty = PreloadedGeoLookup();
       RouteExplanation clash(String rule, String host) => explainRoute(
-            entry: _conn(host, rule: rule),
-            routes: [_vk, _ru],
-            ruleInfoAvailable: true,
-            geo: empty,
-          );
+        entry: _conn(host, rule: rule),
+        routes: [_vk, _ru],
+        ruleInfoAvailable: true,
+        geo: empty,
+      );
       expect(routeOf(clash('GeoSite(category-ru)', 'lenta.ru')), 'ru');
       expect(routeOf(clash('DomainSuffix(vk.com)', 'm.vk.com')), 'vk');
       expect(routeOf(clash('Domain(id.vk.com)', 'id.vk.com')), 'vk');
@@ -280,10 +303,9 @@ void main() {
 
     test('service rules of the core are not routes', () {
       expect(
-        explain(
-          _conn('172.19.0.2', rule: 'dns-out-tun', outbound: 'dns-out'),
-          [_ru],
-        ),
+        explain(_conn('172.19.0.2', rule: 'dns-out-tun', outbound: 'dns-out'), [
+          _ru,
+        ]),
         isA<Unexplained>(),
       );
       expect(
@@ -349,8 +371,11 @@ void main() {
         isTrue,
       );
       expect(
-        routeAppsMatch(['org.telegram.messenger'],
-            process: 'Chrome', packages: {'com.android.chrome'}),
+        routeAppsMatch(
+          ['org.telegram.messenger'],
+          process: 'Chrome',
+          packages: {'com.android.chrome'},
+        ),
         isFalse,
       );
       expect(routeAppsMatch(['com.android.chrome'], process: ''), isNull);
@@ -358,16 +383,24 @@ void main() {
 
     test('pc: by process name or by the path typed in', () {
       const exe = r'C:\Program Files\Mozilla Firefox\firefox.exe';
-      expect(routeAppsMatch(['firefox.exe'], process: exe, windows: true),
-          isTrue);
+      expect(
+        routeAppsMatch(['firefox.exe'], process: exe, windows: true),
+        isTrue,
+      );
       expect(routeAppsMatch(['FIREFOX'], process: exe, windows: true), isTrue);
       expect(routeAppsMatch([exe], process: exe, windows: true), isTrue);
       expect(
         routeAppsMatch([r'D:\other\firefox.exe'], process: exe, windows: true),
         isFalse,
       );
-      expect(routeAppsMatch(['firefox'], process: '/usr/bin/firefox',
-          windows: false), isTrue);
+      expect(
+        routeAppsMatch(
+          ['firefox'],
+          process: '/usr/bin/firefox',
+          windows: false,
+        ),
+        isTrue,
+      );
     });
   });
 
@@ -383,15 +416,19 @@ void main() {
     });
 
     test('reads only the codes it needs and answers off the isolate', () async {
-      await File('${tmp.path}${Platform.pathSeparator}geosite.dat')
-          .writeAsBytes(Uint8List.fromList([
-        ..._entry('CATEGORY-RU', _domain(2, 'ru')),
-        ..._entry('CATEGORY-ADS-ALL', _domain(2, 'doubleclick.net')),
-      ]));
-      await File('${tmp.path}${Platform.pathSeparator}geoip.dat')
-          .writeAsBytes(Uint8List.fromList([
-        ..._entry('REFILTER', _cidr([149, 154, 160, 0], 20)),
-      ]));
+      await File(
+        '${tmp.path}${Platform.pathSeparator}geosite.dat',
+      ).writeAsBytes(
+        Uint8List.fromList([
+          ..._entry('CATEGORY-RU', _domain(2, 'ru')),
+          ..._entry('CATEGORY-ADS-ALL', _domain(2, 'doubleclick.net')),
+        ]),
+      );
+      await File('${tmp.path}${Platform.pathSeparator}geoip.dat').writeAsBytes(
+        Uint8List.fromList([
+          ..._entry('REFILTER', _cidr([149, 154, 160, 0], 20)),
+        ]),
+      );
 
       final insight = await inspectConnection(
         entry: _conn('lenta.ru', rule: 'user-direct-domains'),

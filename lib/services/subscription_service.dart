@@ -96,9 +96,11 @@ class SubscriptionProfileHeaders {
       newUrl: SubscriptionService._sanitizeUrl(found['new-url']) ?? newUrl,
       newDomain: found['new-domain'] ?? newDomain,
       fallbackUrl:
-          SubscriptionService._sanitizeUrl(found['fallback-url']) ?? fallbackUrl,
-      remindExpiry:
-          remind == null ? remindExpiry : SubscriptionService._isOn(remind),
+          SubscriptionService._sanitizeUrl(found['fallback-url']) ??
+          fallbackUrl,
+      remindExpiry: remind == null
+          ? remindExpiry
+          : SubscriptionService._isOn(remind),
     );
   }
 }
@@ -181,20 +183,22 @@ class SubscriptionService {
     this._storage, {
     Dio? dio,
     LocalProxyPortResolver? localProxyPort,
-  })  : _localProxyPort = localProxyPort,
-        _dio = dio ?? _buildDio(localProxyPort: localProxyPort);
+  }) : _localProxyPort = localProxyPort,
+       _dio = dio ?? _buildDio(localProxyPort: localProxyPort);
 
   // при включённом VPN только через локальный инбаунд: пакет приложения исключён из TUN
   static Dio _buildDio({LocalProxyPortResolver? localProxyPort}) {
-    final dio = Dio(BaseOptions(
-      connectTimeout: const Duration(seconds: 15),
-      receiveTimeout: const Duration(seconds: 30),
-      headers: {
-        'User-Agent': browserUserAgent,
-        'Accept': '*/*',
-        'Accept-Language': 'en-US,en;q=0.9',
-      },
-    ));
+    final dio = Dio(
+      BaseOptions(
+        connectTimeout: const Duration(seconds: 15),
+        receiveTimeout: const Duration(seconds: 30),
+        headers: {
+          'User-Agent': browserUserAgent,
+          'Accept': '*/*',
+          'Accept-Language': 'en-US,en;q=0.9',
+        },
+      ),
+    );
 
     if (localProxyPort != null) {
       configureDioForLocalVpnProxy(dio, localProxyPort);
@@ -210,8 +214,8 @@ class SubscriptionService {
 
   static const _blockedHostnames = {
     'metadata.google.internal',
-    '169.254.169.254',           // AWS/GCP/Azure IMDS
-    'fd00:ec2::254',             // AWS IMDSv2 IPv6
+    '169.254.169.254', // AWS/GCP/Azure IMDS
+    'fd00:ec2::254', // AWS IMDSv2 IPv6
   };
 
   static bool isSafeUrl(String url) {
@@ -257,7 +261,9 @@ class SubscriptionService {
       if (b[0] == 169 && b[1] == 254) return true; // 169.254/16
       if (b[0] == 172 && b[1] >= 16 && b[1] <= 31) return true; // 172.16/12
       if (b[0] == 192 && b[1] == 168) return true; // 192.168/16
-      if (b[0] == 100 && b[1] >= 64 && b[1] <= 127) return true; // CGNAT 100.64/10
+      if (b[0] == 100 && b[1] >= 64 && b[1] <= 127) {
+        return true; // CGNAT 100.64/10
+      }
     } else if (addr.type == InternetAddressType.IPv6) {
       if ((b[0] & 0xfe) == 0xfc) return true; // fc00::/7 ULA
     }
@@ -310,7 +316,9 @@ class SubscriptionService {
       }
 
       final schemeLower = uri.scheme.toLowerCase();
-      if (schemeLower == 'hysteria' || schemeLower == 'hysteria2' || schemeLower == 'hy2') {
+      if (schemeLower == 'hysteria' ||
+          schemeLower == 'hysteria2' ||
+          schemeLower == 'hy2') {
         final qp = uri.queryParameters;
         var auth = (qp['auth'] ?? qp['password'] ?? '').toLowerCase();
         if (auth.isEmpty && uri.userInfo.isNotEmpty) {
@@ -327,8 +335,7 @@ class SubscriptionService {
     }
   }
 
-  Future<SubscriptionFetchResult>
-  fetchRaw(
+  Future<SubscriptionFetchResult> fetchRaw(
     String url, {
     CancelToken? cancelToken,
     String? userAgent,
@@ -344,8 +351,9 @@ class SubscriptionService {
     // настройку читаем на каждый запрос: в фоновых изолятах значение по умолчанию расходится с переключателем
     final shareHwid = (await _storage.getSettings()).shareDeviceHwid;
     // выключенный тумблер HWID главнее подмены
-    final hwid =
-        shareHwid ? await _getOrCreateHwid(override: identity.activeHwid) : null;
+    final hwid = shareHwid
+        ? await _getOrCreateHwid(override: identity.activeHwid)
+        : null;
     final hwidHeaders = hwid != null
         ? await _buildRemnawaveHeaders(
             hwid,
@@ -402,8 +410,7 @@ class SubscriptionService {
     }
   }
 
-  Future<SubscriptionFetchResult>
-  _fetchWithRetry(
+  Future<SubscriptionFetchResult> _fetchWithRetry(
     String url, {
     CancelToken? cancelToken,
     required int attempt,
@@ -415,9 +422,11 @@ class SubscriptionService {
     String? usedUserAgent;
     var profile = SubscriptionProfileHeaders.empty;
     // свой UA из сохранённого не берём: в нём версия с первой загрузки, панель видела keqdroid/0.8.7 на 0.34.1
-    final ownSaved = savedUserAgent == 'keqdroid' ||
+    final ownSaved =
+        savedUserAgent == 'keqdroid' ||
         (savedUserAgent?.startsWith('keqdroid/') ?? false);
-    final initialUa = pinnedUserAgent ??
+    final initialUa =
+        pinnedUserAgent ??
         ((savedUserAgent != null && savedUserAgent.isNotEmpty && !ownSaved)
             ? savedUserAgent
             : await appUserAgent());
@@ -430,14 +439,21 @@ class SubscriptionService {
       _throwIfRemnawaveHwidHeadersIndicateError(response.headers, url: url);
 
       if (response.statusCode != 200) {
-        throw SubscriptionFetchException('HTTP ${response.statusCode}', url: url);
+        throw SubscriptionFetchException(
+          'HTTP ${response.statusCode}',
+          url: url,
+        );
       }
 
       final body = response.data ?? '';
       if (body.length > _maxBodyLength) {
-        throw SubscriptionFetchException('Response too large (>10MB)', url: url);
+        throw SubscriptionFetchException(
+          'Response too large (>10MB)',
+          url: url,
+        );
       }
-      final contentType = response.headers.value('content-type')?.toLowerCase() ?? '';
+      final contentType =
+          response.headers.value('content-type')?.toLowerCase() ?? '';
 
       int? usedBytes, totalBytes;
       DateTime? expiresAt;
@@ -448,7 +464,8 @@ class SubscriptionService {
       totalBytes = headerMetaInitial.totalBytes;
       expiresAt = headerMetaInitial.expiresAt;
 
-      var looksLikeHtml = contentType.contains('text/html') ||
+      var looksLikeHtml =
+          contentType.contains('text/html') ||
           body.trimLeft().startsWith('<!doctype html') ||
           body.trimLeft().startsWith('<html');
       var effectiveBody = body;
@@ -464,11 +481,14 @@ class SubscriptionService {
         if (uaResponse != null) {
           response = uaResponse;
           effectiveBody = uaResponse.data ?? '';
-          final uaType = (uaResponse.headers.value('content-type') ?? '').toLowerCase();
-          looksLikeHtml = uaType.contains('text/html') ||
+          final uaType = (uaResponse.headers.value('content-type') ?? '')
+              .toLowerCase();
+          looksLikeHtml =
+              uaType.contains('text/html') ||
               effectiveBody.trimLeft().startsWith('<!doctype html') ||
               effectiveBody.trimLeft().startsWith('<html');
-          usedUserAgent = uaResponse.requestOptions.headers['User-Agent'] as String?;
+          usedUserAgent =
+              uaResponse.requestOptions.headers['User-Agent'] as String?;
           if (usedBytes == null || totalBytes == null || expiresAt == null) {
             final headerMetaUa = _parseUserInfoHeader(uaResponse.headers);
             profile = _parseProfileHeaders(uaResponse.headers);
@@ -563,16 +583,13 @@ class SubscriptionService {
             return parsedViaHttpClient;
           }
         } on FormatException catch (fe) {
-          throw SubscriptionFetchException(
-            fe.message,
-            url: url,
-            cause: fe,
-          );
+          throw SubscriptionFetchException(fe.message, url: url, cause: fe);
         }
       }
 
       // сбой сокета или TLS посреди обмена dio отдаёт как unknown, он разовый
-      final isRetryable = e.type == DioExceptionType.connectionTimeout ||
+      final isRetryable =
+          e.type == DioExceptionType.connectionTimeout ||
           e.type == DioExceptionType.receiveTimeout ||
           e.type == DioExceptionType.connectionError ||
           (e.type == DioExceptionType.unknown && e.error is IOException);
@@ -602,8 +619,9 @@ class SubscriptionService {
     }
   }
 
-  Future<SubscriptionFetchResult?>
-  _tryParseFromErrorResponse(DioException e) async {
+  Future<SubscriptionFetchResult?> _tryParseFromErrorResponse(
+    DioException e,
+  ) async {
     final response = e.response;
     if (response == null) {
       return null;
@@ -641,8 +659,7 @@ class SubscriptionService {
     }
   }
 
-  Future<SubscriptionFetchResult?>
-  _tryParseWithClientUserAgents(
+  Future<SubscriptionFetchResult?> _tryParseWithClientUserAgents(
     String url, {
     CancelToken? cancelToken,
     required Map<String, String> hwidHeaders,
@@ -690,14 +707,14 @@ class SubscriptionService {
     );
   }
 
-  Future<SubscriptionFetchResult?>
-  _tryFetchWithHttpClientFallback(
+  Future<SubscriptionFetchResult?> _tryFetchWithHttpClientFallback(
     String url, {
     required String? hwid,
     Map<String, String>? hwidHeaders,
     String? pinnedUserAgent,
   }) async {
-    final effectiveHwidHeaders = hwidHeaders ??
+    final effectiveHwidHeaders =
+        hwidHeaders ??
         (hwid == null
             ? const <String, String>{}
             : await _buildRemnawaveHeaders(hwid));
@@ -706,8 +723,7 @@ class SubscriptionService {
     for (final candidate in candidates) {
       HttpClient? client;
       try {
-        client = HttpClient()
-          ..connectionTimeout = const Duration(seconds: 15);
+        client = HttpClient()..connectionTimeout = const Duration(seconds: 15);
         // свой клиент мимо dio, прокси ему отдельно, иначе уйдёт напрямую мимо туннеля
         final resolveProxy = _localProxyPort;
         if (resolveProxy != null) {
@@ -745,9 +761,12 @@ class SubscriptionService {
         final body = _decodeHttpBody(bytes, dioLikeHeaders);
         if (body.trim().isEmpty) continue;
         final contentType =
-            (resp.headers.contentType?.mimeType ?? dioLikeHeaders.value('content-type') ?? '')
+            (resp.headers.contentType?.mimeType ??
+                    dioLikeHeaders.value('content-type') ??
+                    '')
                 .toLowerCase();
-        final looksLikeHtml = contentType.contains('text/html') ||
+        final looksLikeHtml =
+            contentType.contains('text/html') ||
             body.trimLeft().startsWith('<!doctype html') ||
             body.trimLeft().startsWith('<html');
         // без содержимого: в теле ключи серверов, а лог пересылают при жалобах
@@ -886,7 +905,8 @@ class SubscriptionService {
     return null;
   }
 
-  Options _hwidOptions(Map<String, String> headers) => Options(headers: headers);
+  Options _hwidOptions(Map<String, String> headers) =>
+      Options(headers: headers);
 
   // подставной HWID не кэшируем и не сохраняем, иначе он станет HWID устройства для всех подписок
   Future<String> _getOrCreateHwid({String? override}) async {
@@ -897,15 +917,15 @@ class SubscriptionService {
 
     String? androidId;
     try {
-      androidId = (await _platform.invokeMethod<String>('getAndroidId'))
-          ?.trim()
-          .toLowerCase();
+      androidId = (await _platform.invokeMethod<String>(
+        'getAndroidId',
+      ))?.trim().toLowerCase();
     } on Object {
       androidId = null;
     }
-    
+
     final fromStorage = (_storage.getHwid() ?? '').trim().toLowerCase();
-    
+
     if (androidId != null && androidId.isNotEmpty) {
       if (fromStorage != androidId) {
         await _storage.setHwid(androidId);
@@ -931,18 +951,19 @@ class SubscriptionService {
     String? overrideModel,
     String? overrideOsVersion,
   }) async {
-    final os = _trimmedOrNull(overrideOs) ??
+    final os =
+        _trimmedOrNull(overrideOs) ??
         (Platform.isAndroid
             ? 'Android'
             : Platform.isIOS
-                ? 'iOS'
-                : Platform.isWindows
-                    ? 'Windows'
-                    : Platform.isMacOS
-                        ? 'macOS'
-                        : Platform.isLinux
-                            ? 'Linux'
-                            : Platform.operatingSystem);
+            ? 'iOS'
+            : Platform.isWindows
+            ? 'Windows'
+            : Platform.isMacOS
+            ? 'macOS'
+            : Platform.isLinux
+            ? 'Linux'
+            : Platform.operatingSystem);
     final model = _trimmedOrNull(overrideModel) ?? await _getDeviceModel();
     final osVersion =
         _trimmedOrNull(overrideOsVersion) ?? Platform.operatingSystemVersion;
@@ -1002,11 +1023,16 @@ class SubscriptionService {
     } on Object {
       // ниже запасное имя
     }
-    _cachedDeviceModel = Platform.isAndroid ? 'Android Device' : 'Unknown Device';
+    _cachedDeviceModel = Platform.isAndroid
+        ? 'Android Device'
+        : 'Unknown Device';
     return _cachedDeviceModel!;
   }
 
-  void _throwIfRemnawaveHwidHeadersIndicateError(Headers headers, {required String url}) {
+  void _throwIfRemnawaveHwidHeadersIndicateError(
+    Headers headers, {
+    required String url,
+  }) {
     final active = headers.value('x-hwid-active')?.toLowerCase() == 'true';
     if (!active) {
       return;
@@ -1017,7 +1043,8 @@ class SubscriptionService {
         url: url,
       );
     }
-    final maxReached = headers.value('x-hwid-max-devices-reached')?.toLowerCase() == 'true' ||
+    final maxReached =
+        headers.value('x-hwid-max-devices-reached')?.toLowerCase() == 'true' ||
         headers.value('x-hwid-limit')?.toLowerCase() == 'true';
     if (maxReached) {
       throw SubscriptionFetchException(
@@ -1028,8 +1055,9 @@ class SubscriptionService {
   }
 
   @visibleForTesting
-  static SubscriptionProfileHeaders parseProfileHeadersForTest(Headers headers) =>
-      _parseProfileHeaders(headers);
+  static SubscriptionProfileHeaders parseProfileHeadersForTest(
+    Headers headers,
+  ) => _parseProfileHeaders(headers);
 
   // в теле сильнее, чем в заголовке, как у остальных метаданных Happ
   static ProviderRouting? _routingOf(Headers headers, String body) =>
@@ -1053,7 +1081,9 @@ class SubscriptionService {
       title: _decodeHeaderText(pick(['profile-title', 'profile_title'])),
       announce: _decodeHeaderText(pick(['announce', 'profile-announce'])),
       supportUrl: _sanitizeUrl(pick(['support-url', 'profile-support-url'])),
-      webPageUrl: _sanitizeUrl(pick(['profile-web-page-url', 'profile-webpage-url'])),
+      webPageUrl: _sanitizeUrl(
+        pick(['profile-web-page-url', 'profile-webpage-url']),
+      ),
       updateIntervalHours: (interval != null && interval > 0) ? interval : null,
       newUrl: _sanitizeUrl(pick(['new-url'])),
       newDomain: pick(['new-domain']),
@@ -1073,16 +1103,23 @@ class SubscriptionService {
     if (raw == null || raw.isEmpty) return null;
 
     String? tryDecode(String s) {
-      var normalized = s.replaceAll(RegExp(r'\s'), '').replaceAll('-', '+').replaceAll('_', '/');
+      var normalized = s
+          .replaceAll(RegExp(r'\s'), '')
+          .replaceAll('-', '+')
+          .replaceAll('_', '/');
       if (normalized.isEmpty) return null;
       final pad = normalized.length % 4;
-      if (pad != 0) normalized = normalized.padRight(normalized.length + (4 - pad), '=');
+      if (pad != 0) {
+        normalized = normalized.padRight(normalized.length + (4 - pad), '=');
+      }
       try {
         final bytes = base64.decode(normalized);
         if (bytes.isEmpty) return null;
         final text = utf8.decode(bytes, allowMalformed: false).trim();
         if (text.isEmpty) return null;
-        if (text.runes.any((r) => r < 0x20 && r != 0x0A && r != 0x09)) return null;
+        if (text.runes.any((r) => r < 0x20 && r != 0x0A && r != 0x09)) {
+          return null;
+        }
         return text;
       } catch (_) {
         return null;
@@ -1091,7 +1128,8 @@ class SubscriptionService {
 
     const prefix = 'base64:';
     if (raw.toLowerCase().startsWith(prefix)) {
-      return tryDecode(raw.substring(prefix.length)) ?? raw.substring(prefix.length);
+      return tryDecode(raw.substring(prefix.length)) ??
+          raw.substring(prefix.length);
     }
     if (raw.length >= 8 && RegExp(r'^[A-Za-z0-9+/_=-]+$').hasMatch(raw)) {
       final decoded = tryDecode(raw);
@@ -1109,10 +1147,10 @@ class SubscriptionService {
     return uri.toString();
   }
 
-  static ({int? usedBytes, int? totalBytes, DateTime? expiresAt}) _parseUserInfoHeader(
-    Headers headers,
-  ) {
-    final userInfo = headers.value('x-subscription-userinfo') ??
+  static ({int? usedBytes, int? totalBytes, DateTime? expiresAt})
+  _parseUserInfoHeader(Headers headers) {
+    final userInfo =
+        headers.value('x-subscription-userinfo') ??
         headers.value('subscription-userinfo') ??
         headers.value('userinfo') ??
         headers.value('x-userinfo');
@@ -1143,7 +1181,9 @@ class SubscriptionService {
           }
       }
     }
-    final usedBytes = (upload != null || download != null) ? (upload ?? 0) + (download ?? 0) : null;
+    final usedBytes = (upload != null || download != null)
+        ? (upload ?? 0) + (download ?? 0)
+        : null;
     return (usedBytes: usedBytes, totalBytes: totalBytes, expiresAt: expiresAt);
   }
 
@@ -1178,12 +1218,16 @@ class SubscriptionService {
         if (resp.statusCode != 200) continue;
         final body = (resp.data ?? '').trimLeft();
         final type = (resp.headers.value('content-type') ?? '').toLowerCase();
-        final isHtml = type.contains('text/html') ||
+        final isHtml =
+            type.contains('text/html') ||
             body.startsWith('<!doctype html') ||
             body.startsWith('<html');
         if (!isHtml) return resp;
       } on Object catch (e) {
-        AppLogger.instance.debug('Subscription fetch with UA $ua failed', error: e);
+        AppLogger.instance.debug(
+          'Subscription fetch with UA $ua failed',
+          error: e,
+        );
       }
     }
     return null;
@@ -1235,18 +1279,15 @@ class SubscriptionService {
         ..._extractUriLinks(candidate),
         ..._extractUriLinks(_htmlUnescape(candidate)),
         ..._extractUriLinks(_jsUnescape(_htmlUnescape(candidate))),
-      }
-          .where((c) => !_isMetadataConfig(c))
-          .toList();
+      }.where((c) => !_isMetadataConfig(c)).toList();
       final customConfigs = _extractCustomConfigs(candidate);
       if (extractedLinks.isNotEmpty || customConfigs.isNotEmpty) {
         return [...customConfigs, ...extractedLinks];
       }
 
-      final singbox = SingboxOutbounds.translate(candidate)
-          .links
-          .where((c) => !_isMetadataConfig(c))
-          .toList();
+      final singbox = SingboxOutbounds.translate(
+        candidate,
+      ).links.where((c) => !_isMetadataConfig(c)).toList();
       if (singbox.isNotEmpty) return singbox;
 
       final structured = _extractConfigsFromStructuredContent(candidate);
@@ -1255,13 +1296,12 @@ class SubscriptionService {
       final clashConfigs = _extractClashConfigs(candidate);
       if (clashConfigs.isNotEmpty) return clashConfigs;
 
-      final lines = LineSplitter.split(candidate)
-          .map((l) => l.trim())
-          .where((l) => l.isNotEmpty)
-          .toList();
+      final lines = LineSplitter.split(
+        candidate,
+      ).map((l) => l.trim()).where((l) => l.isNotEmpty).toList();
       final hasOnlyMetadataLinks =
           lines.isNotEmpty &&
-              lines.every((l) => !_isValidConfig(l) || _isMetadataConfig(l));
+          lines.every((l) => !_isValidConfig(l) || _isMetadataConfig(l));
       final hasHwidGateMarkers = lines.any(_isHwidGateConfig);
       final providerGateMessage = _detectProviderGateMessage(lines);
 
@@ -1295,14 +1335,13 @@ class SubscriptionService {
   // порядок как в _parseBody, но без регулярок по всему тексту, а YAML только у похожего на Clash
   static List<String> _parseLargeStructured(String body) {
     if (body.startsWith('[') || body.startsWith('{')) {
-      final xray = CustomXrayConfig.extractConfigs(body)
-          .where(_isUsableCustomConfig)
-          .toList();
+      final xray = CustomXrayConfig.extractConfigs(
+        body,
+      ).where(_isUsableCustomConfig).toList();
       if (xray.isNotEmpty) return xray;
-      final singbox = SingboxOutbounds.translate(body)
-          .links
-          .where((c) => !_isMetadataConfig(c))
-          .toList();
+      final singbox = SingboxOutbounds.translate(
+        body,
+      ).links.where((c) => !_isMetadataConfig(c)).toList();
       if (singbox.isNotEmpty) return singbox;
     }
     if (!CustomClashConfig.looksLikeClash(body)) return const [];
@@ -1366,22 +1405,30 @@ class SubscriptionService {
     int iterations = 0;
     const maxIterations = 200;
 
-    while (queue.isNotEmpty && out.length < maxVariants && iterations < maxIterations) {
+    while (queue.isNotEmpty &&
+        out.length < maxVariants &&
+        iterations < maxIterations) {
       iterations++;
-      
+
       if (queue.length > maxQueueSize) {
         queue.clear();
         break;
       }
 
       final current = queue.removeAt(0).trim();
-      if (current.isEmpty || current.length > _maxVariantLength || !seen.add(current)) continue;
+      if (current.isEmpty ||
+          current.length > _maxVariantLength ||
+          !seen.add(current)) {
+        continue;
+      }
       out.add(current);
 
       final html = _htmlUnescape(current);
       final js = _jsUnescape(html);
       final decoded = _tryDecodeBase64Flexible(current);
-      final decodedCompact = _tryDecodeBase64Flexible(current.replaceAll(RegExp(r'\s+'), ''));
+      final decodedCompact = _tryDecodeBase64Flexible(
+        current.replaceAll(RegExp(r'\s+'), ''),
+      );
       final uriDecoded = _tryUriDecode(current);
 
       final nextCandidates = [html, js, decoded, decodedCompact, uriDecoded]
@@ -1406,7 +1453,10 @@ class SubscriptionService {
   }
 
   static String? _tryDecodeBase64Flexible(String input) {
-    final compact = input.replaceAll(RegExp(r'\s+'), '').replaceAll('-', '+').replaceAll('_', '/');
+    final compact = input
+        .replaceAll(RegExp(r'\s+'), '')
+        .replaceAll('-', '+')
+        .replaceAll('_', '/');
     if (compact.isEmpty) return null;
 
     final padded = switch (compact.length % 4) {
@@ -1415,7 +1465,9 @@ class SubscriptionService {
       _ => compact,
     };
     try {
-      return const Utf8Decoder().convert(base64.decode(base64.normalize(padded)));
+      return const Utf8Decoder().convert(
+        base64.decode(base64.normalize(padded)),
+      );
     } on Object {
       return null;
     }
@@ -1447,7 +1499,9 @@ class SubscriptionService {
         final parsed = jsonDecode(text);
         if (parsed is Map<String, dynamic>) {
           final keys = parsed.keys.map((k) => k.toLowerCase()).toSet();
-          if (keys.contains('outbounds') || keys.contains('inbounds') || keys.contains('proxies')) {
+          if (keys.contains('outbounds') ||
+              keys.contains('inbounds') ||
+              keys.contains('proxies')) {
             if (CustomXrayConfig.tryParse(text) != null) {
               return 'Subscription returned an Xray config without a server address. '
                   'This is usually a provider stub: check subscription status and '
@@ -1584,8 +1638,13 @@ class SubscriptionService {
   // ключа); пусто, false и 0 у mihomo читаются как не задано, а числа в YAML бывают строками
   static bool _carried(Object? want, Object? got) {
     bool unset(Object? v) =>
-        v == null || v == false || v == '' || v == 0 || v == '0' ||
-        (v is Iterable && v.isEmpty) || (v is Map && v.isEmpty);
+        v == null ||
+        v == false ||
+        v == '' ||
+        v == 0 ||
+        v == '0' ||
+        (v is Iterable && v.isEmpty) ||
+        (v is Map && v.isEmpty);
     if (unset(want)) return true;
     if (want is Map) {
       if (got is! Map) return false;
@@ -1635,11 +1694,16 @@ class SubscriptionService {
     int iterations = 0;
     const maxIterations = 1000;
 
-    while (queue.isNotEmpty && found.length < maxTotalNodes && iterations < maxIterations) {
+    while (queue.isNotEmpty &&
+        found.length < maxTotalNodes &&
+        iterations < maxIterations) {
       iterations++;
 
       if (queue.length > maxQueueSize) {
-        queue.removeRange(0, (queue.length - maxQueueSize ~/ 2).clamp(1, queue.length));
+        queue.removeRange(
+          0,
+          (queue.length - maxQueueSize ~/ 2).clamp(1, queue.length),
+        );
       }
 
       final (current, depth, isDirect) = queue.removeAt(0);
@@ -1688,7 +1752,8 @@ class SubscriptionService {
         for (final entry in map.entries.take(50)) {
           final value = entry.value;
           if (value is String) {
-            final isLikelyConfig = value.startsWith('vless://') ||
+            final isLikelyConfig =
+                value.startsWith('vless://') ||
                 value.startsWith('vmess://') ||
                 value.startsWith('ss://') ||
                 value.startsWith('trojan://') ||
@@ -1748,7 +1813,8 @@ class SubscriptionService {
     List<Map<String, dynamic>> proxies,
     List<Map<String, dynamic>> groups,
     bool standalone,
-  }) _extractYamlLikeProxies(String content) {
+  })
+  _extractYamlLikeProxies(String content) {
     final parsed = CustomClashConfig.tryParse(content);
     if (parsed != null && parsed.proxies.isNotEmpty) {
       return (
@@ -1793,7 +1859,9 @@ class SubscriptionService {
         final rest = trimmed.substring(2).trim();
         if (rest.contains(':')) {
           final idx = rest.indexOf(':');
-          current[_cleanKey(rest.substring(0, idx))] = _cleanYamlValue(rest.substring(idx + 1));
+          current[_cleanKey(rest.substring(0, idx))] = _cleanYamlValue(
+            rest.substring(idx + 1),
+          );
         }
         continue;
       }
@@ -1812,7 +1880,8 @@ class SubscriptionService {
   static String _cleanYamlValue(String input) {
     final v = input.trim();
     if (v.length >= 2 &&
-        ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'")))) {
+        ((v.startsWith('"') && v.endsWith('"')) ||
+            (v.startsWith("'") && v.endsWith("'")))) {
       return v.substring(1, v.length - 1).trim();
     }
     return v;
@@ -1945,7 +2014,10 @@ class SubscriptionService {
     final name = pick(['name', 'ps', 'remark', 'remarks']);
     final fragment = name.isNotEmpty ? '#${Uri.encodeComponent(name)}' : '';
 
-    if (type == 'vmess' || (type.isEmpty && map.containsKey('uuid') && map.containsKey('cipher'))) {
+    if (type == 'vmess' ||
+        (type.isEmpty &&
+            map.containsKey('uuid') &&
+            map.containsKey('cipher'))) {
       final id = pick(['uuid', 'id']);
       if (host.isEmpty || port <= 0 || id.isEmpty) return null;
       final query = {
@@ -2009,17 +2081,19 @@ class SubscriptionService {
     if (type == 'ss' || type == 'shadowsocks') {
       final cipher = pick(['cipher', 'method']);
       final password = pick(['password', 'passwd', 'pass']);
-      if (host.isEmpty || port <= 0 || cipher.isEmpty || password.isEmpty) return null;
-      final userInfo = base64Url.encode(utf8.encode('$cipher:$password')).replaceAll('=', '');
+      if (host.isEmpty || port <= 0 || cipher.isEmpty || password.isEmpty) {
+        return null;
+      }
+      final userInfo = base64Url
+          .encode(utf8.encode('$cipher:$password'))
+          .replaceAll('=', '');
       final query = <String, String>{
         if (pick(['plugin']).isNotEmpty) 'plugin': pick(['plugin']),
         if (pick(['udp-over-tcp']).toLowerCase() == 'true') 'uot': '1',
         if (pick(['udp-over-tcp-version']).isNotEmpty)
           'udp-over-tcp-version': pick(['udp-over-tcp-version']),
       };
-      final tail = query.isEmpty
-          ? ''
-          : '?${Uri(queryParameters: query).query}';
+      final tail = query.isEmpty ? '' : '?${Uri(queryParameters: query).query}';
       return 'ss://$userInfo@$host:$port$tail$fragment';
     }
 
@@ -2124,7 +2198,8 @@ class SubscriptionService {
       };
       return Uri(
         scheme: 'mierus',
-        userInfo: '${Uri.encodeComponent(username)}:'
+        userInfo:
+            '${Uri.encodeComponent(username)}:'
             '${Uri.encodeComponent(password)}',
         host: host,
         queryParameters: query,
@@ -2142,7 +2217,11 @@ class SubscriptionService {
       final query = <String, String>{'auth': auth, 'version': '2'};
       final sni = pick(['sni', 'servername', 'server_name']);
       if (sni.isNotEmpty) query['sni'] = sni;
-      final insecure = pick(['insecure', 'skip-cert-verify', 'allow_insecure']).toLowerCase();
+      final insecure = pick([
+        'insecure',
+        'skip-cert-verify',
+        'allow_insecure',
+      ]).toLowerCase();
       if (insecure == '1' || insecure == 'true') query['insecure'] = '1';
       final obfs = pick(['obfs']);
       if (obfs.isNotEmpty) query['obfs'] = obfs;
@@ -2209,8 +2288,9 @@ class SubscriptionService {
     final query = <String, String>{};
     final pbk = pick(['pbk', 'public-key']);
     final security = pick(['security', 'tls']);
-    final normalized =
-        security.isNotEmpty ? _normalizeTlsValue(security) : defaultSecurity;
+    final normalized = security.isNotEmpty
+        ? _normalizeTlsValue(security)
+        : defaultSecurity;
     if (pbk.isNotEmpty) {
       query['security'] = 'reality';
       query['pbk'] = pbk;
@@ -2337,7 +2417,9 @@ class SubscriptionService {
   static List<String> _extractUrisDirectly(String text) {
     final lines = LineSplitter.split(text)
         .map((l) => l.trim())
-        .where((l) => l.isNotEmpty && _isValidConfig(l) && !_isMetadataConfig(l))
+        .where(
+          (l) => l.isNotEmpty && _isValidConfig(l) && !_isMetadataConfig(l),
+        )
         .toList();
     return lines;
   }
@@ -2351,9 +2433,18 @@ class SubscriptionService {
 
     final found = <String>{};
     final patterns = <RegExp>[
-      RegExp(r'''(?:href|src|data-url)\s*=\s*["']([^"']+)["']''', caseSensitive: false),
-      RegExp(r'''(?:fetch|axios\.get|open)\s*\(\s*["']([^"']+)["']''', caseSensitive: false),
-      RegExp(r'''(?:window\.)?location(?:\.href)?\s*=\s*["']([^"']+)["']''', caseSensitive: false),
+      RegExp(
+        r'''(?:href|src|data-url)\s*=\s*["']([^"']+)["']''',
+        caseSensitive: false,
+      ),
+      RegExp(
+        r'''(?:fetch|axios\.get|open)\s*\(\s*["']([^"']+)["']''',
+        caseSensitive: false,
+      ),
+      RegExp(
+        r'''(?:window\.)?location(?:\.href)?\s*=\s*["']([^"']+)["']''',
+        caseSensitive: false,
+      ),
     ];
 
     for (final re in patterns) {
@@ -2408,8 +2499,10 @@ class SubscriptionService {
           final body = (resp.data ?? '').trim();
           if (body.isEmpty) continue;
 
-          final ctype = (resp.headers.value('content-type') ?? '').toLowerCase();
-          final looksHtml = ctype.contains('text/html') ||
+          final ctype = (resp.headers.value('content-type') ?? '')
+              .toLowerCase();
+          final looksHtml =
+              ctype.contains('text/html') ||
               body.startsWith('<!doctype html') ||
               body.startsWith('<html');
           if (!looksHtml) {
@@ -2426,7 +2519,10 @@ class SubscriptionService {
             next.addAll(_extractSubscriptionUrlsFromHtml(body, baseUrl: u));
           }
         } on Object catch (e) {
-          AppLogger.instance.debug('Subscription fallback address failed', error: e);
+          AppLogger.instance.debug(
+            'Subscription fallback address failed',
+            error: e,
+          );
         }
       }
       frontier = next;
@@ -2523,7 +2619,8 @@ class SubscriptionService {
     try {
       final uri = Uri.parse(raw);
       final host = uri.host.toLowerCase();
-      if ((host == '0.0.0.0' || host == '::' || host == '::1') && uri.port <= 1) {
+      if ((host == '0.0.0.0' || host == '::' || host == '::1') &&
+          uri.port <= 1) {
         return true;
       }
     } on Object {
@@ -2571,7 +2668,8 @@ class SubscriptionService {
       try {
         final uri = Uri.parse(line);
         final host = uri.host.toLowerCase();
-        if ((host == '0.0.0.0' || host == '::' || host == '::1') && uri.port <= 1) {
+        if ((host == '0.0.0.0' || host == '::' || host == '::1') &&
+            uri.port <= 1) {
           hasNullRouteEndpoint = true;
         }
       } on Object {
@@ -2675,9 +2773,8 @@ class SubscriptionService {
     }
   }
 
-  static ({int? usedBytes, int? totalBytes, DateTime? expiresAt}) _extractMetaFromBody(
-    String content,
-  ) {
+  static ({int? usedBytes, int? totalBytes, DateTime? expiresAt})
+  _extractMetaFromBody(String content) {
     final remarks = <String>{};
     final original = content.trim();
     final candidates = <String>{original};
@@ -2692,9 +2789,9 @@ class SubscriptionService {
     }
 
     for (final candidate in candidates) {
-      for (final line in LineSplitter.split(candidate)
-          .map((e) => e.trim())
-          .where((e) => e.isNotEmpty)) {
+      for (final line in LineSplitter.split(
+        candidate,
+      ).map((e) => e.trim()).where((e) => e.isNotEmpty)) {
         if (!_isValidConfig(line)) continue;
         final name = _extractConfigName(line);
         if (name != null && name.isNotEmpty) remarks.add(name);
@@ -2706,7 +2803,9 @@ class SubscriptionService {
     DateTime? expiresAt;
 
     for (final remark in remarks) {
-      final dateMatch = RegExp(r'(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})').firstMatch(remark);
+      final dateMatch = RegExp(
+        r'(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})',
+      ).firstMatch(remark);
       if (dateMatch != null && expiresAt == null) {
         final d = int.tryParse(dateMatch.group(1)!);
         final m = int.tryParse(dateMatch.group(2)!);
@@ -2728,7 +2827,9 @@ class SubscriptionService {
       if (trafficMatch != null) {
         usedBytes ??= _toBytes(trafficMatch.group(1), trafficMatch.group(2));
         final totalRaw = (trafficMatch.group(3) ?? '').toLowerCase();
-        if (totalRaw == '∞' || totalRaw == 'infinity' || totalRaw == 'unlimited') {
+        if (totalRaw == '∞' ||
+            totalRaw == 'infinity' ||
+            totalRaw == 'unlimited') {
           totalBytes ??= 0;
         } else {
           totalBytes ??= _toBytes(
@@ -2769,27 +2870,27 @@ class SubscriptionService {
   // окно из трея будит автообновление провайдера и DesktopBackgroundService разом, и подписку качали дважды
   static final _inFlight = <String, Future<UpdateResult>>{};
 
-  Future<UpdateResult> updateSubscription(Subscription sub,
-      {CancelToken? cancelToken}) {
+  Future<UpdateResult> updateSubscription(
+    Subscription sub, {
+    CancelToken? cancelToken,
+  }) {
     if (cancelToken != null) return _update(sub, cancelToken: cancelToken);
     final key = '${sub.id}\n${sub.url}\n${sub.userAgent}';
-    return _inFlight[key] ??=
-        _update(sub).whenComplete(() {
-          _inFlight.remove(key);
-        });
+    return _inFlight[key] ??= _update(sub).whenComplete(() {
+      _inFlight.remove(key);
+    });
   }
 
   Future<SubscriptionFetchResult> _fetchFor(
     Subscription sub,
     String url,
     CancelToken? cancelToken,
-  ) =>
-      fetchRaw(
-        url,
-        cancelToken: cancelToken,
-        userAgent: sub.userAgent,
-        identity: sub.fetchIdentity,
-      );
+  ) => fetchRaw(
+    url,
+    cancelToken: cancelToken,
+    userAgent: sub.userAgent,
+    identity: sub.fetchIdentity,
+  );
 
   // запасной адрес провайдера только читаем: основной остаётся прежним, вдруг он вернётся
   Future<SubscriptionFetchResult> _fetchOrFallback(
@@ -2831,11 +2932,14 @@ class SubscriptionService {
     );
     if (target == null) return (result: result, url: sub.url);
     final key = normalizeSubscriptionUrl(target);
-    final taken = (await _storage.getSubscriptions())
-        .any((s) => s.id != sub.id && normalizeSubscriptionUrl(s.url) == key);
+    final taken = (await _storage.getSubscriptions()).any(
+      (s) => s.id != sub.id && normalizeSubscriptionUrl(s.url) == key,
+    );
     final host = Uri.tryParse(target)?.host ?? '?';
     if (taken) {
-      AppLogger.instance.warn('Subscription move to $host skipped: already added');
+      AppLogger.instance.warn(
+        'Subscription move to $host skipped: already added',
+      );
       return (result: result, url: sub.url);
     }
     try {
@@ -2848,8 +2952,10 @@ class SubscriptionService {
     }
   }
 
-  Future<UpdateResult> _update(Subscription sub,
-      {CancelToken? cancelToken}) async {
+  Future<UpdateResult> _update(
+    Subscription sub, {
+    CancelToken? cancelToken,
+  }) async {
     try {
       final fetched = await _fetchOrFallback(sub, cancelToken);
       final move = await _followMove(sub, fetched, cancelToken);
@@ -2866,8 +2972,10 @@ class SubscriptionService {
 
       // точный дубль давал два сервера с одним id и duplicate ValueKey в списке;
       // выбранная или помеченная копия остаётся вместо первой, иначе выбор слетал бы при обновлении
-      final activeConfig =
-          oldServers.where((s) => s.id == activeId).firstOrNull?.config;
+      final activeConfig = oldServers
+          .where((s) => s.id == activeId)
+          .firstOrNull
+          ?.config;
       final marked = {
         for (final s in oldServers)
           if (s.isPinned || s.customName != null || s.autoSkip) s.config,
@@ -2885,7 +2993,7 @@ class SubscriptionService {
       final usedOldIds = <String>{};
       final matched = uniqueConfigs.map((config) {
         final exactMatch = oldServers.cast<ServerItem?>().firstWhere(
-              (s) => s?.config == config,
+          (s) => s?.config == config,
           orElse: () => null,
         );
         if (exactMatch != null && usedOldIds.add(exactMatch.id)) {
@@ -2908,6 +3016,7 @@ class SubscriptionService {
         final probe = ServerItem.fromRaw(config);
         return '${probe.protocol}|${probe.derivedName}';
       }
+
       final unmatchedOld = <String, List<ServerItem>>{};
       for (final s in oldServers) {
         if (usedOldIds.contains(s.id) || s.configOverridden) continue;
@@ -2953,12 +3062,16 @@ class SubscriptionService {
       try {
         await _storage.setClashTemplate(sub.id, result.clashTemplate);
       } catch (e, st) {
-        AppLogger.instance.warn('Clash template not saved', error: e, stackTrace: st);
+        AppLogger.instance.warn(
+          'Clash template not saved',
+          error: e,
+          stackTrace: st,
+        );
       }
 
       if (activeId != null) {
         final wasInThisSub = oldServers.any((s) => s.id == activeId);
-        final stillExists  = servers.any((s) => s.id == activeId);
+        final stillExists = servers.any((s) => s.id == activeId);
         if (wasInThisSub && !stillExists) {
           await _storage.setActiveServerId(
             await _autoSelectReplacement(sub, activeId, oldServers, servers),
@@ -2987,13 +3100,17 @@ class SubscriptionService {
             supportUrl: result.profile.supportUrl,
             webPageUrl: result.profile.webPageUrl,
             // интервал панели только при первой загрузке, дальше его выбирает пользователь
-            updateIntervalHours:
-                wasFirstFetch ? result.profile.updateIntervalHours : null,
+            updateIntervalHours: wasFirstFetch
+                ? result.profile.updateIntervalHours
+                : null,
             fallbackUrl: result.profile.fallbackUrl,
             remindExpiry: result.profile.remindExpiry,
           );
       await _storage.upsertSubscription(updated);
-      final routingChanged = await _applyProviderRouting(updated, result.routing);
+      final routingChanged = await _applyProviderRouting(
+        updated,
+        result.routing,
+      );
 
       return UpdateResult(
         success: true,
@@ -3030,7 +3147,8 @@ class SubscriptionService {
           .firstOrNull;
       if (owner == null) return null;
       final home = await AutoSelectHomeStore.load();
-      final ledHere = home != null &&
+      final ledHere =
+          home != null &&
           home.subscriptionId == owner.id &&
           home.pickedId == goneId;
       if (owner.id != sub.id && !ledHere) return null;

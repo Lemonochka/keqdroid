@@ -62,13 +62,16 @@ class MemoryWatch {
       polls: ConnectionsPollStats.instance.takeSummary(),
     );
     if (Platform.isWindows) {
-      final pids = WindowsTunnelBackend.activeInstance?.activeCorePids ?? const {};
+      final pids =
+          WindowsTunnelBackend.activeInstance?.activeCorePids ?? const {};
       final native = await _channel.invokeMapMethod<String, Object?>(
         'getProcessResources',
         {'cores': pids},
       );
-      final self = (native?['self'] as Map?)?.cast<String, Object?>() ?? const {};
-      final cores = (native?['cores'] as Map?)?.cast<String, Object?>() ?? const {};
+      final self =
+          (native?['self'] as Map?)?.cast<String, Object?>() ?? const {};
+      final cores =
+          (native?['cores'] as Map?)?.cast<String, Object?>() ?? const {};
       return MemorySample(
         rss: common.rss,
         peakRss: common.peakRss,

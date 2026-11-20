@@ -19,7 +19,9 @@ void _varint(List<int> out, int value) {
 List<int> _domain(int type, String value) {
   final body = <int>[];
   if (type != 0) {
-    body..add(0x08)..addAll([type]); // field 1, varint
+    body
+      ..add(0x08)
+      ..addAll([type]); // field 1, varint
   }
   body.add(0x12); // field 2, length-delimited
   _varint(body, value.length);
@@ -98,15 +100,30 @@ void main() {
       ..._entry('TELEGRAM', [
         ..._cidr([91, 108, 4, 0], 22),
         ..._cidr([
-          0x2a, 0x0a, 0x01, 0x00, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0x2a,
+          0x0a,
+          0x01,
+          0x00,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
         ], 32),
       ]),
     ]);
 
-    expect(
-      await GeoDatReader.cidrs(file, 'telegram'),
-      ['91.108.4.0/22', '2a0a:100::/32'],
-    );
+    expect(await GeoDatReader.cidrs(file, 'telegram'), [
+      '91.108.4.0/22',
+      '2a0a:100::/32',
+    ]);
   });
 
   test('missing code and missing file yield empty lists, not throws', () async {
@@ -134,54 +151,76 @@ void main() {
     final geosite = File('assets/bin/windows/geosite.dat');
     final geoip = File('assets/bin/windows/geoip.dat');
 
-    test('codes merged by tool/fetch_xray_geo.ps1 are present and readable', () async {
-      if (!geoip.existsSync() || !geosite.existsSync()) return;
+    test(
+      'codes merged by tool/fetch_xray_geo.ps1 are present and readable',
+      () async {
+        if (!geoip.existsSync() || !geosite.existsSync()) return;
 
-      // Их нет в базах v2fly, поэтому правила вида `geoip:telegram` раньше
-      // молча выкидывались санитайзером (жалоба «ТГ не учитывается»).
-      final ipCodes = await GeoDatReader.codes(geoip);
-      expect(ipCodes, containsAll(['telegram', 'refilter', 'ru', 'private']));
+        // Их нет в базах v2fly, поэтому правила вида `geoip:telegram` раньше
+        // молча выкидывались санитайзером (жалоба «ТГ не учитывается»).
+        final ipCodes = await GeoDatReader.codes(geoip);
+        expect(ipCodes, containsAll(['telegram', 'refilter', 'ru', 'private']));
 
-      final siteCodes = await GeoDatReader.codes(geosite);
-      expect(
-        siteCodes,
-        containsAll([
-          'telegram',
-          'refilter',
-          'category-ru',
-          'ru-whitelist',
-          'ru-available-only-inside',
-          'antifilter-download-community',
-          'gfw',
-          'win-spy',
-          'win-update',
-          'win-extra',
-        ]),
-      );
-      for (final code in ['ru-available-only-inside', 'gfw', 'win-spy']) {
-        expect(await GeoDatReader.domains(geosite, code), isNotEmpty, reason: code);
-      }
+        final siteCodes = await GeoDatReader.codes(geosite);
+        expect(
+          siteCodes,
+          containsAll([
+            'telegram',
+            'refilter',
+            'category-ru',
+            'ru-whitelist',
+            'ru-available-only-inside',
+            'antifilter-download-community',
+            'gfw',
+            'win-spy',
+            'win-update',
+            'win-extra',
+          ]),
+        );
+        for (final code in ['ru-available-only-inside', 'gfw', 'win-spy']) {
+          expect(
+            await GeoDatReader.domains(geosite, code),
+            isNotEmpty,
+            reason: code,
+          );
+        }
 
-      // Тело домерженной записи должно читаться, а не только её заголовок.
-      expect(await GeoDatReader.cidrs(geoip, 'telegram'), isNotEmpty);
-      expect(await GeoDatReader.domains(geosite, 'refilter'), isNotEmpty);
-    });
+        // Тело домерженной записи должно читаться, а не только её заголовок.
+        expect(await GeoDatReader.cidrs(geoip, 'telegram'), isNotEmpty);
+        expect(await GeoDatReader.domains(geosite, 'refilter'), isNotEmpty);
+      },
+    );
 
     // замена, у которой в базе нет цели, молча превращается в выброс
-    test('у каждой замены незнакомого кода цели есть в поставляемой базе', () async {
-      if (!geosite.existsSync()) return;
-      final index = await GeoAssetIndex.fromDirectory('assets/bin/windows');
-      for (final code in ['ru-direct', 'ru-blocked', 'google-cn', 'apple-cn']) {
-        expect(geoSubstitutes('geosite:$code', index), isNotNull, reason: code);
-      }
-    });
+    test(
+      'у каждой замены незнакомого кода цели есть в поставляемой базе',
+      () async {
+        if (!geosite.existsSync()) return;
+        final index = await GeoAssetIndex.fromDirectory('assets/bin/windows');
+        for (final code in [
+          'ru-direct',
+          'ru-blocked',
+          'google-cn',
+          'apple-cn',
+        ]) {
+          expect(
+            geoSubstitutes('geosite:$code', index),
+            isNotNull,
+            reason: code,
+          );
+        }
+      },
+    );
 
-    test('белый список собран из текста: домены вместе с поддоменами', () async {
-      if (!geosite.existsSync()) return;
-      final domains = await GeoDatReader.domains(geosite, 'ru-whitelist');
-      expect(domains, isNotEmpty);
-      expect(domains.every((d) => d.type == GeoDomainType.domain), isTrue);
-      expect(domains.map((d) => d.value), contains('gosuslugi.ru'));
-    });
+    test(
+      'белый список собран из текста: домены вместе с поддоменами',
+      () async {
+        if (!geosite.existsSync()) return;
+        final domains = await GeoDatReader.domains(geosite, 'ru-whitelist');
+        expect(domains, isNotEmpty);
+        expect(domains.every((d) => d.type == GeoDomainType.domain), isTrue);
+        expect(domains.map((d) => d.value), contains('gosuslugi.ru'));
+      },
+    );
   });
 }

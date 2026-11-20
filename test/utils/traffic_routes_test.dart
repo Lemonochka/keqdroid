@@ -10,15 +10,14 @@ RoutingRule _rule(
   List<String> values,
   RuleAction action, {
   bool enabled = true,
-}) =>
-    RoutingRule(
-      id: '$type-$values',
-      name: 'r',
-      type: type,
-      values: values,
-      action: action,
-      enabled: enabled,
-    );
+}) => RoutingRule(
+  id: '$type-$values',
+  name: 'r',
+  type: type,
+  values: values,
+  action: action,
+  enabled: enabled,
+);
 
 TrafficRoute _route(
   String id, {
@@ -29,17 +28,16 @@ TrafficRoute _route(
   RouteTarget target = RouteTarget.vpn,
   String server = '',
   bool enabled = true,
-}) =>
-    TrafficRoute(
-      id: id,
-      apps: apps,
-      content: content,
-      sites: sites,
-      presetId: preset,
-      target: target,
-      serverId: server,
-      enabled: enabled,
-    );
+}) => TrafficRoute(
+  id: id,
+  apps: apps,
+  content: content,
+  sites: sites,
+  presetId: preset,
+  target: target,
+  serverId: server,
+  enabled: enabled,
+);
 
 /// Прежнее сворачивание «Своих правил» в три списка — копия кода, который
 /// исполнял connect() до маршрутов. Заморожена здесь как эталон: перенос
@@ -50,17 +48,23 @@ AppSettings _legacyFold(AppSettings settings, List<RoutingRule> rules) {
   final blocked = <String>[];
   for (final rule in rules) {
     if (!rule.enabled) continue;
-    final values =
-        rule.values.map((v) => v.trim()).where((v) => v.isNotEmpty).toList();
+    final values = rule.values
+        .map((v) => v.trim())
+        .where((v) => v.isNotEmpty)
+        .toList();
     if (values.isEmpty) continue;
     final tokens = switch (rule.type) {
       RuleType.domain || RuleType.ipCidr => values,
-      RuleType.geoip => values
-          .map((v) => v.toLowerCase().startsWith('geoip:') ? v : 'geoip:$v')
-          .toList(),
-      RuleType.geosite => values
-          .map((v) => v.toLowerCase().startsWith('geosite:') ? v : 'geosite:$v')
-          .toList(),
+      RuleType.geoip =>
+        values
+            .map((v) => v.toLowerCase().startsWith('geoip:') ? v : 'geoip:$v')
+            .toList(),
+      RuleType.geosite =>
+        values
+            .map(
+              (v) => v.toLowerCase().startsWith('geosite:') ? v : 'geosite:$v',
+            )
+            .toList(),
       RuleType.processName => const <String>[],
     };
     if (tokens.isEmpty) continue;
@@ -113,8 +117,12 @@ void main() {
           _rule(RuleType.geoip, ['ru'], RuleAction.direct),
           _rule(RuleType.geosite, ['geosite:google'], RuleAction.proxy),
           _rule(RuleType.ipCidr, ['1.1.1.1'], RuleAction.block),
-          _rule(RuleType.domain, ['off.example'], RuleAction.proxy,
-              enabled: false),
+          _rule(
+            RuleType.domain,
+            ['off.example'],
+            RuleAction.proxy,
+            enabled: false,
+          ),
           _rule(RuleType.processName, ['chrome.exe'], RuleAction.direct),
         ],
       ),
@@ -132,7 +140,11 @@ void main() {
         ],
       ),
       'geo-коды и пустые значения': (
-        const AppSettings(directRules: 'vk.com', proxyRules: '', blockedRules: ''),
+        const AppSettings(
+          directRules: 'vk.com',
+          proxyRules: '',
+          blockedRules: '',
+        ),
         [
           _rule(RuleType.geoip, ['RU'], RuleAction.direct),
           _rule(RuleType.geoip, ['geoip:us'], RuleAction.proxy),
@@ -162,7 +174,12 @@ void main() {
     test('правило по процессу — маршрут этих приложений, выключенный', () {
       final routes = routesFromLegacy(
         const AppSettings(directRules: '', proxyRules: '', blockedRules: ''),
-        [_rule(RuleType.processName, ['chrome.exe', 'firefox'], RuleAction.direct)],
+        [
+          _rule(RuleType.processName, [
+            'chrome.exe',
+            'firefox',
+          ], RuleAction.direct),
+        ],
         newId: id,
       );
       expect(routes.single.apps, ['chrome.exe', 'firefox']);
@@ -188,10 +205,9 @@ void main() {
         isTrue,
       );
       expect(
-        legacyRoutingCustomized(
-          const AppSettings(),
-          [_rule(RuleType.domain, ['a.example'], RuleAction.direct)],
-        ),
+        legacyRoutingCustomized(const AppSettings(), [
+          _rule(RuleType.domain, ['a.example'], RuleAction.direct),
+        ]),
         isTrue,
       );
     });
@@ -208,17 +224,14 @@ void main() {
         _route('all-direct', target: RouteTarget.direct),
         _route('all-server', target: RouteTarget.server, server: 's'),
       ];
-      expect(
-        orderedRoutes(routes).map((r) => r.id),
-        [
-          // Блок действует везде, в том числе у приложений со своим маршрутом.
-          'block', 'app-block',
-          // Сайты приложения раньше «весь трафик» того же приложения.
-          'app-sites', 'app-all',
-          // Как стояли прежние списки: обход, другой сервер, через VPN.
-          'all-direct', 'all-server', 'all-vpn',
-        ],
-      );
+      expect(orderedRoutes(routes).map((r) => r.id), [
+        // Блок действует везде, в том числе у приложений со своим маршрутом.
+        'block', 'app-block',
+        // Сайты приложения раньше «весь трафик» того же приложения.
+        'app-sites', 'app-all',
+        // Как стояли прежние списки: обход, другой сервер, через VPN.
+        'all-direct', 'all-server', 'all-vpn',
+      ]);
     });
   });
 
@@ -226,8 +239,12 @@ void main() {
     test('выключенные и пустые не попадают', () {
       final s = foldRoutes(const AppSettings(), [
         _route('a', sites: 'on.example', target: RouteTarget.direct),
-        _route('b', sites: 'off.example', target: RouteTarget.direct,
-            enabled: false),
+        _route(
+          'b',
+          sites: 'off.example',
+          target: RouteTarget.direct,
+          enabled: false,
+        ),
         _route('c', sites: ' ', target: RouteTarget.block),
       ]);
       expect(routingEntries(s.directRules), ['on.example']);
@@ -235,26 +252,32 @@ void main() {
     });
 
     test('прежние поля настроек не участвуют', () {
-      final s = foldRoutes(
-        const AppSettings(directRules: 'legacy.example'),
-        [_route('a', sites: 'route.example', target: RouteTarget.direct)],
-      );
+      final s = foldRoutes(const AppSettings(directRules: 'legacy.example'), [
+        _route('a', sites: 'route.example', target: RouteTarget.direct),
+      ]);
       expect(routingEntries(s.directRules), ['route.example']);
     });
 
     test('готовый список разворачивается в свои значения', () {
       final s = foldRoutes(const AppSettings(), [
-        _route('a',
-            content: RouteContent.preset, preset: 'ru',
-            target: RouteTarget.direct),
+        _route(
+          'a',
+          content: RouteContent.preset,
+          preset: 'ru',
+          target: RouteTarget.direct,
+        ),
       ]);
       expect(routingEntries(s.directRules), ['geosite:category-ru']);
     });
 
     test('маршрут отдельных приложений общим спискам не достаётся', () {
       final s = foldRoutes(const AppSettings(), [
-        _route('a', apps: ['chrome'], sites: 'yt.example',
-            target: RouteTarget.direct),
+        _route(
+          'a',
+          apps: ['chrome'],
+          sites: 'yt.example',
+          target: RouteTarget.direct,
+        ),
       ]);
       expect(s.directRules, isEmpty);
     });
@@ -263,21 +286,25 @@ void main() {
     // идёт через текущий сервер, а не теряется.
     test('недоступный сервер — через VPN', () {
       final s = foldRoutes(const AppSettings(), [
-        _route('a', sites: 'yt.example', target: RouteTarget.server,
-            server: 'gone'),
+        _route(
+          'a',
+          sites: 'yt.example',
+          target: RouteTarget.server,
+          server: 'gone',
+        ),
       ]);
       expect(routingEntries(s.proxyRules), ['yt.example']);
     });
 
     test('доступный сервер в общие списки не сворачивается', () {
-      final s = foldRoutes(
-        const AppSettings(),
-        [
-          _route('a', sites: 'yt.example', target: RouteTarget.server,
-              server: 'de'),
-        ],
-        serverUsable: (r) => r.serverId == 'de',
-      );
+      final s = foldRoutes(const AppSettings(), [
+        _route(
+          'a',
+          sites: 'yt.example',
+          target: RouteTarget.server,
+          server: 'de',
+        ),
+      ], serverUsable: (r) => r.serverId == 'de');
       expect(s.proxyRules, isEmpty);
     });
   });
@@ -286,8 +313,11 @@ void main() {
     expect(
       routeListUrls([
         _route('a', sites: 'x.example, https://l.example/a.txt'),
-        _route('b', sites: 'https://l.example/a.txt\nhttps://l.example/b.txt',
-            target: RouteTarget.block),
+        _route(
+          'b',
+          sites: 'https://l.example/a.txt\nhttps://l.example/b.txt',
+          target: RouteTarget.block,
+        ),
         _route('c', content: RouteContent.preset, preset: 'ads'),
       ]),
       ['https://l.example/a.txt', 'https://l.example/b.txt'],
@@ -310,10 +340,14 @@ void main() {
         expect(runet(sites), isTrue, reason: sites);
       }
       expect(
-        routeSendsRunetDirect(_route('a',
+        routeSendsRunetDirect(
+          _route(
+            'a',
             content: RouteContent.preset,
             preset: 'ru',
-            target: RouteTarget.direct)),
+            target: RouteTarget.direct,
+          ),
+        ),
         isTrue,
       );
     });
@@ -333,8 +367,14 @@ void main() {
   });
 
   test('маршрут переживает сохранение', () {
-    final r = _route('a', apps: ['chrome'], sites: 'yt.example',
-        target: RouteTarget.server, server: 'de', enabled: false);
+    final r = _route(
+      'a',
+      apps: ['chrome'],
+      sites: 'yt.example',
+      target: RouteTarget.server,
+      server: 'de',
+      enabled: false,
+    );
     expect(TrafficRoute.fromJson(r.toJson()), r);
   });
 }

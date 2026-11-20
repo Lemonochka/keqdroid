@@ -8,12 +8,11 @@ import 'package:keqdroid/shared/ui/haptics.dart';
 List<({IconData icon, String label, bool badge})> appNavDestinations(
   AppLocalizations l10n, {
   required bool showConnectedBadge,
-}) =>
-    [
-      (icon: Icons.lan_rounded, label: l10n.navServers, badge: showConnectedBadge),
-      (icon: Icons.language_rounded, label: l10n.navSubscriptions, badge: false),
-      (icon: Icons.settings_rounded, label: l10n.navSettings, badge: false),
-    ];
+}) => [
+  (icon: Icons.lan_rounded, label: l10n.navServers, badge: showConnectedBadge),
+  (icon: Icons.language_rounded, label: l10n.navSubscriptions, badge: false),
+  (icon: Icons.settings_rounded, label: l10n.navSettings, badge: false),
+];
 
 // своя реализация: у NavigationBar во Flutter 3.44 подпись только под иконкой;
 // анимация здесь, а не в пунктах, потому что доля ряда считается из той же величины, что отступы
@@ -86,9 +85,7 @@ class _AppBottomNavState extends State<AppBottomNav>
             animation: Listenable.merge(_ctrls),
             builder: (context, _) => LayoutBuilder(
               builder: (context, constraints) {
-                final ts = [
-                  for (final c in _ctrls) c.value.clamp(0.0, 1.0),
-                ];
+                final ts = [for (final c in _ctrls) c.value.clamp(0.0, 1.0)];
                 final budgets = _labelBudgets(ts, constraints.maxWidth);
                 return Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -207,8 +204,9 @@ class _NavItem extends StatelessWidget {
                           padding: const EdgeInsetsDirectional.only(start: 8),
                           child: Text(
                             label,
-                            style: theme.textTheme.labelLarge
-                                ?.copyWith(color: cs.onSurface),
+                            style: theme.textTheme.labelLarge?.copyWith(
+                              color: cs.onSurface,
+                            ),
                             maxLines: 1,
                             softWrap: false,
                             overflow: TextOverflow.fade,

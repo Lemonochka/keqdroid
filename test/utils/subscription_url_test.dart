@@ -101,8 +101,17 @@ void main() {
     });
 
     test('с https на http, на тот же адрес и на мусор не переезжаем', () {
-      expect(movedSubscriptionUrl(current, newUrl: 'http://new.example/s'), isNull);
-      expect(movedSubscriptionUrl(current, newUrl: 'https://OLD.example:2096/sub/abc?fmt=v2ray'), isNull);
+      expect(
+        movedSubscriptionUrl(current, newUrl: 'http://new.example/s'),
+        isNull,
+      );
+      expect(
+        movedSubscriptionUrl(
+          current,
+          newUrl: 'https://OLD.example:2096/sub/abc?fmt=v2ray',
+        ),
+        isNull,
+      );
       expect(movedSubscriptionUrl(current, newUrl: 'vless://x@y:1'), isNull);
       expect(movedSubscriptionUrl(current, newDomain: 'not a domain'), isNull);
       expect(movedSubscriptionUrl(current, newDomain: 'localhost'), isNull);

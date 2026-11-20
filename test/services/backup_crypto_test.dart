@@ -9,7 +9,11 @@ final _backup = KeqdroidBackup(
   exportedAt: DateTime.utc(2026, 11, 18, 14, 2),
   data: {
     'subscriptions': [
-      {'id': 's1', 'name': 'Ranteis', 'url': 'https://sub.example/secret-token'},
+      {
+        'id': 's1',
+        'name': 'Ranteis',
+        'url': 'https://sub.example/secret-token',
+      },
     ],
   },
 );
@@ -22,18 +26,21 @@ void main() {
     BackupKeys.noReleaseKey = false;
   });
 
-  test('the file hides the subscription links and opens back the same', () async {
-    BackupKeys.releaseOverride = _releaseKey;
-    final file = await SettingsBackupService.encodeFile(_backup);
+  test(
+    'the file hides the subscription links and opens back the same',
+    () async {
+      BackupKeys.releaseOverride = _releaseKey;
+      final file = await SettingsBackupService.encodeFile(_backup);
 
-    expect(BackupCrypto.isSealed(file), isTrue);
-    expect(latin1.decode(file), isNot(contains('secret-token')));
-    expect(latin1.decode(file), isNot(contains('keqdis_backup')));
+      expect(BackupCrypto.isSealed(file), isTrue);
+      expect(latin1.decode(file), isNot(contains('secret-token')));
+      expect(latin1.decode(file), isNot(contains('keqdis_backup')));
 
-    final back = await SettingsBackupService.decodeFile(file);
-    expect(back.data, _backup.data);
-    expect(back.exportedAt, _backup.exportedAt);
-  });
+      final back = await SettingsBackupService.decodeFile(file);
+      expect(back.data, _backup.data);
+      expect(back.exportedAt, _backup.exportedAt);
+    },
+  );
 
   test('the same backup encrypts differently every time', () async {
     BackupKeys.releaseOverride = _releaseKey;
@@ -59,15 +66,17 @@ void main() {
     );
   });
 
-  test('a build without the release key writes files any build can read',
-      () async {
-    BackupKeys.noReleaseKey = true;
-    final file = await SettingsBackupService.encodeFile(_backup);
-    BackupKeys.noReleaseKey = false;
-    BackupKeys.releaseOverride = _releaseKey;
-    final back = await SettingsBackupService.decodeFile(file);
-    expect(back.data, _backup.data);
-  });
+  test(
+    'a build without the release key writes files any build can read',
+    () async {
+      BackupKeys.noReleaseKey = true;
+      final file = await SettingsBackupService.encodeFile(_backup);
+      BackupKeys.noReleaseKey = false;
+      BackupKeys.releaseOverride = _releaseKey;
+      final back = await SettingsBackupService.decodeFile(file);
+      expect(back.data, _backup.data);
+    },
+  );
 
   test('a changed byte is caught instead of restoring garbage', () async {
     BackupKeys.releaseOverride = _releaseKey;

@@ -18,7 +18,8 @@ class _FakeFetch {
     return (_pending[path] ??= Completer<String?>()).future;
   }
 
-  void complete(String path, String? value) => _pending.remove(path)!.complete(value);
+  void complete(String path, String? value) =>
+      _pending.remove(path)!.complete(value);
   bool isPending(String path) => _pending.containsKey(path);
 }
 

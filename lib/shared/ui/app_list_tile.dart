@@ -46,8 +46,7 @@ class AppListTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final foreground =
-        checked ? scheme.onSecondaryContainer : scheme.onSurface;
+    final foreground = checked ? scheme.onSecondaryContainer : scheme.onSurface;
     final muted = checked
         ? scheme.onSecondaryContainer.withValues(alpha: 0.7)
         : scheme.onSurfaceVariant;
@@ -117,8 +116,9 @@ class AppListTile extends StatelessWidget {
                         const SizedBox(height: 2),
                         Text(
                           app.installPath ?? app.packageName,
-                          style: theme.textTheme.bodySmall
-                              ?.copyWith(color: muted),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: muted,
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -142,7 +142,11 @@ class AppListTile extends StatelessWidget {
 class AppSelectionMark extends StatelessWidget {
   final bool checked;
   final Color color;
-  const AppSelectionMark({super.key, required this.checked, required this.color});
+  const AppSelectionMark({
+    super.key,
+    required this.checked,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -301,9 +305,9 @@ class _AppIconViewState extends State<AppIconView> {
       child: Center(
         child: Text(
           widget.appName.isNotEmpty ? widget.appName[0].toUpperCase() : '?',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: scheme.onPrimaryContainer,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(color: scheme.onPrimaryContainer),
         ),
       ),
     );

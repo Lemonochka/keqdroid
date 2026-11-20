@@ -63,8 +63,8 @@ class ConnectionsTracker {
           closedAt: !entry.closed
               ? null
               : catchingUp
-                  ? (entry.startedAt ?? at)
-                  : at,
+              ? (entry.startedAt ?? at)
+              : at,
         );
         continue;
       }
@@ -106,23 +106,20 @@ class ConnectionsTracker {
   static ConnectionsSnapshot _snapshotFrom(
     ConnectionsSnapshot source,
     List<ConnectionEntry> entries,
-  ) =>
-      ConnectionsSnapshot(
-        entries: entries,
-        source: source.source,
-        note: source.note,
-        ruleInfoAvailable: source.ruleInfoAvailable,
-        appNamesAvailable: source.appNamesAvailable,
-      );
+  ) => ConnectionsSnapshot(
+    entries: entries,
+    source: source.source,
+    note: source.note,
+    ruleInfoAvailable: source.ruleInfoAvailable,
+    appNamesAvailable: source.appNamesAvailable,
+  );
 
   static List<ConnectionEntry> _group(List<ConnectionEntry> entries) {
     final groups = <String, List<ConnectionEntry>>{};
     for (final entry in entries) {
       groups.putIfAbsent(entry.groupKey, () => []).add(entry);
     }
-    return [
-      for (final members in groups.values) _mergeGroup(members),
-    ];
+    return [for (final members in groups.values) _mergeGroup(members)];
   }
 
   static ConnectionEntry _mergeGroup(List<ConnectionEntry> members) {
@@ -150,7 +147,8 @@ class ConnectionsTracker {
       if (!member.closed) closed = false;
     }
 
-    final newestFirst = [...members]..sort((a, b) {
+    final newestFirst = [...members]
+      ..sort((a, b) {
         final at = a.startedAt, bt = b.startedAt;
         if (at == null || bt == null) return 0;
         return bt.compareTo(at);

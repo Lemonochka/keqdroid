@@ -26,13 +26,16 @@ void main() {
     templates = {};
     saved = [];
     storage = _MockStorageService();
-    when(() => storage.getSettings()).thenAnswer((_) async => const AppSettings());
+    when(
+      () => storage.getSettings(),
+    ).thenAnswer((_) async => const AppSettings());
     when(() => storage.getHwid()).thenReturn(null);
     when(() => storage.setHwid(any())).thenAnswer((_) async {});
     when(() => storage.getServers()).thenAnswer((_) async => const []);
     when(() => storage.getActiveServerId()).thenReturn(null);
-    when(() => storage.replaceServersBySubscription(any(), any()))
-        .thenAnswer((inv) async {
+    when(() => storage.replaceServersBySubscription(any(), any())).thenAnswer((
+      inv,
+    ) async {
       saved = inv.positionalArguments[1] as List<ServerItem>;
     });
     when(() => storage.upsertSubscription(any())).thenAnswer((_) async {});
@@ -42,21 +45,29 @@ void main() {
     });
   });
 
-  const sub = Subscription(id: 's1', name: 'Шаблон', url: 'https://example.com/sub');
+  const sub = Subscription(
+    id: 's1',
+    name: 'Шаблон',
+    url: 'https://example.com/sub',
+  );
 
   Future<UpdateResult> update(String body) => SubscriptionService(
-        storage,
-        dio: Dio()..httpClientAdapter = _Adapter(body),
-      ).updateSubscription(sub);
+    storage,
+    dio: Dio()..httpClientAdapter = _Adapter(body),
+  ).updateSubscription(sub);
 
   test('шаблон с группами хранится рядом, серверы те же узлы', () async {
-    final body = File('test/fixtures/subscription_payloads/clash-template-groups.txt')
-        .readAsStringSync();
+    final body = File(
+      'test/fixtures/subscription_payloads/clash-template-groups.txt',
+    ).readAsStringSync();
     final result = await update(body);
     expect(result.success, isTrue);
     expect(saved, hasLength(3));
     final template = ClashTemplate.fromBody(templates['s1']!)!;
-    expect([for (final g in template.groups) g.name], ['Недоступные сайты', 'YouTube']);
+    expect(
+      [for (final g in template.groups) g.name],
+      ['Недоступные сайты', 'YouTube'],
+    );
     expect(template.nodeFor(saved[1]), '🇫🇮 Finland');
   });
 
@@ -84,12 +95,11 @@ class _Adapter implements HttpClientAdapter {
     RequestOptions options,
     Stream<List<int>>? requestStream,
     Future<void>? cancelFuture,
-  ) async =>
-      ResponseBody.fromString(
-        body,
-        200,
-        headers: {
-          'content-type': ['text/plain; charset=utf-8'],
-        },
-      );
+  ) async => ResponseBody.fromString(
+    body,
+    200,
+    headers: {
+      'content-type': ['text/plain; charset=utf-8'],
+    },
+  );
 }

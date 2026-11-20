@@ -22,16 +22,15 @@ TrafficRoute _app(
   RouteTarget target = RouteTarget.vpn,
   String serverId = '',
   bool enabled = true,
-}) =>
-    TrafficRoute(
-      id: id,
-      apps: apps,
-      content: content,
-      sites: sites,
-      target: target,
-      serverId: serverId,
-      enabled: enabled,
-    );
+}) => TrafficRoute(
+  id: id,
+  apps: apps,
+  content: content,
+  sites: sites,
+  target: target,
+  serverId: serverId,
+  enabled: enabled,
+);
 
 void main() {
   group('appRoutesRun', () {
@@ -77,7 +76,10 @@ void main() {
         outbounds: const [],
         windows: true,
       );
-      expect(rules.single.apps, ['Chrome.exe', r'C:\Program Files\App\app.exe']);
+      expect(rules.single.apps, [
+        'Chrome.exe',
+        r'C:\Program Files\App\app.exe',
+      ]);
     });
 
     test('выключенные, пустые и без приложений пропускаются', () {
@@ -132,14 +134,20 @@ void main() {
     test('сайты маршрутов приложений в общий выход не попадают', () {
       final outbounds = routeServerOutbounds(
         routes: [
-          _app('every', const [],
-              sites: 'vk.com',
-              target: RouteTarget.server,
-              serverId: 'de'),
-          _app('app', ['a.exe'],
-              sites: 'youtube.com',
-              target: RouteTarget.server,
-              serverId: 'de'),
+          _app(
+            'every',
+            const [],
+            sites: 'vk.com',
+            target: RouteTarget.server,
+            serverId: 'de',
+          ),
+          _app(
+            'app',
+            ['a.exe'],
+            sites: 'youtube.com',
+            target: RouteTarget.server,
+            serverId: 'de',
+          ),
         ],
         servers: _servers,
         activeServerId: 'nl',

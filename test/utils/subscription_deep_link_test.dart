@@ -55,20 +55,31 @@ void main() {
 
     test('серверная ссылка остаётся серверной', () {
       // Иначе vless:// уехал бы в добавление подписки вместо импорта сервера.
-      expect(subscriptionUrlFromDeepLink('vless://uuid@host:443?type=tcp'), isNull);
-      expect(subscriptionUrlFromDeepLink('https://panel.example.com/sub'), isNull);
+      expect(
+        subscriptionUrlFromDeepLink('vless://uuid@host:443?type=tcp'),
+        isNull,
+      );
+      expect(
+        subscriptionUrlFromDeepLink('https://panel.example.com/sub'),
+        isNull,
+      );
     });
 
     test('мусор вместо адреса отбрасывается', () {
       expect(subscriptionUrlFromDeepLink('keqdroid://install-config'), isNull);
-      expect(subscriptionUrlFromDeepLink('keqdroid://install-config?url='), isNull);
+      expect(
+        subscriptionUrlFromDeepLink('keqdroid://install-config?url='),
+        isNull,
+      );
       expect(
         subscriptionUrlFromDeepLink('keqdroid://install-config?url=not-a-url'),
         isNull,
       );
       // ftp/file и прочее в подписку не пускаем.
       expect(
-        subscriptionUrlFromDeepLink('keqdroid://install-config?url=ftp://x.example.com/s'),
+        subscriptionUrlFromDeepLink(
+          'keqdroid://install-config?url=ftp://x.example.com/s',
+        ),
         isNull,
       );
     });

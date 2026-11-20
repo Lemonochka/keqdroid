@@ -9,10 +9,7 @@ void main() {
       connectionMode: 'proxy',
       connectionModeChosen: true,
     );
-    const vpn = AppSettings(
-      connectionMode: 'tun',
-      connectionModeChosen: true,
-    );
+    const vpn = AppSettings(connectionMode: 'tun', connectionModeChosen: true);
 
     test('на Android невыбранный режим читается как VPN, а не как дефолт', () {
       // Дефолт поля — десктопный `proxy`, и до 0.13.0 на Android он лежал в

@@ -24,8 +24,9 @@ Future<ProviderContainer> _seed(List<ServerItem> servers) async {
   return container;
 }
 
-List<String> _names(ProviderContainer c) =>
-    [for (final s in c.read(serversProvider).servers) s.displayName];
+List<String> _names(ProviderContainer c) => [
+  for (final s in c.read(serversProvider).servers) s.displayName,
+];
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -34,23 +35,31 @@ void main() {
     final c = await _seed([ServerItem.fromRaw(_vless('A'))]);
     await expectLater(
       c.read(serversProvider.notifier).addManual(_vless('A')),
-      throwsA(isA<Exception>().having((e) => '$e', 'text', contains('already added'))),
+      throwsA(
+        isA<Exception>().having((e) => '$e', 'text', contains('already added')),
+      ),
     );
     expect(_names(c), ['A']);
   });
 
   test('тот же сервер под другим именем второй раз не добавляется', () async {
-    final c = await _seed([ServerItem.fromRaw(_vless('A'), subscriptionId: 's1')]);
+    final c = await _seed([
+      ServerItem.fromRaw(_vless('A'), subscriptionId: 's1'),
+    ]);
     await expectLater(
       c.read(serversProvider.notifier).addManual(_vless('@channel B')),
-      throwsA(isA<Exception>().having((e) => '$e', 'text', contains('already added'))),
+      throwsA(
+        isA<Exception>().having((e) => '$e', 'text', contains('already added')),
+      ),
     );
     expect(_names(c), ['A']);
   });
 
   test('другой SNI добавляется вторым сервером', () async {
     final c = await _seed([ServerItem.fromRaw(_vless('A'))]);
-    await c.read(serversProvider.notifier).addManual(_vless('B', sni: 'b.example'));
+    await c
+        .read(serversProvider.notifier)
+        .addManual(_vless('B', sni: 'b.example'));
     expect(_names(c), ['A', 'B']);
   });
 }

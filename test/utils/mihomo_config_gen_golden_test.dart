@@ -94,20 +94,24 @@ void main() {
 
     _golden('vmess-ws-tls', () {
       // vmess прячет параметры в base64-json, а не в query.
-      final vmess = base64.encode(utf8.encode(jsonEncode({
-        'v': '2',
-        'ps': 'vmess',
-        'add': '198.51.100.13',
-        'port': '443',
-        'id': _uuid,
-        'aid': '0',
-        'net': 'ws',
-        'type': 'none',
-        'host': 'vmess.example',
-        'path': '/vmess',
-        'tls': 'tls',
-        'sni': 'vmess.example',
-      })));
+      final vmess = base64.encode(
+        utf8.encode(
+          jsonEncode({
+            'v': '2',
+            'ps': 'vmess',
+            'add': '198.51.100.13',
+            'port': '443',
+            'id': _uuid,
+            'aid': '0',
+            'net': 'ws',
+            'type': 'none',
+            'host': 'vmess.example',
+            'path': '/vmess',
+            'tls': 'tls',
+            'sni': 'vmess.example',
+          }),
+        ),
+      );
       return MihomoConfigGen.generate(
         'vmess://$vmess',
         _settings,
@@ -196,12 +200,14 @@ void main() {
           name: 'chain',
           hops: [
             const ProxyChainHop(
-              config: 'vless://$_uuid@198.51.100.20:443?type=tcp&security=reality'
+              config:
+                  'vless://$_uuid@198.51.100.20:443?type=tcp&security=reality'
                   '&sni=decoy.example&pbk=publickey&sid=aabb&fp=chrome'
                   '&flow=xtls-rprx-vision#entry',
             ),
             const ProxyChainHop(
-              config: '[Interface]\n'
+              config:
+                  '[Interface]\n'
                   'PrivateKey = AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEA=\n'
                   'Address = 10.8.1.2/32\n'
                   'Jc = 4\nJmin = 40\nJmax = 70\n'
@@ -360,15 +366,17 @@ void main() {
 
   group('golden: MihomoConfigGen.generatePingConfig', () {
     _golden('ping-vless-reality', () {
-      return const JsonEncoder.withIndent('  ').convert(jsonDecode(
-        MihomoConfigGen.generatePingConfig(
-          'vless://$_uuid@198.51.100.31:443?type=tcp&security=reality'
-          '&sni=decoy.example&pbk=publickey&sid=aabb&fp=chrome#ping',
-          _settings,
-          socksPort: 28150,
-          httpInbound: true,
+      return const JsonEncoder.withIndent('  ').convert(
+        jsonDecode(
+          MihomoConfigGen.generatePingConfig(
+            'vless://$_uuid@198.51.100.31:443?type=tcp&security=reality'
+            '&sni=decoy.example&pbk=publickey&sid=aabb&fp=chrome#ping',
+            _settings,
+            socksPort: 28150,
+            httpInbound: true,
+          ),
         ),
-      ));
+      );
     });
   });
 }
@@ -469,7 +477,8 @@ void _golden(String name, String Function() generate) {
     expect(
       file.existsSync(),
       isTrue,
-      reason: 'нет фикстуры ${file.path} — сними её: UPDATE_GOLDEN=1 flutter test',
+      reason:
+          'нет фикстуры ${file.path} — сними её: UPDATE_GOLDEN=1 flutter test',
     );
     // Пояс поверх .gitattributes: если фикстура всё же приехала с CRLF.
     final expected = file.readAsStringSync().replaceAll('\r\n', '\n');

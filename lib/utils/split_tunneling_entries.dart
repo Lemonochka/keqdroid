@@ -30,7 +30,7 @@ bool splitEntryMatches(String entry, AppInfo app, {bool? windows}) {
 
 class SplitSelection {
   SplitSelection(Iterable<String> entries, {bool? windows})
-      : _windows = windows {
+    : _windows = windows {
     for (final entry in entries) {
       if (entry.trim().isEmpty) continue;
       if (isProcessPathEntry(entry)) {

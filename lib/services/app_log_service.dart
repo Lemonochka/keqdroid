@@ -8,11 +8,7 @@ import '../models/app_internals.dart';
 import 'app_internals_service.dart';
 import 'debug_log_service.dart';
 
-enum AppLogSource {
-  app,
-
-  native,
-}
+enum AppLogSource { app, native }
 
 enum LogLevel { debug, info, warn, error }
 
@@ -31,9 +27,9 @@ class AppLogService {
   static const _channel = MethodChannel('keqdroid_vpn_channel');
 
   static List<AppLogSource> get sources => [
-        AppLogSource.app,
-        if (Platform.isAndroid) AppLogSource.native,
-      ];
+    AppLogSource.app,
+    if (Platform.isAndroid) AppLogSource.native,
+  ];
 
   static Future<List<LogEntry>> read(AppLogSource source) async =>
       parse(source, await _readRaw(source));
@@ -50,8 +46,9 @@ class AppLogService {
     }
   }
 
-  static final _head =
-      RegExp(r'^\d{4}-\d{2}-\d{2}T\S+ \[(DEBUG|INFO|WARN|ERROR)\] ');
+  static final _head = RegExp(
+    r'^\d{4}-\d{2}-\d{2}T\S+ \[(DEBUG|INFO|WARN|ERROR)\] ',
+  );
 
   static List<LogEntry> parse(AppLogSource source, String text) {
     final lines = const LineSplitter().convert(text);
@@ -112,7 +109,8 @@ class AppLogService {
   static Future<File> writeBundleFile(Directory dir, {DateTime? now}) async {
     final at = now ?? DateTime.now();
     String two(int v) => v.toString().padLeft(2, '0');
-    final name = 'keqdroid-log-${at.year}-${two(at.month)}-${two(at.day)}'
+    final name =
+        'keqdroid-log-${at.year}-${two(at.month)}-${two(at.day)}'
         '-${two(at.hour)}${two(at.minute)}.txt';
     final file = File('${dir.path}${Platform.pathSeparator}$name');
     await file.writeAsString(await bundle(tailEntries: null), flush: true);

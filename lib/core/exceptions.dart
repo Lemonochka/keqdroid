@@ -5,7 +5,8 @@ abstract class AppException implements Exception {
   const AppException(this.message, {this.cause});
 
   @override
-  String toString() => '$runtimeType: $message${cause != null ? ' (caused by: $cause)' : ''}';
+  String toString() =>
+      '$runtimeType: $message${cause != null ? ' (caused by: $cause)' : ''}';
 }
 
 class NetworkException extends AppException {
@@ -17,7 +18,11 @@ class NetworkException extends AppException {
 class SubscriptionFetchException extends NetworkException {
   final String url;
 
-  const SubscriptionFetchException(super.message, {required this.url, super.cause});
+  const SubscriptionFetchException(
+    super.message, {
+    required this.url,
+    super.cause,
+  });
 }
 
 // TimeoutException перекрывал одноимённый из dart:async там, где импортированы оба
@@ -42,7 +47,11 @@ class VpnStartException extends VpnException {
 class PlatformChannelException extends AppException {
   final String channel;
 
-  const PlatformChannelException(super.message, {required this.channel, super.cause});
+  const PlatformChannelException(
+    super.message, {
+    required this.channel,
+    super.cause,
+  });
 }
 
 class StorageException extends AppException {
@@ -51,6 +60,8 @@ class StorageException extends AppException {
 
 class FileDialogUnavailableException extends AppException {
   const FileDialogUnavailableException({super.cause})
-      : super('No file dialog available: install xdg-desktop-portal-gtk, '
-            'zenity or kdialog');
+    : super(
+        'No file dialog available: install xdg-desktop-portal-gtk, '
+        'zenity or kdialog',
+      );
 }

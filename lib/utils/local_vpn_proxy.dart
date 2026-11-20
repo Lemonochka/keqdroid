@@ -80,11 +80,11 @@ void configureHttpClientForLocalVpnProxy(
   String? password,
 }) {
   client.findProxy = (_) => localProxyDirective(
-        resolvePort(),
-        // синглтон читаем в момент запроса: после пересоздания изолята логин и пароль приезжают позже
-        username: username ?? Socks5Credentials().username,
-        password: password ?? Socks5Credentials().password,
-      );
+    resolvePort(),
+    // синглтон читаем в момент запроса: после пересоздания изолята логин и пароль приезжают позже
+    username: username ?? Socks5Credentials().username,
+    password: password ?? Socks5Credentials().password,
+  );
 }
 
 void configureDioForLocalVpnProxy(
@@ -117,13 +117,12 @@ void configureDioForLocalVpnHttpProxy(
   required int httpPort,
   String? username,
   String? password,
-}) =>
-    configureDioForLocalVpnProxy(
-      dio,
-      () => httpPort,
-      username: username,
-      password: password,
-    );
+}) => configureDioForLocalVpnProxy(
+  dio,
+  () => httpPort,
+  username: username,
+  password: password,
+);
 
 void configureDioForActiveVpn(
   Dio dio, {

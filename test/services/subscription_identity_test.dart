@@ -58,20 +58,24 @@ void main() {
 
   setUp(() {
     storage = _MockStorageService();
-    when(() => storage.getSettings()).thenAnswer((_) async => const AppSettings());
+    when(
+      () => storage.getSettings(),
+    ).thenAnswer((_) async => const AppSettings());
     when(() => storage.getHwid()).thenReturn('devicehwid0000');
     when(() => storage.setHwid(any())).thenAnswer((_) async {});
   });
 
   _RecordingAdapter plainAdapter() => _RecordingAdapter(
-        body: base64.encode(utf8.encode(_node)),
-        contentType: 'text/plain; charset=utf-8',
-      );
+    body: base64.encode(utf8.encode(_node)),
+    contentType: 'text/plain; charset=utf-8',
+  );
 
   SubscriptionService serviceWith(_RecordingAdapter adapter) {
-    final dio = Dio(BaseOptions(headers: {
-      'User-Agent': SubscriptionService.browserUserAgent,
-    }));
+    final dio = Dio(
+      BaseOptions(
+        headers: {'User-Agent': SubscriptionService.browserUserAgent},
+      ),
+    );
     dio.httpClientAdapter = adapter;
     return SubscriptionService(storage, dio: dio);
   }
@@ -124,7 +128,10 @@ void main() {
       final ascii = matches(RegExp(r'^[\x20-\x7E]+$'));
       // ASCII-часть значения сохраняется (версия сборки ещё пригодится
       // панели), выброшена только кириллица
-      expect(adapter.header('x-ver-os'), '" Windows 11 Pro" 10.0 (Build 26100)');
+      expect(
+        adapter.header('x-ver-os'),
+        '" Windows 11 Pro" 10.0 (Build 26100)',
+      );
       // от значения не осталось ни буквы, ни цифры → значение устройства
       expect(adapter.header('x-device-os'), ascii);
       expect(adapter.header('x-device-model'), ascii);
@@ -183,8 +190,9 @@ void main() {
     });
 
     test('hwid stays unsent while sharing is off in settings', () async {
-      when(() => storage.getSettings())
-          .thenAnswer((_) async => const AppSettings(shareDeviceHwid: false));
+      when(
+        () => storage.getSettings(),
+      ).thenAnswer((_) async => const AppSettings(shareDeviceHwid: false));
       final adapter = plainAdapter();
       final service = serviceWith(adapter);
 
@@ -204,9 +212,9 @@ void main() {
     // Панель отдаёт подписку html-страницей: без закреплённого UA это ровно
     // тот случай, ради которого и существует перебор запасных.
     _RecordingAdapter htmlAdapter() => _RecordingAdapter(
-          body: '<html><body><pre>$_node</pre></body></html>',
-          contentType: 'text/html; charset=utf-8',
-        );
+      body: '<html><body><pre>$_node</pre></body></html>',
+      contentType: 'text/html; charset=utf-8',
+    );
 
     test('is not rotated away when the panel answers with html', () async {
       final adapter = htmlAdapter();
@@ -236,34 +244,37 @@ void main() {
       expect(adapter.requests.length, greaterThan(1));
     });
 
-    test('does not overwrite the saved working UA of the subscription',
-        () async {
-      final adapter = plainAdapter();
-      final service = serviceWith(adapter);
-      when(() => storage.getServers()).thenAnswer((_) async => []);
-      when(() => storage.getActiveServerId()).thenReturn(null);
-      when(() => storage.replaceServersBySubscription(any(), any()))
-          .thenAnswer((_) async {});
-      when(() => storage.upsertSubscription(any())).thenAnswer((_) async {});
+    test(
+      'does not overwrite the saved working UA of the subscription',
+      () async {
+        final adapter = plainAdapter();
+        final service = serviceWith(adapter);
+        when(() => storage.getServers()).thenAnswer((_) async => []);
+        when(() => storage.getActiveServerId()).thenReturn(null);
+        when(
+          () => storage.replaceServersBySubscription(any(), any()),
+        ).thenAnswer((_) async {});
+        when(() => storage.upsertSubscription(any())).thenAnswer((_) async {});
 
-      final result = await service.updateSubscription(
-        const Subscription(
-          id: 's1',
-          name: 'S',
-          url: 'https://example.com/sub',
-          userAgent: 'NekoBox/1.4.2',
-          fetchIdentity: SubscriptionFetchIdentity(
-            enabled: true,
-            userAgent: 'Happ/4.1.0',
+        final result = await service.updateSubscription(
+          const Subscription(
+            id: 's1',
+            name: 'S',
+            url: 'https://example.com/sub',
+            userAgent: 'NekoBox/1.4.2',
+            fetchIdentity: SubscriptionFetchIdentity(
+              enabled: true,
+              userAgent: 'Happ/4.1.0',
+            ),
           ),
-        ),
-      );
+        );
 
-      expect(result.success, isTrue);
-      // Закреплённый UA — выбор пользовательницы, а не «UA, который тут
-      // работает»: выключив подмену, она обязана вернуться к прежнему.
-      expect(result.subscription.userAgent, 'NekoBox/1.4.2');
-    });
+        expect(result.success, isTrue);
+        // Закреплённый UA — выбор пользовательницы, а не «UA, который тут
+        // работает»: выключив подмену, она обязана вернуться к прежнему.
+        expect(result.subscription.userAgent, 'NekoBox/1.4.2');
+      },
+    );
   });
 
   group('user agent catalogue', () {

@@ -22,7 +22,12 @@ class ConnectionsPollStats {
     return Stopwatch()..start();
   }
 
-  void end(Stopwatch started, {bool ok = true, int bodyChars = 0, int? connections}) {
+  void end(
+    Stopwatch started, {
+    bool ok = true,
+    int bodyChars = 0,
+    int? connections,
+  }) {
     _inFlight--;
     if (!ok) _failures++;
     if (started.elapsed > slowAfter) _slow++;
@@ -35,7 +40,8 @@ class ConnectionsPollStats {
   int get inFlight => _inFlight;
 
   String takeSummary() {
-    final summary = '$_requests requests, in flight $_inFlight '
+    final summary =
+        '$_requests requests, in flight $_inFlight '
         '(max $_maxInFlight), failed $_failures, slow $_slow, '
         'largest ${_kb(_maxBodyChars)} / $_maxConnections connections';
     _requests = 0;

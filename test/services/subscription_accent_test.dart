@@ -8,9 +8,9 @@ import 'package:keqdroid/services/subscription_accent_service.dart';
 /// стоимость пересчёта.
 void main() {
   ColorScheme schemeOf(Brightness brightness) => ColorScheme.fromSeed(
-        seedColor: const Color(0xFF6750A4),
-        brightness: brightness,
-      );
+    seedColor: const Color(0xFF6750A4),
+    brightness: brightness,
+  );
 
   group('рисованная тема', () {
     test('акцент берётся из той же роли, что нарисована на карточке', () async {
@@ -23,10 +23,7 @@ void main() {
       expect(accent, isNotNull);
       // Рисунки идут от оттенка primary, акцент группы обязан прийти оттуда же,
       // иначе карточка и её серверы разъедутся по цвету.
-      expect(
-        accent!.seed,
-        scheme.primary.harmonizeWith(scheme.primary),
-      );
+      expect(accent!.seed, scheme.primary.harmonizeWith(scheme.primary));
     });
 
     test('тема «без подложки» акцента не даёт', () async {
@@ -39,16 +36,18 @@ void main() {
       );
     });
 
-    test('неизвестный id не роняет экран, а просто оставляет группу обычной',
-        () async {
-      expect(
-        await SubscriptionAccentService.resolve(
-          themeId: 'темы-больше-нет',
-          scheme: schemeOf(Brightness.dark),
-        ),
-        isNull,
-      );
-    });
+    test(
+      'неизвестный id не роняет экран, а просто оставляет группу обычной',
+      () async {
+        expect(
+          await SubscriptionAccentService.resolve(
+            themeId: 'темы-больше-нет',
+            scheme: schemeOf(Brightness.dark),
+          ),
+          isNull,
+        );
+      },
+    );
   });
 
   group('контраст', () {
@@ -85,18 +84,22 @@ void main() {
       expect(_contrast(tinted, base), lessThan(1.1));
     });
 
-    test('рамка, наоборот, видна — на тонкой линии слабый тон пропадает',
-        () async {
-      final scheme = schemeOf(Brightness.light);
-      final accent = await SubscriptionAccentService.resolve(
-        themeId: 'depth',
-        scheme: scheme,
-      );
-      final base = scheme.outlineVariant;
-      expect(accent!.outline(base), isNot(base));
-      expect(SubscriptionAccent.outlineTint,
-          greaterThan(SubscriptionAccent.surfaceTint));
-    });
+    test(
+      'рамка, наоборот, видна — на тонкой линии слабый тон пропадает',
+      () async {
+        final scheme = schemeOf(Brightness.light);
+        final accent = await SubscriptionAccentService.resolve(
+          themeId: 'depth',
+          scheme: scheme,
+        );
+        final base = scheme.outlineVariant;
+        expect(accent!.outline(base), isNot(base));
+        expect(
+          SubscriptionAccent.outlineTint,
+          greaterThan(SubscriptionAccent.surfaceTint),
+        );
+      },
+    );
   });
 
   group('кэш', () {
@@ -107,7 +110,10 @@ void main() {
         scheme: scheme,
       );
       expect(
-        SubscriptionAccentService.cached(themeId: 'cookieLayers', scheme: scheme),
+        SubscriptionAccentService.cached(
+          themeId: 'cookieLayers',
+          scheme: scheme,
+        ),
         same(first),
       );
     });

@@ -21,24 +21,24 @@ import '../helpers/test_storage.dart';
 class _ManySubs extends SubscriptionsNotifier {
   @override
   Future<List<Subscription>> build() async => [
-        for (var i = 0; i < 10; i++)
-          Subscription(id: 's$i', name: 'Sub $i', url: 'https://example.com/$i'),
-      ];
+    for (var i = 0; i < 10; i++)
+      Subscription(id: 's$i', name: 'Sub $i', url: 'https://example.com/$i'),
+  ];
 }
 
 class _ThreeSubs extends SubscriptionsNotifier {
   @override
   Future<List<Subscription>> build() async => [
-        for (var i = 0; i < 3; i++)
-          Subscription(
-            id: 't$i',
-            name: 'Sub $i',
-            url: 'https://example.com/t$i',
-            announce: 'Announcement $i',
-            usedBytes: 1 << 30,
-            totalBytes: 10 << 30,
-          ),
-      ];
+    for (var i = 0; i < 3; i++)
+      Subscription(
+        id: 't$i',
+        name: 'Sub $i',
+        url: 'https://example.com/t$i',
+        announce: 'Announcement $i',
+        usedBytes: 1 << 30,
+        totalBytes: 10 << 30,
+      ),
+  ];
 }
 
 Future<void> _frames(WidgetTester tester) async {
@@ -56,7 +56,9 @@ Future<void> _pumpSettings(WidgetTester tester) async {
     ProviderScope(
       overrides: [
         storageProvider.overrideWithValue(storage),
-        vpnEngineProvider.overrideWithValue(VpnEngine.withBackend(FakeTunnelBackend())),
+        vpnEngineProvider.overrideWithValue(
+          VpnEngine.withBackend(FakeTunnelBackend()),
+        ),
         updateInfoProvider.overrideWith((ref) async => null),
       ],
       child: MaterialApp(
@@ -64,7 +66,10 @@ Future<void> _pumpSettings(WidgetTester tester) async {
         supportedLocales: AppLocalizations.supportedLocales,
         locale: const Locale('en'),
         theme: buildAppTheme(
-          buildPresetScheme(themePresetFor(const AppSettings()), Brightness.light),
+          buildPresetScheme(
+            themePresetFor(const AppSettings()),
+            Brightness.light,
+          ),
         ),
         home: const SettingsTab(),
       ),
@@ -75,16 +80,24 @@ Future<void> _pumpSettings(WidgetTester tester) async {
 
 double _topFade(WidgetTester tester) => tester
     .widget<EdgeFadeMask>(
-      find.descendant(of: find.byType(ScrollEdgeFade), matching: find.byType(EdgeFadeMask)),
+      find.descendant(
+        of: find.byType(ScrollEdgeFade),
+        matching: find.byType(EdgeFadeMask),
+      ),
     )
     .top;
 
 void main() {
-  testWidgets('у настроек гаснет низ под версией, а верх нет и при прокрутке', (tester) async {
+  testWidgets('у настроек гаснет низ под версией, а верх нет и при прокрутке', (
+    tester,
+  ) async {
     await _pumpSettings(tester);
     EdgeFadeMask fade() => tester.widget<EdgeFadeMask>(
-          find.ancestor(of: find.byType(ListView).first, matching: find.byType(EdgeFadeMask)),
-        );
+      find.ancestor(
+        of: find.byType(ListView).first,
+        matching: find.byType(EdgeFadeMask),
+      ),
+    );
     expect(fade().bottom, greaterThan(20));
     expect(fade().top, 0);
     await tester.drag(find.byType(ListView).first, const Offset(0, -200));
@@ -93,7 +106,9 @@ void main() {
     expect(find.byType(ScrollEdgeFade), findsNothing);
   });
 
-  testWidgets('верх списка подписок тоже гаснет только при прокрутке', (tester) async {
+  testWidgets('верх списка подписок тоже гаснет только при прокрутке', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(700, 700);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -102,7 +117,9 @@ void main() {
       ProviderScope(
         overrides: [
           storageProvider.overrideWithValue(storage),
-          vpnEngineProvider.overrideWithValue(VpnEngine.withBackend(FakeTunnelBackend())),
+          vpnEngineProvider.overrideWithValue(
+            VpnEngine.withBackend(FakeTunnelBackend()),
+          ),
           subscriptionsProvider.overrideWith(_ManySubs.new),
         ],
         child: MaterialApp(
@@ -121,46 +138,59 @@ void main() {
   });
 
   // список стал короче окна без прокрутки, а затемнение оставалось и прятало верх первой карточки
-  testWidgets('свёрнутая подписка, после которой всё влезло, не оставляет затемнения сверху', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(700, 800);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.reset);
-    final storage = (await tester.runAsync(buildStorageService))!;
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          storageProvider.overrideWithValue(storage),
-          vpnEngineProvider.overrideWithValue(VpnEngine.withBackend(FakeTunnelBackend())),
-          subscriptionsProvider.overrideWith(_ThreeSubs.new),
-        ],
-        child: MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          locale: const Locale('en'),
-          home: const SubscriptionsTab(),
+  testWidgets(
+    'свёрнутая подписка, после которой всё влезло, не оставляет затемнения сверху',
+    (tester) async {
+      tester.view.physicalSize = const Size(700, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final storage = (await tester.runAsync(buildStorageService))!;
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            storageProvider.overrideWithValue(storage),
+            vpnEngineProvider.overrideWithValue(
+              VpnEngine.withBackend(FakeTunnelBackend()),
+            ),
+            subscriptionsProvider.overrideWith(_ThreeSubs.new),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('en'),
+            home: const SubscriptionsTab(),
+          ),
         ),
-      ),
-    );
-    await _frames(tester);
-    ScrollPosition position() =>
-        tester.state<ScrollableState>(find.byType(Scrollable).first).position;
-    expect(position().maxScrollExtent, greaterThan(0), reason: 'раскрытые не влезают');
+      );
+      await _frames(tester);
+      ScrollPosition position() =>
+          tester.state<ScrollableState>(find.byType(Scrollable).first).position;
+      expect(
+        position().maxScrollExtent,
+        greaterThan(0),
+        reason: 'раскрытые не влезают',
+      );
 
-    await tester.drag(find.byType(Scrollable).first, const Offset(0, -300));
-    await _frames(tester);
-    expect(_topFade(tester), greaterThan(20));
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, -300));
+      await _frames(tester);
+      expect(_topFade(tester), greaterThan(20));
 
-    await tester.tap(find.byIcon(Icons.expand_more_rounded).last);
-    await _frames(tester);
-    expect(position().maxScrollExtent, 0, reason: 'после сворачивания всё влезло');
-    expect(position().pixels, 0);
-    expect(_topFade(tester), 0);
-  });
+      await tester.tap(find.byIcon(Icons.expand_more_rounded).last);
+      await _frames(tester);
+      expect(
+        position().maxScrollExtent,
+        0,
+        reason: 'после сворачивания всё влезло',
+      );
+      expect(position().pixels, 0);
+      expect(_topFade(tester), 0);
+    },
+  );
 
   // на ПК полоса прокрутки рисуется внутри списка у правого края и ложилась на карточки
-  testWidgets('на ПК у списка настроек есть поле под полосу прокрутки', (tester) async {
+  testWidgets('на ПК у списка настроек есть поле под полосу прокрутки', (
+    tester,
+  ) async {
     PlatformBootstrap.debugIsDesktopOverride = true;
     addTearDown(() => PlatformBootstrap.debugIsDesktopOverride = null);
     await _pumpSettings(tester);
@@ -172,7 +202,9 @@ void main() {
     expect(700 - group.right, 24);
   });
 
-  testWidgets('над версией приложения нет разделительной линии', (tester) async {
+  testWidgets('над версией приложения нет разделительной линии', (
+    tester,
+  ) async {
     await _pumpSettings(tester);
     expect(find.text('App version'), findsOneWidget);
     expect(find.byType(Divider), findsNothing);

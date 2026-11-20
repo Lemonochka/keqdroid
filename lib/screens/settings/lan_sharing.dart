@@ -28,9 +28,11 @@ class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
     _passCtrl = TextEditingController(text: s.lanPassword);
     _fetchLocalIp();
     if (Platform.isLinux) {
-      unawaited(LinuxFirewalls.detect().then((f) {
-        if (mounted) setState(() => _firewall = f);
-      }));
+      unawaited(
+        LinuxFirewalls.detect().then((f) {
+          if (mounted) setState(() => _firewall = f);
+        }),
+      );
     }
   }
 
@@ -69,7 +71,10 @@ class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
         }
       }
     } catch (e) {
-      AppLogger.instance.debug('Local address for LAN sharing not found', error: e);
+      AppLogger.instance.debug(
+        'Local address for LAN sharing not found',
+        error: e,
+      );
     }
   }
 
@@ -81,13 +86,17 @@ class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
     String? username,
     String? password,
   }) async {
-    await ref.read(settingsNotifierProvider.notifier).save(current.copyWith(
-      lanSharing: lanSharing,
-      lanSocksPort: socksPort,
-      lanHttpPort: httpPort,
-      lanUsername: username,
-      lanPassword: password,
-    ));
+    await ref
+        .read(settingsNotifierProvider.notifier)
+        .save(
+          current.copyWith(
+            lanSharing: lanSharing,
+            lanSocksPort: socksPort,
+            lanHttpPort: httpPort,
+            lanUsername: username,
+            lanPassword: password,
+          ),
+        );
   }
 
   @override
@@ -99,14 +108,14 @@ class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
     final isConnected = ref.watch(
       vpnStateProvider.select((a) {
         final status = a.value?.status;
-        return status == VpnStatus.connected ||
-            status == VpnStatus.connecting;
+        return status == VpnStatus.connected || status == VpnStatus.connecting;
       }),
     );
     final ip = _localIp ?? '...';
 
-    final iconAccent =
-        isLan ? ExpressiveAccent.tertiary : ExpressiveAccent.secondary;
+    final iconAccent = isLan
+        ? ExpressiveAccent.tertiary
+        : ExpressiveAccent.secondary;
 
     return ExpressiveGroupTile(
       padding: const EdgeInsets.all(16),
@@ -115,21 +124,26 @@ class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
         children: [
           Row(
             children: [
-              ExpressiveIconBadge(
-                icon: Icons.lan_rounded,
-                accent: iconAccent,
-              ),
+              ExpressiveIconBadge(icon: Icons.lan_rounded, accent: iconAccent),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(l10n.settingsLanProxyTitle,
-                        style: textTheme.titleMedium?.copyWith(color: AppTheme.text(context))),
                     Text(
-                      isLan ? l10n.settingsLanSharingOnIp(ip) : l10n.settingsOff,
+                      l10n.settingsLanProxyTitle,
+                      style: textTheme.titleMedium?.copyWith(
+                        color: AppTheme.text(context),
+                      ),
+                    ),
+                    Text(
+                      isLan
+                          ? l10n.settingsLanSharingOnIp(ip)
+                          : l10n.settingsOff,
                       style: textTheme.bodyMedium?.copyWith(
-                        color: isLan ? AppTheme.accent(context) : AppTheme.textLight(context),
+                        color: isLan
+                            ? AppTheme.accent(context)
+                            : AppTheme.textLight(context),
                       ),
                     ),
                   ],
@@ -138,7 +152,9 @@ class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
               Switch(
                 value: isLan,
                 activeThumbColor: AppTheme.accent(context),
-                onChanged: isConnected ? null : (_) => _saveSettings(settings, lanSharing: !isLan),
+                onChanged: isConnected
+                    ? null
+                    : (_) => _saveSettings(settings, lanSharing: !isLan),
               ),
             ],
           ),
@@ -154,8 +170,12 @@ class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(l10n.settingsDeviceIpListTitle,
-                      style: textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context))),
+                  Text(
+                    l10n.settingsDeviceIpListTitle,
+                    style: textTheme.bodySmall?.copyWith(
+                      color: AppTheme.textLight(context),
+                    ),
+                  ),
                   const SizedBox(height: 4),
                   Row(
                     children: [
@@ -171,16 +191,27 @@ class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
                         onTap: () {
                           Clipboard.setData(ClipboardData(text: ip));
                           AppSnack.of(context).showSnackBar(
-                            SnackBar(content: Text(l10n.settingsIpCopied), duration: const Duration(seconds: 1)),
+                            SnackBar(
+                              content: Text(l10n.settingsIpCopied),
+                              duration: const Duration(seconds: 1),
+                            ),
                           );
                         },
-                        child: Icon(Icons.copy_rounded, size: 16, color: AppTheme.textLight(context)),
+                        child: Icon(
+                          Icons.copy_rounded,
+                          size: 16,
+                          color: AppTheme.textLight(context),
+                        ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 8),
-                  Text(l10n.settingsSetupAnotherDeviceTitle,
-                      style: textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context))),
+                  Text(
+                    l10n.settingsSetupAnotherDeviceTitle,
+                    style: textTheme.bodySmall?.copyWith(
+                      color: AppTheme.textLight(context),
+                    ),
+                  ),
                   const SizedBox(height: 4),
                   _proxyLine(context, 'SOCKS5', ip, settings.lanSocksPort),
                   const SizedBox(height: 2),
@@ -191,8 +222,9 @@ class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
                       l10n.settingsLanFirewallHint(
                         '${settings.lanSocksPort}, ${settings.lanHttpPort}',
                       ),
-                      style: textTheme.bodySmall
-                          ?.copyWith(color: AppTheme.textLight(context)),
+                      style: textTheme.bodySmall?.copyWith(
+                        color: AppTheme.textLight(context),
+                      ),
                     ),
                     const SizedBox(height: 2),
                     SelectableText(
@@ -201,8 +233,9 @@ class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
                         settings.lanHttpPort,
                       ]),
                       textDirection: TextDirection.ltr,
-                      style: textTheme.bodySmall
-                          ?.copyWith(fontFamily: 'monospace'),
+                      style: textTheme.bodySmall?.copyWith(
+                        fontFamily: 'monospace',
+                      ),
                     ),
                   ],
                 ],
@@ -212,21 +245,31 @@ class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
             Row(
               children: [
                 Expanded(
-                  child: _portField(context, l10n.settingsSocks5PortLabel, _socksCtrl, (v) {
-                    final port = int.tryParse(v);
-                    if (port != null && port > 0 && port < 65536) {
-                      _saveSettings(settings, socksPort: port);
-                    }
-                  }),
+                  child: _portField(
+                    context,
+                    l10n.settingsSocks5PortLabel,
+                    _socksCtrl,
+                    (v) {
+                      final port = int.tryParse(v);
+                      if (port != null && port > 0 && port < 65536) {
+                        _saveSettings(settings, socksPort: port);
+                      }
+                    },
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: _portField(context, l10n.settingsHttpPortLabel, _httpCtrl, (v) {
-                    final port = int.tryParse(v);
-                    if (port != null && port > 0 && port < 65536) {
-                      _saveSettings(settings, httpPort: port);
-                    }
-                  }),
+                  child: _portField(
+                    context,
+                    l10n.settingsHttpPortLabel,
+                    _httpCtrl,
+                    (v) {
+                      final port = int.tryParse(v);
+                      if (port != null && port > 0 && port < 65536) {
+                        _saveSettings(settings, httpPort: port);
+                      }
+                    },
+                  ),
                 ),
               ],
             ),
@@ -256,14 +299,20 @@ class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
             const SizedBox(height: 6),
             Text(
               l10n.settingsLanAuthHint,
-              style: textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
+              style: textTheme.bodySmall?.copyWith(
+                color: AppTheme.textLight(context),
+              ),
             ),
           ],
           if (isConnected && isLan)
             Padding(
               padding: const EdgeInsets.only(top: 8),
-              child: Text(l10n.settingsTurnOffToChange,
-                  style: textTheme.bodySmall?.copyWith(color: AppTheme.orange(context))),
+              child: Text(
+                l10n.settingsTurnOffToChange,
+                style: textTheme.bodySmall?.copyWith(
+                  color: AppTheme.orange(context),
+                ),
+              ),
             ),
         ],
       ),
@@ -278,8 +327,12 @@ class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
       children: [
         SizedBox(
           width: 52,
-          child: Text(label,
-              style: textTheme.labelSmall?.copyWith(color: AppTheme.textLight(context))),
+          child: Text(
+            label,
+            style: textTheme.labelSmall?.copyWith(
+              color: AppTheme.textLight(context),
+            ),
+          ),
         ),
         Expanded(
           child: Text(
@@ -295,16 +348,29 @@ class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
           onTap: () {
             Clipboard.setData(ClipboardData(text: text));
             AppSnack.of(context).showSnackBar(
-              SnackBar(content: Text(l10n.settingsProxyCopied(label, text)), duration: const Duration(seconds: 1)),
+              SnackBar(
+                content: Text(l10n.settingsProxyCopied(label, text)),
+                duration: const Duration(seconds: 1),
+              ),
             );
           },
-          child: Icon(Icons.copy_rounded, size: 14, color: AppTheme.textLight(context)),
+          child: Icon(
+            Icons.copy_rounded,
+            size: 14,
+            color: AppTheme.textLight(context),
+          ),
         ),
       ],
     );
   }
 
-  Widget _textField(BuildContext context, String label, TextEditingController ctrl, ValueChanged<String> onSubmit, {bool obscurable = false}) {
+  Widget _textField(
+    BuildContext context,
+    String label,
+    TextEditingController ctrl,
+    ValueChanged<String> onSubmit, {
+    bool obscurable = false,
+  }) {
     return CommitOnBlur(
       controller: ctrl,
       onCommit: onSubmit,
@@ -312,16 +378,26 @@ class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
         controller: ctrl,
         textDirection: technicalInputDirection,
         obscureText: obscurable && !_lanPassVisible,
-        style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.text(context)),
+        style: Theme.of(
+          context,
+        ).textTheme.bodyMedium?.copyWith(color: AppTheme.text(context)),
         decoration: InputDecoration(
           labelText: label,
-          labelStyle:
-              Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(ExpressiveShape.medium)),
+          labelStyle: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 8,
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(ExpressiveShape.medium),
+          ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(ExpressiveShape.medium),
-            borderSide: BorderSide(color: AppTheme.textLight(context).withValues(alpha: 0.3)),
+            borderSide: BorderSide(
+              color: AppTheme.textLight(context).withValues(alpha: 0.3),
+            ),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(ExpressiveShape.medium),
@@ -330,11 +406,14 @@ class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
           suffixIcon: obscurable
               ? IconButton(
                   icon: Icon(
-                    _lanPassVisible ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                    _lanPassVisible
+                        ? Icons.visibility_off_rounded
+                        : Icons.visibility_rounded,
                     size: 18,
                     color: AppTheme.textLight(context),
                   ),
-                  onPressed: () => setState(() => _lanPassVisible = !_lanPassVisible),
+                  onPressed: () =>
+                      setState(() => _lanPassVisible = !_lanPassVisible),
                 )
               : null,
           isDense: true,
@@ -346,7 +425,12 @@ class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
     );
   }
 
-  Widget _portField(BuildContext context, String label, TextEditingController ctrl, ValueChanged<String> onSubmit) {
+  Widget _portField(
+    BuildContext context,
+    String label,
+    TextEditingController ctrl,
+    ValueChanged<String> onSubmit,
+  ) {
     return CommitOnBlur(
       controller: ctrl,
       onCommit: onSubmit,
@@ -354,16 +438,26 @@ class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
         controller: ctrl,
         textDirection: technicalInputDirection,
         keyboardType: TextInputType.number,
-        style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.text(context)),
+        style: Theme.of(
+          context,
+        ).textTheme.bodyMedium?.copyWith(color: AppTheme.text(context)),
         decoration: InputDecoration(
           labelText: label,
-          labelStyle:
-              Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(ExpressiveShape.medium)),
+          labelStyle: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 8,
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(ExpressiveShape.medium),
+          ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(ExpressiveShape.medium),
-            borderSide: BorderSide(color: AppTheme.textLight(context).withValues(alpha: 0.3)),
+            borderSide: BorderSide(
+              color: AppTheme.textLight(context).withValues(alpha: 0.3),
+            ),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(ExpressiveShape.medium),
@@ -378,4 +472,3 @@ class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
     );
   }
 }
-

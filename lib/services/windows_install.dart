@@ -12,7 +12,8 @@ class WindowsInstall {
   static const setupSuffix = '-setup.exe';
 
   // AppId из windows/installer/keqdroid.iss
-  static const _uninstallKey = r'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion'
+  static const _uninstallKey =
+      r'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion'
       r'\Uninstall\{2F4ADD17-AA28-4805-B040-B3EE05138A9C}_is1';
 
   static Future<bool> isInstalledCopy() async {
@@ -25,18 +26,14 @@ class WindowsInstall {
   // reg.exe печатает в кодовой странице OEM, и папка не латиницей не совпала бы
   static Future<String?> _registeredLocation() async {
     try {
-      final result = await Process.run(
-        'powershell.exe',
-        [
-          '-NoProfile',
-          '-NonInteractive',
-          '-Command',
-          '[Console]::OutputEncoding = [Text.Encoding]::UTF8; '
-              "(Get-ItemProperty -LiteralPath '$_uninstallKey' "
-              '-ErrorAction Stop).InstallLocation',
-        ],
-        stdoutEncoding: utf8,
-      );
+      final result = await Process.run('powershell.exe', [
+        '-NoProfile',
+        '-NonInteractive',
+        '-Command',
+        '[Console]::OutputEncoding = [Text.Encoding]::UTF8; '
+            "(Get-ItemProperty -LiteralPath '$_uninstallKey' "
+            '-ErrorAction Stop).InstallLocation',
+      ], stdoutEncoding: utf8);
       if (result.exitCode != 0) return null;
       final out = (result.stdout as String).trim();
       return out.isEmpty ? null : out;

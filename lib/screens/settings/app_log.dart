@@ -28,7 +28,9 @@ class _AppLogScreenState extends State<_AppLogScreen> {
     for (final source in AppLogService.sources) {
       final entries = await AppLogService.read(source);
       if (!mounted) return;
-      setState(() => _problems[source] = entries.where((e) => e.isProblem).length);
+      setState(
+        () => _problems[source] = entries.where((e) => e.isProblem).length,
+      );
     }
     final exits = await AppLogService.processExits();
     if (mounted) setState(() => _exits = exits);
@@ -38,9 +40,9 @@ class _AppLogScreenState extends State<_AppLogScreen> {
     final text = await AppLogService.bundle();
     await Clipboard.setData(ClipboardData(text: text));
     if (!mounted) return;
-    AppSnack.of(context).showSnackBar(
-      SnackBar(content: Text(l10n.serversCopiedToClipboard)),
-    );
+    AppSnack.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(l10n.serversCopiedToClipboard)));
   }
 
   Future<void> _shareFile(AppLocalizations l10n) async {
@@ -54,7 +56,9 @@ class _AppLogScreenState extends State<_AppLogScreen> {
       if (mounted) {
         AppSnack.of(context).showSnackBar(
           SnackBar(
-            content: Text(l10n.subscriptionsShareFailed(friendlyError(e, context))),
+            content: Text(
+              l10n.subscriptionsShareFailed(friendlyError(e, context)),
+            ),
           ),
         );
       }
@@ -67,7 +71,10 @@ class _AppLogScreenState extends State<_AppLogScreen> {
   }
 
   Future<void> _open(Widget screen) async {
-    await Navigator.push(context, MaterialPageRoute<void>(builder: (_) => screen));
+    await Navigator.push(
+      context,
+      MaterialPageRoute<void>(builder: (_) => screen),
+    );
     if (mounted) unawaited(_load());
   }
 
@@ -117,9 +124,9 @@ class _AppLogScreenState extends State<_AppLogScreen> {
   }
 
   static IconData _sourceIcon(AppLogSource source) => switch (source) {
-        AppLogSource.app => Icons.widgets_rounded,
-        AppLogSource.native => Icons.android_rounded,
-      };
+    AppLogSource.app => Icons.widgets_rounded,
+    AppLogSource.native => Icons.android_rounded,
+  };
 }
 
 String _sourceTitle(AppLocalizations l10n, AppLogSource source) =>
@@ -166,17 +173,23 @@ class _AppLogSourceTile extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: textTheme.titleMedium?.copyWith(color: AppTheme.text(context)),
+                  style: textTheme.titleMedium?.copyWith(
+                    color: AppTheme.text(context),
+                  ),
                 ),
                 Text(
                   subtitle,
-                  style: textTheme.bodyMedium?.copyWith(color: AppTheme.textLight(context)),
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: AppTheme.textLight(context),
+                  ),
                 ),
                 if (count != null)
                   Text(
                     l10n.appLogProblems(count),
                     style: textTheme.labelLarge?.copyWith(
-                      color: count > 0 ? AppTheme.red(context) : AppTheme.green(context),
+                      color: count > 0
+                          ? AppTheme.red(context)
+                          : AppTheme.green(context),
                     ),
                   ),
               ],
@@ -228,26 +241,25 @@ class _AppLogSourceScreenState extends State<_AppLogSourceScreen> {
   Future<void> _copy(AppLocalizations l10n, String text) async {
     await Clipboard.setData(ClipboardData(text: text));
     if (!mounted) return;
-    AppSnack.of(context).showSnackBar(
-      SnackBar(content: Text(l10n.serversCopiedToClipboard)),
-    );
+    AppSnack.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(l10n.serversCopiedToClipboard)));
   }
 
   Color _levelColor(LogLevel level) => switch (level) {
-        LogLevel.error => AppTheme.red(context),
-        LogLevel.warn => AppTheme.orange(context),
-        LogLevel.debug => AppTheme.textLight(context),
-        LogLevel.info => AppTheme.text(context),
-      };
+    LogLevel.error => AppTheme.red(context),
+    LogLevel.warn => AppTheme.orange(context),
+    LogLevel.debug => AppTheme.textLight(context),
+    LogLevel.info => AppTheme.text(context),
+  };
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final shown = _shown;
-    final style = Theme.of(context).textTheme.bodySmall?.copyWith(
-          fontFamily: 'monospace',
-          height: 1.35,
-        );
+    final style = Theme.of(
+      context,
+    ).textTheme.bodySmall?.copyWith(fontFamily: 'monospace', height: 1.35);
     return Scaffold(
       backgroundColor: AppTheme.bg(context),
       appBar: ExpressiveScrolledUnderBar(
@@ -287,50 +299,51 @@ class _AppLogSourceScreenState extends State<_AppLogSourceScreen> {
             child: _entries == null
                 ? const Center(child: ShapeLoadingIndicator())
                 : shown.isEmpty
-                    ? Center(
-                        child: Text(
-                          l10n.appLogEmpty,
-                          style: TextStyle(color: AppTheme.textLight(context)),
+                ? Center(
+                    child: Text(
+                      l10n.appLogEmpty,
+                      style: TextStyle(color: AppTheme.textLight(context)),
+                    ),
+                  )
+                : Align(
+                    alignment: Alignment.topCenter,
+                    child: Container(
+                      margin: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppTheme.inset(context),
+                        borderRadius: BorderRadius.circular(
+                          ExpressiveShape.large,
                         ),
-                      )
-                    : Align(
-                        alignment: Alignment.topCenter,
-                        child: Container(
-                          margin: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: AppTheme.inset(context),
-                            borderRadius:
-                                BorderRadius.circular(ExpressiveShape.large),
-                            border: Border.all(color: AppTheme.divider(context)),
-                          ),
-                          clipBehavior: Clip.antiAlias,
-                          child: ListView.builder(
-                            shrinkWrap: true,
-                            reverse: true,
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            itemCount: shown.length,
-                            itemBuilder: (context, index) {
-                              final entry = shown[shown.length - 1 - index];
-                              return InkWell(
-                                onLongPress: () => _copy(l10n, entry.text),
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 3,
-                                  ),
-                                  child: Text(
-                                    entry.text,
-                                    textDirection: TextDirection.ltr,
-                                    style: style?.copyWith(
-                                      color: _levelColor(entry.level),
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
+                        border: Border.all(color: AppTheme.divider(context)),
                       ),
+                      clipBehavior: Clip.antiAlias,
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        reverse: true,
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        itemCount: shown.length,
+                        itemBuilder: (context, index) {
+                          final entry = shown[shown.length - 1 - index];
+                          return InkWell(
+                            onLongPress: () => _copy(l10n, entry.text),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 3,
+                              ),
+                              child: Text(
+                                entry.text,
+                                textDirection: TextDirection.ltr,
+                                style: style?.copyWith(
+                                  color: _levelColor(entry.level),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
           ),
         ],
       ),
@@ -371,9 +384,9 @@ class _ProcessExitsScreen extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(4, 8, 4, 0),
           child: Text(
             l10n.settingsInternalsExitsHint,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppTheme.textLight(context),
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
           ),
         ),
       ],

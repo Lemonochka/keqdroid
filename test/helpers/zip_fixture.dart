@@ -67,8 +67,9 @@ ZipEntry fixtureTemplate(FixtureEntry e, {required int compressedSize}) =>
 Uint8List buildZip(List<FixtureEntry> entries, {Uint8List? beforeDirectory}) {
   final writer = ZipWriter();
   for (final e in entries) {
-    final data =
-        e.method == 8 ? deflateRaw(e.content, level: e.level) : e.content;
+    final data = e.method == 8
+        ? deflateRaw(e.content, level: e.level)
+        : e.content;
     writer.add(
       fixtureTemplate(e, compressedSize: data.length),
       method: e.method,
@@ -111,7 +112,9 @@ List<ZipEntry> readEntries(Uint8List zip) {
 
 int dataOffset(Uint8List zip, ZipEntry e) =>
     e.localHeaderOffset +
-    ZipLayout.localHeaderLength(Uint8List.sublistView(zip, e.localHeaderOffset))!;
+    ZipLayout.localHeaderLength(
+      Uint8List.sublistView(zip, e.localHeaderOffset),
+    )!;
 
 Uint8List contentOf(Uint8List zip, ZipEntry e) {
   final start = dataOffset(zip, e);

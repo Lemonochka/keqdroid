@@ -66,9 +66,7 @@ void main() {
 
     final tags = _rulesOf(generated).map((r) => r['ruleTag']).toList();
     final author = tags.indexOf('author-known');
-    final ours = tags.indexWhere(
-      (t) => t is String && t.startsWith('user-'),
-    );
+    final ours = tags.indexWhere((t) => t is String && t.startsWith('user-'));
 
     expect(author, isNot(-1));
     expect(ours, isNot(-1));

@@ -41,23 +41,23 @@ class _Backend extends FakeTunnelBackend {
 }
 
 VpnState _connected(int seconds) => VpnState(
-      status: VpnStatus.connected,
-      uploadSpeed: 100,
-      downloadSpeed: 2048,
-      totalUpload: 1000 + seconds,
-      totalDownload: 5000 + seconds * 2048,
-      duration: Duration(seconds: seconds),
-    );
+  status: VpnStatus.connected,
+  uploadSpeed: 100,
+  downloadSpeed: 2048,
+  totalUpload: 1000 + seconds,
+  totalDownload: 5000 + seconds * 2048,
+  duration: Duration(seconds: seconds),
+);
 
 // на экране 2h 5m, 0 B/s и 3.02 GB, а байты и секунды под ними уже другие
 VpnState _quiet(int seconds, int extraBytes) => VpnState(
-      status: VpnStatus.connected,
-      uploadSpeed: 0,
-      downloadSpeed: 0,
-      totalUpload: 1000 + extraBytes,
-      totalDownload: 3243000000 + extraBytes,
-      duration: Duration(hours: 2, minutes: 5, seconds: seconds),
-    );
+  status: VpnStatus.connected,
+  uploadSpeed: 0,
+  downloadSpeed: 0,
+  totalUpload: 1000 + extraBytes,
+  totalDownload: 3243000000 + extraBytes,
+  duration: Duration(hours: 2, minutes: 5, seconds: seconds),
+);
 
 bool _inside<T extends Widget>(RenderObject ro) {
   final creator = ro.debugCreator;
@@ -92,7 +92,8 @@ Future<_Backend> _pumpHome(
     for (var i = 0; i < 6; i++)
       ServerItem(
         id: 's$i',
-        config: 'vless://00000000-0000-4000-8000-000000000000@198.51.100.$i:443'
+        config:
+            'vless://00000000-0000-4000-8000-000000000000@198.51.100.$i:443'
             '?type=tcp&security=reality&pbk=k&sni=example.com#Server%20$i',
         type: ServerItemType.subscription,
         subscriptionId: 'sub0',
@@ -100,12 +101,16 @@ Future<_Backend> _pumpHome(
         addedAt: DateTime(2026, 11, 1),
       ),
   ];
-  final storage = await tester.runAsync(() => buildStorageService(initialValues: {
+  final storage = await tester.runAsync(
+    () => buildStorageService(
+      initialValues: {
         'keqdis_servers_v2': jsonEncode([for (final s in servers) s.toJson()]),
         'keqdis_subscriptions': jsonEncode([sub.toJson()]),
         'keqdis_active_server': 's1',
         if (modern) 'keqdis_settings': jsonEncode({'modernConnectPanel': true}),
-      }));
+      },
+    ),
+  );
   final backend = _Backend();
   await tester.pumpWidget(
     ProviderScope(
@@ -157,7 +162,11 @@ void main() {
     debugProfilePaintsEnabled = false;
     debugOnProfilePaint = null;
 
-    expect(stripPaints, greaterThan(0), reason: 'тик дошёл до строки статистики');
+    expect(
+      stripPaints,
+      greaterThan(0),
+      reason: 'тик дошёл до строки статистики',
+    );
     expect(navPaints, 0);
 
     await _unmount(tester);
@@ -165,11 +174,13 @@ void main() {
 
   // на 400 МГц такой тик стоил 12-13 мс раскладки и перерисовки ради того же текста
   for (final modern in [false, true]) {
-    testWidgets(
-        'тик без видимых перемен не трогает строку и время, '
+    testWidgets('тик без видимых перемен не трогает строку и время, '
         '${modern ? 'модерн' : 'легаси'}', (tester) async {
-      final backend =
-          await _pumpHome(tester, state: _quiet(10, 0), modern: modern);
+      final backend = await _pumpHome(
+        tester,
+        state: _quiet(10, 0),
+        modern: modern,
+      );
       expect(find.textContaining('3.02 GB'), findsOneWidget);
       expect(find.textContaining('2h 5m'), findsOneWidget);
 
@@ -193,10 +204,7 @@ void main() {
       debugProfilePaintsEnabled = false;
       debugOnProfilePaint = null;
 
-      expect(
-        rebuilt.where((w) => w is StatStrip || w is Text),
-        isEmpty,
-      );
+      expect(rebuilt.where((w) => w is StatStrip || w is Text), isEmpty);
       expect(stripPaints, 0);
 
       await _unmount(tester);

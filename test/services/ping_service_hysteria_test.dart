@@ -10,10 +10,7 @@ void main() {
           'hysteria2://pwd@host:443?obfs=salamander&obfs-password=secret&sni=host',
       type: ServerItemType.manual,
     );
-    expect(
-      PingService.effectivePingType(server, PingType.tcp),
-      PingType.url,
-    );
+    expect(PingService.effectivePingType(server, PingType.tcp), PingType.url);
   });
 
   test('VLESS stays on TCP when settings say TCP', () {
@@ -22,48 +19,76 @@ void main() {
       config: 'vless://uuid@host:443',
       type: ServerItemType.manual,
     );
-    expect(
-      PingService.effectivePingType(server, PingType.tcp),
-      PingType.tcp,
-    );
+    expect(PingService.effectivePingType(server, PingType.tcp), PingType.tcp);
   });
 
-  test('AmneziaWG меряется тем типом, что выбран: url и speed больше не ICMP', () {
-    // Раньше профиль всегда уходил в ICMP: url-замер поднимал xray, который
-    // `.conf` не разбирает. Теперь его меряет mihomo, как и везёт.
-    final server = ServerItem(
-      id: '3',
-      config: '[Interface]\n'
-          'PrivateKey = AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEA=\n'
-          'Address = 10.8.1.2/32\n'
-          '[Peer]\n'
-          'PublicKey = AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIA=\n'
-          'Endpoint = 203.0.113.10:51820\n',
-      type: ServerItemType.manual,
-    );
-    expect(PingService.effectivePingType(server, PingType.url), PingType.url);
-    expect(
-      PingService.effectivePingType(server, PingType.speed),
-      PingType.speed,
-    );
-  });
+  test(
+    'AmneziaWG меряется тем типом, что выбран: url и speed больше не ICMP',
+    () {
+      // Раньше профиль всегда уходил в ICMP: url-замер поднимал xray, который
+      // `.conf` не разбирает. Теперь его меряет mihomo, как и везёт.
+      final server = ServerItem(
+        id: '3',
+        config:
+            '[Interface]\n'
+            'PrivateKey = AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEA=\n'
+            'Address = 10.8.1.2/32\n'
+            '[Peer]\n'
+            'PublicKey = AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIA=\n'
+            'Endpoint = 203.0.113.10:51820\n',
+        type: ServerItemType.manual,
+      );
+      expect(PingService.effectivePingType(server, PingType.url), PingType.url);
+      expect(
+        PingService.effectivePingType(server, PingType.speed),
+        PingType.speed,
+      );
+    },
+  );
 
   test('TCP ping color thresholds', () {
-    expect(PingService.pingLatencyQuality(50, PingType.tcp), PingLatencyQuality.good);
-    expect(PingService.pingLatencyQuality(100, PingType.tcp), PingLatencyQuality.fair);
-    expect(PingService.pingLatencyQuality(200, PingType.tcp), PingLatencyQuality.poor);
+    expect(
+      PingService.pingLatencyQuality(50, PingType.tcp),
+      PingLatencyQuality.good,
+    );
+    expect(
+      PingService.pingLatencyQuality(100, PingType.tcp),
+      PingLatencyQuality.fair,
+    );
+    expect(
+      PingService.pingLatencyQuality(200, PingType.tcp),
+      PingLatencyQuality.poor,
+    );
   });
 
   test('URL proxy ping uses relaxed color thresholds', () {
-    expect(PingService.pingLatencyQuality(500, PingType.url), PingLatencyQuality.good);
-    expect(PingService.pingLatencyQuality(800, PingType.url), PingLatencyQuality.fair);
-    expect(PingService.pingLatencyQuality(1500, PingType.url), PingLatencyQuality.poor);
+    expect(
+      PingService.pingLatencyQuality(500, PingType.url),
+      PingLatencyQuality.good,
+    );
+    expect(
+      PingService.pingLatencyQuality(800, PingType.url),
+      PingLatencyQuality.fair,
+    );
+    expect(
+      PingService.pingLatencyQuality(1500, PingType.url),
+      PingLatencyQuality.poor,
+    );
   });
 
   test('Speed quality is inverted (higher kbps is better)', () {
-    expect(PingService.pingLatencyQuality(40000, PingType.speed), PingLatencyQuality.good);
-    expect(PingService.pingLatencyQuality(10000, PingType.speed), PingLatencyQuality.fair);
-    expect(PingService.pingLatencyQuality(3000, PingType.speed), PingLatencyQuality.poor);
+    expect(
+      PingService.pingLatencyQuality(40000, PingType.speed),
+      PingLatencyQuality.good,
+    );
+    expect(
+      PingService.pingLatencyQuality(10000, PingType.speed),
+      PingLatencyQuality.fair,
+    );
+    expect(
+      PingService.pingLatencyQuality(3000, PingType.speed),
+      PingLatencyQuality.poor,
+    );
   });
 
   test('Speed value formats as Mbps, latency as ms', () {
@@ -79,25 +104,37 @@ void main() {
       config: 'vless://uuid@host:443',
       type: ServerItemType.manual,
     );
-    expect(PingService.effectivePingType(server, PingType.speed), PingType.speed);
+    expect(
+      PingService.effectivePingType(server, PingType.speed),
+      PingType.speed,
+    );
     expect(PingService.pingTypeToStored(PingType.speed), 'speed');
     expect(PingService.pingTypeFromStored('speed'), PingType.speed);
   });
 
   test('TUN fallback only rewrites TCP, leaves speed/url intact', () {
     expect(
-      PingService.pingTypeForConnectionState(PingType.tcp,
-          vpnConnected: true, tunMode: true),
+      PingService.pingTypeForConnectionState(
+        PingType.tcp,
+        vpnConnected: true,
+        tunMode: true,
+      ),
       PingType.url,
     );
     expect(
-      PingService.pingTypeForConnectionState(PingType.speed,
-          vpnConnected: true, tunMode: true),
+      PingService.pingTypeForConnectionState(
+        PingType.speed,
+        vpnConnected: true,
+        tunMode: true,
+      ),
       PingType.speed,
     );
     expect(
-      PingService.pingTypeForConnectionState(PingType.tcp,
-          vpnConnected: true, tunMode: false),
+      PingService.pingTypeForConnectionState(
+        PingType.tcp,
+        vpnConnected: true,
+        tunMode: false,
+      ),
       PingType.tcp,
     );
   });
@@ -109,16 +146,24 @@ void main() {
     // одинаковые 2-4 мс до любого сервера).
     test('tcp подменяется даже при tunMode: false', () {
       expect(
-        PingService.pingTypeForConnectionState(PingType.tcp,
-            vpnConnected: true, tunMode: false, platformAlwaysTun: true),
+        PingService.pingTypeForConnectionState(
+          PingType.tcp,
+          vpnConnected: true,
+          tunMode: false,
+          platformAlwaysTun: true,
+        ),
         PingType.url,
       );
     });
 
     test('icmp тоже, он через прокси-протокол не проходит', () {
       expect(
-        PingService.pingTypeForConnectionState(PingType.icmp,
-            vpnConnected: true, tunMode: false, platformAlwaysTun: true),
+        PingService.pingTypeForConnectionState(
+          PingType.icmp,
+          vpnConnected: true,
+          tunMode: false,
+          platformAlwaysTun: true,
+        ),
         PingType.url,
       );
     });
@@ -126,8 +171,12 @@ void main() {
     test('без подключения меряем как просили', () {
       // Туннеля нет — raw tcp честен, подменять его нечем и незачем.
       expect(
-        PingService.pingTypeForConnectionState(PingType.tcp,
-            vpnConnected: false, tunMode: false, platformAlwaysTun: true),
+        PingService.pingTypeForConnectionState(
+          PingType.tcp,
+          vpnConnected: false,
+          tunMode: false,
+          platformAlwaysTun: true,
+        ),
         PingType.tcp,
       );
     });
@@ -135,8 +184,12 @@ void main() {
     test('speed и url не трогаем', () {
       for (final type in const [PingType.speed, PingType.url]) {
         expect(
-          PingService.pingTypeForConnectionState(type,
-              vpnConnected: true, tunMode: false, platformAlwaysTun: true),
+          PingService.pingTypeForConnectionState(
+            type,
+            vpnConnected: true,
+            tunMode: false,
+            platformAlwaysTun: true,
+          ),
           type,
         );
       }

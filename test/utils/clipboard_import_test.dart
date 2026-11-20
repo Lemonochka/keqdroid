@@ -55,8 +55,12 @@ Future<(_FakeSubs, _FakeServers)> _mount(
         ? <String, dynamic>{'text': clipboard}
         : null,
   );
-  addTearDown(() => tester.binding.defaultBinaryMessenger
-      .setMockMethodCallHandler(SystemChannels.platform, null));
+  addTearDown(
+    () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      null,
+    ),
+  );
 
   final subs = _FakeSubs()..download = download;
   final servers = _FakeServers();
@@ -71,7 +75,9 @@ Future<(_FakeSubs, _FakeServers)> _mount(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         // капля Модерна и ПК: её хост стоит над всем приложением
-        builder: drop ? (context, child) => LiquidToastHost(child: child!) : null,
+        builder: drop
+            ? (context, child) => LiquidToastHost(child: child!)
+            : null,
         home: Scaffold(
           body: Consumer(
             builder: (context, ref, _) => TextButton(
@@ -100,8 +106,10 @@ final _loading = find.byType(ShapeLoadingIndicator);
 
 void main() {
   testWidgets('ссылка подписки из буфера становится подпиской', (tester) async {
-    final (subs, servers) =
-        await _pasteFromClipboard(tester, 'https://sub.example/api/token');
+    final (subs, servers) = await _pasteFromClipboard(
+      tester,
+      'https://sub.example/api/token',
+    );
 
     expect(subs.added.single.url, 'https://sub.example/api/token');
     expect(subs.added.single.name, 'sub.example');
@@ -190,7 +198,9 @@ void main() {
     }
 
     // уход загрузки в край и выход итога заново оставляли почти секунду пустого экрана
-    testWidgets('итог сменяет загрузку в той же капле, без пустой паузы', (tester) async {
+    testWidgets('итог сменяет загрузку в той же капле, без пустой паузы', (
+      tester,
+    ) async {
       final download = Completer<void>();
       await _mount(
         tester,
@@ -205,7 +215,10 @@ void main() {
       for (var i = 0; i < 10; i++) {
         await tester.pump(const Duration(milliseconds: 50));
         final loading = find.text('Добавляю…').evaluate().isNotEmpty;
-        final done = find.text('Подписка добавлена: sub.example').evaluate().isNotEmpty;
+        final done = find
+            .text('Подписка добавлена: sub.example')
+            .evaluate()
+            .isNotEmpty;
         expect(loading || done, isTrue, reason: 'кадр ${i + 1} пустой');
       }
       expect(find.text('Добавляю…'), findsNothing);

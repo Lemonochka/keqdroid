@@ -13,7 +13,8 @@ import 'package:keqdroid/utils/socks5_credentials.dart';
 /// TUN на ПК держит сам xray. Здесь то, что раньше решал sing-box перед
 /// xray: кто идёт мимо туннеля, куда девается IPv6, как ведут себя режимы
 /// сплита. Порядок правил целиком фиксируют голдены vless-desktop-tun-*.
-const _link = 'vless://00000000-0000-4000-8000-000000000000@198.51.100.40:443'
+const _link =
+    'vless://00000000-0000-4000-8000-000000000000@198.51.100.40:443'
     '?type=tcp&security=tls&sni=pc.example#pc';
 
 Map<String, dynamic> _config(
@@ -24,13 +25,14 @@ Map<String, dynamic> _config(
 }) {
   Socks5Credentials().init('u', 'p');
   return jsonDecode(
-    ConfigGeneratorV2.generateConfig(
-      input,
-      settings,
-      desktopTun: tun,
-      appRoutes: appRoutes,
-    ),
-  ) as Map<String, dynamic>;
+        ConfigGeneratorV2.generateConfig(
+          input,
+          settings,
+          desktopTun: tun,
+          appRoutes: appRoutes,
+        ),
+      )
+      as Map<String, dynamic>;
 }
 
 List<Map<String, dynamic>> _rules(Map<String, dynamic> config) =>
@@ -53,11 +55,13 @@ const _linux = DesktopTunOptions(windows: false, mtu: 9000);
 void main() {
   test('своё приложение и ядра замера мимо туннеля, только из TUN', () {
     final own = _rule(
-      _config(const DesktopTunOptions(
-        windows: true,
-        mtu: 9000,
-        appProcessName: 'keqdroid.exe',
-      )),
+      _config(
+        const DesktopTunOptions(
+          windows: true,
+          mtu: 9000,
+          appProcessName: 'keqdroid.exe',
+        ),
+      ),
       'tun-own',
     )!;
     expect(own['inboundTag'], ['tun-in']);
@@ -84,12 +88,14 @@ void main() {
     );
     expect(
       _rule(
-        _config(const DesktopTunOptions(
-          windows: true,
-          mtu: 9000,
-          routingMode: AppRoutingMode.allExceptSelected,
-          managedProcessNames: ['steam.exe'],
-        )),
+        _config(
+          const DesktopTunOptions(
+            windows: true,
+            mtu: 9000,
+            routingMode: AppRoutingMode.allExceptSelected,
+            managedProcessNames: ['steam.exe'],
+          ),
+        ),
         'tun-other-vpn',
       ),
       isNull,
@@ -97,12 +103,14 @@ void main() {
   });
 
   test('только выбранные: невыбранные одним правилом с отрицанием', () {
-    final config = _config(const DesktopTunOptions(
-      windows: true,
-      mtu: 9000,
-      routingMode: AppRoutingMode.onlySelected,
-      managedProcessNames: ['firefox.exe', r'C:\Apps\chat.exe', '  '],
-    ));
+    final config = _config(
+      const DesktopTunOptions(
+        windows: true,
+        mtu: 9000,
+        routingMode: AppRoutingMode.onlySelected,
+        managedProcessNames: ['firefox.exe', r'C:\Apps\chat.exe', '  '],
+      ),
+    );
     expect(_rule(config, 'tun-unselected')!['process'], [
       '!firefox.exe',
       r'!C:\Apps\chat.exe',
@@ -111,28 +119,37 @@ void main() {
     expect(_rules(config).last['outboundTag'], 'proxy');
   });
 
-  test('только выбранные без единого имени: остальное напрямую, как у mihomo', () {
-    final rules = _rules(_config(const DesktopTunOptions(
-      windows: true,
-      mtu: 9000,
-      routingMode: AppRoutingMode.onlySelected,
-      managedProcessNames: [''],
-    )));
-    final catchAll = rules[rules.length - 2];
-    expect(catchAll['ruleTag'], 'tun-unselected');
-    expect(catchAll['inboundTag'], ['tun-in']);
-    expect(catchAll['outboundTag'], 'direct');
-    expect(catchAll.containsKey('process'), isFalse);
-  });
+  test(
+    'только выбранные без единого имени: остальное напрямую, как у mihomo',
+    () {
+      final rules = _rules(
+        _config(
+          const DesktopTunOptions(
+            windows: true,
+            mtu: 9000,
+            routingMode: AppRoutingMode.onlySelected,
+            managedProcessNames: [''],
+          ),
+        ),
+      );
+      final catchAll = rules[rules.length - 2];
+      expect(catchAll['ruleTag'], 'tun-unselected');
+      expect(catchAll['inboundTag'], ['tun-in']);
+      expect(catchAll['outboundTag'], 'direct');
+      expect(catchAll.containsKey('process'), isFalse);
+    },
+  );
 
   test('кроме выбранных: выбранные напрямую', () {
     final rule = _rule(
-      _config(const DesktopTunOptions(
-        windows: false,
-        mtu: 9000,
-        routingMode: AppRoutingMode.allExceptSelected,
-        managedProcessNames: ['steam', '/opt/game/game'],
-      )),
+      _config(
+        const DesktopTunOptions(
+          windows: false,
+          mtu: 9000,
+          routingMode: AppRoutingMode.allExceptSelected,
+          managedProcessNames: ['steam', '/opt/game/game'],
+        ),
+      ),
       'tun-excluded',
     )!;
     expect(rule['process'], ['steam', '/opt/game/game']);
@@ -140,11 +157,11 @@ void main() {
   });
 
   test('IPv6 закрывается перед final и только из TUN', () {
-    final rules = _rules(_config(const DesktopTunOptions(
-      windows: true,
-      mtu: 9000,
-      captureIpv6: true,
-    )));
+    final rules = _rules(
+      _config(
+        const DesktopTunOptions(windows: true, mtu: 9000, captureIpv6: true),
+      ),
+    );
     final ipv6 = rules[rules.length - 2];
     expect(
       ipv6['ruleTag'],
@@ -164,11 +181,11 @@ void main() {
   });
 
   test('на Linux маршрут по умолчанию в таблицу ядра, без DNS и WFP', () {
-    final settings = _tunSettings(_config(const DesktopTunOptions(
-      windows: false,
-      mtu: 1500,
-      strictRoute: true,
-    )));
+    final settings = _tunSettings(
+      _config(
+        const DesktopTunOptions(windows: false, mtu: 1500, strictRoute: true),
+      ),
+    );
     expect(settings['autoSystemRoutingTable'], ['0.0.0.0/0']);
     expect(settings.containsKey('dns'), isFalse);
     expect(settings.containsKey('autoSystemWfpBlockLeak'), isFalse);
@@ -176,11 +193,11 @@ void main() {
   });
 
   test('строгий маршрут на Windows закрывает DNS и семейство без маршрута', () {
-    final strict = _tunSettings(_config(const DesktopTunOptions(
-      windows: true,
-      mtu: 9000,
-      strictRoute: true,
-    )));
+    final strict = _tunSettings(
+      _config(
+        const DesktopTunOptions(windows: true, mtu: 9000, strictRoute: true),
+      ),
+    );
     expect(strict['dns'], [kTunDnsAddress]);
     expect(strict['autoSystemWfpBlockLeak'], ['dns', 'misconfigtun']);
     expect(
@@ -190,12 +207,16 @@ void main() {
   });
 
   test('без своих маршрутов ядро их не ставит и WFP не включает', () {
-    final settings = _tunSettings(_config(const DesktopTunOptions(
-      windows: true,
-      mtu: 9000,
-      autoRoute: false,
-      strictRoute: true,
-    )));
+    final settings = _tunSettings(
+      _config(
+        const DesktopTunOptions(
+          windows: true,
+          mtu: 9000,
+          autoRoute: false,
+          strictRoute: true,
+        ),
+      ),
+    );
     expect(settings.containsKey('autoSystemRoutingTable'), isFalse);
     expect(settings.containsKey('autoSystemWfpBlockLeak'), isFalse);
     expect(settings['autoOutboundsInterface'], 'auto');
@@ -206,11 +227,9 @@ void main() {
   });
 
   test('свой таймаут UDP: уровень 1 со всеми четырьмя таймаутами', () {
-    final config = _config(const DesktopTunOptions(
-      windows: true,
-      mtu: 9000,
-      udpTimeoutSec: 60,
-    ));
+    final config = _config(
+      const DesktopTunOptions(windows: true, mtu: 9000, udpTimeoutSec: 60),
+    );
     // одно поле обнулило бы остальные: ToCorePolicy берёт все четыре
     expect((config['policy'] as Map)['levels'], {
       '1': {
@@ -240,10 +259,7 @@ void main() {
   });
 
   test('Fake IP включается и на ПК', () {
-    final config = _config(
-      _windows,
-      settings: const AppSettings(fakeIp: true),
-    );
+    final config = _config(_windows, settings: const AppSettings(fakeIp: true));
     expect(config.containsKey('fakedns'), isTrue);
   });
 
@@ -253,7 +269,8 @@ void main() {
       hops: [
         ProxyChainHop(config: _link),
         ProxyChainHop(
-          config: 'vless://00000000-0000-4000-8000-000000000000'
+          config:
+              'vless://00000000-0000-4000-8000-000000000000'
               '@198.51.100.41:443?type=tcp&security=tls&sni=b.example#b',
         ),
       ],
@@ -315,17 +332,22 @@ void main() {
     final ipv6 = _rule(config, 'tun-ipv6')!;
     expect(ipv6['inboundTag'], ['tun-in']);
     expect(ipv6['ip'], ['::/0']);
-    expect(_tunSettings(config)['autoSystemRoutingTable'], ['0.0.0.0/0', '::/0']);
+    expect(_tunSettings(config)['autoSystemRoutingTable'], [
+      '0.0.0.0/0',
+      '::/0',
+    ]);
   });
 
   group('IPv6 через VPN', () {
     test('TUN берёт IPv6, а правила tun-ipv6 нет: ядро его не сбросит', () {
-      final config = _config(const DesktopTunOptions(
-        windows: true,
-        mtu: 9000,
-        captureIpv6: true,
-        passIpv6: true,
-      ));
+      final config = _config(
+        const DesktopTunOptions(
+          windows: true,
+          mtu: 9000,
+          captureIpv6: true,
+          passIpv6: true,
+        ),
+      );
       expect(_rule(config, 'tun-ipv6'), isNull);
       final tun = _tunSettings(config);
       expect(tun['gateway'], contains(kTunInterfaceIpv6Prefix));
@@ -333,41 +355,50 @@ void main() {
     });
 
     test('без захвата пропускать нечего, конфиг как без IPv6', () {
-      final passed = _config(const DesktopTunOptions(
-        windows: true,
-        mtu: 9000,
-        passIpv6: true,
-      ));
+      final passed = _config(
+        const DesktopTunOptions(windows: true, mtu: 9000, passIpv6: true),
+      );
       expect(passed, _config(_windows));
     });
 
-    test('на Android адрес IPv6 в конфиге для VpnService, и только по флагу', () {
-      Map<String, dynamic> androidTun({required bool ipv6}) {
-        Socks5Credentials().init('u', 'p');
-        final config = jsonDecode(ConfigGeneratorV2.generateConfig(
-          _link,
-          const AppSettings(),
-          nativeTunInbound: true,
-          nativeTunIpv6: ipv6,
-        )) as Map<String, dynamic>;
-        return ((config['inbounds'] as List)
-                .cast<Map<String, dynamic>>()
-                .firstWhere((i) => i['tag'] == 'tun-in'))['settings']
-            as Map<String, dynamic>;
-      }
+    test(
+      'на Android адрес IPv6 в конфиге для VpnService, и только по флагу',
+      () {
+        Map<String, dynamic> androidTun({required bool ipv6}) {
+          Socks5Credentials().init('u', 'p');
+          final config =
+              jsonDecode(
+                    ConfigGeneratorV2.generateConfig(
+                      _link,
+                      const AppSettings(),
+                      nativeTunInbound: true,
+                      nativeTunIpv6: ipv6,
+                    ),
+                  )
+                  as Map<String, dynamic>;
+          return ((config['inbounds'] as List)
+                  .cast<Map<String, dynamic>>()
+                  .firstWhere((i) => i['tag'] == 'tun-in'))['settings']
+              as Map<String, dynamic>;
+        }
 
-      expect(androidTun(ipv6: true)['gateway'], [kTunInterfaceIpv6Prefix]);
-      expect(androidTun(ipv6: false).containsKey('gateway'), isFalse);
-    });
+        expect(androidTun(ipv6: true)['gateway'], [kTunInterfaceIpv6Prefix]);
+        expect(androidTun(ipv6: false).containsKey('gateway'), isFalse);
+      },
+    );
 
     test('флаг Android на ПК ничего не меняет', () {
       Socks5Credentials().init('u', 'p');
-      final config = jsonDecode(ConfigGeneratorV2.generateConfig(
-        _link,
-        const AppSettings(),
-        desktopTun: _windows,
-        nativeTunIpv6: true,
-      )) as Map<String, dynamic>;
+      final config =
+          jsonDecode(
+                ConfigGeneratorV2.generateConfig(
+                  _link,
+                  const AppSettings(),
+                  desktopTun: _windows,
+                  nativeTunIpv6: true,
+                ),
+              )
+              as Map<String, dynamic>;
       expect(config, _config(_windows));
     });
   });

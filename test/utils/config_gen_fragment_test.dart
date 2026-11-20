@@ -19,16 +19,15 @@ AppSettings _withFragment({
   String length = XrayCoreSettings.defaultFragmentLength,
   String interval = XrayCoreSettings.defaultFragmentInterval,
   String dnsQueryStrategy = 'UseIPv4',
-}) =>
-    const AppSettings().copyWith(
-      xrayCore: XrayCoreSettings(
-        fragmentEnabled: enabled,
-        fragmentPackets: packets,
-        fragmentLength: length,
-        fragmentInterval: interval,
-        dnsQueryStrategy: dnsQueryStrategy,
-      ),
-    );
+}) => const AppSettings().copyWith(
+  xrayCore: XrayCoreSettings(
+    fragmentEnabled: enabled,
+    fragmentPackets: packets,
+    fragmentLength: length,
+    fragmentInterval: interval,
+    dnsQueryStrategy: dnsQueryStrategy,
+  ),
+);
 
 List<Map<String, dynamic>> _outbounds(Map<String, dynamic> config) =>
     (config['outbounds'] as List).cast<Map<String, dynamic>>();
@@ -91,10 +90,14 @@ void main() {
     });
 
     test('целое число и диапазон доезжают как есть, мусор — дефолтом', () {
-      final numeric =
-          _generate(_vless, _withFragment(length: '80', interval: '0'));
-      final fragment = ((_byTag(numeric, 'fragment')!['settings']
-          as Map<String, dynamic>)['fragment'] as Map<String, dynamic>);
+      final numeric = _generate(
+        _vless,
+        _withFragment(length: '80', interval: '0'),
+      );
+      final fragment =
+          ((_byTag(numeric, 'fragment')!['settings']
+                  as Map<String, dynamic>)['fragment']
+              as Map<String, dynamic>);
       expect(fragment['length'], 80);
       // 0 с tlshello — «разрезать, но отправить одним пакетом», значение рабочее.
       expect(fragment['interval'], 0);
@@ -103,16 +106,20 @@ void main() {
         _vless,
         _withFragment(length: '100-', interval: 'десять'),
       );
-      final fallback = ((_byTag(broken, 'fragment')!['settings']
-          as Map<String, dynamic>)['fragment'] as Map<String, dynamic>);
+      final fallback =
+          ((_byTag(broken, 'fragment')!['settings']
+                  as Map<String, dynamic>)['fragment']
+              as Map<String, dynamic>);
       expect(fallback['length'], '100-200');
       expect(fallback['interval'], '10-20');
     });
 
     test('неизвестный режим packets откатывается на tlshello', () {
       final config = _generate(_vless, _withFragment(packets: 'chaos'));
-      final fragment = ((_byTag(config, 'fragment')!['settings']
-          as Map<String, dynamic>)['fragment'] as Map<String, dynamic>);
+      final fragment =
+          ((_byTag(config, 'fragment')!['settings']
+                  as Map<String, dynamic>)['fragment']
+              as Map<String, dynamic>);
 
       expect(fragment['packets'], 'tlshello');
     });
@@ -142,13 +149,15 @@ void main() {
     });
 
     test('проба пингует через ту же фрагментацию', () {
-      final config = jsonDecode(
-        ConfigGeneratorV2.generatePingConfig(
-          _vless,
-          _withFragment(),
-          socksPort: 10800,
-        ),
-      ) as Map<String, dynamic>;
+      final config =
+          jsonDecode(
+                ConfigGeneratorV2.generatePingConfig(
+                  _vless,
+                  _withFragment(),
+                  socksPort: 10800,
+                ),
+              )
+              as Map<String, dynamic>;
 
       expect(_dialerProxyOf(_byTag(config, 'proxy')), 'fragment');
       expect(_byTag(config, 'fragment'), isNotNull);

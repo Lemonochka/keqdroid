@@ -80,8 +80,14 @@ void main() {
     final entries = SubscriptionService.parseBodyForTest(_profile);
     expect(entries.where((e) => e.startsWith('vless://')), hasLength(2));
     expect(entries.where((e) => e.startsWith('tuic://')), hasLength(1));
-    expect(entries.firstWhere((e) => e.startsWith('ss://')), contains('udp-over-tcp-version=2'));
-    expect(entries.firstWhere((e) => e.contains('pin.example')), contains('1d9cd22b'));
+    expect(
+      entries.firstWhere((e) => e.startsWith('ss://')),
+      contains('udp-over-tcp-version=2'),
+    );
+    expect(
+      entries.firstWhere((e) => e.contains('pin.example')),
+      contains('1d9cd22b'),
+    );
   });
 
   test('ss-opts, звено цепочки и smux доезжают до ядра', () {
@@ -90,7 +96,10 @@ void main() {
     final whole = entries.where((e) => e.startsWith('{')).toList();
     expect(whole, hasLength(3));
 
-    expect((nodeOf(whole[0], 'TrojanGo')['ss-opts'] as Map)['password'], 'sspw');
+    expect(
+      (nodeOf(whole[0], 'TrojanGo')['ss-opts'] as Map)['password'],
+      'sspw',
+    );
     expect((nodeOf(whole[2], 'Smux')['smux'] as Map)['protocol'], 'h2mux');
     final chain = CustomClashConfig.tryParse(whole[1])!;
     expect([for (final p in chain.proxies) p['name']], ['Exit', 'Plain']);
@@ -103,7 +112,11 @@ void main() {
     final clash = CustomClashConfig.tryParse(trojanGo)!;
     expect(clash.remarks, 'TrojanGo');
     expect(clash.map['rules'], ['MATCH,TrojanGo']);
-    final session = MihomoConfigGen.build(trojanGo, const AppSettings(), socksPort: 2080);
+    final session = MihomoConfigGen.build(
+      trojanGo,
+      const AppSettings(),
+      socksPort: 2080,
+    );
     expect((session['rules'] as List).last, 'MATCH,TrojanGo');
     expect(jsonEncode(session['proxies']), contains('sspw'));
   });
@@ -133,16 +146,20 @@ rules:
 ''';
 
     CustomClashConfig entryOf(String name) => CustomClashConfig.tryParse(
-          SubscriptionService.parseBodyForTest(yaml)
-              .firstWhere((e) => e.contains('"name":"$name"')),
-        )!;
+      SubscriptionService.parseBodyForTest(
+        yaml,
+      ).firstWhere((e) => e.contains('"name":"$name"')),
+    )!;
 
     test('узел едет с группой-звеном и её составом', () {
       expect(SubscriptionService.unsupportedClashNodes(yaml), isEmpty);
       for (final name in ['WG', 'DE']) {
         final clash = entryOf(name);
-        expect([for (final p in clash.proxies) p['name']], [name, 'RU1', 'RU2'],
-            reason: name);
+        expect(
+          [for (final p in clash.proxies) p['name']],
+          [name, 'RU1', 'RU2'],
+          reason: name,
+        );
         expect(
           [for (final g in clash.map['proxy-groups'] as List) g['name']],
           ['Entry', 'Auto'],
@@ -155,30 +172,44 @@ rules:
       for (final name in ['WG', 'DE']) {
         final clash = entryOf(name);
         expect(clash.primaryTarget, name);
-        final session = MihomoConfigGen.build(clash.encode(), const AppSettings(), socksPort: 2080);
-        expect((session['rules'] as List).last, 'MATCH,$name');
-        final probe = jsonDecode(MihomoConfigGen.generatePingConfig(
+        final session = MihomoConfigGen.build(
           clash.encode(),
           const AppSettings(),
-          socksPort: 3001,
-        )) as Map<String, dynamic>;
+          socksPort: 2080,
+        );
+        expect((session['rules'] as List).last, 'MATCH,$name');
+        final probe =
+            jsonDecode(
+                  MihomoConfigGen.generatePingConfig(
+                    clash.encode(),
+                    const AppSettings(),
+                    socksPort: 3001,
+                  ),
+                )
+                as Map<String, dynamic>;
         final main = (probe['proxies'] as List)
             .cast<Map<Object?, Object?>>()
             .firstWhere((p) => p['name'] == MihomoConfigGen.proxyName);
         expect(main['dialer-proxy'], isNot(MihomoConfigGen.proxyName));
-        expect(
-          [for (final g in probe['proxy-groups'] as List) g['name']],
-          contains(main['dialer-proxy']),
-        );
+        expect([
+          for (final g in probe['proxy-groups'] as List) g['name'],
+        ], contains(main['dialer-proxy']));
       }
     });
 
     test('звена нет в конфиге: узел как раньше, ссылкой', () {
-      final broken = yaml.replaceFirst('dialer-proxy: Entry}', 'dialer-proxy: Missing}');
+      final broken = yaml.replaceFirst(
+        'dialer-proxy: Entry}',
+        'dialer-proxy: Missing}',
+      );
       final entries = SubscriptionService.parseBodyForTest(broken);
       expect(entries.where((e) => e.contains('"name":"DE"')), isEmpty);
-      expect(entries.where((e) => e.startsWith('trojan://') && e.contains('de.example')),
-          hasLength(1));
+      expect(
+        entries.where(
+          (e) => e.startsWith('trojan://') && e.contains('de.example'),
+        ),
+        hasLength(1),
+      );
     });
   });
 
@@ -204,8 +235,13 @@ proxies:
 ''';
     final entries = SubscriptionService.parseBodyForTest(yaml);
     expect(entries.where((e) => e.startsWith('vmess://')), hasLength(1));
-    expect(((nodeOf(entries.firstWhere((e) => e.startsWith('{')), 'Post')
-            ['http-opts']) as Map)['method'],
-        'POST');
+    expect(
+      ((nodeOf(
+            entries.firstWhere((e) => e.startsWith('{')),
+            'Post',
+          )['http-opts'])
+          as Map)['method'],
+      'POST',
+    );
   });
 }

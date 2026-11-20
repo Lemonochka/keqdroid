@@ -33,19 +33,15 @@ time="2026-10-28T00:20:05.704784000+04:00" level=warning msg="[TUN] default inte
 time="2026-10-28T00:20:20.795632200+04:00" level=warning msg="Start Tun interface timeout: The system cannot find the file specified. [retrying 1/3]"
 ''';
 
-const _fallback = 'The TUN tunnel did not start. Run the app as '
+const _fallback =
+    'The TUN tunnel did not start. Run the app as '
     'Administrator and make sure wintun.dll sits next to xray.exe.';
 
 // так сообщение собирает WindowsTunnelBackend, когда xray вышел до подъёма TUN
 VpnStartException _xrayFailure() => VpnStartException(
-      'xray exited with code -1 before the tunnel came up.\n'
-      '${tunStartFailureMessage(
-        fallback: _fallback,
-        coreOutput: _xrayLog,
-        windows: true,
-        tail: _xrayLog.trim().split('\n').skip(3).join('\n'),
-      )}',
-    );
+  'xray exited with code -1 before the tunnel came up.\n'
+  '${tunStartFailureMessage(fallback: _fallback, coreOutput: _xrayLog, windows: true, tail: _xrayLog.trim().split('\n').skip(3).join('\n'))}',
+);
 
 Future<String> _renderFor(
   WidgetTester tester,
@@ -99,8 +95,11 @@ void main() {
       final message = _xrayFailure().message;
       expect(message, contains('Windows refused to set up the TUN network'));
       expect(message, isNot(contains('Run the app as Administrator')));
-      expect(message, contains('ntstatus: 0xC00002F0'),
-          reason: 'хвост лога остаётся для разбора');
+      expect(
+        message,
+        contains('ntstatus: 0xC00002F0'),
+        reason: 'хвост лога остаётся для разбора',
+      );
     });
   });
 
@@ -137,10 +136,12 @@ void main() {
     // в тесте их буквы рисует заглушка, мерить нечего
     testWidgets('влезает под кнопку в узком окне', (tester) async {
       for (final family in ['Rubik', 'Montserrat']) {
-        final bytes = File('assets/fonts/$family-Variable.ttf').readAsBytesSync();
-        await (FontLoader(family)
-              ..addFont(Future.value(ByteData.sublistView(bytes))))
-            .load();
+        final bytes = File(
+          'assets/fonts/$family-Variable.ttf',
+        ).readAsBytesSync();
+        await (FontLoader(
+          family,
+        )..addFont(Future.value(ByteData.sublistView(bytes)))).load();
       }
       for (final locale in ['en', 'ru', 'de']) {
         final text = await _renderFor(tester, locale, _xrayFailure());
@@ -148,13 +149,20 @@ void main() {
           final painter = TextPainter(
             text: TextSpan(
               text: text,
-              style: TextStyle(fontFamily: family, fontSize: 12, height: 16 / 12),
+              style: TextStyle(
+                fontFamily: family,
+                fontSize: 12,
+                height: 16 / 12,
+              ),
             ),
             textDirection: TextDirection.ltr,
             maxLines: 5,
           )..layout(maxWidth: 300);
-          expect(painter.didExceedMaxLines, isFalse,
-              reason: '$locale, $family: конец совета обрезан многоточием');
+          expect(
+            painter.didExceedMaxLines,
+            isFalse,
+            reason: '$locale, $family: конец совета обрезан многоточием',
+          );
         }
       }
     });
@@ -227,7 +235,11 @@ void main() {
           .toList();
       expect(ids[0], xrayWintunInstanceId(kTunInterfaceName));
       expect(ids[1], isNot(ids[0]));
-      expect(ids[2], ids[1], reason: 'запасной GUID один, лишних сетей в Windows не плодим');
+      expect(
+        ids[2],
+        ids[1],
+        reason: 'запасной GUID один, лишних сетей в Windows не плодим',
+      );
     });
 
     test('другую ошибку не повторяем', () async {
@@ -255,8 +267,10 @@ void main() {
     // 0.31.0, 28.10.2026: xray вышел после отказа Windows, дочитывание его вывода упало TypeError,
     // и повтор под запасным именем не запустился
     test('вывод ядра дочитывается с таймаутом без ошибки типа', () async {
-      await coreOutputDone([Completer<void>().future, Future<void>.value()])
-          .timeout(const Duration(milliseconds: 10), onTimeout: () {});
+      await coreOutputDone([
+        Completer<void>().future,
+        Future<void>.value(),
+      ]).timeout(const Duration(milliseconds: 10), onTimeout: () {});
     });
   });
 }

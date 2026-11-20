@@ -11,9 +11,7 @@ import 'package:keqdroid/utils/socks5_credentials.dart';
 /// до служебного адреса `v1.mux.cool`, а пачку разбирает сервер. Отсюда все
 /// правила ниже: где ядро эту пачку поймёт, там ключ `mux` и появляется, а где
 /// не поймёт — не появляется, иначе соединение молча не встанет.
-const _mux = AppSettings(
-  xrayCore: XrayCoreSettings(muxEnabled: true),
-);
+const _mux = AppSettings(xrayCore: XrayCoreSettings(muxEnabled: true));
 
 const _uuid = '00000000-0000-4000-8000-000000000000';
 
@@ -23,7 +21,8 @@ List<Map<String, dynamic>> _outbounds(
 }) {
   Socks5Credentials().init('u', 'p');
   final config =
-      jsonDecode(ConfigGeneratorV2.generateConfig(uri, settings)) as Map<String, dynamic>;
+      jsonDecode(ConfigGeneratorV2.generateConfig(uri, settings))
+          as Map<String, dynamic>;
   return (config['outbounds'] as List).cast<Map<String, dynamic>>();
 }
 
@@ -34,7 +33,9 @@ void main() {
   group('куда mux попадает', () {
     test('vless: включатель, оба числа и режим QUIC — как ждёт ядро', () {
       expect(
-        _muxOf('vless://$_uuid@host.example:443?type=ws&security=tls&sni=x.example'),
+        _muxOf(
+          'vless://$_uuid@host.example:443?type=ws&security=tls&sni=x.example',
+        ),
         {
           'enabled': true,
           'concurrency': XrayCoreSettings.defaultMuxConcurrency,
@@ -46,20 +47,26 @@ void main() {
 
     test('vmess и trojan тоже: сервер разбирает mux одинаково для всех', () {
       expect(
-        _muxOf('trojan://pass@host.example:443?type=tcp&security=tls&sni=x.example'),
+        _muxOf(
+          'trojan://pass@host.example:443?type=tcp&security=tls&sni=x.example',
+        ),
         isNotNull,
       );
 
-      final vmess = base64.encode(utf8.encode(jsonEncode({
-        'v': '2',
-        'add': 'host.example',
-        'port': '443',
-        'id': _uuid,
-        'net': 'ws',
-        'path': '/p',
-        'tls': 'tls',
-        'sni': 'x.example',
-      })));
+      final vmess = base64.encode(
+        utf8.encode(
+          jsonEncode({
+            'v': '2',
+            'add': 'host.example',
+            'port': '443',
+            'id': _uuid,
+            'net': 'ws',
+            'path': '/p',
+            'tls': 'tls',
+            'sni': 'x.example',
+          }),
+        ),
+      );
       expect(_muxOf('vmess://$vmess'), isNotNull);
     });
 
@@ -86,13 +93,17 @@ void main() {
 
     test('xhttp: у него свой мультиплексор внутри транспорта', () {
       expect(
-        _muxOf('vless://$_uuid@host.example:443?type=xhttp&security=reality'
-            '&sni=decoy.example&pbk=k&sid=aa&fp=chrome&path=%2F'),
+        _muxOf(
+          'vless://$_uuid@host.example:443?type=xhttp&security=reality'
+          '&sni=decoy.example&pbk=k&sid=aa&fp=chrome&path=%2F',
+        ),
         isNull,
       );
       expect(
-        _muxOf('vless://$_uuid@host.example:443?type=splithttp&security=tls'
-            '&sni=x.example&path=%2F'),
+        _muxOf(
+          'vless://$_uuid@host.example:443?type=splithttp&security=tls'
+          '&sni=x.example&path=%2F',
+        ),
         isNull,
       );
     });
@@ -103,11 +114,13 @@ void main() {
           name: 'hop1 to hop2',
           hops: [
             ProxyChainHop(
-              config: 'vless://$_uuid@hop1.example:443'
+              config:
+                  'vless://$_uuid@hop1.example:443'
                   '?type=tcp&security=tls&sni=hop1.example',
             ),
             ProxyChainHop(
-              config: 'vless://$_uuid@hop2.example:443'
+              config:
+                  'vless://$_uuid@hop2.example:443'
                   '?type=tcp&security=tls&sni=hop2.example',
             ),
           ],
@@ -129,14 +142,19 @@ void main() {
       );
       expect(mux?['concurrency'], -1);
       // XUDP при этом остаётся — ради него всё и включают.
-      expect(mux?['xudpConcurrency'], XrayCoreSettings.defaultMuxXudpConcurrency);
+      expect(
+        mux?['xudpConcurrency'],
+        XrayCoreSettings.defaultMuxXudpConcurrency,
+      );
     });
 
     test('вариант -udp443 тот же: сервер смотрит на укороченное имя флоу', () {
       expect(
-        _muxOf('vless://$_uuid@host.example:443?type=tcp&security=reality'
-            '&sni=decoy.example&pbk=k&sid=aa&fp=chrome'
-            '&flow=xtls-rprx-vision-udp443')?['concurrency'],
+        _muxOf(
+          'vless://$_uuid@host.example:443?type=tcp&security=reality'
+          '&sni=decoy.example&pbk=k&sid=aa&fp=chrome'
+          '&flow=xtls-rprx-vision-udp443',
+        )?['concurrency'],
         -1,
       );
     });
@@ -156,15 +174,15 @@ void main() {
 
   group('значения подрезаются по границам ядра', () {
     Map<String, dynamic>? withNumbers(int c, int x) => _muxOf(
-          'vless://$_uuid@host.example:443?type=tcp&security=tls&sni=x.example',
-          settings: AppSettings(
-            xrayCore: XrayCoreSettings(
-              muxEnabled: true,
-              muxConcurrency: c,
-              muxXudpConcurrency: x,
-            ),
-          ),
-        );
+      'vless://$_uuid@host.example:443?type=tcp&security=tls&sni=x.example',
+      settings: AppSettings(
+        xrayCore: XrayCoreSettings(
+          muxEnabled: true,
+          muxConcurrency: c,
+          muxXudpConcurrency: x,
+        ),
+      ),
+    );
 
     test('сверху — 128 и 1024', () {
       final mux = withNumbers(999, 9999);

@@ -67,11 +67,9 @@ void main() {
     test('a connection handed to the engine is not reported as proxied', () {
       // Ровно баг из отчёта: ru-домен уходил в direct внутри ядра, а экран
       // показывал PROXY, потому что sing-box отдал соединение движку.
-      final handed = _entry('yandex.ru').withRouting(
-        rule: '',
-        outbound: 'proxy',
-        decidedByCore: true,
-      );
+      final handed = _entry(
+        'yandex.ru',
+      ).withRouting(rule: '', outbound: 'proxy', decidedByCore: true);
       expect(handed.verdict, ConnectionVerdict.viaCore);
       expect(handed.rule, isEmpty);
     });
@@ -89,11 +87,13 @@ void main() {
     test('sing-box decisions of its own stay untouched', () {
       expect(_entry('vk.com').verdict, ConnectionVerdict.proxied);
       expect(
-        _entry('ads.example').withRouting(
-          rule: 'block-domains',
-          outbound: 'block',
-          decidedByCore: false,
-        ).verdict,
+        _entry('ads.example')
+            .withRouting(
+              rule: 'block-domains',
+              outbound: 'block',
+              decidedByCore: false,
+            )
+            .verdict,
         ConnectionVerdict.blocked,
       );
     });
@@ -163,7 +163,10 @@ void main() {
       XrayRouteDecisions.observe(
         '[Info] app/dispatcher: default route for tcp:example.org:443',
       );
-      expect(XrayRouteDecisions.forTarget(key('example.org'))!.outbound, 'proxy');
+      expect(
+        XrayRouteDecisions.forTarget(key('example.org'))!.outbound,
+        'proxy',
+      );
     });
 
     test('память ограничена, старые решения вытесняются', () {

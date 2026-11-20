@@ -46,10 +46,9 @@ List<String> _rulesOf(Map<String, dynamic> config) =>
 /// Правило сплита: по процессу, мимо туннеля, и не правило самого
 /// приложения.
 String _splitRule(Map<String, dynamic> config) => _rulesOf(config).singleWhere(
-      (r) =>
-          r.startsWith('AND,((IN-TYPE,TUN),(PROCESS-') &&
-          !r.contains('keqdroid'),
-    );
+  (r) =>
+      r.startsWith('AND,((IN-TYPE,TUN),(PROCESS-') && !r.contains('keqdroid'),
+);
 
 /// Куда mihomo отправит соединение [process] → [host], пришедшее из туннеля.
 String _route(
@@ -58,11 +57,10 @@ String _route(
   String host, {
   String? path,
   String inType = 'TUN',
-}) =>
-    simulateMihomo(
-      config,
-      SimConn(process: process, path: path, host: host, inType: inType),
-    );
+}) => simulateMihomo(
+  config,
+  SimConn(process: process, path: path, host: host, inType: inType),
+);
 
 void main() {
   group('только выбранные', () {
@@ -76,8 +74,11 @@ void main() {
 
     test('остальной трафик выбранного — куда велит «Всё остальное»', () {
       expect(
-        _route(_config(mode: AppRoutingMode.onlySelected), 'firefox.exe',
-            'example.com'),
+        _route(
+          _config(mode: AppRoutingMode.onlySelected),
+          'firefox.exe',
+          'example.com',
+        ),
         'proxy',
       );
       expect(
@@ -120,8 +121,11 @@ void main() {
       expect(split, contains('PROCESS-NAME-REGEX,'));
       // AND, два подправила и цель: ни одной запятой из имён.
       expect(split.split(','), hasLength(6));
-      expect(split, isNot(contains('(x86)')),
-          reason: 'скобки из имён должны быть закодированы');
+      expect(
+        split,
+        isNot(contains('(x86)')),
+        reason: 'скобки из имён должны быть закодированы',
+      );
       for (final app in apps) {
         expect(_route(rules, app, 'example.com'), 'proxy', reason: app);
       }
@@ -181,20 +185,32 @@ void main() {
         mode: AppRoutingMode.onlySelected,
         apps: const [firefox, 'Telegram.exe'],
       );
-      expect(_route(rules, 'firefox.exe', 'yandex.ru', path: firefox),
-          'DIRECT');
-      expect(_route(rules, 'firefox.exe', 'example.com', path: firefox),
-          'proxy');
+      expect(
+        _route(rules, 'firefox.exe', 'yandex.ru', path: firefox),
+        'DIRECT',
+      );
+      expect(
+        _route(rules, 'firefox.exe', 'example.com', path: firefox),
+        'proxy',
+      );
       // Регистр пути на Windows не важен.
       expect(
-        _route(rules, 'FIREFOX.EXE', 'example.com',
-            path: r'c:\program files\mozilla firefox\FIREFOX.EXE'),
+        _route(
+          rules,
+          'FIREFOX.EXE',
+          'example.com',
+          path: r'c:\program files\mozilla firefox\FIREFOX.EXE',
+        ),
         'proxy',
       );
       // Имя из той же записи-списка по-прежнему ловит любой Telegram.exe.
       expect(
-        _route(rules, 'Telegram.exe', 'example.com',
-            path: r'D:\Portable\Telegram.exe'),
+        _route(
+          rules,
+          'Telegram.exe',
+          'example.com',
+          path: r'D:\Portable\Telegram.exe',
+        ),
         'proxy',
       );
     });
@@ -205,8 +221,12 @@ void main() {
         apps: const [firefox],
       );
       expect(
-        _route(rules, 'firefox.exe', 'example.com',
-            path: r'D:\Portable\firefox.exe'),
+        _route(
+          rules,
+          'firefox.exe',
+          'example.com',
+          path: r'D:\Portable\firefox.exe',
+        ),
         'DIRECT',
       );
       expect(_route(rules, 'chrome.exe', 'telegram.org'), 'DIRECT');
@@ -218,11 +238,17 @@ void main() {
         mode: AppRoutingMode.allExceptSelected,
         apps: const [firefox, 'Telegram.exe'],
       );
-      expect(_route(rules, 'firefox.exe', 'telegram.org', path: firefox),
-          'DIRECT');
       expect(
-        _route(rules, 'firefox.exe', 'telegram.org',
-            path: r'D:\Portable\firefox.exe'),
+        _route(rules, 'firefox.exe', 'telegram.org', path: firefox),
+        'DIRECT',
+      );
+      expect(
+        _route(
+          rules,
+          'firefox.exe',
+          'telegram.org',
+          path: r'D:\Portable\firefox.exe',
+        ),
         'proxy',
       );
       expect(_route(rules, 'Telegram.exe', 'example.com'), 'DIRECT');
@@ -230,7 +256,10 @@ void main() {
 
     test('запятые и скобки в пути не ломают правило', () {
       const odd = r'C:\Games (old),new\run.exe';
-      final rules = _config(mode: AppRoutingMode.onlySelected, apps: const [odd]);
+      final rules = _config(
+        mode: AppRoutingMode.onlySelected,
+        apps: const [odd],
+      );
       final split = _splitRule(rules);
       expect(split, contains('PROCESS-PATH-REGEX,'));
       expect(split.split(','), hasLength(6));
@@ -251,22 +280,28 @@ void main() {
         'DIRECT',
       );
       expect(
-        _route(rules, 'firefox', 'example.com',
-            path: '/usr/lib/firefox/firefox'),
+        _route(
+          rules,
+          'firefox',
+          'example.com',
+          path: '/usr/lib/firefox/firefox',
+        ),
         'proxy',
       );
-      expect(_route(rules, 'curl', 'example.com', path: '/usr/bin/curl'),
-          'proxy');
-      expect(_route(rules, 'curl', 'example.com', path: '/tmp/curl'),
-          'DIRECT');
-      expect(_route(rules, 'wget', 'telegram.org', path: '/usr/bin/wget'),
-          'DIRECT');
+      expect(
+        _route(rules, 'curl', 'example.com', path: '/usr/bin/curl'),
+        'proxy',
+      );
+      expect(_route(rules, 'curl', 'example.com', path: '/tmp/curl'), 'DIRECT');
+      expect(
+        _route(rules, 'wget', 'telegram.org', path: '/usr/bin/wget'),
+        'DIRECT',
+      );
       expect(_rulesOf(rules).any((r) => r.contains('x2eexe')), isFalse);
     });
   });
 
-  test('готовый Clash-конфиг: невыбранные мимо VPN, выбранные по правилам',
-      () {
+  test('готовый Clash-конфиг: невыбранные мимо VPN, выбранные по правилам', () {
     const clash = '''
 proxies:
   - {name: p1, type: ss, server: 203.0.113.10, port: 8388, cipher: aes-256-gcm, password: x}
@@ -291,10 +326,7 @@ rules:
     expect(_route(rules, 'firefox.exe', 'author-direct.example'), 'DIRECT');
     expect(_route(rules, 'firefox.exe', 'example.com'), 'G');
     expect(_route(rules, 'chrome.exe', 'example.com'), 'DIRECT');
-    expect(
-      _route(rules, 'keqdroid.exe', 'example.com', inType: 'HTTP'),
-      'G',
-    );
+    expect(_route(rules, 'keqdroid.exe', 'example.com', inType: 'HTTP'), 'G');
   });
 
   // Сплит решает, кто идёт в туннель, а на свой HTTP-вход приложение шлёт

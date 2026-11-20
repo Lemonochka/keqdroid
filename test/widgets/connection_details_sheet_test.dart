@@ -18,23 +18,22 @@ ConnectionEntry _one(
   bool closed = false,
   int? download,
   int? upload,
-}) =>
-    ConnectionEntry(
-      id: source,
-      network: 'tcp',
-      host: 'drinkit-mobile-api.drinkit.dodois.io',
-      destPort: 443,
-      destIp: '51.250.39.172',
-      source: source,
-      process: 'Drinkit',
-      inbound: 'tun-in',
-      outbound: 'direct',
-      rule: 'keq-route-3-domains',
-      startedAt: at,
-      closed: closed,
-      download: download,
-      upload: upload,
-    );
+}) => ConnectionEntry(
+  id: source,
+  network: 'tcp',
+  host: 'drinkit-mobile-api.drinkit.dodois.io',
+  destPort: 443,
+  destIp: '51.250.39.172',
+  source: source,
+  process: 'Drinkit',
+  inbound: 'tun-in',
+  outbound: 'direct',
+  rule: 'keq-route-3-domains',
+  startedAt: at,
+  closed: closed,
+  download: download,
+  upload: upload,
+);
 
 ConnectionEntry _group(int n, {bool live = false}) {
   final members = [
@@ -58,24 +57,28 @@ ConnectionEntry _group(int n, {bool live = false}) {
 }
 
 const _lists = [
-  ConnectionListLine('Российские сайты', ListMatch.hit, note: 'маршрут включён'),
+  ConnectionListLine(
+    'Российские сайты',
+    ListMatch.hit,
+    note: 'маршрут включён',
+  ),
   ConnectionListLine('Белые списки мобильной связи', ListMatch.hit),
   ConnectionListLine('Реклама и трекеры', ListMatch.miss),
   ConnectionListLine('Иранские сайты', ListMatch.unknown, note: 'нет в базе'),
 ];
 
 Widget _app(Widget sheet) => MaterialApp(
-      locale: const Locale('ru'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFFE76FAD),
-          brightness: Brightness.dark,
-        ),
-      ),
-      home: Scaffold(body: sheet),
-    );
+  locale: const Locale('ru'),
+  localizationsDelegates: AppLocalizations.localizationsDelegates,
+  supportedLocales: AppLocalizations.supportedLocales,
+  theme: ThemeData(
+    colorScheme: ColorScheme.fromSeed(
+      seedColor: const Color(0xFFE76FAD),
+      brightness: Brightness.dark,
+    ),
+  ),
+  home: Scaffold(body: sheet),
+);
 
 ConnectionDetailsSheet _sheet(
   ValueListenable<ConnectionEntry> entry, {
@@ -83,53 +86,59 @@ ConnectionDetailsSheet _sheet(
   bool livenessKnown = true,
   Future<ConnectionInsightView>? insight,
   List<String> pendingLists = const [],
-}) =>
-    ConnectionDetailsSheet(
-      entry: entry,
-      live: live,
-      livenessKnown: livenessKnown,
-      pendingLists: pendingLists,
-      insight: insight ??
-          Future.value(
-            const ConnectionInsightView(
-              rule: ConnectionField(
-                'keq-route-3-domains',
-                mono: true,
-                note: 'маршрут «Российские сайты»',
-              ),
-              lists: _lists,
-            ),
+}) => ConnectionDetailsSheet(
+  entry: entry,
+  live: live,
+  livenessKnown: livenessKnown,
+  pendingLists: pendingLists,
+  insight:
+      insight ??
+      Future.value(
+        const ConnectionInsightView(
+          rule: ConnectionField(
+            'keq-route-3-domains',
+            mono: true,
+            note: 'маршрут «Российские сайты»',
           ),
-      app: const ConnectionField('Drinkit'),
-      rule: const ConnectionField('keq-route-3-domains', mono: true),
-      exit: const ConnectionField('direct', mono: true, note: 'мимо VPN'),
-      now: () => _t0.add(const Duration(minutes: 2, seconds: 14)),
-    );
+          lists: _lists,
+        ),
+      ),
+  app: const ConnectionField('Drinkit'),
+  rule: const ConnectionField('keq-route-3-domains', mono: true),
+  exit: const ConnectionField('direct', mono: true, note: 'мимо VPN'),
+  now: () => _t0.add(const Duration(minutes: 2, seconds: 14)),
+);
 
 void main() {
-  testWidgets('a single connection: every field, its own source, no member list',
-      (tester) async {
-    final entry = ValueNotifier(_one('172.19.0.1:43612', _t0));
-    await tester.pumpWidget(_app(_sheet(entry)));
-    await tester.pump();
+  testWidgets(
+    'a single connection: every field, its own source, no member list',
+    (tester) async {
+      final entry = ValueNotifier(_one('172.19.0.1:43612', _t0));
+      await tester.pumpWidget(_app(_sheet(entry)));
+      await tester.pump();
 
-    expect(tester.takeException(), isNull);
-    expect(find.text('drinkit-mobile-api.drinkit.dodois.io:443'), findsOneWidget);
-    expect(find.text('НАПРЯМУЮ'), findsOneWidget);
-    expect(find.text('51.250.39.172'), findsOneWidget);
-    expect(find.text('Drinkit'), findsOneWidget);
-    expect(find.text('маршрут «Российские сайты»'), findsOneWidget);
-    expect(find.text('мимо VPN'), findsOneWidget);
-    expect(find.text('172.19.0.1:43612'), findsOneWidget);
-    expect(find.text('начало'), findsOneWidget);
-    expect(find.text('13:20:12'), findsOneWidget);
-    // по логу не видно, сколько оно живёт
-    expect(find.textContaining('открыто'), findsNothing);
-    expect(find.textContaining('Соединения:'), findsNothing);
-  });
+      expect(tester.takeException(), isNull);
+      expect(
+        find.text('drinkit-mobile-api.drinkit.dodois.io:443'),
+        findsOneWidget,
+      );
+      expect(find.text('НАПРЯМУЮ'), findsOneWidget);
+      expect(find.text('51.250.39.172'), findsOneWidget);
+      expect(find.text('Drinkit'), findsOneWidget);
+      expect(find.text('маршрут «Российские сайты»'), findsOneWidget);
+      expect(find.text('мимо VPN'), findsOneWidget);
+      expect(find.text('172.19.0.1:43612'), findsOneWidget);
+      expect(find.text('начало'), findsOneWidget);
+      expect(find.text('13:20:12'), findsOneWidget);
+      // по логу не видно, сколько оно живёт
+      expect(find.textContaining('открыто'), findsNothing);
+      expect(find.textContaining('Соединения:'), findsNothing);
+    },
+  );
 
-  testWidgets('ready lists: a check, a dash and an honest unknown',
-      (tester) async {
+  testWidgets('ready lists: a check, a dash and an honest unknown', (
+    tester,
+  ) async {
     final entry = ValueNotifier(_one('a:1', _t0));
     await tester.pumpWidget(_app(_sheet(entry)));
     await tester.pump();
@@ -145,86 +154,94 @@ void main() {
     expect(find.byIcon(Icons.help_outline_rounded), findsOneWidget);
   });
 
-  testWidgets('while the base is read the lists wait, the rest is already there',
-      (tester) async {
-    final entry = ValueNotifier(_one('a:1', _t0));
-    final pending = Completer<ConnectionInsightView>();
-    await tester.pumpWidget(_app(_sheet(entry, insight: pending.future)));
+  testWidgets(
+    'while the base is read the lists wait, the rest is already there',
+    (tester) async {
+      final entry = ValueNotifier(_one('a:1', _t0));
+      final pending = Completer<ConnectionInsightView>();
+      await tester.pumpWidget(_app(_sheet(entry, insight: pending.future)));
 
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
-    expect(find.text('keq-route-3-domains'), findsOneWidget);
-    expect(find.text('маршрут «Российские сайты»'), findsNothing);
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.text('keq-route-3-domains'), findsOneWidget);
+      expect(find.text('маршрут «Российские сайты»'), findsNothing);
 
-    pending.complete(const ConnectionInsightView(lists: _lists));
-    await tester.pump();
-    expect(find.byType(CircularProgressIndicator), findsNothing);
-  });
+      pending.complete(const ConnectionInsightView(lists: _lists));
+      await tester.pump();
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+    },
+  );
 
-  testWidgets('the sheet opens at its full height and does not jump when the lists arrive',
-      (tester) async {
-    final entry = ValueNotifier(_one('a:1', _t0));
-    final pending = Completer<ConnectionInsightView>();
-    await tester.pumpWidget(
-      _app(
-        _sheet(
-          entry,
-          insight: pending.future,
-          pendingLists: [for (final line in _lists) line.name],
+  testWidgets(
+    'the sheet opens at its full height and does not jump when the lists arrive',
+    (tester) async {
+      final entry = ValueNotifier(_one('a:1', _t0));
+      final pending = Completer<ConnectionInsightView>();
+      await tester.pumpWidget(
+        _app(
+          _sheet(
+            entry,
+            insight: pending.future,
+            pendingLists: [for (final line in _lists) line.name],
+          ),
         ),
-      ),
-    );
-    final before = tester.getSize(find.byType(ConnectionDetailsSheet)).height;
+      );
+      final before = tester.getSize(find.byType(ConnectionDetailsSheet)).height;
 
-    pending.complete(const ConnectionInsightView(lists: _lists));
-    await tester.pump();
-    expect(
-      tester.getSize(find.byType(ConnectionDetailsSheet)).height,
-      moreOrLessEquals(before, epsilon: 0.5),
-    );
-    await tester.pumpAndSettle();
-    expect(
-      tester.getSize(find.byType(ConnectionDetailsSheet)).height,
-      moreOrLessEquals(before, epsilon: 0.5),
-    );
-  });
+      pending.complete(const ConnectionInsightView(lists: _lists));
+      await tester.pump();
+      expect(
+        tester.getSize(find.byType(ConnectionDetailsSheet)).height,
+        moreOrLessEquals(before, epsilon: 0.5),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        tester.getSize(find.byType(ConnectionDetailsSheet)).height,
+        moreOrLessEquals(before, epsilon: 0.5),
+      );
+    },
+  );
 
-  testWidgets('a route note that comes with the lists grows the sheet smoothly',
-      (tester) async {
-    final entry = ValueNotifier(_one('a:1', _t0));
-    final pending = Completer<ConnectionInsightView>();
-    await tester.pumpWidget(
-      _app(
-        _sheet(
-          entry,
-          insight: pending.future,
-          pendingLists: [for (final line in _lists) line.name],
+  testWidgets(
+    'a route note that comes with the lists grows the sheet smoothly',
+    (tester) async {
+      final entry = ValueNotifier(_one('a:1', _t0));
+      final pending = Completer<ConnectionInsightView>();
+      await tester.pumpWidget(
+        _app(
+          _sheet(
+            entry,
+            insight: pending.future,
+            pendingLists: [for (final line in _lists) line.name],
+          ),
         ),
-      ),
-    );
-    double height() => tester.getSize(find.byType(ConnectionDetailsSheet)).height;
-    final before = height();
+      );
+      double height() =>
+          tester.getSize(find.byType(ConnectionDetailsSheet)).height;
+      final before = height();
 
-    pending.complete(
-      const ConnectionInsightView(
-        rule: ConnectionField(
-          'keq-route-3-domains',
-          mono: true,
-          note: 'маршрут «Российские сайты»',
+      pending.complete(
+        const ConnectionInsightView(
+          rule: ConnectionField(
+            'keq-route-3-domains',
+            mono: true,
+            note: 'маршрут «Российские сайты»',
+          ),
+          lists: _lists,
         ),
-        lists: _lists,
-      ),
-    );
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 16));
-    final firstFrame = height();
-    await tester.pumpAndSettle();
-    final grown = height() - before;
-    expect(grown, greaterThan(8));
-    expect(firstFrame - before, lessThan(grown / 2));
-  });
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 16));
+      final firstFrame = height();
+      await tester.pumpAndSettle();
+      final grown = height() - before;
+      expect(grown, greaterThan(8));
+      expect(firstFrame - before, lessThan(grown / 2));
+    },
+  );
 
-  testWidgets('a group lists its connections, four first, the rest on tap',
-      (tester) async {
+  testWidgets('a group lists its connections, four first, the rest on tap', (
+    tester,
+  ) async {
     final entry = ValueNotifier(_group(6));
     await tester.pumpWidget(_app(_sheet(entry)));
     await tester.pump();
@@ -246,8 +263,9 @@ void main() {
     expect(find.text('ещё 2'), findsNothing);
   });
 
-  testWidgets('without Info logs nobody is called open or closed',
-      (tester) async {
+  testWidgets('without Info logs nobody is called open or closed', (
+    tester,
+  ) async {
     final entry = ValueNotifier(_group(3));
     await tester.pumpWidget(_app(_sheet(entry, livenessKnown: false)));
     await tester.pump();
@@ -256,12 +274,12 @@ void main() {
     expect(find.text('закрыто'), findsNothing);
   });
 
-  testWidgets('live snapshot: how long it is open and bytes per connection',
-      (tester) async {
-    final entry = ValueNotifier(_group(2, live: true).copyWith(
-      download: 3072,
-      upload: 200,
-    ));
+  testWidgets('live snapshot: how long it is open and bytes per connection', (
+    tester,
+  ) async {
+    final entry = ValueNotifier(
+      _group(2, live: true).copyWith(download: 3072, upload: 200),
+    );
     await tester.pumpWidget(_app(_sheet(entry, live: true)));
     await tester.pump();
 
@@ -285,8 +303,12 @@ void main() {
         return null;
       },
     );
-    addTearDown(() => tester.binding.defaultBinaryMessenger
-        .setMockMethodCallHandler(SystemChannels.platform, null));
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      ),
+    );
 
     final entry = ValueNotifier(_one('172.19.0.1:43612', _t0));
     await tester.pumpWidget(_app(_sheet(entry)));
@@ -295,24 +317,32 @@ void main() {
     await tester.pump();
 
     expect(copied, contains('drinkit-mobile-api.drinkit.dodois.io:443 TCP'));
-    expect(copied, contains('правило: keq-route-3-domains (маршрут «Российские сайты»)'));
+    expect(
+      copied,
+      contains('правило: keq-route-3-domains (маршрут «Российские сайты»)'),
+    );
     expect(copied, contains('выход: direct (мимо VPN)'));
     expect(copied, contains('источник: 172.19.0.1:43612'));
   });
 
-  testWidgets('the list card opens details on tap, the host text too',
-      (tester) async {
+  testWidgets('the list card opens details on tap, the host text too', (
+    tester,
+  ) async {
     var taps = 0;
-    await tester.pumpWidget(_app(ListView(
-      children: [
-        ConnectionTile(
-          entry: _one('a:1', _t0),
-          showProcess: true,
-          ruleInfoAvailable: true,
-          onTap: () => taps++,
+    await tester.pumpWidget(
+      _app(
+        ListView(
+          children: [
+            ConnectionTile(
+              entry: _one('a:1', _t0),
+              showProcess: true,
+              ruleInfoAvailable: true,
+              onTap: () => taps++,
+            ),
+          ],
         ),
-      ],
-    )));
+      ),
+    );
     await tester.tap(find.text('direct'));
     await tester.tap(find.text('drinkit-mobile-api.drinkit.dodois.io:443'));
     expect(taps, 2);

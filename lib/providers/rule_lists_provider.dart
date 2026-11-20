@@ -37,21 +37,17 @@ class RuleListsNotifier extends Notifier<Map<String, RuleListStatus>> {
     );
 
     // поле сохраняется на паузе в наборе, без ожидания ушла бы недопечатанная ссылка
-    ref.listen<String?>(
-      _routeListUrlsProvider,
-      (_, urls) {
-        _syncDebounce?.cancel();
-        if (urls == null) return;
-        if (urls.isEmpty) {
-          unawaited(_sync());
-          return;
-        }
-        _syncDebounce = Timer(const Duration(milliseconds: 1500), () {
-          unawaited(_sync());
-        });
-      },
-      fireImmediately: true,
-    );
+    ref.listen<String?>(_routeListUrlsProvider, (_, urls) {
+      _syncDebounce?.cancel();
+      if (urls == null) return;
+      if (urls.isEmpty) {
+        unawaited(_sync());
+        return;
+      }
+      _syncDebounce = Timer(const Duration(milliseconds: 1500), () {
+        unawaited(_sync());
+      });
+    }, fireImmediately: true);
     return const {};
   }
 
@@ -119,15 +115,14 @@ class RuleListsNotifier extends Notifier<Map<String, RuleListStatus>> {
 
 final ruleListsProvider =
     NotifierProvider<RuleListsNotifier, Map<String, RuleListStatus>>(
-  RuleListsNotifier.new,
-);
+      RuleListsNotifier.new,
+    );
 
 // списки профилей тоже: prune стёр бы скачанное для них при первой синхронизации
 List<TrafficRoute> _allRoutes(
   List<TrafficRoute> main,
   List<RoutingProfile> profiles,
-) =>
-    [...main, for (final p in profiles) ...p.routes];
+) => [...main, for (final p in profiles) ...p.routes];
 
 final _routeListUrlsProvider = Provider<String?>((ref) {
   final main = ref.watch(routesProvider).value;

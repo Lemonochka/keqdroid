@@ -23,32 +23,39 @@ void main() {
 
   setUp(() {
     storage = _MockStorageService();
-    when(() => storage.getSettings()).thenAnswer((_) async => const AppSettings());
+    when(
+      () => storage.getSettings(),
+    ).thenAnswer((_) async => const AppSettings());
     when(() => storage.getHwid()).thenReturn(null);
     when(() => storage.setHwid(any())).thenAnswer((_) async {});
     when(() => storage.getServers()).thenAnswer((_) async => const []);
     when(() => storage.getActiveServerId()).thenReturn(null);
-    when(() => storage.replaceServersBySubscription(any(), any()))
-        .thenAnswer((_) async {});
+    when(
+      () => storage.replaceServersBySubscription(any(), any()),
+    ).thenAnswer((_) async {});
     when(() => storage.upsertSubscription(any())).thenAnswer((_) async {});
   });
 
-  const body = 'vless://11111111-1111-1111-1111-111111111111@1.1.1.1:443'
+  const body =
+      'vless://11111111-1111-1111-1111-111111111111@1.1.1.1:443'
       '?security=reality&type=tcp#Alpha';
   const sub = Subscription(id: 's1', name: 'S', url: 'https://example.com/sub');
 
   SubscriptionService service(_CountingAdapter adapter) =>
       SubscriptionService(storage, dio: Dio()..httpClientAdapter = adapter);
 
-  test('два одновременных обновления одной подписки идут одним запросом', () async {
-    final adapter = _CountingAdapter(body);
-    final results = await Future.wait([
-      service(adapter).updateSubscription(sub),
-      service(adapter).updateSubscription(sub),
-    ]);
-    expect(adapter.requests, 1);
-    expect(results.map((r) => r.success), [true, true]);
-  });
+  test(
+    'два одновременных обновления одной подписки идут одним запросом',
+    () async {
+      final adapter = _CountingAdapter(body);
+      final results = await Future.wait([
+        service(adapter).updateSubscription(sub),
+        service(adapter).updateSubscription(sub),
+      ]);
+      expect(adapter.requests, 1);
+      expect(results.map((r) => r.success), [true, true]);
+    },
+  );
 
   test('следующее обновление после завершения качает заново', () async {
     final adapter = _CountingAdapter(body);
@@ -61,7 +68,9 @@ void main() {
     final adapter = _CountingAdapter(body);
     await Future.wait([
       service(adapter).updateSubscription(sub),
-      service(adapter).updateSubscription(sub.copyWith(url: 'https://example.org/sub')),
+      service(
+        adapter,
+      ).updateSubscription(sub.copyWith(url: 'https://example.org/sub')),
     ]);
     expect(adapter.requests, 2);
   });

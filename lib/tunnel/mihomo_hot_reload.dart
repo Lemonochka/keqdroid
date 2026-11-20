@@ -51,7 +51,10 @@ Future<bool> putMihomoConfig({
     final response = await close.close().timeout(const Duration(seconds: 3));
     await response.drain<void>();
   } catch (e) {
-    AppLogger.instance.warn('mihomo reload: old connections stay open', error: e);
+    AppLogger.instance.warn(
+      'mihomo reload: old connections stay open',
+      error: e,
+    );
   } finally {
     client.close(force: true);
   }

@@ -14,7 +14,8 @@ import '../helpers/xray_rules_sim.dart';
 
 // маршруты приложений на xray под Android: правила с process на входе tun-in,
 // в том же порядке, что у mihomo
-const _active = 'vless://00000000-0000-4000-8000-000000000000@203.0.113.10:443'
+const _active =
+    'vless://00000000-0000-4000-8000-000000000000@203.0.113.10:443'
     '?type=tcp&security=tls&sni=nl.example#NL';
 const _de = 'trojan://pw@198.51.100.7:443?security=tls&sni=de.example#DE';
 
@@ -41,15 +42,14 @@ TrafficRoute _route(
   String sites = '',
   RouteTarget target = RouteTarget.vpn,
   String serverId = '',
-}) =>
-    TrafficRoute(
-      id: id,
-      apps: apps,
-      content: content,
-      sites: sites,
-      target: target,
-      serverId: serverId,
-    );
+}) => TrafficRoute(
+  id: id,
+  apps: apps,
+  content: content,
+  sites: sites,
+  target: target,
+  serverId: serverId,
+);
 
 final _chromeAll = _route(
   'chrome-all',
@@ -101,19 +101,22 @@ Map<String, dynamic> _config(
     ))
       r.copyWith(listDomains: listDomains[r.entries]),
   ];
-  return jsonDecode(ConfigGeneratorV2.generateConfig(
-    input,
-    _settings,
-    nativeTunInbound: tun,
-    routeServers: outbounds,
-    appRoutes: apps,
-  )) as Map<String, dynamic>;
+  return jsonDecode(
+        ConfigGeneratorV2.generateConfig(
+          input,
+          _settings,
+          nativeTunInbound: tun,
+          routeServers: outbounds,
+          appRoutes: apps,
+        ),
+      )
+      as Map<String, dynamic>;
 }
 
 List<Map<String, dynamic>> _rules(Map<String, dynamic> c) => [
-      for (final r in (c['routing'] as Map)['rules'] as List)
-        (r as Map).cast<String, dynamic>(),
-    ];
+  for (final r in (c['routing'] as Map)['rules'] as List)
+    (r as Map).cast<String, dynamic>(),
+];
 
 String? _go(
   Map<String, dynamic> c,
@@ -122,17 +125,16 @@ String? _go(
   String ip = '',
   String resolvesTo = '',
   String inbound = 'tun-in',
-}) =>
-    simulateXray(
-      c,
-      XrayConn(
-        inbound: inbound,
-        process: app,
-        host: host,
-        ip: ip,
-        resolvesTo: resolvesTo,
-      ),
-    );
+}) => simulateXray(
+  c,
+  XrayConn(
+    inbound: inbound,
+    process: app,
+    host: host,
+    ip: ip,
+    resolvesTo: resolvesTo,
+  ),
+);
 
 void main() {
   test('правило — вход туннеля, приложения и выход', () {
@@ -144,23 +146,25 @@ void main() {
     expect(rule['outboundTag'], 'keq-srv-0');
   });
 
-  test('порядок: блок, сам сервер, частные сети, приложения, все приложения',
-      () {
-    final tags = [for (final r in _rules(_config(_routes))) r['ruleTag']];
-    int at(String tag) {
-      final i = tags.indexOf(tag);
-      expect(i, isNot(-1), reason: tag);
-      return i;
-    }
+  test(
+    'порядок: блок, сам сервер, частные сети, приложения, все приложения',
+    () {
+      final tags = [for (final r in _rules(_config(_routes))) r['ruleTag']];
+      int at(String tag) {
+        final i = tags.indexOf(tag);
+        expect(i, isNot(-1), reason: tag);
+        return i;
+      }
 
-    expect(at('block-domains'), lessThan(at('keq-app-0-domains')));
-    expect(at('keq-app-0-domains'), lessThan(at('server-ip')));
-    expect(at('route-server-0'), lessThan(at('app-private')));
-    expect(at('app-private'), lessThan(at('keq-app-1-domains')));
-    expect(at('keq-app-1-domains'), lessThan(at('keq-app-2')));
-    expect(at('keq-app-3'), lessThan(at('direct-domains')));
-    expect(at('direct-domains'), lessThan(at('proxy-domains')));
-  });
+      expect(at('block-domains'), lessThan(at('keq-app-0-domains')));
+      expect(at('keq-app-0-domains'), lessThan(at('server-ip')));
+      expect(at('route-server-0'), lessThan(at('app-private')));
+      expect(at('app-private'), lessThan(at('keq-app-1-domains')));
+      expect(at('keq-app-1-domains'), lessThan(at('keq-app-2')));
+      expect(at('keq-app-3'), lessThan(at('direct-domains')));
+      expect(at('direct-domains'), lessThan(at('proxy-domains')));
+    },
+  );
 
   test('сайты приложения раньше его «весь трафик»', () {
     final c = _config(_routes);
@@ -195,8 +199,7 @@ void main() {
     expect(_go(c, _discord, ip: '93.184.216.34'), 'keq-srv-0');
   });
 
-  test('адрес в сайтах маршрута: по адресу сразу, по домену после резолва',
-      () {
+  test('адрес в сайтах маршрута: по адресу сразу, по домену после резолва', () {
     final c = _config([
       _route(
         'tg',
@@ -238,8 +241,11 @@ void main() {
       },
     );
     expect(
-      _go(c, 'com.valvesoftware.android.steam.community',
-          host: 'store.steampowered.com'),
+      _go(
+        c,
+        'com.valvesoftware.android.steam.community',
+        host: 'store.steampowered.com',
+      ),
       'direct',
     );
     expect(_go(c, _chrome, host: 'store.steampowered.com'), 'proxy');

@@ -3,8 +3,7 @@ part of '../settings_tab.dart';
 Widget appearanceGeneralTabForTest(
   AppSettings current, {
   Future<void> Function(AppSettings)? onSave,
-}) =>
-    _AppearanceGeneralTab(current: current, onSave: onSave ?? (_) async {});
+}) => _AppearanceGeneralTab(current: current, onSave: onSave ?? (_) async {});
 
 class _ThemeCustomizationCard extends ConsumerWidget {
   final AsyncValue<AppSettings> settingsAsync;
@@ -16,12 +15,14 @@ class _ThemeCustomizationCard extends ConsumerWidget {
     final settings = settingsAsync.value ?? const AppSettings();
     // themePresetFor: своей темы в списке нет, и resolveThemePreset дал бы Ocean
     final preset = themePresetFor(settings);
-    final modeLabel = settings.darkTheme ? l10n.themeModeDark : l10n.themeModeLight;
+    final modeLabel = settings.darkTheme
+        ? l10n.themeModeDark
+        : l10n.themeModeLight;
     final isDesktop = PlatformBootstrap.isDesktop;
     final subtitle = settings.followSystemTheme
         ? (isDesktop
-            ? l10n.settingsSystemColorsSubtitle(modeLabel)
-            : l10n.settingsAndroidColorsSubtitle(modeLabel))
+              ? l10n.settingsSystemColorsSubtitle(modeLabel)
+              : l10n.settingsAndroidColorsSubtitle(modeLabel))
         // без изоляции в фарси решётка уезжает в конец
         : '${ltrIsolate(preset.name)} · $modeLabel';
     return _SettingsCard(
@@ -31,7 +32,9 @@ class _ThemeCustomizationCard extends ConsumerWidget {
       accent: ExpressiveAccent.primary,
       onTap: () => Navigator.push(
         context,
-        MaterialPageRoute<void>(builder: (_) => _ThemeCustomizationScreen(settings: settings)),
+        MaterialPageRoute<void>(
+          builder: (_) => _ThemeCustomizationScreen(settings: settings),
+        ),
       ),
     );
   }
@@ -218,12 +221,15 @@ class _AppearanceGeneralTab extends ConsumerWidget {
                         label: l10n.appearanceConnectPanelModern,
                       ),
                     ],
-                    selected: LiquidBarStyle.tryParse(current.bottomBarStyle) != null,
-                    onChanged: (v) => onSave(current.copyWith(
-                      bottomBarStyle: v
-                          ? LiquidBarStyle.mainland.name
-                          : AppSettings.bottomBarLegacy,
-                    )),
+                    selected:
+                        LiquidBarStyle.tryParse(current.bottomBarStyle) != null,
+                    onChanged: (v) => onSave(
+                      current.copyWith(
+                        bottomBarStyle: v
+                            ? LiquidBarStyle.mainland.name
+                            : AppSettings.bottomBarLegacy,
+                      ),
+                    ),
                     height: 48,
                   ),
                 ),
@@ -240,7 +246,9 @@ class _AppearanceGeneralTab extends ConsumerWidget {
                           label: l10n.appearanceBarIslands,
                         ),
                       ],
-                      selected: LiquidBarStyle.fromId(current.bottomBarStyle).name,
+                      selected: LiquidBarStyle.fromId(
+                        current.bottomBarStyle,
+                      ).name,
                       onChanged: (v) =>
                           onSave(current.copyWith(bottomBarStyle: v)),
                       height: 48,
@@ -288,8 +296,7 @@ class _AppearanceGeneralTab extends ConsumerWidget {
                   icon: Icons.vibration_rounded,
                   title: l10n.appearanceHaptics,
                   value: current.hapticFeedback,
-                  onChanged: (v) =>
-                      onSave(current.copyWith(hapticFeedback: v)),
+                  onChanged: (v) => onSave(current.copyWith(hapticFeedback: v)),
                 ),
               ],
             ),
@@ -360,11 +367,7 @@ class _AppearanceSwitchTile extends StatelessWidget {
             ),
           ),
           const SizedBox(width: ExpressiveSpacing.small),
-          Switch(
-            value: value,
-            activeThumbColor: accent,
-            onChanged: onChanged,
-          ),
+          Switch(value: value, activeThumbColor: accent, onChanged: onChanged),
         ],
       ),
     );
@@ -431,9 +434,9 @@ class _IconShapePickerState extends State<_IconShapePicker> {
           child: Text(
             _shapeLabel(l10n, current),
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: accent,
-                  fontWeight: FontWeight.w600,
-                ),
+              color: accent,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
       ],
@@ -485,22 +488,25 @@ class _ShapeSwatch extends StatelessWidget {
           shape: shape.border(_size),
           child: GestureDetector(
             onTap: onTap,
-            child: Builder(builder: (context) {
-              final scheme = Theme.of(context).colorScheme;
-              return AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                curve: Curves.easeOutCubic,
-                width: _size,
-                height: _size,
-                decoration: ShapeDecoration(
-                  color: TvFocusHighlight.containerOf(context) ??
-                      (selected
-                          ? scheme.primary
-                          : scheme.surfaceContainerHighest),
-                  shape: shape.border(_size),
-                ),
-              );
-            }),
+            child: Builder(
+              builder: (context) {
+                final scheme = Theme.of(context).colorScheme;
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  curve: Curves.easeOutCubic,
+                  width: _size,
+                  height: _size,
+                  decoration: ShapeDecoration(
+                    color:
+                        TvFocusHighlight.containerOf(context) ??
+                        (selected
+                            ? scheme.primary
+                            : scheme.surfaceContainerHighest),
+                    shape: shape.border(_size),
+                  ),
+                );
+              },
+            ),
           ),
         ),
       ),
@@ -553,9 +559,9 @@ class _FontPicker extends StatelessWidget {
               ),
             ),
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: accent,
-                  fontWeight: FontWeight.w600,
-                ),
+              color: accent,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
       ],
@@ -592,34 +598,37 @@ class _FontSwatch extends StatelessWidget {
           radius: BorderRadius.circular(ExpressiveShape.large),
           child: GestureDetector(
             onTap: onTap,
-            child: Builder(builder: (context) {
-              final scheme = Theme.of(context).colorScheme;
-              final focusFill = TvFocusHighlight.containerOf(context);
-              return AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                curve: Curves.easeOutCubic,
-                height: 56,
-                alignment: Alignment.center,
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                decoration: BoxDecoration(
-                  color: focusFill ??
-                      (selected
-                          ? scheme.primary
-                          : scheme.surfaceContainerHighest),
-                  borderRadius: BorderRadius.circular(ExpressiveShape.large),
-                ),
-                child: Text(
-                  'Aa Яя',
-                  maxLines: 1,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontFamily: fontFamily,
-                        color: selected && focusFill == null
-                            ? scheme.onPrimary
-                            : scheme.onSurface,
-                      ),
-                ),
-              );
-            }),
+            child: Builder(
+              builder: (context) {
+                final scheme = Theme.of(context).colorScheme;
+                final focusFill = TvFocusHighlight.containerOf(context);
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  curve: Curves.easeOutCubic,
+                  height: 56,
+                  alignment: Alignment.center,
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  decoration: BoxDecoration(
+                    color:
+                        focusFill ??
+                        (selected
+                            ? scheme.primary
+                            : scheme.surfaceContainerHighest),
+                    borderRadius: BorderRadius.circular(ExpressiveShape.large),
+                  ),
+                  child: Text(
+                    'Aa Яя',
+                    maxLines: 1,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontFamily: fontFamily,
+                      color: selected && focusFill == null
+                          ? scheme.onPrimary
+                          : scheme.onSurface,
+                    ),
+                  ),
+                );
+              },
+            ),
           ),
         ),
       ),
@@ -643,7 +652,9 @@ class _AppearanceThemesTab extends StatelessWidget {
         slivers: [
           SliverPadding(
             padding: const EdgeInsets.all(16),
-            sliver: SliverList.list(children: _controls(context, l10n, isDesktop)),
+            sliver: SliverList.list(
+              children: _controls(context, l10n, isDesktop),
+            ),
           ),
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
@@ -660,73 +671,72 @@ class _AppearanceThemesTab extends StatelessWidget {
     bool isDesktop,
   ) {
     return [
-          ExpressiveConnectedButtons<bool>(
-            segments: [
-              ExpressiveSegment(
-                value: false,
-                label: l10n.themeModeLight,
-                icon: Icons.light_mode_rounded,
-              ),
-              ExpressiveSegment(
-                value: true,
-                label: l10n.themeModeDark,
-                icon: Icons.dark_mode_rounded,
-              ),
-            ],
-            selected: current.darkTheme,
-            onChanged: (v) => onSave(current.copyWith(darkTheme: v)),
-            height: 56,
+      ExpressiveConnectedButtons<bool>(
+        segments: [
+          ExpressiveSegment(
+            value: false,
+            label: l10n.themeModeLight,
+            icon: Icons.light_mode_rounded,
           ),
-          const SizedBox(height: ExpressiveSpacing.large),
-          ExpressiveGroup(
-            children: [
-              _AppearanceSwitchTile(
-                icon: Icons.contrast_rounded,
-                title: l10n.appearanceAmoled,
-                subtitle: current.darkTheme ? null : l10n.appearanceAmoledNeedsDark,
-                value: current.amoledBlack,
-                onChanged: current.darkTheme
-                    ? (v) => onSave(current.copyWith(amoledBlack: v))
-                    : null,
-              ),
-              // вне окна праздника переключатель ничего не делает, поэтому скрыт;
-              // выше системных цветов, чтобы подпись под группой оставалась про них
-              if (HalloweenSeason.isNow)
-                _AppearanceSwitchTile(
-                  icon: Icons.celebration_rounded,
-                  title: l10n.appearanceHalloween,
-                  subtitle: l10n.appearanceHalloweenUntil,
-                  value: current.seasonalDecor,
-                  onChanged: (v) => onSave(current.copyWith(seasonalDecor: v)),
-                ),
-              _AppearanceSwitchTile(
-                icon: isDesktop
-                    ? Icons.desktop_windows_rounded
-                    : Icons.android_rounded,
-                title: isDesktop
-                    ? l10n.themeUseSystemColors
-                    : l10n.themeUseDynamicColors,
-                value: current.followSystemTheme,
-                onChanged: (v) =>
-                    onSave(current.copyWith(followSystemTheme: v)),
-              ),
-            ],
+          ExpressiveSegment(
+            value: true,
+            label: l10n.themeModeDark,
+            icon: Icons.dark_mode_rounded,
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(4, 8, 4, 0),
-            child: Text(
-              l10n.themePaletteHint,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppTheme.textLight(context),
-                    height: 1.35,
-                  ),
+        ],
+        selected: current.darkTheme,
+        onChanged: (v) => onSave(current.copyWith(darkTheme: v)),
+        height: 56,
+      ),
+      const SizedBox(height: ExpressiveSpacing.large),
+      ExpressiveGroup(
+        children: [
+          _AppearanceSwitchTile(
+            icon: Icons.contrast_rounded,
+            title: l10n.appearanceAmoled,
+            subtitle: current.darkTheme ? null : l10n.appearanceAmoledNeedsDark,
+            value: current.amoledBlack,
+            onChanged: current.darkTheme
+                ? (v) => onSave(current.copyWith(amoledBlack: v))
+                : null,
+          ),
+          // вне окна праздника переключатель ничего не делает, поэтому скрыт;
+          // выше системных цветов, чтобы подпись под группой оставалась про них
+          if (HalloweenSeason.isNow)
+            _AppearanceSwitchTile(
+              icon: Icons.celebration_rounded,
+              title: l10n.appearanceHalloween,
+              subtitle: l10n.appearanceHalloweenUntil,
+              value: current.seasonalDecor,
+              onChanged: (v) => onSave(current.copyWith(seasonalDecor: v)),
             ),
+          _AppearanceSwitchTile(
+            icon: isDesktop
+                ? Icons.desktop_windows_rounded
+                : Icons.android_rounded,
+            title: isDesktop
+                ? l10n.themeUseSystemColors
+                : l10n.themeUseDynamicColors,
+            value: current.followSystemTheme,
+            onChanged: (v) => onSave(current.copyWith(followSystemTheme: v)),
           ),
-          ExpressiveSectionHeader(
-            l10n.themeColorThemesTitle,
-            icon: Icons.palette_rounded,
+        ],
+      ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(4, 8, 4, 0),
+        child: Text(
+          l10n.themePaletteHint,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: AppTheme.textLight(context),
+            height: 1.35,
           ),
-        ];
+        ),
+      ),
+      ExpressiveSectionHeader(
+        l10n.themeColorThemesTitle,
+        icon: Icons.palette_rounded,
+      ),
+    ];
   }
 }
 
@@ -791,9 +801,9 @@ class _UiScalePickerState extends State<_UiScalePicker> {
               child: Text(
                 '$percent%',
                 textAlign: TextAlign.end,
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: AppTheme.text(context),
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.labelLarge?.copyWith(color: AppTheme.text(context)),
               ),
             ),
           ],
@@ -803,9 +813,9 @@ class _UiScalePickerState extends State<_UiScalePicker> {
           child: Text(
             l10n.appearanceUiScaleSubtitle,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppTheme.textLight(context),
-                  height: 1.35,
-                ),
+              color: AppTheme.textLight(context),
+              height: 1.35,
+            ),
           ),
         ),
       ],
@@ -844,10 +854,13 @@ class _ThemePresetGrid extends StatelessWidget {
         final tileWidth = constraints.crossAxisExtent / columns;
         final mockWidth =
             tileWidth - ExpressiveListSegment.gap * 2 - _padding * 2;
-        final labelHeight = MediaQuery.textScalerOf(context)
-                .scale(theme.textTheme.labelLarge?.fontSize ?? 14) *
+        final labelHeight =
+            MediaQuery.textScalerOf(
+              context,
+            ).scale(theme.textTheme.labelLarge?.fontSize ?? 14) *
             1.4;
-        final tileHeight = _padding * 2 +
+        final tileHeight =
+            _padding * 2 +
             mockWidth / _ThemeScreenMock.aspectRatio +
             ExpressiveSpacing.small +
             labelHeight +
@@ -855,7 +868,8 @@ class _ThemePresetGrid extends StatelessWidget {
 
         final l10n = AppLocalizations.of(context)!;
         final customSeed = parseThemeSeed(current.customThemeSeed);
-        final customSelected = !current.followSystemTheme &&
+        final customSelected =
+            !current.followSystemTheme &&
             current.themePresetId == kCustomThemePresetId;
         final count = kThemePresets.length + 1;
 
@@ -904,7 +918,8 @@ class _ThemePresetGrid extends StatelessWidget {
             }
             final preset = kThemePresets[i];
             // с разрешённым id: у тех, кто сидел на удалённой теме, в настройках лежит forest
-            final selected = !current.followSystemTheme &&
+            final selected =
+                !current.followSystemTheme &&
                 !customSelected &&
                 preset.id == resolveThemePreset(current.themePresetId).id;
             return Padding(
@@ -921,10 +936,12 @@ class _ThemePresetGrid extends StatelessWidget {
                 selected: selected,
                 color: scheme.surfaceContainerHigh,
                 selectedColor: scheme.secondaryContainer,
-                onTap: () => onSave(current.copyWith(
-                  themePresetId: preset.id,
-                  followSystemTheme: false,
-                )),
+                onTap: () => onSave(
+                  current.copyWith(
+                    themePresetId: preset.id,
+                    followSystemTheme: false,
+                  ),
+                ),
                 child: _ThemePresetTile(
                   name: preset.name,
                   scheme: _previewScheme(preset),
@@ -961,8 +978,9 @@ class _ThemePresetTile extends StatelessWidget {
     final theme = Theme.of(context);
     final appScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
-    final labelColor =
-        selected ? appScheme.onSecondaryContainer : appScheme.onSurface;
+    final labelColor = selected
+        ? appScheme.onSecondaryContainer
+        : appScheme.onSurface;
 
     return Padding(
       padding: EdgeInsets.all(padding),
@@ -981,10 +999,11 @@ class _ThemePresetTile extends StatelessWidget {
                   name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: (selected
-                          ? textTheme.emphasized(textTheme.labelLarge)
-                          : textTheme.labelLarge)
-                      ?.copyWith(color: labelColor),
+                  style:
+                      (selected
+                              ? textTheme.emphasized(textTheme.labelLarge)
+                              : textTheme.labelLarge)
+                          ?.copyWith(color: labelColor),
                 ),
               ),
               SizedBox(
@@ -1045,11 +1064,7 @@ class _ThemeScreenMock extends StatelessWidget {
                 borderRadius: BorderRadius.circular(14),
               ),
             ),
-            child: Icon(
-              Icons.pause_rounded,
-              size: 16,
-              color: scheme.onPrimary,
-            ),
+            child: Icon(Icons.pause_rounded, size: 16, color: scheme.onPrimary),
           ),
           const SizedBox(height: 7),
           _bar(52, 4, scheme.onSurface.withValues(alpha: 0.9)),
@@ -1079,19 +1094,19 @@ class _ThemeScreenMock extends StatelessWidget {
   }
 
   static Widget _bar(double width, double height, Color color) => Container(
-        width: width,
-        height: height,
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(height / 2),
-        ),
-      );
+    width: width,
+    height: height,
+    decoration: BoxDecoration(
+      color: color,
+      borderRadius: BorderRadius.circular(height / 2),
+    ),
+  );
 
   static Widget _dot(double size, Color color) => Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-      );
+    width: size,
+    height: size,
+    decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+  );
 
   Widget _serverRow({required bool selected}) {
     final fg = selected ? scheme.onSecondaryContainer : scheme.onSurface;
@@ -1103,8 +1118,9 @@ class _ThemeScreenMock extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 6),
       padding: const EdgeInsets.symmetric(horizontal: 5),
       decoration: BoxDecoration(
-        color:
-            selected ? scheme.secondaryContainer : scheme.surfaceContainerHigh,
+        color: selected
+            ? scheme.secondaryContainer
+            : scheme.surfaceContainerHigh,
         borderRadius: selected
             ? BorderRadius.circular(5)
             : const BorderRadius.vertical(
@@ -1155,34 +1171,30 @@ class _ThemeScreenMock extends StatelessWidget {
   }
 
   Widget _bottomNav() => SizedBox(
-        height: 14,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 5),
-              decoration: BoxDecoration(
-                color: scheme.secondaryContainer,
-                borderRadius: BorderRadius.circular(7),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _dot(5, scheme.onSecondaryContainer),
-                  const SizedBox(width: 3),
-                  _bar(
-                    12,
-                    2.5,
-                    scheme.onSecondaryContainer.withValues(alpha: 0.9),
-                  ),
-                ],
-              ),
-            ),
-            _dot(5.5, scheme.onSurfaceVariant),
-            _dot(5.5, scheme.onSurfaceVariant),
-          ],
+    height: 14,
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 5),
+          decoration: BoxDecoration(
+            color: scheme.secondaryContainer,
+            borderRadius: BorderRadius.circular(7),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _dot(5, scheme.onSecondaryContainer),
+              const SizedBox(width: 3),
+              _bar(12, 2.5, scheme.onSecondaryContainer.withValues(alpha: 0.9)),
+            ],
+          ),
         ),
-      );
+        _dot(5.5, scheme.onSurfaceVariant),
+        _dot(5.5, scheme.onSurfaceVariant),
+      ],
+    ),
+  );
 }
 
 class _MockWavePainter extends CustomPainter {

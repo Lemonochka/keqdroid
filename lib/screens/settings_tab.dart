@@ -155,100 +155,105 @@ class SettingsTab extends ConsumerWidget {
                 child: EdgeFadeMask(
                   bottom: 32,
                   child: SmoothScroll(
-                  builder: (context, controller) => ListView(
-                    controller: controller,
-                    physics: const ClampingScrollPhysics(),
-                    padding: EdgeInsets.fromLTRB(
-                      _settingsListInset(),
-                      24,
-                      _settingsListInset(),
-                      24,
-                    ),
-                    children: [
-                      Text(
-                        l10n.settingsTitle,
-                        style: Theme.of(context).textTheme
-                            .emphasized(
-                              Theme.of(context).textTheme.headlineMedium,
-                            )
-                            ?.copyWith(color: AppTheme.text(context)),
+                    builder: (context, controller) => ListView(
+                      controller: controller,
+                      physics: const ClampingScrollPhysics(),
+                      padding: EdgeInsets.fromLTRB(
+                        _settingsListInset(),
+                        24,
+                        _settingsListInset(),
+                        24,
                       ),
-                      const SizedBox(height: 20),
-                      ExpressiveGroup(
-                        children: [
-                          _ThemeCustomizationCard(settingsAsync: settingsAsync),
-                          _LanguageSettingsCard(settingsAsync: settingsAsync),
-                          _BehaviourSettingsCard(settingsAsync: settingsAsync),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      ExpressiveGroup(
-                        children: [
-                          _LanSharingCard(settingsAsync: settingsAsync),
-                          const _SplitTunnelingSettingsCard(),
-                          if (Platform.isWindows || Platform.isLinux)
+                      children: [
+                        Text(
+                          l10n.settingsTitle,
+                          style: Theme.of(context).textTheme
+                              .emphasized(
+                                Theme.of(context).textTheme.headlineMedium,
+                              )
+                              ?.copyWith(color: AppTheme.text(context)),
+                        ),
+                        const SizedBox(height: 20),
+                        ExpressiveGroup(
+                          children: [
+                            _ThemeCustomizationCard(
+                              settingsAsync: settingsAsync,
+                            ),
+                            _LanguageSettingsCard(settingsAsync: settingsAsync),
+                            _BehaviourSettingsCard(
+                              settingsAsync: settingsAsync,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        ExpressiveGroup(
+                          children: [
+                            _LanSharingCard(settingsAsync: settingsAsync),
+                            const _SplitTunnelingSettingsCard(),
+                            if (Platform.isWindows || Platform.isLinux)
+                              _SettingsCard(
+                                title: Platform.isLinux
+                                    ? l10n.settingsDesktopTitleLinux
+                                    : l10n.settingsDesktopTitle,
+                                subtitle: l10n.settingsDesktopSubtitle,
+                                icon: Icons.desktop_windows_rounded,
+                                accent: ExpressiveAccent.secondary,
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute<void>(
+                                    builder: (_) =>
+                                        const _DesktopSettingsScreen(),
+                                  ),
+                                ),
+                              ),
                             _SettingsCard(
-                              title: Platform.isLinux
-                                  ? l10n.settingsDesktopTitleLinux
-                                  : l10n.settingsDesktopTitle,
-                              subtitle: l10n.settingsDesktopSubtitle,
-                              icon: Icons.desktop_windows_rounded,
-                              accent: ExpressiveAccent.secondary,
+                              title: l10n.settingsAdvanced,
+                              subtitle: l10n.settingsAdvancedSubtitle,
+                              icon: Icons.tune_rounded,
+                              accent: ExpressiveAccent.primary,
                               onTap: () => Navigator.push(
                                 context,
                                 MaterialPageRoute<void>(
                                   builder: (_) =>
-                                      const _DesktopSettingsScreen(),
+                                      const _AdvancedSettingsScreen(),
                                 ),
                               ),
                             ),
-                          _SettingsCard(
-                            title: l10n.settingsAdvanced,
-                            subtitle: l10n.settingsAdvancedSubtitle,
-                            icon: Icons.tune_rounded,
-                            accent: ExpressiveAccent.primary,
-                            onTap: () => Navigator.push(
-                              context,
-                              MaterialPageRoute<void>(
-                                builder: (_) => const _AdvancedSettingsScreen(),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        ExpressiveGroup(
+                          children: [
+                            _SettingsCard(
+                              title: l10n.settingsBackupRestore,
+                              subtitle: l10n.settingsBackupRestoreSubtitle,
+                              icon: Icons.cloud_upload_rounded,
+                              accent: ExpressiveAccent.secondary,
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute<void>(
+                                  builder: (_) => const _BackupRestoreScreen(),
+                                ),
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      ExpressiveGroup(
-                        children: [
-                          _SettingsCard(
-                            title: l10n.settingsBackupRestore,
-                            subtitle: l10n.settingsBackupRestoreSubtitle,
-                            icon: Icons.cloud_upload_rounded,
-                            accent: ExpressiveAccent.secondary,
-                            onTap: () => Navigator.push(
-                              context,
-                              MaterialPageRoute<void>(
-                                builder: (_) => const _BackupRestoreScreen(),
+                            _SettingsCard(
+                              title: l10n.settingsInternalsTitle,
+                              subtitle: l10n.settingsInternalsSubtitle,
+                              icon: Icons.info_rounded,
+                              accent: ExpressiveAccent.tertiary,
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute<void>(
+                                  builder: (_) => const _AppInternalsScreen(),
+                                ),
                               ),
                             ),
-                          ),
-                          _SettingsCard(
-                            title: l10n.settingsInternalsTitle,
-                            subtitle: l10n.settingsInternalsSubtitle,
-                            icon: Icons.info_rounded,
-                            accent: ExpressiveAccent.tertiary,
-                            onTap: () => Navigator.push(
-                              context,
-                              MaterialPageRoute<void>(
-                                builder: (_) => const _AppInternalsScreen(),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                    ],
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                      ],
+                    ),
                   ),
-                ),
                 ),
               ),
               const _AppVersionSection(),
@@ -556,7 +561,9 @@ class _AppVersionSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final style = FloatingBar.shown(context) ? FloatingBar.styleOf(context) : null;
+    final style = FloatingBar.shown(context)
+        ? FloatingBar.styleOf(context)
+        : null;
     final floating = style != null;
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -564,12 +571,14 @@ class _AppVersionSection extends StatelessWidget {
         final half = style == null
             ? 0.0
             : (constraints.maxWidth -
-                    2 * (FloatingBar.margin + LiquidBottomNav.sideGap(style)) -
-                    LiquidBottomNav.restWidth(
-                      context,
-                      AppLocalizations.of(context)!.navSettings,
-                    )) /
-                2;
+                      2 *
+                          (FloatingBar.margin +
+                              LiquidBottomNav.sideGap(style)) -
+                      LiquidBottomNav.restWidth(
+                        context,
+                        AppLocalizations.of(context)!.navSettings,
+                      )) /
+                  2;
         if (style != null && half >= 72) {
           return Padding(
             padding: const EdgeInsets.only(bottom: FloatingBar.bottomMargin),
@@ -584,10 +593,7 @@ class _AppVersionSection extends StatelessWidget {
             24 + (floating ? FloatingBar.bottomMargin + FloatingBar.height : 0),
           ),
           child: Column(
-            children: [
-              const SizedBox(height: 8),
-              const _UpdateVersionInfo(),
-            ],
+            children: [const SizedBox(height: 8), const _UpdateVersionInfo()],
           ),
         );
       },
@@ -754,18 +760,11 @@ class _UpdateVersionInfoState extends ConsumerState<_UpdateVersionInfo> {
             size: ExpressiveIconSize.inline,
             color: statusColor,
           )
-        : Icon(
-            statusIcon,
-            size: ExpressiveIconSize.inline,
-            color: statusColor,
-          );
+        : Icon(statusIcon, size: ExpressiveIconSize.inline, color: statusColor);
     final checkButton = IconButton.filledTonal(
       onPressed: checking ? null : _forceCheck,
       icon: checking
-          ? ShapeLoadingIndicator(
-              size: ExpressiveIconSize.large,
-              color: accent,
-            )
+          ? ShapeLoadingIndicator(size: ExpressiveIconSize.large, color: accent)
           : const Icon(Icons.refresh_rounded),
       tooltip: l10n.settingsCheckForUpdates,
     );
@@ -818,21 +817,25 @@ class _UpdateVersionInfoState extends ConsumerState<_UpdateVersionInfo> {
           : updateAvailable
           ? (scheme.tertiary, scheme.onTertiary)
           : (null, textColor);
-      _publishSide(FloatingSide(
-        owner: this,
-        start: Text(
-          ltrIsolate('v$_version'),
-          style: textTheme.emphasized(textTheme.titleSmall)?.copyWith(color: ink),
+      _publishSide(
+        FloatingSide(
+          owner: this,
+          start: Text(
+            ltrIsolate('v$_version'),
+            style: textTheme
+                .emphasized(textTheme.titleSmall)
+                ?.copyWith(color: ink),
+          ),
+          end: checkButton,
+          startColor: tile,
+          startTooltip: statusLabel,
+          onStartTap: checking
+              ? null
+              : updateInfo != null
+              ? () => showUpdateDialog(context, updateInfo)
+              : _forceCheck,
         ),
-        end: checkButton,
-        startColor: tile,
-        startTooltip: statusLabel,
-        onStartTap: checking
-            ? null
-            : updateInfo != null
-            ? () => showUpdateDialog(context, updateInfo)
-            : _forceCheck,
-      ));
+      );
       return Column(
         mainAxisSize: MainAxisSize.min,
         children: [

@@ -38,10 +38,10 @@ void main() {
   String url(String path) => 'http://127.0.0.1:${server.port}$path';
 
   RuleListService service({int? maxBytes}) => RuleListService(
-        root: () async => root,
-        allowPlainHttp: true,
-        maxBytes: maxBytes ?? RuleListService.defaultMaxBytes,
-      );
+    root: () async => root,
+    allowPlainHttp: true,
+    maxBytes: maxBytes ?? RuleListService.defaultMaxBytes,
+  );
 
   test('скачанный список разбирается и переживает перезапуск', () async {
     bodies['/ads.txt'] = '! comment\n||ads.example^\n0.0.0.0 track.example\n';
@@ -56,28 +56,32 @@ void main() {
     expect(again.updatedAt, isNotNull);
   });
 
-  test('ядру уходят домены по полям, повторы между списками схлопнуты',
-      () async {
-    bodies['/a.txt'] = 'a.example\nshared.example\n';
-    bodies['/b.txt'] = '||shared.example^\n||b.example^\n';
-    bodies['/d.txt'] = 'direct.example\n';
-    final s = service();
-    await s.refresh(url('/a.txt'));
-    await s.refresh(url('/b.txt'));
-    await s.refresh(url('/d.txt'));
+  test(
+    'ядру уходят домены по полям, повторы между списками схлопнуты',
+    () async {
+      bodies['/a.txt'] = 'a.example\nshared.example\n';
+      bodies['/b.txt'] = '||shared.example^\n||b.example^\n';
+      bodies['/d.txt'] = 'direct.example\n';
+      final s = service();
+      await s.refresh(url('/a.txt'));
+      await s.refresh(url('/b.txt'));
+      await s.refresh(url('/d.txt'));
 
-    final lists = await s.domainsFor(AppSettings(
-      blockedRules: 'x.example, ${url('/a.txt')}\n${url('/b.txt')}',
-      directRules: url('/d.txt'),
-      proxyRules: 'youtube.com',
-    ));
-    expect(
-      lists.blocked,
-      unorderedEquals(['a.example', 'shared.example', 'b.example']),
-    );
-    expect(lists.direct, ['direct.example']);
-    expect(lists.proxy, isEmpty);
-  });
+      final lists = await s.domainsFor(
+        AppSettings(
+          blockedRules: 'x.example, ${url('/a.txt')}\n${url('/b.txt')}',
+          directRules: url('/d.txt'),
+          proxyRules: 'youtube.com',
+        ),
+      );
+      expect(
+        lists.blocked,
+        unorderedEquals(['a.example', 'shared.example', 'b.example']),
+      );
+      expect(lists.direct, ['direct.example']);
+      expect(lists.proxy, isEmpty);
+    },
+  );
 
   test('ещё не скачанный список подключение не задерживает', () async {
     final lists = await service().domainsFor(
@@ -99,7 +103,9 @@ void main() {
     expect(failed.domains, 1);
     expect(failed.loaded, isTrue);
 
-    final lists = await s.domainsFor(AppSettings(blockedRules: url('/ads.txt')));
+    final lists = await s.domainsFor(
+      AppSettings(blockedRules: url('/ads.txt')),
+    );
     expect(lists.blocked, ['ads.example']);
   });
 
@@ -128,8 +134,7 @@ void main() {
     final closed = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
     final port = closed.port;
     await closed.close();
-    final result =
-        await service().refresh('http://127.0.0.1:$port/ads.txt');
+    final result = await service().refresh('http://127.0.0.1:$port/ads.txt');
     expect(result.failure, RuleListFailure.network);
   });
 

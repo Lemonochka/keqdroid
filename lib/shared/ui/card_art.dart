@@ -103,9 +103,9 @@ class CardArtPainter extends CustomPainter {
   }) {
     final unit = _unitPaths.putIfAbsent(
       polygon,
-      () => RoundedPolygonBorder(polygon: polygon).getOuterPath(
-        Rect.fromCenter(center: Offset.zero, width: 1, height: 1),
-      ),
+      () => RoundedPolygonBorder(
+        polygon: polygon,
+      ).getOuterPath(Rect.fromCenter(center: Offset.zero, width: 1, height: 1)),
     );
     final m = Matrix4.identity()
       ..translateByDouble(at.dx, at.dy, 0, 1)
@@ -124,13 +124,19 @@ class CardArtPainter extends CustomPainter {
 
   // растр и узор лежат под одной волной и тают к тексту
   (double, double) _under(double x, double y, Size size) {
-    final surface =
-        _surface(x, base: size.height * 0.36, amp: 10, length: 160, phase: 1.3);
+    final surface = _surface(
+      x,
+      base: size.height * 0.36,
+      amp: 10,
+      length: 160,
+      phase: 1.3,
+    );
     if (y < surface) return (0, 0);
-    final depth =
-        ((y - surface) / math.max(size.height - surface, 1)).clamp(0.0, 1.0);
-    final right =
-        math.pow((x / size.width).clamp(0.0, 1.0), 1.8).toDouble();
+    final depth = ((y - surface) / math.max(size.height - surface, 1)).clamp(
+      0.0,
+      1.0,
+    );
+    final right = math.pow((x / size.width).clamp(0.0, 1.0), 1.8).toDouble();
     return (depth, right);
   }
 
@@ -146,8 +152,7 @@ class CardArtPainter extends CustomPainter {
         if (r < 0.5) continue;
         dots.addOval(Rect.fromCircle(center: Offset(x, y), radius: r));
       }
-      final color =
-          Color.lerp(from, to, (x / size.width).clamp(0.0, 1.0))!;
+      final color = Color.lerp(from, to, (x / size.width).clamp(0.0, 1.0))!;
       canvas.drawPath(dots, _fill(color.withValues(alpha: 0.6)));
     }
   }
@@ -165,24 +170,33 @@ class CardArtPainter extends CustomPainter {
       canvas.drawPath(
         _water(
           size,
-          (x) => _surface(x, base: h * level, amp: amp, length: length, phase: phase),
+          (x) => _surface(
+            x,
+            base: h * level,
+            amp: amp,
+            length: length,
+            phase: phase,
+          ),
         ),
         _fill(color),
       );
     }
   }
 
-  (Offset, double) _cookieSpot(Size size) => (
-        Offset(size.width * 0.93, size.height * 0.34),
-        _unit(size) * 1.5,
-      );
+  (Offset, double) _cookieSpot(Size size) =>
+      (Offset(size.width * 0.93, size.height * 0.34), _unit(size) * 1.5);
 
   void _cookieLayers(Canvas canvas, Size size) {
     final (at, s) = _cookieSpot(size);
     const steps = [1.0, 0.76, 0.54, 0.34];
     for (final (i, k) in steps.indexed) {
       canvas.drawPath(
-        _shape(MaterialShapes.cookie9Sided, s * k, at: at, degrees: 14 + i * 9.0),
+        _shape(
+          MaterialShapes.cookie9Sided,
+          s * k,
+          at: at,
+          degrees: 14 + i * 9.0,
+        ),
         _fill(_p(20 + i * 2.5, 89 - i * 2.5, chroma: 22 + i * 7.0)),
       );
     }
@@ -192,7 +206,12 @@ class CardArtPainter extends CustomPainter {
     final (at, s) = _cookieSpot(size);
     canvas
       ..drawPath(
-        _shape(MaterialShapes.cookie9Sided, s, at: at + const Offset(-12, 9), degrees: 14),
+        _shape(
+          MaterialShapes.cookie9Sided,
+          s,
+          at: at + const Offset(-12, 9),
+          degrees: 14,
+        ),
         _fill(_t(24, 86, chroma: 34).withValues(alpha: 0.9)),
       )
       ..drawPath(
@@ -200,7 +219,12 @@ class CardArtPainter extends CustomPainter {
         _fill(_p(23, 86, chroma: 34)),
       )
       ..drawPath(
-        _shape(MaterialShapes.cookie9Sided, s, at: at + const Offset(10, -8), degrees: 14),
+        _shape(
+          MaterialShapes.cookie9Sided,
+          s,
+          at: at + const Offset(10, -8),
+          degrees: 14,
+        ),
         _stroke(_p(60, 62, chroma: 40).withValues(alpha: 0.5), 1.6),
       );
   }
@@ -223,12 +247,15 @@ class CardArtPainter extends CustomPainter {
     var row = 0;
     for (double y = step / 2; y < size.height + step; y += step * 0.86, row++) {
       var col = 0;
-      for (double x = row.isOdd ? step : step / 2; x < size.width + step; x += step, col++) {
+      for (
+        double x = row.isOdd ? step : step / 2;
+        x < size.width + step;
+        x += step, col++
+      ) {
         final (depth, right) = _under(x, y, size);
         final k = math.sqrt(depth) * right;
         if (k < 0.1) continue;
-        final color =
-            Color.lerp(from, to, (y / size.height).clamp(0.0, 1.0))!;
+        final color = Color.lerp(from, to, (y / size.height).clamp(0.0, 1.0))!;
         canvas.drawPath(
           _shape(
             _patternShapes[(row * 3 + col) % _patternShapes.length],
@@ -246,7 +273,12 @@ class CardArtPainter extends CustomPainter {
     final w = size.width;
     final h = size.height;
     final u = _unit(size);
-    final top = _shape(MaterialShapes.flower, u, at: Offset(w, h * 0.06), degrees: 12);
+    final top = _shape(
+      MaterialShapes.flower,
+      u,
+      at: Offset(w, h * 0.06),
+      degrees: 12,
+    );
     final bottom = _shape(
       MaterialShapes.clover4Leaf,
       u * 0.78,
@@ -255,9 +287,15 @@ class CardArtPainter extends CustomPainter {
     );
     canvas
       ..drawPath(top, _fill(_p(22, 87, chroma: 30)))
-      ..drawPath(top, _stroke(_p(58, 62, chroma: 42).withValues(alpha: 0.55), 2))
+      ..drawPath(
+        top,
+        _stroke(_p(58, 62, chroma: 42).withValues(alpha: 0.55), 2),
+      )
       ..drawPath(bottom, _fill(_t(21, 88, chroma: 26)))
-      ..drawPath(bottom, _stroke(_t(58, 64, chroma: 42).withValues(alpha: 0.55), 2));
+      ..drawPath(
+        bottom,
+        _stroke(_t(58, 64, chroma: 42).withValues(alpha: 0.55), 2),
+      );
   }
 
   void _shapeAccent(Canvas canvas, Size size) {
@@ -272,9 +310,17 @@ class CardArtPainter extends CustomPainter {
     );
     canvas
       ..drawPath(big, _fill(_p(20, 89, chroma: 24)))
-      ..drawPath(big, _stroke(_p(58, 62, chroma: 42).withValues(alpha: 0.55), 2))
       ..drawPath(
-        _shape(MaterialShapes.sunny, u * 0.2, at: Offset(w * 0.62, h * 0.8), degrees: 15),
+        big,
+        _stroke(_p(58, 62, chroma: 42).withValues(alpha: 0.55), 2),
+      )
+      ..drawPath(
+        _shape(
+          MaterialShapes.sunny,
+          u * 0.2,
+          at: Offset(w * 0.62, h * 0.8),
+          degrees: 15,
+        ),
         _fill(_t(52, 70, chroma: 52)),
       );
   }

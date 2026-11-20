@@ -91,7 +91,6 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
   // пока идёт штатный стоп, сторож не должен принять наш kill за смерть ядра
   bool _stoppingSession = false;
 
-
   @override
   Stream<VpnState> get stateStream => _stateCtrl.stream;
 
@@ -137,7 +136,7 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
 
   @override
   Future<({String username, String password})?>
-      fetchActiveSocksCredentials() async => null;
+  fetchActiveSocksCredentials() async => null;
 
   @override
   Future<({String username, String password})> fetchSocksCredentials() async {
@@ -202,20 +201,20 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
   Future<void> _startXrayProxySession(TunnelSessionRequest request) async {
     final bin = await LinuxCorePaths.xrayExecutable();
     if (bin == null) {
-      throw VpnStartException(
-        'xray not found. ${LinuxCorePaths.binariesHint}',
-      );
+      throw VpnStartException('xray not found. ${LinuxCorePaths.binariesHint}');
     }
 
     final metricsPort = await _freePort();
     final xrayLog = XraySessionLog.raise(request.xrayConfig);
     _xrayLogThreshold = xrayLog.threshold;
     final configFile = File(p.join(_sessionDir!.path, 'xray.json'));
-    await configFile.writeAsString(withXrayDesktopSession(
-      xrayLog.config,
-      metricsPort: metricsPort,
-      processLog: request.debugMode,
-    ));
+    await configFile.writeAsString(
+      withXrayDesktopSession(
+        xrayLog.config,
+        metricsPort: metricsPort,
+        processLog: request.debugMode,
+      ),
+    );
     _xrayMetricsPort = metricsPort;
 
     // HTTP-инбаунд ядро поднимает всегда (через него ходит апдейтер), занятый порт роняет всё
@@ -269,10 +268,9 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
     final xrayLog = XraySessionLog.raise(request.xrayConfig);
     _xrayLogThreshold = xrayLog.threshold;
     _xrayMetricsPort = metricsPort;
-    await _runXrayAsRoot(withXrayDesktopSession(
-      xrayLog.config,
-      metricsPort: metricsPort,
-    ));
+    await _runXrayAsRoot(
+      withXrayDesktopSession(xrayLog.config, metricsPort: metricsPort),
+    );
   }
 
   Future<void> _startMihomoSession(TunnelSessionRequest request) async {
@@ -324,12 +322,14 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
         final tail = coreLog.trim().isEmpty
             ? _tail(_rootLog)
             : _tail(StringBuffer(coreLog));
-        throw VpnStartException(tunStartFailureMessage(
-          fallback: 'The mihomo TUN tunnel did not start.',
-          coreOutput: coreLog.trim().isEmpty ? _rootLog.toString() : coreLog,
-          windows: false,
-          tail: tail,
-        ));
+        throw VpnStartException(
+          tunStartFailureMessage(
+            fallback: 'The mihomo TUN tunnel did not start.',
+            coreOutput: coreLog.trim().isEmpty ? _rootLog.toString() : coreLog,
+            windows: false,
+            tail: tail,
+          ),
+        );
       }
       return;
     }
@@ -500,8 +500,12 @@ polkit.addRule(function(action, subject) {
   }
 
   // отказ хранится файлом у данных приложения: он про эту машину, в резервную копию на другой компьютер ехать не должен
-  static Future<File> _passwordlessOffMarker() async => File(p.join(
-      (await getApplicationSupportDirectory()).path, 'tun_password_always'));
+  static Future<File> _passwordlessOffMarker() async => File(
+    p.join(
+      (await getApplicationSupportDirectory()).path,
+      'tun_password_always',
+    ),
+  );
 
   static Future<bool> passwordlessTunDeclined() async {
     if (!Platform.isLinux) return false;
@@ -552,10 +556,11 @@ $run''';
   static Future<bool> installPasswordlessTun() async {
     if (!Platform.isLinux) return false;
     try {
-      final res = await Process.run(
-        'pkexec',
-        ['sh', '-c', await _installScript(runAfter: false)],
-      );
+      final res = await Process.run('pkexec', [
+        'sh',
+        '-c',
+        await _installScript(runAfter: false),
+      ]);
       if (res.exitCode != 0) {
         AppLogger.instance.warn(
           'installPasswordlessTun failed: code=${res.exitCode} '
@@ -567,8 +572,11 @@ $run''';
       if (marker.existsSync()) await marker.delete();
       return true;
     } catch (e, st) {
-      AppLogger.instance
-          .error('installPasswordlessTun error', error: e, stackTrace: st);
+      AppLogger.instance.error(
+        'installPasswordlessTun error',
+        error: e,
+        stackTrace: st,
+      );
       return false;
     }
   }
@@ -586,8 +594,11 @@ $run''';
       await marker.writeAsString('1');
       return true;
     } catch (e, st) {
-      AppLogger.instance
-          .error('removePasswordlessTun error', error: e, stackTrace: st);
+      AppLogger.instance.error(
+        'removePasswordlessTun error',
+        error: e,
+        stackTrace: st,
+      );
       return false;
     }
   }
@@ -634,12 +645,14 @@ $run''';
       final tail = coreLog.trim().isEmpty
           ? _tail(_rootLog)
           : _tail(StringBuffer(coreLog));
-      throw VpnStartException(tunStartFailureMessage(
-        fallback: 'The TUN tunnel did not start.',
-        coreOutput: coreLog.trim().isEmpty ? _rootLog.toString() : coreLog,
-        windows: false,
-        tail: tail,
-      ));
+      throw VpnStartException(
+        tunStartFailureMessage(
+          fallback: 'The TUN tunnel did not start.',
+          coreOutput: coreLog.trim().isEmpty ? _rootLog.toString() : coreLog,
+          windows: false,
+          tail: tail,
+        ),
+      );
     }
   }
 
@@ -675,9 +688,10 @@ $run''';
       await file.setPosition(_rootLogOffset);
       final bytes = await file.read(length - _rootLogOffset);
       _rootLogOffset += bytes.length;
-      final lines = (_rootLogPending +
-              const Utf8Decoder(allowMalformed: true).convert(bytes))
-          .split('\n');
+      final lines =
+          (_rootLogPending +
+                  const Utf8Decoder(allowMalformed: true).convert(bytes))
+              .split('\n');
       _rootLogPending = lines.removeLast();
       for (final line in lines) {
         _appendCoreLine(_xrayLog, line.trimRight());
@@ -907,8 +921,9 @@ $run''';
             coreTail = coreLog.readAsStringSync().trim();
           }
         } catch (_) {}
-        final detail =
-            coreTail.isNotEmpty ? _tail(StringBuffer(coreTail)) : _tail(log);
+        final detail = coreTail.isNotEmpty
+            ? _tail(StringBuffer(coreTail))
+            : _tail(log);
         final hint = tunFailureHint(
           coreTail.isNotEmpty ? coreTail : log.toString(),
           windows: false,
@@ -927,9 +942,9 @@ $run''';
     try {
       if (!file.existsSync()) return false;
       if (since == null) return true;
-      return !file
-          .lastModifiedSync()
-          .isBefore(since.subtract(const Duration(seconds: 1)));
+      return !file.lastModifiedSync().isBefore(
+        since.subtract(const Duration(seconds: 1)),
+      );
     } catch (_) {
       return false;
     }
@@ -982,27 +997,31 @@ $run''';
 
   void _watchProcessExit(Process? process, String label) {
     if (process == null) return;
-    unawaited(process.exitCode.then((code) async {
-      if (_stoppingSession) return;
-      if (!identical(process, _xrayProcess) &&
-          !identical(process, _rootXrayProcess) &&
-          !identical(process, _mihomoProcess)) {
-        return;
-      }
-      AppLogger.instance.error(
-        '$label exited unexpectedly with code $code; tearing the session down',
-      );
-      try {
-        await stopSession();
-      } catch (e) {
-        AppLogger.instance.warn('Teardown after core exit failed', error: e);
-      }
-      emit(VpnState(
-        status: VpnStatus.error,
-        errorMessage:
-            '$label stopped unexpectedly (exit code $code). Disconnected.',
-      ));
-    }));
+    unawaited(
+      process.exitCode.then((code) async {
+        if (_stoppingSession) return;
+        if (!identical(process, _xrayProcess) &&
+            !identical(process, _rootXrayProcess) &&
+            !identical(process, _mihomoProcess)) {
+          return;
+        }
+        AppLogger.instance.error(
+          '$label exited unexpectedly with code $code; tearing the session down',
+        );
+        try {
+          await stopSession();
+        } catch (e) {
+          AppLogger.instance.warn('Teardown after core exit failed', error: e);
+        }
+        emit(
+          VpnState(
+            status: VpnStatus.error,
+            errorMessage:
+                '$label stopped unexpectedly (exit code $code). Disconnected.',
+          ),
+        );
+      }),
+    );
   }
 
   @override
@@ -1020,7 +1039,11 @@ $run''';
         request.mode != _activeMode) {
       return false;
     }
-    if (!await putMihomoConfig(port: port, secret: api.secret, config: config)) {
+    if (!await putMihomoConfig(
+      port: port,
+      secret: api.secret,
+      config: config,
+    )) {
       return false;
     }
     // сбор диагностики кладёт в отчёт этот файл
@@ -1179,12 +1202,7 @@ $run''';
   Future<String?> getAppIcon(String path) async => null;
 
   @override
-  Future<
-    List<
-      ServerUrlTestResult
-    >?
-  >
-  xrayUrlTestMulti({
+  Future<List<ServerUrlTestResult>?> xrayUrlTestMulti({
     required String config,
     required List<(String id, int port)> probes,
     VpnBackend core = VpnBackend.xray,
@@ -1193,25 +1211,19 @@ $run''';
     bool keepAlive = true,
     int concurrency = 16,
     UrlTestProgress? onEach,
-  }) =>
-      EphemeralXrayPing.urlTestMulti(
-        configJson: config,
-        probes: probes,
-        core: core,
-        testUrl: testUrl,
-        timeoutMs: timeoutMs,
-        keepAlive: keepAlive,
-        concurrency: concurrency,
-        onEach: onEach,
-      );
+  }) => EphemeralXrayPing.urlTestMulti(
+    configJson: config,
+    probes: probes,
+    core: core,
+    testUrl: testUrl,
+    timeoutMs: timeoutMs,
+    keepAlive: keepAlive,
+    concurrency: concurrency,
+    onEach: onEach,
+  );
 
   @override
-  Future<
-    List<
-      ServerUrlTestResult
-    >
-  >
-  xrayUrlTestBatch({
+  Future<List<ServerUrlTestResult>> xrayUrlTestBatch({
     required List<(String id, String xrayConfig)> items,
     required int socksPort,
     VpnBackend core = VpnBackend.xray,
@@ -1242,8 +1254,7 @@ $run''';
   }
 
   @override
-  Future<List<ServerSpeedTestResult>>
-  xraySpeedTestBatch({
+  Future<List<ServerSpeedTestResult>> xraySpeedTestBatch({
     required List<(String id, String xrayConfig)> items,
     required int socksPort,
     VpnBackend core = VpnBackend.xray,
@@ -1395,8 +1406,10 @@ $run''';
     TunnelSessionRequest request, {
     required bool needsHttp,
   }) async {
-    final socksIssue =
-        await LocalPortResolver.probe('127.0.0.1', request.socksPort);
+    final socksIssue = await LocalPortResolver.probe(
+      '127.0.0.1',
+      request.socksPort,
+    );
     if (socksIssue != null) {
       throw VpnStartException(
         localPortBlockedMessage(
@@ -1407,8 +1420,10 @@ $run''';
       );
     }
     if (!needsHttp) return;
-    final httpIssue =
-        await LocalPortResolver.probe('127.0.0.1', request.httpPort);
+    final httpIssue = await LocalPortResolver.probe(
+      '127.0.0.1',
+      request.httpPort,
+    );
     if (httpIssue != null) {
       throw VpnStartException(
         localPortBlockedMessage(
@@ -1437,9 +1452,6 @@ $run''';
     if (!_stateCtrl.isClosed) _stateCtrl.add(state);
   }
 
-
-
-
   // счётчики API ядра, а не интерфейса: рукопожатия TCP отвечает локальный стек,
   // и пришло было бы и от мёртвого сервера
   @override
@@ -1454,7 +1466,10 @@ $run''';
   }
 
   @override
-  Future<void> pollTrafficStats(ConnectionMode mode, {bool force = false}) async {
+  Future<void> pollTrafficStats(
+    ConnectionMode mode, {
+    bool force = false,
+  }) async {
     if (!statsPollingEnabled && !force) return;
     if (_xrayProcess == null &&
         _mihomoProcess == null &&
@@ -1530,9 +1545,6 @@ $run''';
     }
   }
 
-
-
-
   Future<({int rx, int tx})?> _queryTunCounters() async {
     try {
       final base = '/sys/class/net/$tunInterfaceName/statistics';
@@ -1547,7 +1559,4 @@ $run''';
       return null;
     }
   }
-
-
-
 }

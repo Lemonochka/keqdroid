@@ -13,8 +13,9 @@ String _fieldsOf(ServerConfigForm form, String id) =>
     form.parsedText[id]?.trim() ?? '';
 
 void main() {
-  final golden = jsonDecode(File(serverConfigFormGolden).readAsStringSync())
-      as Map<String, dynamic>;
+  final golden =
+      jsonDecode(File(serverConfigFormGolden).readAsStringSync())
+          as Map<String, dynamic>;
 
   serverConfigFormCorpus.forEach((name, link) {
     test('$name: rebuilds as the editor did', () {
@@ -73,7 +74,11 @@ void main() {
       final config = jsonEncode({
         'proxies': [node],
         'proxy-groups': [
-          {'name': 'g', 'type': 'select', 'proxies': ['n']},
+          {
+            'name': 'g',
+            'type': 'select',
+            'proxies': ['n'],
+          },
         ],
       });
       expect(ServerConfigForm().parse(config), 'raw-only protocol');
@@ -110,11 +115,14 @@ void main() {
       final link = form.build(
         (id) => id == 'address' ? 'edited.example.com' : _fieldsOf(form, id),
       );
-      final config = jsonDecode(
-        ConfigGeneratorV2.generateConfig(link, const AppSettings()),
-      ) as Map<String, dynamic>;
+      final config =
+          jsonDecode(
+                ConfigGeneratorV2.generateConfig(link, const AppSettings()),
+              )
+              as Map<String, dynamic>;
       final proxy = (config['outbounds'] as List).first as Map;
-      return (proxy['streamSettings'] as Map)['xhttpSettings'] as Map<String, dynamic>;
+      return (proxy['streamSettings'] as Map)['xhttpSettings']
+          as Map<String, dynamic>;
     }
 
     test('повтор режима уходит из extra, остальное в нём остаётся', () {
@@ -122,7 +130,9 @@ void main() {
         xhttp('&mode=auto', {'mode': 'auto', 'xPaddingBytes': '100-1342'}),
       );
       expect(form.drop['mode'], 'auto');
-      expect(jsonDecode(form.parsedText['extra']!), {'xPaddingBytes': '100-1342'});
+      expect(jsonDecode(form.parsedText['extra']!), {
+        'xPaddingBytes': '100-1342',
+      });
     });
 
     test('режим только в extra встаёт в Транспорт, и xray его видит', () {
@@ -149,7 +159,9 @@ void main() {
     });
 
     test('extra без повторов не переписывается', () {
-      final form = parsed(xhttp('&mode=auto', {'xPaddingBytes': '1-2', 'b': 1}));
+      final form = parsed(
+        xhttp('&mode=auto', {'xPaddingBytes': '1-2', 'b': 1}),
+      );
       expect(form.parsedText['extra'], '{"xPaddingBytes":"1-2","b":1}');
     });
   });

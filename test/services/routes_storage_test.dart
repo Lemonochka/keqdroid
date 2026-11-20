@@ -15,38 +15,39 @@ void main() {
     expect(storage.routesHintPending, isFalse);
   });
 
-  test('обновление: списки и свои правила стали маршрутами, подсказка ждёт',
-      () async {
-    final storage = await buildStorageService();
-    await storage.saveSettings(const AppSettings(
-      directRules: 'vk.com',
-      proxyRules: 'youtube.com',
-      blockedRules: '',
-    ));
-    await storage.saveRules(const [
-      RoutingRule(
-        id: 'r',
-        name: 'n',
-        type: RuleType.geosite,
-        values: ['google'],
-        action: RuleAction.proxy,
-      ),
-    ]);
+  test(
+    'обновление: списки и свои правила стали маршрутами, подсказка ждёт',
+    () async {
+      final storage = await buildStorageService();
+      await storage.saveSettings(
+        const AppSettings(
+          directRules: 'vk.com',
+          proxyRules: 'youtube.com',
+          blockedRules: '',
+        ),
+      );
+      await storage.saveRules(const [
+        RoutingRule(
+          id: 'r',
+          name: 'n',
+          type: RuleType.geosite,
+          values: ['google'],
+          action: RuleAction.proxy,
+        ),
+      ]);
 
-    final routes = await storage.getRoutes();
-    expect(
-      routes.map((r) => (r.sites, r.target)),
-      [
+      final routes = await storage.getRoutes();
+      expect(routes.map((r) => (r.sites, r.target)), [
         ('vk.com', RouteTarget.direct),
         ('youtube.com', RouteTarget.vpn),
         ('geosite:google', RouteTarget.vpn),
-      ],
-    );
-    expect(storage.routesHintPending, isTrue);
+      ]);
+      expect(storage.routesHintPending, isTrue);
 
-    await storage.dismissRoutesHint();
-    expect(storage.routesHintPending, isFalse);
-  });
+      await storage.dismissRoutesHint();
+      expect(storage.routesHintPending, isFalse);
+    },
+  );
 
   // Перенос делается один раз. Иначе маршрут, который человек удалил,
   // возвращался бы из прежнего поля при каждом запуске.

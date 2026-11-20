@@ -10,20 +10,22 @@ import 'package:keqdroid/models/tun_settings.dart';
 /// текст. Пять локалей забыть ещё легче, чем одну.
 void main() {
   for (final locale in AppLocalizations.supportedLocales) {
-    test('подпись MTU (${locale.languageCode}) называет актуальное умолчание',
-        () async {
-      final l10n = await AppLocalizations.delegate.load(locale);
+    test(
+      'подпись MTU (${locale.languageCode}) называет актуальное умолчание',
+      () async {
+        final l10n = await AppLocalizations.delegate.load(locale);
 
-      expect(
-        l10n.settingsTunMtuHint,
-        contains('${TunSettings.defaultMtu}'),
-        reason: 'подпись обязана совпадать с TunSettings.defaultMtu',
-      );
-      expect(
-        l10n.settingsTunUdpTimeoutHint,
-        contains('${TunSettings.defaultUdpTimeoutSec}'),
-      );
-    });
+        expect(
+          l10n.settingsTunMtuHint,
+          contains('${TunSettings.defaultMtu}'),
+          reason: 'подпись обязана совпадать с TunSettings.defaultMtu',
+        );
+        expect(
+          l10n.settingsTunUdpTimeoutHint,
+          contains('${TunSettings.defaultUdpTimeoutSec}'),
+        );
+      },
+    );
   }
 
   test('подписи полей не пережили смену умолчаний незамеченными', () async {

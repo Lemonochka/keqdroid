@@ -9,8 +9,12 @@ import '../helpers/test_storage.dart';
 
 Future<ProviderContainer> _container({required bool decor}) async {
   final storage = await buildStorageService();
-  await storage.saveSettings(const AppSettings().copyWith(seasonalDecor: decor));
-  final container = ProviderContainer(overrides: [storageProvider.overrideWithValue(storage)]);
+  await storage.saveSettings(
+    const AppSettings().copyWith(seasonalDecor: decor),
+  );
+  final container = ProviderContainer(
+    overrides: [storageProvider.overrideWithValue(storage)],
+  );
   addTearDown(container.dispose);
   await container.read(settingsNotifierProvider.future);
   return container;
@@ -43,7 +47,9 @@ void main() {
     final c = await _container(decor: true);
     expect(c.read(halloweenActiveProvider), isTrue);
     final settings = c.read(settingsNotifierProvider).value!;
-    await c.read(settingsNotifierProvider.notifier).save(settings.copyWith(seasonalDecor: false));
+    await c
+        .read(settingsNotifierProvider.notifier)
+        .save(settings.copyWith(seasonalDecor: false));
     expect(c.read(halloweenActiveProvider), isFalse);
   });
 }

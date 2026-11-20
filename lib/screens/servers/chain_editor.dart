@@ -61,12 +61,14 @@ class _ChainEditorScreenState extends ConsumerState<ChainEditorScreen> {
         continue;
       }
       _detachedHopIndexes.add(_hops.length);
-      _hops.add(ServerItem(
-        id: hop.serverId ?? '',
-        config: hop.config,
-        type: ServerItemType.manual,
-        customName: hop.name.isEmpty ? null : hop.name,
-      ));
+      _hops.add(
+        ServerItem(
+          id: hop.serverId ?? '',
+          config: hop.config,
+          type: ServerItemType.manual,
+          customName: hop.name.isEmpty ? null : hop.name,
+        ),
+      );
     }
   }
 
@@ -113,8 +115,9 @@ class _ChainEditorScreenState extends ConsumerState<ChainEditorScreen> {
     setState(() {
       _hops.removeAt(index);
       _detachedHopIndexes.remove(index);
-      final shifted =
-          _detachedHopIndexes.map((i) => i > index ? i - 1 : i).toSet();
+      final shifted = _detachedHopIndexes
+          .map((i) => i > index ? i - 1 : i)
+          .toSet();
       _detachedHopIndexes
         ..clear()
         ..addAll(shifted);
@@ -152,11 +155,9 @@ class _ChainEditorScreenState extends ConsumerState<ChainEditorScreen> {
       _error = null;
     });
     try {
-      final saved = await ref.read(serversProvider.notifier).saveChain(
-            id: widget.serverId,
-            name: _name.text,
-            hops: _hops,
-          );
+      final saved = await ref
+          .read(serversProvider.notifier)
+          .saveChain(id: widget.serverId, name: _name.text, hops: _hops);
       if (!mounted) return;
       Navigator.of(context).pop(saved);
     } catch (e) {
@@ -174,9 +175,13 @@ class _ChainEditorScreenState extends ConsumerState<ChainEditorScreen> {
     final theme = Theme.of(context);
     final textColor = AppTheme.text(context);
     final textLight = AppTheme.textLight(context);
-    _core = preferredBackend(ref.watch(settingsNotifierProvider.select(
-      (a) => a.value?.vpnCore ?? AppSettings.vpnCoreXray,
-    )));
+    _core = preferredBackend(
+      ref.watch(
+        settingsNotifierProvider.select(
+          (a) => a.value?.vpnCore ?? AppSettings.vpnCoreXray,
+        ),
+      ),
+    );
 
     return Scaffold(
       backgroundColor: AppTheme.bg(context),
@@ -204,27 +209,27 @@ class _ChainEditorScreenState extends ConsumerState<ChainEditorScreen> {
         child: SmoothScroll(
           builder: (context, controller) => ReorderZoomFix(
             builder: (context, fix) => CustomScrollView(
-            controller: controller,
-            slivers: [
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-                sliver: SliverToBoxAdapter(child: _nameField(l10n)),
-              ),
-              SliverToBoxAdapter(
-                child: ExpressiveSectionHeader(
-                  l10n.chainRouteLabel,
-                  icon: Icons.route_rounded,
+              controller: controller,
+              slivers: [
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                  sliver: SliverToBoxAdapter(child: _nameField(l10n)),
                 ),
-              ),
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                sliver: _routeCard(l10n, fix),
-              ),
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-                sliver: SliverToBoxAdapter(child: _footnotes(l10n)),
-              ),
-            ],
+                SliverToBoxAdapter(
+                  child: ExpressiveSectionHeader(
+                    l10n.chainRouteLabel,
+                    icon: Icons.route_rounded,
+                  ),
+                ),
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  sliver: _routeCard(l10n, fix),
+                ),
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                  sliver: SliverToBoxAdapter(child: _footnotes(l10n)),
+                ),
+              ],
             ),
           ),
         ),
@@ -239,14 +244,16 @@ class _ChainEditorScreenState extends ConsumerState<ChainEditorScreen> {
       controller: _name,
       maxLines: 1,
       textInputAction: TextInputAction.done,
-      style: Theme.of(context)
-          .textTheme
-          .bodyLarge
-          ?.copyWith(color: AppTheme.text(context)),
+      style: Theme.of(
+        context,
+      ).textTheme.bodyLarge?.copyWith(color: AppTheme.text(context)),
       decoration: InputDecoration(
         labelText: l10n.chainNameLabel,
         hintText: l10n.chainNameHint,
-        prefixIcon: Icon(Icons.link_rounded, color: AppTheme.textLight(context)),
+        prefixIcon: Icon(
+          Icons.link_rounded,
+          color: AppTheme.textLight(context),
+        ),
         filled: true,
         fillColor: AppTheme.card(context),
         border: OutlineInputBorder(
@@ -298,8 +305,9 @@ class _ChainEditorScreenState extends ConsumerState<ChainEditorScreen> {
                 Material(
                   color: AppTheme.card(context),
                   elevation: 6,
-                  borderRadius:
-                      ExpressiveShape.radius(ExpressiveShape.largeIncreased),
+                  borderRadius: ExpressiveShape.radius(
+                    ExpressiveShape.largeIncreased,
+                  ),
                   shadowColor: AppTheme.accent(context).withValues(alpha: 0.4),
                   child: child,
                 ),
@@ -365,10 +373,9 @@ class _ChainEditorScreenState extends ConsumerState<ChainEditorScreen> {
                 full
                     ? l10n.chainMaxNodes(ProxyChainConfig.maxHops)
                     : l10n.chainAddNode,
-                style: Theme.of(context)
-                    .textTheme
-                    .labelLarge
-                    ?.copyWith(color: color),
+                style: Theme.of(
+                  context,
+                ).textTheme.labelLarge?.copyWith(color: color),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -399,56 +406,57 @@ class _ChainEditorScreenState extends ConsumerState<ChainEditorScreen> {
         ],
         Text(
           l10n.chainHint,
-          style: theme.textTheme.bodySmall
-              ?.copyWith(color: AppTheme.textLight(context), height: 1.35),
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: AppTheme.textLight(context),
+            height: 1.35,
+          ),
         ),
       ],
     );
   }
 
   Widget _banner(String message, Color color, IconData icon) => Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.12),
-          borderRadius: ExpressiveShape.radius(ExpressiveShape.medium),
+    padding: const EdgeInsets.all(10),
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: 0.12),
+      borderRadius: ExpressiveShape.radius(ExpressiveShape.medium),
+    ),
+    child: Row(
+      children: [
+        Icon(icon, size: 18, color: color),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            message,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: AppTheme.text(context)),
+          ),
         ),
-        child: Row(
-          children: [
-            Icon(icon, size: 18, color: color),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                message,
-                style: Theme.of(context)
-                    .textTheme
-                    .bodySmall
-                    ?.copyWith(color: AppTheme.text(context)),
-              ),
-            ),
-          ],
-        ),
-      );
+      ],
+    ),
+  );
 
   Widget _saveBar(AppLocalizations l10n) => SafeArea(
-        minimum: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-        child: FilledButton(
-          onPressed: _canSave ? _save : null,
-          style: FilledButton.styleFrom(
-            backgroundColor: AppTheme.accentContainer(context),
-            foregroundColor: AppTheme.onAccentContainer(context),
-            minimumSize: const Size.fromHeight(52),
-            shape: RoundedRectangleBorder(
-              borderRadius: ExpressiveShape.radius(ExpressiveShape.large),
-            ),
-          ),
-          child: _saving
-              ? ShapeLoadingIndicator(
-                  size: 20,
-                  color: AppTheme.onAccentContainer(context),
-                )
-              : Text(l10n.chainSave),
+    minimum: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+    child: FilledButton(
+      onPressed: _canSave ? _save : null,
+      style: FilledButton.styleFrom(
+        backgroundColor: AppTheme.accentContainer(context),
+        foregroundColor: AppTheme.onAccentContainer(context),
+        minimumSize: const Size.fromHeight(52),
+        shape: RoundedRectangleBorder(
+          borderRadius: ExpressiveShape.radius(ExpressiveShape.large),
         ),
-      );
+      ),
+      child: _saving
+          ? ShapeLoadingIndicator(
+              size: 20,
+              color: AppTheme.onAccentContainer(context),
+            )
+          : Text(l10n.chainSave),
+    ),
+  );
 }
 
 const double _railWidth = 44;
@@ -469,14 +477,14 @@ class _Rail extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = AppTheme.divider(context);
     Widget half(bool visible) => Expanded(
-          child: Center(
-            child: SizedBox(
-              width: 2,
-              height: double.infinity,
-              child: ColoredBox(color: visible ? color : Colors.transparent),
-            ),
-          ),
-        );
+      child: Center(
+        child: SizedBox(
+          width: 2,
+          height: double.infinity,
+          child: ColoredBox(color: visible ? color : Colors.transparent),
+        ),
+      ),
+    );
 
     return SizedBox(
       width: _railWidth,
@@ -531,10 +539,9 @@ class _EndpointNode extends StatelessWidget {
           Expanded(
             child: Text(
               label,
-              style: Theme.of(context)
-                  .textTheme
-                  .labelLarge
-                  ?.copyWith(color: textLight),
+              style: Theme.of(
+                context,
+              ).textTheme.labelLarge?.copyWith(color: textLight),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -601,8 +608,9 @@ class _HopRow extends StatelessWidget {
                           name,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.titleSmall
-                              ?.copyWith(color: AppTheme.text(context)),
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            color: AppTheme.text(context),
+                          ),
                         ),
                         const SizedBox(height: 2),
                         Text(
@@ -612,8 +620,9 @@ class _HopRow extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: theme.textTheme.bodySmall?.copyWith(
-                            color:
-                                detached ? AppTheme.orange(context) : textLight,
+                            color: detached
+                                ? AppTheme.orange(context)
+                                : textLight,
                           ),
                         ),
                       ],

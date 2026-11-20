@@ -42,25 +42,32 @@ void main() {
     return out;
   }
 
-  test('урезанная база покрывает все коды, которые приложение выпускает само',
-      () async {
-    final present = await GeoDatReader.codes(lite);
-    expect(present, isNotEmpty, reason: 'assets/geo/geoip-lite.dat не читается');
+  test(
+    'урезанная база покрывает все коды, которые приложение выпускает само',
+    () async {
+      final present = await GeoDatReader.codes(lite);
+      expect(
+        present,
+        isNotEmpty,
+        reason: 'assets/geo/geoip-lite.dat не читается',
+      );
 
-    final needed = presetGeoipCodes()
-      // Генераторы конфига дописывают его сами, в пресетах его нет.
-      ..add('private')
-      // Их клали убранные пресеты; в списках у людей они остались.
-      ..addAll(['ru', 'telegram']);
+      final needed = presetGeoipCodes()
+        // Генераторы конфига дописывают его сами, в пресетах его нет.
+        ..add('private')
+        // Их клали убранные пресеты; в списках у людей они остались.
+        ..addAll(['ru', 'telegram']);
 
-    final missing = needed.difference(present);
-    expect(
-      missing,
-      isEmpty,
-      reason: 'этих кодов нет во вшитой базе: ${missing.join(", ")}. '
-          'Добавь их в _defaultCodes и пересобери: dart run tool/geo_lite.dart',
-    );
-  });
+      final missing = needed.difference(present);
+      expect(
+        missing,
+        isEmpty,
+        reason:
+            'этих кодов нет во вшитой базе: ${missing.join(", ")}. '
+            'Добавь их в _defaultCodes и пересобери: dart run tool/geo_lite.dart',
+      );
+    },
+  );
 
   test('база по умолчанию не считается полной', () async {
     // Порог отделяет вшитую базу от догруженной, и обе стороны должны быть от
@@ -72,17 +79,20 @@ void main() {
     expect(index.hasFullGeoip, isFalse);
   });
 
-  test('дефолтные правила приложения не ссылаются на страны вне базы', () async {
-    // Тот же вопрос с другой стороны: не «есть ли код в базе», а «что увидит
-    // человек сразу после установки». Санитайзер не должен выбросить ничего.
-    final present = await GeoDatReader.codes(lite);
-    final index = GeoAssetIndex(geoipCodes: present, geositeCodes: const {});
-    for (final code in presetGeoipCodes()) {
-      expect(
-        index.geoipCodes.contains(code),
-        isTrue,
-        reason: 'geoip:$code выпадет из маршрутизации на свежей установке',
-      );
-    }
-  });
+  test(
+    'дефолтные правила приложения не ссылаются на страны вне базы',
+    () async {
+      // Тот же вопрос с другой стороны: не «есть ли код в базе», а «что увидит
+      // человек сразу после установки». Санитайзер не должен выбросить ничего.
+      final present = await GeoDatReader.codes(lite);
+      final index = GeoAssetIndex(geoipCodes: present, geositeCodes: const {});
+      for (final code in presetGeoipCodes()) {
+        expect(
+          index.geoipCodes.contains(code),
+          isTrue,
+          reason: 'geoip:$code выпадет из маршрутизации на свежей установке',
+        );
+      }
+    },
+  );
 }

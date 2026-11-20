@@ -60,8 +60,10 @@ class CustomClashConfig {
       // или proxy-providers: без этого профиль на провайдерах уезжал в неизвестный формат, то есть на xray
       return RegExp(r'"(proxies|proxy-providers)"\s*:').hasMatch(text);
     }
-    return RegExp(r'^(proxies|proxy-groups|proxy-providers)\s*:', multiLine: true)
-        .hasMatch(text);
+    return RegExp(
+      r'^(proxies|proxy-groups|proxy-providers)\s*:',
+      multiLine: true,
+    ).hasMatch(text);
   }
 
   static CustomClashConfig? tryParse(String raw) {
@@ -71,8 +73,9 @@ class CustomClashConfig {
   }
 
   static CustomClashConfig? _fromMap(Map<String, dynamic> map) {
-    if (proxiesOf(map)
-        .any((p) => p['type'] != null && serverOf(p).address.isNotEmpty)) {
+    if (proxiesOf(
+      map,
+    ).any((p) => p['type'] != null && serverOf(p).address.isNotEmpty)) {
       return CustomClashConfig._(map);
     }
     if (usesProviderNodes(map)) return CustomClashConfig._(map);
@@ -194,7 +197,8 @@ class CustomClashConfig {
         final sources = entry.value;
         for (final source in sources is List ? sources : [sources]) {
           if (source is! Map) continue;
-          final merged = _plain(source, yamlMerge: true) as Map<String, dynamic>;
+          final merged =
+              _plain(source, yamlMerge: true) as Map<String, dynamic>;
           for (final m in merged.entries) {
             if (!node.containsKey(m.key) && !out.containsKey(m.key)) {
               out[m.key] = m.value;
@@ -259,7 +263,8 @@ class CustomClashConfig {
     final groups = <String, Map<Object?, Object?>>{
       if (raw is List)
         for (final group in raw)
-          if (group is Map && group['name'] != null) group['name'].toString(): group,
+          if (group is Map && group['name'] != null)
+            group['name'].toString(): group,
     };
     Set<String> reachable(Iterable<Object?> starts) {
       final out = <String>{};
@@ -269,7 +274,9 @@ class CustomClashConfig {
         final group = groups[name];
         if (group == null || !out.add(name)) continue;
         final members = group['proxies'];
-        if (members is List) queue.addAll([for (final m in members) m.toString()]);
+        if (members is List) {
+          queue.addAll([for (final m in members) m.toString()]);
+        }
       }
       return out;
     }
@@ -277,16 +284,18 @@ class CustomClashConfig {
     final viaDialer = reachable([for (final p in proxies) p['dialer-proxy']]);
     if (viaDialer.isEmpty) return const {};
     final subRules = map['sub-rules'];
-    return viaDialer.difference(reachable([
-      ...groups.keys.where((name) => !viaDialer.contains(name)),
-      for (final rule in [
-        ..._rulesOf(map),
-        if (subRules is Map)
-          for (final list in subRules.values)
-            if (list is List) ...list.map((r) => r.toString()),
-      ])
-        _parseRule(rule)?.target,
-    ]));
+    return viaDialer.difference(
+      reachable([
+        ...groups.keys.where((name) => !viaDialer.contains(name)),
+        for (final rule in [
+          ..._rulesOf(map),
+          if (subRules is Map)
+            for (final list in subRules.values)
+              if (list is List) ...list.map((r) => r.toString()),
+        ])
+          _parseRule(rule)?.target,
+      ]),
+    );
   }
 
   static const _builtinTargets = {
@@ -300,8 +309,11 @@ class CustomClashConfig {
 
   // Узел со звеньями dialer-proxy, без них ядро его не соберёт. Звеном бывает и группа (BasicOption в base.go),
   // тогда едет её состав. null, если звена нет в конфиге или состав группы набирает ядро
-  static ({List<Map<String, dynamic>> proxies, List<Map<String, dynamic>> groups})?
-      withHops(
+  static ({
+    List<Map<String, dynamic>> proxies,
+    List<Map<String, dynamic>> groups,
+  })?
+  withHops(
     Map<String, dynamic> node,
     List<Map<String, dynamic>> proxies,
     List<Map<String, dynamic>> groups,
@@ -367,7 +379,7 @@ class CustomClashConfig {
   // в маршрут идут узлы и группы, до которых дотягивается primaryTarget, под именами tag, tag-1...
   // имена автора совпали бы с узлами сессии. null, если состав группы набирает ядро (use, include-all)
   ({List<Map<String, dynamic>> proxies, List<Map<String, dynamic>> groups})?
-      routeNodes(String tag) {
+  routeNodes(String tag) {
     final proxyByName = <String, Map<String, dynamic>>{
       for (final proxy in proxies)
         if ((proxy['name']?.toString() ?? '').isNotEmpty)
@@ -467,7 +479,8 @@ class CustomClashConfig {
     if (ownDns || !_authorDnsEnabled || dns is! Map) return null;
     final range = dns['fake-ip-range']?.toString() ?? '';
     final octets = range.split('/').first.split('.').map(int.tryParse).toList();
-    if (octets.length != 4 || octets.any((o) => o == null || o < 0 || o > 255)) {
+    if (octets.length != 4 ||
+        octets.any((o) => o == null || o < 0 || o > 255)) {
       return null;
     }
     return '${octets[0]}.${octets[1]}.${octets[2]}.${octets[3]! & ~3}/30';
@@ -608,18 +621,26 @@ class CustomClashConfig {
     }
 
     final rules = out['rules'];
-    if (rules is List) out['rules'] = [for (final rule in rules) retarget(rule)];
+    if (rules is List) {
+      out['rules'] = [for (final rule in rules) retarget(rule)];
+    }
     final subRules = out['sub-rules'];
     if (subRules is Map) {
       out['sub-rules'] = {
         for (final MapEntry(:key, :value) in subRules.entries)
-          key.toString(): value is List ? [for (final r in value) retarget(r)] : value,
+          key.toString(): value is List
+              ? [for (final r in value) retarget(r)]
+              : value,
       };
     }
     out['proxy-groups'] = [
       if (authorGroups is List) ...authorGroups,
       for (final name in unsafe)
-        {'name': alias[name], 'type': 'select', 'proxies': [name]},
+        {
+          'name': alias[name],
+          'type': 'select',
+          'proxies': [name],
+        },
     ];
     return out;
   }
@@ -660,8 +681,13 @@ class CustomClashConfig {
         final parsed = _parseRule(text);
         final subs = geoSubstitutes(unknown, index);
         if (parsed != null && parsed.type == 'GEOSITE' && subs != null) {
-          final tail = text.substring(text.indexOf(parsed.payload) + parsed.payload.length);
-          out.addAll([for (final s in subs) 'GEOSITE,${s.substring('geosite:'.length)}$tail']);
+          final tail = text.substring(
+            text.indexOf(parsed.payload) + parsed.payload.length,
+          );
+          out.addAll([
+            for (final s in subs)
+              'GEOSITE,${s.substring('geosite:'.length)}$tail',
+          ]);
         } else {
           dropped.add(unknown);
         }
@@ -683,9 +709,15 @@ class CustomClashConfig {
   }
 
   // базы ASN мы не возим, а без неё ядро до подъёма туннеля качает её с GitHub и на отказе не берёт весь конфиг (geodata.InitASN)
-  static final _asnCondition = RegExp(r'(?:^|\()\s*(?:SRC-)?IP-ASN\s*,\s*([^,)\s]+)', caseSensitive: false);
+  static final _asnCondition = RegExp(
+    r'(?:^|\()\s*(?:SRC-)?IP-ASN\s*,\s*([^,)\s]+)',
+    caseSensitive: false,
+  );
 
-  static final _geoCondition = RegExp(r'(?:^|\()\s*(GEOSITE|GEOIP)\s*,\s*([^,)\s]+)', caseSensitive: false);
+  static final _geoCondition = RegExp(
+    r'(?:^|\()\s*(GEOSITE|GEOIP)\s*,\s*([^,)\s]+)',
+    caseSensitive: false,
+  );
 
   static String? _unknownGeoIn(String rule, GeoAssetIndex index) {
     for (final m in _geoCondition.allMatches(rule)) {
@@ -737,7 +769,9 @@ class CustomClashConfig {
   }
 
   // у AND, OR, NOT и SUB-RULE условие в скобках со своими запятыми, цель после закрывающей
-  static ({String type, String payload, String target})? _parseRule(String rule) {
+  static ({String type, String payload, String target})? _parseRule(
+    String rule,
+  ) {
     final text = rule.trim();
     final comma = text.indexOf(',');
     if (comma < 0) return null;
@@ -747,8 +781,11 @@ class CustomClashConfig {
       return (type: type, payload: '', target: rest.split(',').first.trim());
     }
     // в регулярке свои запятые ({1,3}), ядро берёт цель последней (ParseRulePayload)
-    if (const {'DOMAIN-REGEX', 'PROCESS-NAME-REGEX', 'PROCESS-PATH-REGEX'}
-        .contains(type)) {
+    if (const {
+      'DOMAIN-REGEX',
+      'PROCESS-NAME-REGEX',
+      'PROCESS-PATH-REGEX',
+    }.contains(type)) {
       final last = rest.lastIndexOf(',');
       if (last < 0) return null;
       return (
@@ -782,8 +819,10 @@ class CustomClashConfig {
     return (type: type, payload: payload, target: rest.split(',').first.trim());
   }
 
-  static final _processCondition =
-      RegExp(r'(?:^|\()\s*(?:PROCESS-[A-Z-]+|UID)\s*,', caseSensitive: false);
+  static final _processCondition = RegExp(
+    r'(?:^|\()\s*(?:PROCESS-[A-Z-]+|UID)\s*,',
+    caseSensitive: false,
+  );
 
   static bool _hasProcessRules(Map<String, dynamic> map) {
     final subRules = map['sub-rules'];

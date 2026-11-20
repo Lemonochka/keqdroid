@@ -9,14 +9,14 @@ import '../helpers/test_storage.dart';
 
 class _Connected extends VpnStateNotifier {
   @override
-  Future<VpnState> build() async =>
-      const VpnState(status: VpnStatus.connected);
+  Future<VpnState> build() async => const VpnState(status: VpnStatus.connected);
 }
 
 final _server = ServerItem(
   id: 'srv-1',
   type: ServerItemType.manual,
-  config: 'vless://00000000-0000-4000-8000-000000000000@198.51.100.10:443'
+  config:
+      'vless://00000000-0000-4000-8000-000000000000@198.51.100.10:443'
       '?type=tcp&security=none#test',
 );
 
@@ -46,59 +46,69 @@ void main() {
     return c;
   }
 
-  test('неудачный первый запрос повторяется, и флаг появляется', () async {
-    var calls = 0;
-    final c = await container((_) async {
-      calls++;
-      return calls == 1 ? null : const ExitIp(ip: '203.0.113.7', countryCode: 'NL');
-    });
-    final sub = c.listen(exitIpProvider, (_, _) {});
-    addTearDown(sub.close);
+  test(
+    'неудачный первый запрос повторяется, и флаг появляется',
+    () async {
+      var calls = 0;
+      final c = await container((_) async {
+        calls++;
+        return calls == 1
+            ? null
+            : const ExitIp(ip: '203.0.113.7', countryCode: 'NL');
+      });
+      final sub = c.listen(exitIpProvider, (_, _) {});
+      addTearDown(sub.close);
 
-    final exit = await c.read(exitIpProvider.future);
-    expect(calls, 2);
-    expect(exit?.countryCode, 'NL');
-  }, timeout: const Timeout(Duration(seconds: 20)));
+      final exit = await c.read(exitIpProvider.future);
+      expect(calls, 2);
+      expect(exit?.countryCode, 'NL');
+    },
+    timeout: const Timeout(Duration(seconds: 20)),
+  );
 
-  test('полученный ответ не запрашивается заново, когда шапку пересобрали',
-      () async {
-    var calls = 0;
-    final c = await container((_) async {
-      calls++;
-      return const ExitIp(ip: '203.0.113.7', countryCode: 'NL');
-    });
-    // Шапка ушла с экрана и вернулась: подписчиков на миг не было вовсе.
-    var sub = c.listen(exitIpProvider, (_, _) {});
-    await c.read(exitIpProvider.future);
-    sub.close();
-    await Future<void>.delayed(Duration.zero);
-    sub = c.listen(exitIpProvider, (_, _) {});
-    addTearDown(sub.close);
+  test(
+    'полученный ответ не запрашивается заново, когда шапку пересобрали',
+    () async {
+      var calls = 0;
+      final c = await container((_) async {
+        calls++;
+        return const ExitIp(ip: '203.0.113.7', countryCode: 'NL');
+      });
+      // Шапка ушла с экрана и вернулась: подписчиков на миг не было вовсе.
+      var sub = c.listen(exitIpProvider, (_, _) {});
+      await c.read(exitIpProvider.future);
+      sub.close();
+      await Future<void>.delayed(Duration.zero);
+      sub = c.listen(exitIpProvider, (_, _) {});
+      addTearDown(sub.close);
 
-    expect((await c.read(exitIpProvider.future))?.ip, '203.0.113.7');
-    expect(calls, 1);
-  });
+      expect((await c.read(exitIpProvider.future))?.ip, '203.0.113.7');
+      expect(calls, 1);
+    },
+  );
 
   // смена сервера на ходу не рвёт подключение: спроси выход сразу, ответил бы ещё прежний сервер
-  test('пока сервер меняется на ходу, выход не спрашивается, после смены спрашивается заново',
-      () async {
-    var country = 'PL';
-    var calls = 0;
-    final c = await container((_) async {
-      calls++;
-      return ExitIp(ip: '203.0.113.$calls', countryCode: country);
-    });
-    final sub = c.listen(exitIpProvider, (_, _) {});
-    addTearDown(sub.close);
-    expect((await c.read(exitIpProvider.future))?.countryCode, 'PL');
+  test(
+    'пока сервер меняется на ходу, выход не спрашивается, после смены спрашивается заново',
+    () async {
+      var country = 'PL';
+      var calls = 0;
+      final c = await container((_) async {
+        calls++;
+        return ExitIp(ip: '203.0.113.$calls', countryCode: country);
+      });
+      final sub = c.listen(exitIpProvider, (_, _) {});
+      addTearDown(sub.close);
+      expect((await c.read(exitIpProvider.future))?.countryCode, 'PL');
 
-    c.read(vpnServerSwitchInProgressProvider.notifier).set(true);
-    expect(await c.read(exitIpProvider.future), isNull);
-    expect(calls, 1);
+      c.read(vpnServerSwitchInProgressProvider.notifier).set(true);
+      expect(await c.read(exitIpProvider.future), isNull);
+      expect(calls, 1);
 
-    country = 'FI';
-    c.read(vpnServerSwitchInProgressProvider.notifier).set(false);
-    expect((await c.read(exitIpProvider.future))?.countryCode, 'FI');
-    expect(calls, 2);
-  });
+      country = 'FI';
+      c.read(vpnServerSwitchInProgressProvider.notifier).set(false);
+      expect((await c.read(exitIpProvider.future))?.countryCode, 'FI');
+      expect(calls, 2);
+    },
+  );
 }

@@ -14,11 +14,10 @@ Map<String, int> _protocolCountsOf(Subscription sub, WidgetRef ref) {
 }
 
 List<MapEntry<String, int>> _protocolsByCount(Map<String, int> counts) =>
-    counts.entries.toList()
-      ..sort((a, b) {
-        final byCount = b.value.compareTo(a.value);
-        return byCount != 0 ? byCount : a.key.compareTo(b.key);
-      });
+    counts.entries.toList()..sort((a, b) {
+      final byCount = b.value.compareTo(a.value);
+      return byCount != 0 ? byCount : a.key.compareTo(b.key);
+    });
 
 class _ProtocolsTile extends StatelessWidget {
   final Map<String, int> counts;
@@ -48,10 +47,11 @@ class _ProtocolsTile extends StatelessWidget {
     // без изоляции в фарси число из второй половины прилипало к латинским именам
     final value = active
         ? '${ltrIsolate(on.map((e) => e.key.toUpperCase()).join(', '))} · '
-            '${l10n.subscriptionProtocolsKept(kept, total)}'
+              '${l10n.subscriptionProtocolsKept(kept, total)}'
         : l10n.subscriptionProtocolsAll(total);
-    final accent =
-        active ? ExpressiveAccent.tertiary : ExpressiveAccent.secondary;
+    final accent = active
+        ? ExpressiveAccent.tertiary
+        : ExpressiveAccent.secondary;
 
     return ExpressiveGroupTile(
       onTap: onTap,
@@ -67,8 +67,9 @@ class _ProtocolsTile extends StatelessWidget {
               children: [
                 Text(
                   l10n.subscriptionProtocolsTitle,
-                  style: theme.textTheme.titleMedium
-                      ?.copyWith(color: scheme.onSurface),
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: scheme.onSurface,
+                  ),
                 ),
                 Text(
                   value,
@@ -81,7 +82,11 @@ class _ProtocolsTile extends StatelessWidget {
               ],
             ),
           ),
-          Icon(Icons.chevron_right_rounded, size: 22, color: scheme.onSurfaceVariant),
+          Icon(
+            Icons.chevron_right_rounded,
+            size: 22,
+            color: scheme.onSurfaceVariant,
+          ),
         ],
       ),
     );
@@ -127,8 +132,8 @@ class _ProtocolsSheetState extends State<_ProtocolsSheet> {
       final on = !_off.contains(entry.key);
       final canToggle = !on || onCount > 1;
       void toggle() => setState(() {
-            if (!_off.remove(entry.key)) _off.add(entry.key);
-          });
+        if (!_off.remove(entry.key)) _off.add(entry.key);
+      });
       return ExpressiveGroupTile(
         onTap: canToggle ? toggle : null,
         child: Row(
@@ -174,8 +179,9 @@ class _ProtocolsSheetState extends State<_ProtocolsSheet> {
               child: Text(
                 l10n.subscriptionProtocolsHint,
                 textAlign: TextAlign.center,
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: scheme.onSurfaceVariant),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
               ),
             ),
             Flexible(
@@ -250,7 +256,9 @@ class _ProtocolBadge extends StatelessWidget {
       ),
       child: Text(
         protocol.toUpperCase(),
-        style: textTheme.emphasized(textTheme.labelLarge)?.copyWith(
+        style: textTheme
+            .emphasized(textTheme.labelLarge)
+            ?.copyWith(
               color: fg,
               decoration: on ? null : TextDecoration.lineThrough,
               decorationColor: fg,

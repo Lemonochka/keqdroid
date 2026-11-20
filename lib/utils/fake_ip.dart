@@ -19,8 +19,8 @@ const kFakeIpFilter = <String>[
 ];
 
 List<String> fakeIpFilterAsRules() => [
-      for (final pattern in kFakeIpFilter) _asRule(pattern),
-    ];
+  for (final pattern in kFakeIpFilter) _asRule(pattern),
+];
 
 String _asRule(String pattern) {
   if (!pattern.contains('*')) return 'full:$pattern';

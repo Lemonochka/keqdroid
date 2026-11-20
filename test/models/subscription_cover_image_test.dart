@@ -24,15 +24,16 @@ Future<String> _png(Directory dir, int width, int height) async {
 
 Future<ui.Size> _decoded(String path) async {
   final done = Completer<ui.Size>();
-  final stream = SubscriptionCardTheme.coverImage(path).resolve(ImageConfiguration.empty);
+  final stream = SubscriptionCardTheme.coverImage(
+    path,
+  ).resolve(ImageConfiguration.empty);
   late final ImageStreamListener listener;
-  listener = ImageStreamListener(
-    (info, _) {
-      done.complete(ui.Size(info.image.width.toDouble(), info.image.height.toDouble()));
-      stream.removeListener(listener);
-    },
-    onError: (e, _) => done.completeError(e),
-  );
+  listener = ImageStreamListener((info, _) {
+    done.complete(
+      ui.Size(info.image.width.toDouble(), info.image.height.toDouble()),
+    );
+    stream.removeListener(listener);
+  }, onError: (e, _) => done.completeError(e));
   stream.addListener(listener);
   return done.future;
 }
@@ -47,34 +48,49 @@ void main() {
     dir.deleteSync(recursive: true);
   });
 
-  testWidgets('фото с телефона декодируется не крупнее 2048 и с теми же пропорциями', (tester) async {
-    final size = await tester.runAsync(() async => _decoded(await _png(dir, 4000, 2000)));
-    expect(size, const ui.Size(2048, 1024));
-  });
+  testWidgets(
+    'фото с телефона декодируется не крупнее 2048 и с теми же пропорциями',
+    (tester) async {
+      final size = await tester.runAsync(
+        () async => _decoded(await _png(dir, 4000, 2000)),
+      );
+      expect(size, const ui.Size(2048, 1024));
+    },
+  );
 
-  testWidgets('фон карточки держит фото с телефона не крупнее 2048', (tester) async {
+  testWidgets('фон карточки держит фото с телефона не крупнее 2048', (
+    tester,
+  ) async {
     final path = await tester.runAsync(() => _png(dir, 4000, 2000));
     final name = path!.split(Platform.pathSeparator).last;
     final theme = SubscriptionCardTheme.file(name, dir.path);
-    await tester.pumpWidget(MaterialApp(
-      home: Builder(
-        builder: (context) => SizedBox(
-          width: 400,
-          height: 160,
-          child: theme.background(context, veil: CardVeil.none),
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => SizedBox(
+            width: 400,
+            height: 160,
+            child: theme.background(context, veil: CardVeil.none),
+          ),
         ),
       ),
-    ));
+    );
     final raw = find.byType(RawImage);
     for (var i = 0; i < 50 && tester.widget<RawImage>(raw).image == null; i++) {
-      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 20)),
+      );
       await tester.pump();
     }
     expect(tester.widget<RawImage>(raw).image!.width, lessThanOrEqualTo(2048));
   });
 
-  testWidgets('обложка меньше предела остаётся в своём размере', (tester) async {
-    final size = await tester.runAsync(() async => _decoded(await _png(dir, 1200, 675)));
+  testWidgets('обложка меньше предела остаётся в своём размере', (
+    tester,
+  ) async {
+    final size = await tester.runAsync(
+      () async => _decoded(await _png(dir, 1200, 675)),
+    );
     expect(size, const ui.Size(1200, 675));
   });
 }

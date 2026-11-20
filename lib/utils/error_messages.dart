@@ -51,9 +51,11 @@ UiErrorMessage explainError(Object error) {
       kind: UiErrorKind.config,
       code: UiErrorCode.fileDialogUnavailable,
       title: 'File Dialog Unavailable',
-      message: 'This desktop session has no file chooser: neither an XDG '
+      message:
+          'This desktop session has no file chooser: neither an XDG '
           'portal backend nor zenity/kdialog.',
-      action: 'Install xdg-desktop-portal-gtk (or zenity), or paste the '
+      action:
+          'Install xdg-desktop-portal-gtk (or zenity), or paste the '
           'config text instead of picking a file.',
     );
   }
@@ -64,9 +66,11 @@ UiErrorMessage explainError(Object error) {
       kind: UiErrorKind.permission,
       code: UiErrorCode.tunPolkitMissing,
       title: 'Polkit Required',
-      message: 'TUN mode starts the core as root through pkexec, and polkit '
+      message:
+          'TUN mode starts the core as root through pkexec, and polkit '
           'is not installed.',
-      action: 'Install polkit together with an authentication agent, run the '
+      action:
+          'Install polkit together with an authentication agent, run the '
           'app as root (sudo -E keqdroid), or switch to Proxy mode in '
           'settings.',
     );
@@ -77,9 +81,11 @@ UiErrorMessage explainError(Object error) {
       kind: UiErrorKind.permission,
       code: UiErrorCode.tunPolkitNoAgent,
       title: 'Polkit Required',
-      message: 'Nothing answered the request for root: no polkit '
+      message:
+          'Nothing answered the request for root: no polkit '
           'authentication agent is running.',
-      action: 'Start a polkit agent for your desktop (polkit-gnome, '
+      action:
+          'Start a polkit agent for your desktop (polkit-gnome, '
           'lxqt-policykit and the like), or switch to Proxy mode in settings.',
     );
   }
@@ -90,9 +96,11 @@ UiErrorMessage explainError(Object error) {
       kind: UiErrorKind.unknown,
       code: UiErrorCode.tunAdapterRefused,
       title: 'Windows Refused the Adapter',
-      message: 'Windows refused the TUN adapter three times in a row. The '
+      message:
+          'Windows refused the TUN adapter three times in a row. The '
           'server is fine.',
-      action: 'Connect again in a minute or restart the computer. Proxy mode '
+      action:
+          'Connect again in a minute or restart the computer. Proxy mode '
           'still works.',
     );
   }
@@ -115,7 +123,8 @@ UiErrorMessage explainError(Object error) {
     );
   }
 
-  if (msg.contains('hwid') && (msg.contains('bind') || msg.contains('enable'))) {
+  if (msg.contains('hwid') &&
+      (msg.contains('bind') || msg.contains('enable'))) {
     return const UiErrorMessage(
       kind: UiErrorKind.auth,
       code: UiErrorCode.hwidBind,
@@ -140,13 +149,16 @@ UiErrorMessage explainError(Object error) {
   if ((msg.contains('no hosts found') ||
           msg.contains('check hosts tab') ||
           msg.contains('did you forget to add hosts')) &&
-      (msg.contains('service links') || msg.contains('0.0.0.0:1') || msg.contains('remnawave'))) {
+      (msg.contains('service links') ||
+          msg.contains('0.0.0.0:1') ||
+          msg.contains('remnawave'))) {
     return const UiErrorMessage(
       kind: UiErrorKind.providerConfig,
       code: UiErrorCode.providerNoHosts,
       title: 'Provider Configuration Required',
       message: 'Provider has no hosts assigned to this subscription.',
-      action: 'Open provider panel, add/assign hosts, then refresh subscription.',
+      action:
+          'Open provider panel, add/assign hosts, then refresh subscription.',
     );
   }
 
@@ -185,12 +197,12 @@ UiErrorMessage explainError(Object error) {
       code: UiErrorCode.authDenied,
       title: 'Authorization Failed',
       message: 'Access to subscription is denied by provider.',
-      action: 'Check token/credentials and verify subscription has not expired.',
+      action:
+          'Check token/credentials and verify subscription has not expired.',
     );
   }
 
-  if (msg.contains('http 404') ||
-      msg.contains('http 410')) {
+  if (msg.contains('http 404') || msg.contains('http 410')) {
     return const UiErrorMessage(
       kind: UiErrorKind.config,
       code: UiErrorCode.subUrlInvalid,
@@ -255,61 +267,58 @@ UiErrorMessage explainErrorLocalized(Object error, AppLocalizations l10n) {
   };
   final (message, action) = switch (base.code) {
     UiErrorCode.tunAdmin => (
-        l10n.errorTunAdminMessage,
-        l10n.errorTunAdminAction,
-      ),
+      l10n.errorTunAdminMessage,
+      l10n.errorTunAdminAction,
+    ),
     UiErrorCode.tunAdapterRefused => (
-        l10n.errorTunAdapterRefusedMessage,
-        l10n.errorTunAdapterRefusedAction,
-      ),
+      l10n.errorTunAdapterRefusedMessage,
+      l10n.errorTunAdapterRefusedAction,
+    ),
     UiErrorCode.tunPolkitMissing => (
-        l10n.errorPolkitMissingMessage,
-        l10n.errorPolkitMissingAction,
-      ),
+      l10n.errorPolkitMissingMessage,
+      l10n.errorPolkitMissingAction,
+    ),
     UiErrorCode.tunPolkitNoAgent => (
-        l10n.errorPolkitNoAgentMessage,
-        l10n.errorPolkitNoAgentAction,
-      ),
+      l10n.errorPolkitNoAgentMessage,
+      l10n.errorPolkitNoAgentAction,
+    ),
     UiErrorCode.vpnPermission => (
-        l10n.errorVpnPermissionMessage,
-        l10n.errorVpnPermissionAction,
-      ),
+      l10n.errorVpnPermissionMessage,
+      l10n.errorVpnPermissionAction,
+    ),
     UiErrorCode.hwidBind => (
-        l10n.errorHwidBindMessage,
-        l10n.errorHwidBindAction,
-      ),
+      l10n.errorHwidBindMessage,
+      l10n.errorHwidBindAction,
+    ),
     UiErrorCode.deviceLimit => (
-        l10n.errorDeviceLimitMessage,
-        l10n.errorDeviceLimitAction,
-      ),
+      l10n.errorDeviceLimitMessage,
+      l10n.errorDeviceLimitAction,
+    ),
     UiErrorCode.providerNoHosts => (
-        l10n.errorProviderNoHostsMessage,
-        l10n.errorProviderNoHostsAction,
-      ),
+      l10n.errorProviderNoHostsMessage,
+      l10n.errorProviderNoHostsAction,
+    ),
     UiErrorCode.configInvalid => (
-        l10n.errorConfigInvalidMessage,
-        l10n.errorConfigInvalidAction,
-      ),
+      l10n.errorConfigInvalidMessage,
+      l10n.errorConfigInvalidAction,
+    ),
     UiErrorCode.authDenied => (
-        l10n.errorAuthDeniedMessage,
-        l10n.errorAuthDeniedAction,
-      ),
+      l10n.errorAuthDeniedMessage,
+      l10n.errorAuthDeniedAction,
+    ),
     UiErrorCode.subUrlInvalid => (
-        l10n.errorSubUrlInvalidMessage,
-        l10n.errorSubUrlInvalidAction,
-      ),
+      l10n.errorSubUrlInvalidMessage,
+      l10n.errorSubUrlInvalidAction,
+    ),
     UiErrorCode.subUrlInsecureHttp => (
-        l10n.errorSubInsecureHttpMessage,
-        l10n.errorSubInsecureHttpAction,
-      ),
-    UiErrorCode.network => (
-        l10n.errorNetworkMessage,
-        l10n.errorNetworkAction,
-      ),
+      l10n.errorSubInsecureHttpMessage,
+      l10n.errorSubInsecureHttpAction,
+    ),
+    UiErrorCode.network => (l10n.errorNetworkMessage, l10n.errorNetworkAction),
     UiErrorCode.fileDialogUnavailable => (
-        l10n.errorFileDialogMessage,
-        l10n.errorFileDialogAction,
-      ),
+      l10n.errorFileDialogMessage,
+      l10n.errorFileDialogAction,
+    ),
     UiErrorCode.unknown => (base.message, l10n.errorUnknownAction),
   };
   return UiErrorMessage(
@@ -350,4 +359,3 @@ String vpnErrorStatusLabel(String? errorMessage, BuildContext context) {
     UiErrorKind.unknown => l10n.errorConnectionGeneric,
   };
 }
-

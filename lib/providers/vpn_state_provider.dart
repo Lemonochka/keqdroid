@@ -1,12 +1,6 @@
 part of 'providers.dart';
 
-enum ConnectInFlightAction {
-  ignore,
-
-  apply,
-
-  applyAndFinish,
-}
+enum ConnectInFlightAction { ignore, apply, applyAndFinish }
 
 // до старта сессии сервис ещё не поднят и честно отвечает disconnected, это не исход попытки
 ConnectInFlightAction connectInFlightAction(
@@ -18,8 +12,7 @@ ConnectInFlightAction connectInFlightAction(
   }
   return switch (status) {
     VpnStatus.connected ||
-    VpnStatus.disconnected =>
-      ConnectInFlightAction.applyAndFinish,
+    VpnStatus.disconnected => ConnectInFlightAction.applyAndFinish,
     VpnStatus.error => ConnectInFlightAction.apply,
     _ => ConnectInFlightAction.ignore,
   };
@@ -129,19 +122,22 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
   static bool? debugSyncsCredentials;
 
   // на ПК логин и пароль держит само приложение, сверять не с кем
-  static bool get _syncsCredentials => debugSyncsCredentials ?? Platform.isAndroid;
+  static bool get _syncsCredentials =>
+      debugSyncsCredentials ?? Platform.isAndroid;
 
   // Логин и пароль приложения и ядра расходились: свежий изолят пуст, а старт поверх живой сессии ядро
   // не перезапускает. Тогда всё приложение до перезапуска получало 407 от своего же прокси (Pixel 6a, 12.11.2026)
   Future<void> syncSocksCredentialsFromService() {
     if (!_syncsCredentials || _connectInFlight) return Future<void>.value();
-    return _credsSync ??=
-        _takeSocksCredentialsFromService().whenComplete(() => _credsSync = null);
+    return _credsSync ??= _takeSocksCredentialsFromService().whenComplete(
+      () => _credsSync = null,
+    );
   }
 
   Future<void> _takeSocksCredentialsFromService() async {
-    final creds =
-        await ref.read(vpnEngineProvider).fetchActiveSocksCredentials();
+    final creds = await ref
+        .read(vpnEngineProvider)
+        .fetchActiveSocksCredentials();
     // connect() сверит сам, когда поднимет ядро
     if (creds == null || !ref.mounted || _connectInFlight) return;
     final current = Socks5Credentials();
@@ -285,7 +281,8 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     if (server == null || subId == null) return;
     final template = ref.read(subscriptionTemplateProvider(subId));
     if (template == null || template.nodeFor(server) == null) return;
-    final choices = (ref.read(subscriptionsProvider).value ?? const <Subscription>[])
+    final choices =
+        (ref.read(subscriptionsProvider).value ?? const <Subscription>[])
             .where((s) => s.id == subId)
             .firstOrNull
             ?.groupChoices ??
@@ -298,11 +295,15 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       if (attempt > 0) await Future<void>.delayed(const Duration(seconds: 2));
       if (!ref.mounted || state.value?.status != VpnStatus.connected) return;
       for (final group in [...pins.keys]) {
-        if (await MihomoGroupsApi.select(group, pins[group]!)) pins.remove(group);
+        if (await MihomoGroupsApi.select(group, pins[group]!)) {
+          pins.remove(group);
+        }
       }
     }
     if (pins.isNotEmpty) {
-      AppLogger.instance.warn('Template pins not applied: ${pins.keys.join(', ')}');
+      AppLogger.instance.warn(
+        'Template pins not applied: ${pins.keys.join(', ')}',
+      );
     }
     if (ref.mounted) ref.invalidate(liveTemplateGroupsProvider(subId));
   }
@@ -338,7 +339,9 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
 
   Future<RuleListDomains> _cachedRuleLists(AppSettings settings) async {
     try {
-      final lists = await ref.read(ruleListServiceProvider).domainsFor(settings);
+      final lists = await ref
+          .read(ruleListServiceProvider)
+          .domainsFor(settings);
       if (!lists.isEmpty) {
         AppLogger.instance.info(
           'Rule lists: block ${lists.blocked.length}, '
@@ -379,8 +382,9 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     }
     var listed = const <String>[];
     try {
-      listed =
-          await ref.read(ruleListServiceProvider).domainsForEntries(entries);
+      listed = await ref
+          .read(ruleListServiceProvider)
+          .domainsForEntries(entries);
     } catch (e) {
       AppLogger.instance.warn('Rule lists for a route unreadable: $e');
     }
@@ -415,16 +419,20 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
 
   Future<void> connect({bool autostartTunFallback = false}) async {
     if (_connectInFlight) {
-      AppLogger.instance.debug('VPN connect() ignored: connect already in progress');
+      AppLogger.instance.debug(
+        'VPN connect() ignored: connect already in progress',
+      );
       return;
     }
 
     final server = ref.read(serversProvider).activeServer;
     if (server == null) {
-      state = AsyncData(VpnState(
-        status: VpnStatus.error,
-        errorMessage: 'No active server selected',
-      ));
+      state = AsyncData(
+        VpnState(
+          status: VpnStatus.error,
+          errorMessage: 'No active server selected',
+        ),
+      );
       return;
     }
 
@@ -491,10 +499,12 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
         // явно: при смене сервера ошибки из стрима отбрасываются, и без поллинга на десктопе UI застревал в подключении
         state = AsyncData(sessionState);
       } else {
-        state = AsyncData(VpnState(
-          status: VpnStatus.connected,
-          activeMode: sessionState.activeMode,
-        ));
+        state = AsyncData(
+          VpnState(
+            status: VpnStatus.connected,
+            activeMode: sessionState.activeMode,
+          ),
+        );
         _live = built;
       }
     } catch (e, st) {
@@ -507,10 +517,9 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
         error: e,
         stackTrace: st,
       );
-      state = AsyncData(VpnState(
-        status: VpnStatus.error,
-        errorMessage: e.toString(),
-      ));
+      state = AsyncData(
+        VpnState(status: VpnStatus.error, errorMessage: e.toString()),
+      );
       Error.throwWithStackTrace(e, st);
     } finally {
       _connectInFlight = false;
@@ -534,8 +543,10 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     bool autostartTunFallback = false,
   }) async {
     final storage = ref.read(storageProvider);
-    final profile =
-        profileForServer(await storage.getRoutingProfiles(), server);
+    final profile = profileForServer(
+      await storage.getRoutingProfiles(),
+      server,
+    );
     final saved = await storage.getSettings();
     // «Всё остальное» профиля только в эту сессию: на диск настройки пишет лишь _saveDuringConnect
     final stored = profile == null
@@ -550,7 +561,8 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     final template = subId == null ? null : storage.getClashTemplate(subId);
     String? templated;
     if (template != null) {
-      final choices = (await storage.getSubscriptions())
+      final choices =
+          (await storage.getSubscriptions())
               .where((s) => s.id == subId)
               .firstOrNull
               ?.groupChoices ??
@@ -564,7 +576,11 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
           choices: choices,
         );
       } catch (e, st) {
-        AppLogger.instance.warn('Provider template skipped', error: e, stackTrace: st);
+        AppLogger.instance.warn(
+          'Provider template skipped',
+          error: e,
+          stackTrace: st,
+        );
       }
     }
     if (templated != null) {
@@ -579,8 +595,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       preference: stored.vpnCore,
       mihomoAvailable: mihomoShipsHere,
     );
-    final choice = templated != null &&
-            resolved.skip == VpnCoreSkip.clashConfig
+    final choice = templated != null && resolved.skip == VpnCoreSkip.clashConfig
         ? (
             backend: resolved.backend,
             format: resolved.format,
@@ -623,16 +638,17 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       final onMihomo = choice.backend == VpnBackend.mihomo;
       final dropped = onMihomo
           ? MihomoConfigGen.droppedDnsServers(settings.xrayCore.dnsServers)
-          : XrayCoreSettings.xrayDnsServers(settings.xrayCore.dnsServers)
-              .dropped;
+          : XrayCoreSettings.xrayDnsServers(
+              settings.xrayCore.dnsServers,
+            ).dropped;
       if (dropped.isNotEmpty) {
         AppLogger.instance.warn(
           'Custom DNS: ${dropped.length} address(es) dropped — the core '
           'cannot run them: ${dropped.join(', ')}. Supported: '
           '${onMihomo ? 'plain ip[:port], udp://, tcp://, https://, tls://, '
-              'quic://, dhcp://, localhost' : 'plain ip[:port], '
-              'https+local://, https://, h2c://, tcp://, quic+local://, '
-              'localhost, fakedns'}.',
+                    'quic://, dhcp://, localhost' : 'plain ip[:port], '
+                    'https+local://, https://, h2c://, tcp://, quic+local://, '
+                    'localhost, fakedns'}.',
         );
       }
     }
@@ -672,7 +688,8 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     if (reuse == null &&
         Platform.isWindows &&
         connectionMode == ConnectionMode.tun) {
-      final elevated = await engine.requestVpnPermission() ||
+      final elevated =
+          await engine.requestVpnPermission() ||
           await WindowsTunService.state() == TunServiceState.ready;
       if (!elevated) {
         if (autostartTunFallback) {
@@ -738,7 +755,8 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
 
     // системный прокси Windows/GNOME и поле прокси у Wi-Fi не умеют пароль: с auth браузеры
     // спрашивают его без конца, а на Android ядро отбивает каждое соединение
-    final proxyModeNoAuth = connectionMode == ConnectionMode.proxy &&
+    final proxyModeNoAuth =
+        connectionMode == ConnectionMode.proxy &&
         (!Platform.isAndroid || !settings.proxyModeAuth);
 
     // несовпадение ядра с выбором пишем в лог: раньше это выглядело как настройка не работает
@@ -770,16 +788,19 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
 
     final desktop = Platform.isWindows || Platform.isLinux;
     final tunSession = connectionMode == ConnectionMode.tun;
-    final strictRoute =
-        settings.tun.strictRouteEnabled(windows: Platform.isWindows);
+    final strictRoute = settings.tun.strictRouteEnabled(
+      windows: Platform.isWindows,
+    );
     // IPv6-адрес на TUN при выключенном в системе IPv6 роняет ядро; строгий маршрут на Linux закрывал IPv6
     // без маршрута (sing-tun, unreachable), теперь так же: захват и блок
-    final captureIpv6 = desktop &&
+    final captureIpv6 =
+        desktop &&
         tunSession &&
         (settings.tun.ipv6 != TunSettings.ipv6Bypass ||
             (Platform.isLinux && strictRoute)) &&
         await hostHasGlobalIpv6(excludeInterfaceName: kTunInterfaceName);
-    final ipv6ViaVpn = tunSession &&
+    final ipv6ViaVpn =
+        tunSession &&
         settings.tun.ipv6 == TunSettings.ipv6Vpn &&
         server.ipv6Exit == true &&
         (!desktop || captureIpv6);
@@ -790,8 +811,9 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
           'IPv6 stays closed: this machine has no global IPv6 address.',
         (false, false) =>
           'IPv6 stays closed: the last check found no IPv6 at this server.',
-        (false, null) => 'IPv6 stays closed until a ping checks this server '
-            'for IPv6.',
+        (false, null) =>
+          'IPv6 stays closed until a ping checks this server '
+              'for IPv6.',
       });
     }
     // с UseIPv4 ядро не отдаёт AAAA, и IPv6 через сервер никто бы не выбрал
@@ -839,12 +861,13 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
 
     final clashGeoIndex =
         mihomoPicked && (server.protocol == 'clash' || templated != null)
-            ? await GeoAssetService.index()
-            : null;
+        ? await GeoAssetService.index()
+        : null;
     if (clashGeoIndex != null) {
-      final dropped = CustomClashConfig.tryParse(runConfig)
-              ?.withKnownGeo(clashGeoIndex)
-              .dropped ??
+      final dropped =
+          CustomClashConfig.tryParse(
+            runConfig,
+          )?.withKnownGeo(clashGeoIndex).dropped ??
           const <String>[];
       if (dropped.isNotEmpty) {
         AppLogger.instance.warn(
@@ -871,8 +894,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
             routingMode: routingMode,
             managedProcessNames: switch (routingMode) {
               AppRoutingMode.onlySelected ||
-              AppRoutingMode.allExceptSelected =>
-                processNames,
+              AppRoutingMode.allExceptSelected => processNames,
               AppRoutingMode.allProxy => const <String>[],
             },
             appProcessName: Platform.isAndroid
@@ -886,8 +908,9 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
           )
         : null;
 
-    final customGeoIndex =
-        server.protocol == 'custom' ? await GeoAssetService.index() : null;
+    final customGeoIndex = server.protocol == 'custom'
+        ? await GeoAssetService.index()
+        : null;
     if (server.protocol == 'custom') {
       final parsed = CustomXrayConfig.tryParse(server.config);
       final dead = parsed == null
@@ -921,16 +944,15 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
           'code, so the rules cannot be kept. Their traffic now falls '
           'through to "unmatched traffic" in Settings → Routing'
           '${blocked ? ', which is set to BLOCK — that traffic will not '
-              'connect at all. Set it to Proxy or Bypass, or replace the '
-              'codes in the config.' : '.'}',
+                    'connect at all. Set it to Proxy or Bypass, or replace the '
+                    'codes in the config.' : '.'}',
         );
       }
     }
 
     final xrayDesktopTun = desktop && tunSession && !mihomoPicked;
 
-    final listedSettings =
-        mihomoPicked ? settings : ruleLists.expand(settings);
+    final listedSettings = mihomoPicked ? settings : ruleLists.expand(settings);
 
     final xrayConfig = mihomoPicked
         ? ''
@@ -940,7 +962,8 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
             resolvedServerIp: serverIp,
             localInboundsNoAuth: proxyModeNoAuth,
             geoIndex: customGeoIndex,
-            nativeTunInbound: Platform.isAndroid &&
+            nativeTunInbound:
+                Platform.isAndroid &&
                 connectionMode == ConnectionMode.tun &&
                 !mihomoPicked,
             nativeTunIpv6: Platform.isAndroid && ipv6ViaVpn,
@@ -954,10 +977,9 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
                     passIpv6: ipv6ViaVpn,
                     udpTimeoutSec: settings.tun.udpTimeoutSec,
                     routingMode: routingMode,
-                    managedProcessNames:
-                        routingMode == AppRoutingMode.allProxy
-                            ? const []
-                            : processNames,
+                    managedProcessNames: routingMode == AppRoutingMode.allProxy
+                        ? const []
+                        : processNames,
                     appProcessName: p.basename(Platform.resolvedExecutable),
                   )
                 : null,
@@ -1017,10 +1039,9 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
         error: e,
         stackTrace: st,
       );
-      state = AsyncData(VpnState(
-        status: VpnStatus.error,
-        errorMessage: e.toString(),
-      ));
+      state = AsyncData(
+        VpnState(status: VpnStatus.error, errorMessage: e.toString()),
+      );
       Error.throwWithStackTrace(e, st);
     }
   }
@@ -1030,7 +1051,8 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     final server = ref.read(serversProvider).activeServer;
     final subId = server?.subscriptionId;
     if (server == null || subId == null) return null;
-    final subs = ref.read(subscriptionsProvider).value ?? const <Subscription>[];
+    final subs =
+        ref.read(subscriptionsProvider).value ?? const <Subscription>[];
     final own = subs.where((s) => s.id == subId).firstOrNull;
     if (own != null && own.autoSelect) {
       return (server: server, subId: subId, ownerId: subId);
@@ -1049,7 +1071,8 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
   }
 
   List<String> _autoSelectFamily(String ownerId) {
-    final subs = ref.read(subscriptionsProvider).value ?? const <Subscription>[];
+    final subs =
+        ref.read(subscriptionsProvider).value ?? const <Subscription>[];
     return [
       ownerId,
       ...AutoServerSelect.neighbourSubscriptions(
@@ -1064,10 +1087,11 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
 
   int _autoSelectLimit(_AutoTarget target) =>
       _autoSelectOutage.suspects(target.subId)
-          ? AutoSelectWatchdog.suspectLimit
-          : AutoSelectWatchdog.candidateLimit;
+      ? AutoSelectWatchdog.suspectLimit
+      : AutoSelectWatchdog.candidateLimit;
 
-  int _autoSelectScore(String id, int latencyMs) => AutoServerSelect.switchScore(
+  int _autoSelectScore(String id, int latencyMs) =>
+      AutoServerSelect.switchScore(
         ref.read(serversProvider).servers.where((s) => s.id == id).firstOrNull,
         latencyMs,
         DateTime.now(),
@@ -1077,7 +1101,9 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
   Future<bool> _autoSelectOffline() async {
     final net = await VpnNativeBridge.physicalNetworks();
     if (net == null || net.count > 0) return false;
-    AppLogger.instance.info('Auto select: no network under the tunnel, not measuring');
+    AppLogger.instance.info(
+      'Auto select: no network under the tunnel, not measuring',
+    );
     _autoSelectRest(net.changes);
     return true;
   }
@@ -1098,7 +1124,9 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     if (_autoSelectDeadRounds == 0 || mark == null) return true;
     final net = await VpnNativeBridge.physicalNetworks();
     if (net == null || net.count == 0 || net.changes == mark) return true;
-    AppLogger.instance.info('Auto select: the network changed, checking right away');
+    AppLogger.instance.info(
+      'Auto select: the network changed, checking right away',
+    );
     _autoSelectQuietUntil = null;
     _autoSelectDeadRounds = 0;
     _autoSelectNetworkMark = null;
@@ -1118,17 +1146,16 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     String subId, {
     int limit = AutoSelectWatchdog.candidateLimit,
     Set<String> include = const {},
-  }) =>
-      _autoSelectMeasure(
-        current.id,
-        AutoServerSelect.candidatesToMeasure(
-          ref.read(serversProvider).servers,
-          subscriptionId: subId,
-          current: current,
-          limit: limit,
-          include: include,
-        ),
-      );
+  }) => _autoSelectMeasure(
+    current.id,
+    AutoServerSelect.candidatesToMeasure(
+      ref.read(serversProvider).servers,
+      subscriptionId: subId,
+      current: current,
+      limit: limit,
+      include: include,
+    ),
+  );
 
   Future<void> _autoSelectRecord(List<PingResult> results) =>
       ref.read(serversProvider.notifier).updatePingResults({
@@ -1206,7 +1233,9 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     }
     final quietUntil = _autoSelectQuietUntil;
     final deadZone = _autoSelectDeadRounds > 0;
-    if (!deadZone && quietUntil != null && DateTime.now().isBefore(quietUntil)) {
+    if (!deadZone &&
+        quietUntil != null &&
+        DateTime.now().isBefore(quietUntil)) {
       return;
     }
 
@@ -1240,7 +1269,8 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       _autoSelectSilence.silent,
       desktop: !Platform.isAndroid,
     );
-    if (!stalled && !AutoSelectWatchdog.dialFailuresSuggestDeadServer(newFailures)) {
+    if (!stalled &&
+        !AutoSelectWatchdog.dialFailuresSuggestDeadServer(newFailures)) {
       return;
     }
     if (await _autoSelectOffline()) return;
@@ -1268,7 +1298,10 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     _autoSelectCounters = counters;
     if (counters == null || previous == null) return null;
     if (counters.up < previous.up || counters.down < previous.down) return null;
-    return (sent: counters.up - previous.up, received: counters.down - previous.down);
+    return (
+      sent: counters.up - previous.up,
+      received: counters.down - previous.down,
+    );
   }
 
   Future<void> _autoSelectTick() async {
@@ -1301,7 +1334,8 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
         target.subId,
         limit: _autoSelectLimit(target),
       ),
-      reason: 'nothing received for ${AutoSelectWatchdog.probeEvery.inSeconds} s',
+      reason:
+          'nothing received for ${AutoSelectWatchdog.probeEvery.inSeconds} s',
     );
   }
 
@@ -1315,7 +1349,9 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     final server = target.server;
     var switched = false;
     var dead = false;
-    AppLogger.instance.info('Auto select: checking ${server.displayName} — $reason');
+    AppLogger.instance.info(
+      'Auto select: checking ${server.displayName} — $reason',
+    );
     try {
       var verdict = AutoServerSelect.judge(
         currentId: server.id,
@@ -1336,7 +1372,9 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       if (nextId == null) {
         if (measure.results[server.id]?.success == true) {
           _autoSelectOutage = const SubscriptionOutage();
-          AppLogger.instance.info('Auto select: ${server.displayName} answered, staying');
+          AppLogger.instance.info(
+            'Auto select: ${server.displayName} answered, staying',
+          );
           return;
         }
         final across = await _autoSelectAcross(target, measure);
@@ -1410,7 +1448,9 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
         // подписка под подозрением, а сеть жива: второй раунд нужен скоро, пользователь сидит без связи
         final soon = switched || _autoSelectOutage.suspects(target.subId);
         _autoSelectQuietUntil = DateTime.now().add(
-          soon ? AutoSelectWatchdog.quietAfterSwitch : AutoSelectWatchdog.quietAfterCheck,
+          soon
+              ? AutoSelectWatchdog.quietAfterSwitch
+              : AutoSelectWatchdog.quietAfterCheck,
         );
       }
       _autoSelectBusy = false;
@@ -1423,7 +1463,9 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     _AutoSelectMeasure own,
   ) async {
     final server = target.server;
-    if (!own.results.containsKey(server.id)) return (nextId: null, answered: true);
+    if (!own.results.containsKey(server.id)) {
+      return (nextId: null, answered: true);
+    }
     final controls = AutoServerSelect.controls(
       ref.read(serversProvider).servers,
       subscriptionIds: [
@@ -1489,7 +1531,8 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
   Future<void> _autoSelectRecheckTick() {
     final now = DateTime.now();
     final last = _autoSelectRecheckAt ??= now;
-    final scheduled = now.difference(last) >=
+    final scheduled =
+        now.difference(last) >=
         AutoSelectWatchdog.recheckEvery - NeighbourHomePace.every ~/ 2;
     if (scheduled) _autoSelectRecheckAt = now;
     return _autoSelectRecheck(homeOnly: !scheduled);
@@ -1500,7 +1543,8 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     final target = await _autoSelectTarget();
     var home = await AutoSelectHomeStore.load();
     if (target == null) {
-      final subs = ref.read(subscriptionsProvider).value ?? const <Subscription>[];
+      final subs =
+          ref.read(subscriptionsProvider).value ?? const <Subscription>[];
       if (home != null &&
           !subs.any((s) => s.id == home!.subscriptionId && s.autoSelect)) {
         await AutoSelectHomeStore.save(null);
@@ -1553,7 +1597,9 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     try {
       await measure.done;
       if (state.value?.status != VpnStatus.connected) return;
-      if (ref.read(serversProvider).activeServer?.id != target.server.id) return;
+      if (ref.read(serversProvider).activeServer?.id != target.server.id) {
+        return;
+      }
       final homeAnswered = measure.results[home.homeId]?.success == true;
       if (homeOnly) {
         _autoSelectHomePace = _autoSelectHomePace.afterCheck(
@@ -1681,7 +1727,9 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     try {
       final built = await _buildSession(server, engine, reuse: live);
       if (built == null || !sameTunnelShell(live.request, built.request)) {
-        AppLogger.instance.info('Server switch: the tunnel changes too, reconnecting');
+        AppLogger.instance.info(
+          'Server switch: the tunnel changes too, reconnecting',
+        );
         return false;
       }
       if (!await engine.reloadMihomoConfig(built.request)) return false;
@@ -1705,7 +1753,9 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       try {
         await waiter.future.timeout(const Duration(seconds: 4));
       } on TimeoutException {
-        AppLogger.instance.info('No disconnected state within 4 s, reconnecting anyway');
+        AppLogger.instance.info(
+          'No disconnected state within 4 s, reconnecting anyway',
+        );
       } finally {
         if (identical(_disconnectWaiter, waiter)) _disconnectWaiter = null;
       }
@@ -1724,8 +1774,9 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
   }
 }
 
-final vpnStateProvider =
-    AsyncNotifierProvider<VpnStateNotifier, VpnState>(VpnStateNotifier.new);
+final vpnStateProvider = AsyncNotifierProvider<VpnStateNotifier, VpnState>(
+  VpnStateNotifier.new,
+);
 
 typedef _AutoTarget = ({ServerItem server, String subId, String ownerId});
 

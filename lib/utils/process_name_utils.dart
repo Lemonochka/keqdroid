@@ -12,8 +12,7 @@ bool windowsProcessRules(bool? windows) =>
 
 // путь пишем только когда его указали руками: отметка в списке пишет имя, чтобы программа,
 // переехавшая в новую папку, не выпадала из сплита
-bool isProcessPathEntry(String raw) =>
-    raw.contains(r'\') || raw.contains('/');
+bool isProcessPathEntry(String raw) => raw.contains(r'\') || raw.contains('/');
 
 String normalizeProcessPath(String raw, {bool? windows}) {
   final s = raw.trim().replaceAll('"', '');
@@ -44,7 +43,8 @@ String normalizeProcessName(String raw, {bool? windows}) {
 String processRegexLiteral(String text) {
   final out = StringBuffer();
   for (final rune in text.runes) {
-    final isAsciiAlnum = (rune >= 0x30 && rune <= 0x39) ||
+    final isAsciiAlnum =
+        (rune >= 0x30 && rune <= 0x39) ||
         (rune >= 0x41 && rune <= 0x5a) ||
         (rune >= 0x61 && rune <= 0x7a);
     if (isAsciiAlnum || rune > 0x7f) {

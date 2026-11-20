@@ -87,12 +87,14 @@ class ExpressiveGroupSegment extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final radius = this.radius ?? ExpressiveGroup.segmentRadius(
-      index: index,
-      count: count,
-      outerCorner: outerCorner,
-      innerCorner: innerCorner,
-    );
+    final radius =
+        this.radius ??
+        ExpressiveGroup.segmentRadius(
+          index: index,
+          count: count,
+          outerCorner: outerCorner,
+          innerCorner: innerCorner,
+        );
     return _ExpressiveGroupScope(
       radius: radius,
       child: TvFocusHighlight(radius: radius, child: child),
@@ -127,23 +129,19 @@ class ExpressiveSectionHeader extends StatelessWidget {
     final heading = icon == null
         ? label
         : Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: scheme.primaryContainer,
-                    borderRadius: ExpressiveShape.radius(ExpressiveShape.small),
-                  ),
-                  child: Icon(
-                    icon,
-                    size: 16,
-                    color: scheme.onPrimaryContainer,
-                  ),
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: scheme.primaryContainer,
+                  borderRadius: ExpressiveShape.radius(ExpressiveShape.small),
                 ),
-                const SizedBox(width: 10),
-                Flexible(child: label),
-              ],
-            );
+                child: Icon(icon, size: 16, color: scheme.onPrimaryContainer),
+              ),
+              const SizedBox(width: 10),
+              Flexible(child: label),
+            ],
+          );
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(4, 16, 4, 8),
@@ -278,7 +276,11 @@ class ExpressiveActionTile extends StatelessWidget {
             ),
           ),
           if (selected)
-            Icon(Icons.check_rounded, size: 20, color: scheme.onSecondaryContainer),
+            Icon(
+              Icons.check_rounded,
+              size: 20,
+              color: scheme.onSecondaryContainer,
+            ),
         ],
       ),
     );
@@ -349,7 +351,8 @@ class _ExpressiveGroupTileState extends State<ExpressiveGroupTile>
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final base = widget.radius ??
+    final base =
+        widget.radius ??
         _ExpressiveGroupScope.maybeOf(context) ??
         ExpressiveShape.radius(ExpressiveShape.extraLarge);
     final pressed = ExpressiveShape.pressedRadius(base);
@@ -365,7 +368,8 @@ class _ExpressiveGroupTileState extends State<ExpressiveGroupTile>
         );
       },
       child: Material(
-        color: TvFocusHighlight.containerOf(context) ??
+        color:
+            TvFocusHighlight.containerOf(context) ??
             widget.color ??
             scheme.surfaceContainerHigh,
         child: InkWell(
@@ -527,7 +531,8 @@ class _ExpressiveListSegmentState extends State<ExpressiveListSegment>
               shape,
             )!,
             child: Material(
-              color: TvFocusHighlight.containerOf(context) ??
+              color:
+                  TvFocusHighlight.containerOf(context) ??
                   Color.lerp(widget.color, widget.selectedColor, tint),
               child: child,
             ),

@@ -76,22 +76,21 @@ Map<String, dynamic> _routing(Map<String, dynamic> config) =>
     (config['routing'] as Map).cast<String, dynamic>();
 
 List<Map<String, dynamic>> _rules(Map<String, dynamic> config) => [
-      for (final r in _routing(config)['rules'] as List)
-        (r as Map).cast<String, dynamic>(),
-    ];
+  for (final r in _routing(config)['rules'] as List)
+    (r as Map).cast<String, dynamic>(),
+];
 
 Set<String> _outboundTags(Map<String, dynamic> config) => {
-      for (final o in config['outbounds'] as List)
-        if ((o as Map)['tag'] != null) o['tag'] as String,
-    };
+  for (final o in config['outbounds'] as List)
+    if ((o as Map)['tag'] != null) o['tag'] as String,
+};
 
 void main() {
   final server = ServerItem.fromRaw(_providerConfig);
 
   Map<String, dynamic> build({AppSettings settings = const AppSettings()}) =>
-      jsonDecode(
-        ConfigGeneratorV2.generateConfig(server.config, settings),
-      ) as Map<String, dynamic>;
+      jsonDecode(ConfigGeneratorV2.generateConfig(server.config, settings))
+          as Map<String, dynamic>;
 
   group('provider custom config', () {
     test('is recognised as a ready-made Xray server', () {
@@ -106,10 +105,10 @@ void main() {
 
       // Авторские резолверы первые и нетронутые; за ними наш резерв на случай,
       // когда до авторских не достучаться (см. CustomXrayConfig.mergeDns).
-      expect(
-        ((config['dns'] as Map)['servers'] as List).take(2),
-        ['1.1.1.1', '1.0.0.1'],
-      );
+      expect(((config['dns'] as Map)['servers'] as List).take(2), [
+        '1.1.1.1',
+        '1.0.0.1',
+      ]);
       expect(_routing(config)['domainStrategy'], 'IPIfNonMatch');
     });
 
@@ -127,15 +126,21 @@ void main() {
       );
 
       expect(
-        rules.any((r) =>
-            ((r['ip'] as List?) ?? const []).contains('geoip:private') &&
-            r['outboundTag'] == 'direct'),
+        rules.any(
+          (r) =>
+              ((r['ip'] as List?) ?? const []).contains('geoip:private') &&
+              r['outboundTag'] == 'direct',
+        ),
         isTrue,
       );
       expect(
-        rules.any((r) =>
-            ((r['domain'] as List?) ?? const []).contains('geosite:private') &&
-            r['outboundTag'] == 'direct'),
+        rules.any(
+          (r) =>
+              ((r['domain'] as List?) ?? const []).contains(
+                'geosite:private',
+              ) &&
+              r['outboundTag'] == 'direct',
+        ),
         isTrue,
       );
     });
@@ -151,38 +156,43 @@ void main() {
       }
     });
 
-    test("our own rules reuse the author's direct/block, not invented tags", () {
-      // Свои freedom/blackhole дописываются, только если у автора их нет.
-      // Здесь есть оба — лишних аутбаундов появиться не должно. Кроме
-      // `dns`-аутбаунда: перехват DNS у автора висел на его же инбаунде, а
-      // инбаунды мы заменяем своими.
-      final config = build(
-        settings: const AppSettings(
-          directRules: 'example-direct.com',
-          blockedRules: 'example-block.com',
-        ),
-      );
-      final rules = _rules(config);
+    test(
+      "our own rules reuse the author's direct/block, not invented tags",
+      () {
+        // Свои freedom/blackhole дописываются, только если у автора их нет.
+        // Здесь есть оба — лишних аутбаундов появиться не должно. Кроме
+        // `dns`-аутбаунда: перехват DNS у автора висел на его же инбаунде, а
+        // инбаунды мы заменяем своими.
+        final config = build(
+          settings: const AppSettings(
+            directRules: 'example-direct.com',
+            blockedRules: 'example-block.com',
+          ),
+        );
+        final rules = _rules(config);
 
-      expect(
-        _outboundTags(config),
-        unorderedEquals(<String>{'proxy', 'direct', 'block', 'keq-dns-out'}),
-      );
-      expect(
-        rules.firstWhere(
-          (r) => ((r['domain'] as List?) ?? const [])
-              .any((d) => '$d'.contains('example-direct.com')),
-        )['outboundTag'],
-        'direct',
-      );
-      expect(
-        rules.firstWhere(
-          (r) => ((r['domain'] as List?) ?? const [])
-              .any((d) => '$d'.contains('example-block.com')),
-        )['outboundTag'],
-        'block',
-      );
-    });
+        expect(
+          _outboundTags(config),
+          unorderedEquals(<String>{'proxy', 'direct', 'block', 'keq-dns-out'}),
+        );
+        expect(
+          rules.firstWhere(
+            (r) => ((r['domain'] as List?) ?? const []).any(
+              (d) => '$d'.contains('example-direct.com'),
+            ),
+          )['outboundTag'],
+          'direct',
+        );
+        expect(
+          rules.firstWhere(
+            (r) => ((r['domain'] as List?) ?? const []).any(
+              (d) => '$d'.contains('example-block.com'),
+            ),
+          )['outboundTag'],
+          'block',
+        );
+      },
+    );
 
     test('the provider whitelist wins over the app routing lists', () {
       // Ради этой раскладки готовый конфиг и берут: провайдер уже решил, что
@@ -193,7 +203,9 @@ void main() {
 
       // Наше правило узнаём по ruleTag: домен в нём нормализуется к той же
       // форме `domain:vk.com`, что и у автора, и по тексту они неразличимы.
-      final ours = rules.indexWhere((r) => r['ruleTag'] == 'user-proxy-domains');
+      final ours = rules.indexWhere(
+        (r) => r['ruleTag'] == 'user-proxy-domains',
+      );
       final authors = rules.indexWhere(
         (r) =>
             r['ruleTag'] == null &&
@@ -230,7 +242,9 @@ void main() {
       // него снаружи локальной сети. Пропусти вперёд авторское правило — и
       // запрос из интернета, попавший под него, уедет в туннель раньше
       // запрета, то есть прокси станет открытым.
-      final rules = _rules(build(settings: const AppSettings(lanSharing: true)));
+      final rules = _rules(
+        build(settings: const AppSettings(lanSharing: true)),
+      );
       final tags = rules.map((r) => r['ruleTag']).toList();
 
       final deny = tags.indexOf('lan-deny');
@@ -259,8 +273,9 @@ void main() {
       expect(rules.last['ruleTag'], 'final');
       expect(rules.last['outboundTag'], 'proxy');
       expect(
-        _rules(build(settings: const AppSettings(finalOutbound: 'direct')))
-            .last['outboundTag'],
+        _rules(
+          build(settings: const AppSettings(finalOutbound: 'direct')),
+        ).last['outboundTag'],
         'direct',
       );
     });

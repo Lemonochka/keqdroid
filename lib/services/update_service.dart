@@ -92,7 +92,8 @@ class UpdateService {
   static Future<UpdateInfo?> Function({
     required bool viaLocalProxy,
     required int httpPort,
-  }) fetchUpdate = _fetchUpdate;
+  })
+  fetchUpdate = _fetchUpdate;
 
   @visibleForTesting
   static void resetAutoCheck() {
@@ -137,9 +138,10 @@ class UpdateService {
     if (last != null && DateTime.now().difference(last) < minAutoCheckGap) {
       return _cachedAutoResult;
     }
-    return _autoCheckInFlight ??=
-        _autoCheck(viaLocalProxy: viaLocalProxy, httpPort: httpPort)
-            .whenComplete(() => _autoCheckInFlight = null);
+    return _autoCheckInFlight ??= _autoCheck(
+      viaLocalProxy: viaLocalProxy,
+      httpPort: httpPort,
+    ).whenComplete(() => _autoCheckInFlight = null);
   }
 
   static Future<UpdateInfo?> _autoCheck({
@@ -168,7 +170,10 @@ class UpdateService {
     required bool force,
   }) async {
     try {
-      return await fetchUpdate(viaLocalProxy: viaLocalProxy, httpPort: httpPort);
+      return await fetchUpdate(
+        viaLocalProxy: viaLocalProxy,
+        httpPort: httpPort,
+      );
     } catch (e) {
       AppLogger.instance.warn(
         'Update check failed '
@@ -226,11 +231,15 @@ class UpdateService {
     final assets = latestRelease['assets'] as List?;
     final asset = linuxKind != null
         ? _findLinuxAsset(assets, linuxKind)
-        : _findAssetForCurrentPlatform(assets, windowsInstalled: windowsInstalled);
+        : _findAssetForCurrentPlatform(
+            assets,
+            windowsInstalled: windowsInstalled,
+          );
     if (asset == null) return null;
 
     final assetName = (asset['name'] ?? '').toString();
-    final checksumAsset = ReleaseSignature.sumsAsset(assets) ??
+    final checksumAsset =
+        ReleaseSignature.sumsAsset(assets) ??
         _findChecksumAsset(assets, assetName);
     final signatureAsset = ReleaseSignature.signatureAsset(assets);
 
@@ -240,11 +249,12 @@ class UpdateService {
       // pacman обновляет pacman: ведём на страницу релиза, keqdroid-bin в AUR может и не быть
       downloadUrl: linuxKind == LinuxInstallKind.pacman
           ? (latestRelease['html_url'] as String? ??
-              'https://github.com/$_owner/$_repo/releases/latest')
+                'https://github.com/$_owner/$_repo/releases/latest')
           : asset['browser_download_url'] as String,
       releaseNotes: latestRelease['body'] as String?,
       apkSize: asset['size'] as int? ?? 0,
-      openInBrowser: linuxKind == LinuxInstallKind.pacman ||
+      openInBrowser:
+          linuxKind == LinuxInstallKind.pacman ||
           linuxKind == LinuxInstallKind.readOnly ||
           (Platform.isWindows && _shouldOpenDesktopAssetInBrowser(asset)),
       assetName: assetName,
@@ -308,7 +318,7 @@ class UpdateService {
 
   // один повтор: WRONG_VERSION_NUMBER бывает разовым, таймауты не повторяем
   static Future<Response<Object?>> _getReleasesPage(Dio dio, int page) async {
-    for (var attempt = 0;; attempt++) {
+    for (var attempt = 0; ; attempt++) {
       try {
         return await dio.get<Object?>(
           'https://api.github.com/repos/$_owner/$_repo/releases',
@@ -427,8 +437,7 @@ class UpdateService {
       LinuxInstallKind.rpm => const ['.x86_64.rpm', '.rpm'],
       LinuxInstallKind.pacman ||
       LinuxInstallKind.portable ||
-      LinuxInstallKind.readOnly =>
-        const ['-linux-x64.tar.gz'],
+      LinuxInstallKind.readOnly => const ['-linux-x64.tar.gz'],
     };
     for (final suffix in preferredSuffixes) {
       for (final asset in assets.cast<Map<String, dynamic>>()) {
@@ -442,8 +451,7 @@ class UpdateService {
   static Map<String, dynamic>? checksumAssetFor(
     List<Object?>? assets,
     String assetName,
-  ) =>
-      _findChecksumAsset(assets, assetName);
+  ) => _findChecksumAsset(assets, assetName);
 
   // хеш либо в <имя>.sha256 рядом, либо в общем SHA256SUMS/checksums.txt, с 0.19.0 только общий
   static Map<String, dynamic>? _findChecksumAsset(
@@ -580,7 +588,8 @@ class UpdateService {
       await file.delete();
     }
 
-    final assembled = Platform.isAndroid &&
+    final assembled =
+        Platform.isAndroid &&
         ext == '.apk' &&
         await _assembleFromInstalledApk(dio, info, file, onProgress);
     if (!assembled) {
@@ -649,11 +658,11 @@ class UpdateService {
       throw StateError(
         target == null
             ? 'The AppImage this app was started from has been moved or '
-                'renamed, so it cannot be replaced in place. The new version '
-                'is saved as $saved'
+                  'renamed, so it cannot be replaced in place. The new version '
+                  'is saved as $saved'
             : 'The AppImage is in ${p.dirname(target)}, where this user '
-                'cannot write, so it cannot be replaced in place. The new '
-                'version is saved as $saved',
+                  'cannot write, so it cannot be replaced in place. The new '
+                  'version is saved as $saved',
       );
     }
 
@@ -680,10 +689,7 @@ class UpdateService {
 
   // у каждой версии своё имя, и после установки файл оставался: на ПК за неделю 13.11.2026 набралось 258 МБ.
   // свежие не трогаем, после перезапуска их ещё может держать установщик или скрипт обновления
-  static Future<void> sweepLeftovers({
-    Directory? dir,
-    DateTime? now,
-  }) async {
+  static Future<void> sweepLeftovers({Directory? dir, DateTime? now}) async {
     try {
       final temp = dir ?? await getTemporaryDirectory();
       final cutoff = (now ?? DateTime.now()).subtract(
@@ -704,16 +710,15 @@ class UpdateService {
     UpdateInfo info,
     File file,
     void Function(int received, int total)? onProgress,
-  ) =>
-      dio.download(
-        info.downloadUrl,
-        file.path,
-        onReceiveProgress: (received, total) {
-          if (total > 0) {
-            onProgress?.call(received, total);
-          }
-        },
-      );
+  ) => dio.download(
+    info.downloadUrl,
+    file.path,
+    onReceiveProgress: (received, total) {
+      if (total > 0) {
+        onProgress?.call(received, total);
+      }
+    },
+  );
 
   static Future<bool> _assembleFromInstalledApk(
     Dio dio,

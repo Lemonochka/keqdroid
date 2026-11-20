@@ -29,19 +29,19 @@ enum IconShape {
   }
 
   RoundedPolygon get polygon => switch (this) {
-        IconShape.circle => MaterialShapes.circle,
-        IconShape.square => MaterialShapes.square,
-        IconShape.slanted => MaterialShapes.slanted,
-        IconShape.arch => MaterialShapes.arch,
-        IconShape.pill => MaterialShapes.pill,
-        IconShape.gem => MaterialShapes.gem,
-        IconShape.sunny => MaterialShapes.sunny,
-        IconShape.cookie => MaterialShapes.cookie7Sided,
-        IconShape.clover => MaterialShapes.clover4Leaf,
-        IconShape.flower => MaterialShapes.flower,
-        IconShape.puffy => MaterialShapes.puffy,
-        IconShape.pebble => MaterialShapes.softBurst,
-      };
+    IconShape.circle => MaterialShapes.circle,
+    IconShape.square => MaterialShapes.square,
+    IconShape.slanted => MaterialShapes.slanted,
+    IconShape.arch => MaterialShapes.arch,
+    IconShape.pill => MaterialShapes.pill,
+    IconShape.gem => MaterialShapes.gem,
+    IconShape.sunny => MaterialShapes.sunny,
+    IconShape.cookie => MaterialShapes.cookie7Sided,
+    IconShape.clover => MaterialShapes.clover4Leaf,
+    IconShape.flower => MaterialShapes.flower,
+    IconShape.puffy => MaterialShapes.puffy,
+    IconShape.pebble => MaterialShapes.softBurst,
+  };
 
   ShapeBorder border(double size) => RoundedPolygonBorder(polygon: polygon);
 }

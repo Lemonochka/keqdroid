@@ -8,7 +8,8 @@ import 'package:keqdroid/utils/socks5_credentials.dart';
 
 // выбор IPv6 в TUN у mihomo: закрыть, пустить через сервер или мимо.
 // TCP закрывает патч ядра по ключу, правило перед MATCH ловит остальное, как tun-ipv6 у xray
-const _link = 'vless://00000000-0000-4000-8000-000000000000@198.51.100.41:443'
+const _link =
+    'vless://00000000-0000-4000-8000-000000000000@198.51.100.41:443'
     '?type=tcp&security=none#pc';
 
 const _clash = '''
@@ -30,11 +31,11 @@ rules:
 ''';
 
 MihomoTunOptions _pc(String? ipv6) => MihomoTunOptions(
-      device: kTunInterfaceName,
-      stack: TunSettings.stackGvisor,
-      mtu: 9000,
-      ipv6: ipv6,
-    );
+  device: kTunInterfaceName,
+  stack: TunSettings.stackGvisor,
+  mtu: 9000,
+  ipv6: ipv6,
+);
 
 Map<String, dynamic> _build(
   MihomoTunOptions tun, {
@@ -99,7 +100,10 @@ void main() {
       expect((config['dns'] as Map)['ipv6'], isTrue);
       expect(_tun(config)['inet6-address'], [kTunInterfaceIpv6Prefix]);
       expect(config.containsKey(MihomoConfigGen.closeTunIpv6Key), isFalse);
-      expect(_rules(config), isNot(contains(MihomoConfigGen.closedTunIpv6Rule)));
+      expect(
+        _rules(config),
+        isNot(contains(MihomoConfigGen.closedTunIpv6Rule)),
+      );
     });
 
     test('на Android тот же адрес читает VpnService', () {
@@ -117,13 +121,19 @@ void main() {
   });
 
   group('мимо VPN', () {
-    test('пустой адрес IPv6 сильнее умолчания ядра даже со стратегией UseIP', () {
-      final config = _build(_pc(TunSettings.ipv6Bypass), strategy: 'UseIP');
-      expect(config['ipv6'], isTrue);
-      expect(_tun(config)['inet6-address'], isEmpty);
-      expect(config.containsKey(MihomoConfigGen.closeTunIpv6Key), isFalse);
-      expect(_rules(config), isNot(contains(MihomoConfigGen.closedTunIpv6Rule)));
-    });
+    test(
+      'пустой адрес IPv6 сильнее умолчания ядра даже со стратегией UseIP',
+      () {
+        final config = _build(_pc(TunSettings.ipv6Bypass), strategy: 'UseIP');
+        expect(config['ipv6'], isTrue);
+        expect(_tun(config)['inet6-address'], isEmpty);
+        expect(config.containsKey(MihomoConfigGen.closeTunIpv6Key), isFalse);
+        expect(
+          _rules(config),
+          isNot(contains(MihomoConfigGen.closedTunIpv6Rule)),
+        );
+      },
+    );
 
     test('со стратегией UseIPv4 глобальный ipv6 выключен, как раньше', () {
       final config = _build(_pc(TunSettings.ipv6Bypass));
@@ -131,12 +141,15 @@ void main() {
     });
   });
 
-  test('без режима в TUN всё как до выбора: семейство решает стратегия DNS', () {
-    for (final strategy in ['UseIPv4', 'UseIP']) {
-      final config = _build(_pc(null), strategy: strategy);
-      expect(config['ipv6'], strategy == 'UseIP');
-      expect(_tun(config).containsKey('inet6-address'), isFalse);
-      expect(config.containsKey(MihomoConfigGen.closeTunIpv6Key), isFalse);
-    }
-  });
+  test(
+    'без режима в TUN всё как до выбора: семейство решает стратегия DNS',
+    () {
+      for (final strategy in ['UseIPv4', 'UseIP']) {
+        final config = _build(_pc(null), strategy: strategy);
+        expect(config['ipv6'], strategy == 'UseIP');
+        expect(_tun(config).containsKey('inet6-address'), isFalse);
+        expect(config.containsKey(MihomoConfigGen.closeTunIpv6Key), isFalse);
+      }
+    },
+  );
 }

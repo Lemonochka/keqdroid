@@ -99,7 +99,8 @@ class _SmoothWheelActivity extends ScrollActivity {
 
   void _tick(Duration elapsed) {
     final double dt =
-        (elapsed - _lastElapsed).inMicroseconds / Duration.microsecondsPerSecond;
+        (elapsed - _lastElapsed).inMicroseconds /
+        Duration.microsecondsPerSecond;
     _lastElapsed = elapsed;
     if (dt <= 0) return;
 
@@ -140,7 +141,7 @@ class _SmoothWheelActivity extends ScrollActivity {
 
 class SmoothScroll extends StatefulWidget {
   final Widget Function(BuildContext context, ScrollController? controller)
-      builder;
+  builder;
 
   const SmoothScroll({super.key, required this.builder});
 

@@ -33,7 +33,9 @@ class AppLogger {
         if (await previous.exists()) await previous.readAsString(),
         if (await file.exists()) await file.readAsString(),
       ].join();
-      return text.length > maxChars ? text.substring(text.length - maxChars) : text;
+      return text.length > maxChars
+          ? text.substring(text.length - maxChars)
+          : text;
     } catch (_) {
       return '';
     }
@@ -110,12 +112,7 @@ class AppLogger {
     StackTrace? stackTrace,
   }) {
     final text = '[$level] $message';
-    developer.log(
-      text,
-      name: 'keqdroid',
-      error: error,
-      stackTrace: stackTrace,
-    );
+    developer.log(text, name: 'keqdroid', error: error, stackTrace: stackTrace);
     if (kDebugMode && error != null) {
       debugPrint('$text | error: $error');
     }

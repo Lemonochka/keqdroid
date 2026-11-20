@@ -56,9 +56,14 @@ void main() {
     test('core kind and app pid accept nothing else', () {
       expect(
         body,
-        contains(r'case "$KIND" in xray) NAME=keqrnel; EXT=json ;; mihomo) NAME=mihomo; EXT=yaml ;; *) exit 5 ;; esac'),
+        contains(
+          r'case "$KIND" in xray) NAME=keqrnel; EXT=json ;; mihomo) NAME=mihomo; EXT=yaml ;; *) exit 5 ;; esac',
+        ),
       );
-      expect(body, contains(r'''case "$APPPID" in ''|*[!0-9]*) exit 5 ;; esac'''));
+      expect(
+        body,
+        contains(r'''case "$APPPID" in ''|*[!0-9]*) exit 5 ;; esac'''),
+      );
     });
 
     test('under systemd the core cannot write outside its run directory', () {
@@ -69,16 +74,18 @@ void main() {
 
   group('the first password sets up passwordless TUN', () {
     test('and runs the core through the new helper right away', () async {
-      final script =
-          await LinuxTunnelBackend.installScriptForTest(runAfter: true);
+      final script = await LinuxTunnelBackend.installScriptForTest(
+        runAfter: true,
+      );
       expect(script, contains("cat > '$helper'"));
       expect(script, contains('#!/bin/sh\n$body'));
       expect(script.trimRight(), endsWith("exec '$helper' \"\$@\""));
     });
 
     test('the switch in settings only installs', () async {
-      final script =
-          await LinuxTunnelBackend.installScriptForTest(runAfter: false);
+      final script = await LinuxTunnelBackend.installScriptForTest(
+        runAfter: false,
+      );
       expect(script, contains("cat > '$helper'"));
       expect(script, isNot(contains('exec ')));
     });

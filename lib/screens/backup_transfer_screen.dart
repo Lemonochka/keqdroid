@@ -26,12 +26,11 @@ class BackupTransferScreen extends ConsumerStatefulWidget {
   static Future<KeqdroidBackup?> open(
     BuildContext context,
     BackupTransferDirection direction,
-  ) =>
-      Navigator.of(context).push(
-        MaterialPageRoute<KeqdroidBackup>(
-          builder: (_) => BackupTransferScreen(direction: direction),
-        ),
-      );
+  ) => Navigator.of(context).push(
+    MaterialPageRoute<KeqdroidBackup>(
+      builder: (_) => BackupTransferScreen(direction: direction),
+    ),
+  );
 
   @visibleForTesting
   static Future<String?> Function() lanAddress = findLanAddress;
@@ -149,8 +148,9 @@ class _BackupTransferScreenState extends ConsumerState<BackupTransferScreen> {
           const SizedBox(height: ExpressiveSpacing.medium),
           Text(
             l10n.backupTransferHowTo,
-            style: textTheme.bodyLarge
-                ?.copyWith(color: AppTheme.textLight(context)),
+            style: textTheme.bodyLarge?.copyWith(
+              color: AppTheme.textLight(context),
+            ),
           ),
           const SizedBox(height: ExpressiveSpacing.largeIncreased),
           _status(context, l10n),
@@ -201,27 +201,27 @@ class _BackupTransferScreenState extends ConsumerState<BackupTransferScreen> {
   Widget _status(BuildContext context, AppLocalizations l10n) {
     final (Widget icon, String text, Color color) = switch (_phase) {
       _Phase.starting || _Phase.waiting => (
-          ShapeLoadingIndicator(size: 24, color: AppTheme.accent(context)),
-          _give
-              ? l10n.backupTransferWaitingGive
-              : l10n.backupTransferWaitingReceive,
-          AppTheme.accent(context),
-        ),
+        ShapeLoadingIndicator(size: 24, color: AppTheme.accent(context)),
+        _give
+            ? l10n.backupTransferWaitingGive
+            : l10n.backupTransferWaitingReceive,
+        AppTheme.accent(context),
+      ),
       _Phase.given => (
-          Icon(Icons.check_circle_rounded, color: AppTheme.green(context)),
-          l10n.backupTransferGiven,
-          AppTheme.green(context),
-        ),
+        Icon(Icons.check_circle_rounded, color: AppTheme.green(context)),
+        l10n.backupTransferGiven,
+        AppTheme.green(context),
+      ),
       _Phase.failed => (
-          Icon(Icons.error_outline_rounded, color: AppTheme.red(context)),
-          l10n.settingsImportFailed(_detail),
-          AppTheme.red(context),
-        ),
+        Icon(Icons.error_outline_rounded, color: AppTheme.red(context)),
+        l10n.settingsImportFailed(_detail),
+        AppTheme.red(context),
+      ),
       _Phase.noNetwork => (
-          Icon(Icons.wifi_off_rounded, color: AppTheme.red(context)),
-          l10n.backupTransferNoNetwork,
-          AppTheme.red(context),
-        ),
+        Icon(Icons.wifi_off_rounded, color: AppTheme.red(context)),
+        l10n.backupTransferNoNetwork,
+        AppTheme.red(context),
+      ),
     };
     return Row(
       children: [
@@ -230,7 +230,9 @@ class _BackupTransferScreenState extends ConsumerState<BackupTransferScreen> {
         Flexible(
           child: Text(
             text,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(color: color),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(color: color),
           ),
         ),
       ],

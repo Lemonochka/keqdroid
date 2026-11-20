@@ -21,9 +21,7 @@ void main() {
       );
       // Форма без предшествующего тега.
       expect(
-        AppInternalsService.formatVersion(
-          'v0.0.0-20230101000000-abcdefabcdef',
-        ),
+        AppInternalsService.formatVersion('v0.0.0-20230101000000-abcdefabcdef'),
         'v0.0.0 · abcdefabcdef',
       );
     });
@@ -76,7 +74,8 @@ void main() {
     }) {
       return AppInternals(
         processExits: processExits,
-        cores: cores ??
+        cores:
+            cores ??
             [
               CoreInfo(
                 name: 'keqrnel.exe',
@@ -89,16 +88,14 @@ void main() {
                   'sing-box': 'v1.13.19',
                 },
               ),
-              const CoreInfo.missing(
-                name: 'mihomo.exe',
-                role: CoreRole.core,
-              ),
+              const CoreInfo.missing(name: 'mihomo.exe', role: CoreRole.core),
             ],
         geoBases: const [
           GeoBaseInfo(name: 'geoip.dat', codeCount: 253, sizeBytes: 23490631),
           GeoBaseInfo(name: 'geosite.dat', codeCount: 0, missing: true),
         ],
-        session: session ??
+        session:
+            session ??
             const SessionInfo(
               status: VpnStatus.connected,
               engine: 'keqrnel',
@@ -200,24 +197,28 @@ void main() {
       expect(report, contains('## process exits'));
       expect(
         report,
-        contains('2026-09-27 03:12:44 OTHER status=0 importance=125 '
-            'vpn=connected "athena kill"'),
+        contains(
+          '2026-09-27 03:12:44 OTHER status=0 importance=125 '
+          'vpn=connected "athena kill"',
+        ),
       );
       // Без пометки о VPN и без описания — так и пишем, не выдумывая.
       expect(
         report,
-        contains('2026-09-26 22:01:05 USER_REQUESTED status=0 importance=400\n'),
+        contains(
+          '2026-09-26 22:01:05 USER_REQUESTED status=0 importance=400\n',
+        ),
       );
     });
   });
 
   group('смерть процесса', () {
     ProcessExit exitWith(int reason, {int? sdkInt = 35}) => ProcessExit(
-          time: DateTime(2026, 9, 27),
-          reason: reason,
-          reasonName: '$reason',
-          sdkInt: sdkInt,
-        );
+      time: DateTime(2026, 9, 27),
+      reason: reason,
+      reasonName: '$reason',
+      sdkInt: sdkInt,
+    );
 
     test('разбор ответа нативной стороны', () {
       final exit = ProcessExit.fromMap({
@@ -250,11 +251,11 @@ void main() {
 
     test('VPN считается включённым, только пока сессия жила', () {
       ProcessExit withVpn(String? status) => ProcessExit(
-            time: DateTime(2026),
-            reason: 2,
-            reasonName: 'SIGNALED',
-            vpnStatus: status,
-          );
+        time: DateTime(2026),
+        reason: 2,
+        reasonName: 'SIGNALED',
+        vpnStatus: status,
+      );
       expect(withVpn('connected').vpnWasOn, isTrue);
       expect(withVpn('connecting').vpnWasOn, isTrue);
       expect(withVpn('disconnected').vpnWasOn, isFalse);
@@ -271,15 +272,24 @@ void main() {
       expect(exitWith(4).cause, ProcessExitCause.crash); // CRASH
       expect(exitWith(5).cause, ProcessExitCause.crash); // CRASH_NATIVE
       expect(exitWith(6).cause, ProcessExitCause.crash); // ANR
-      expect(exitWith(7).cause, ProcessExitCause.crash); // INITIALIZATION_FAILURE
+      expect(
+        exitWith(7).cause,
+        ProcessExitCause.crash,
+      ); // INITIALIZATION_FAILURE
       expect(exitWith(8).cause, ProcessExitCause.update); // PERMISSION_CHANGE
-      expect(exitWith(9).cause, ProcessExitCause.system); // EXCESSIVE_RESOURCE_USAGE
+      expect(
+        exitWith(9).cause,
+        ProcessExitCause.system,
+      ); // EXCESSIVE_RESOURCE_USAGE
       expect(exitWith(10).cause, ProcessExitCause.user); // USER_REQUESTED
       expect(exitWith(11).cause, ProcessExitCause.user); // USER_STOPPED
       expect(exitWith(12).cause, ProcessExitCause.system); // DEPENDENCY_DIED
       expect(exitWith(13).cause, ProcessExitCause.system); // OTHER
       expect(exitWith(14).cause, ProcessExitCause.system); // FREEZER
-      expect(exitWith(15).cause, ProcessExitCause.update); // PACKAGE_STATE_CHANGE
+      expect(
+        exitWith(15).cause,
+        ProcessExitCause.update,
+      ); // PACKAGE_STATE_CHANGE
       expect(exitWith(16).cause, ProcessExitCause.update); // PACKAGE_UPDATED
       expect(exitWith(99).cause, ProcessExitCause.system);
     });

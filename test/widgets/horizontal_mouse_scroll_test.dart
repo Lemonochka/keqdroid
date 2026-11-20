@@ -6,7 +6,9 @@ import 'package:keqdroid/shared/ui/horizontal_mouse_scroll.dart';
 /// Колесо над горизонтальной лентой внутри вертикальной страницы (выбор картинки подписки на ПК):
 /// листало страницу вниз, а карусель с привязкой возвращалась к той же картинке.
 
-Future<(ScrollController, CarouselController)> _pump(WidgetTester tester) async {
+Future<(ScrollController, CarouselController)> _pump(
+  WidgetTester tester,
+) async {
   tester.view.physicalSize = const Size(500, 600);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
@@ -52,7 +54,9 @@ Future<void> _wheel(WidgetTester tester, Offset at, double dy) async {
 }
 
 void main() {
-  testWidgets('колесо над каруселью листает её по картинке, а не страницу', (tester) async {
+  testWidgets('колесо над каруселью листает её по картинке, а не страницу', (
+    tester,
+  ) async {
     final (page, carousel) = await _pump(tester);
     final at = tester.getCenter(find.byType(CarouselView));
     await _wheel(tester, at, 50);
@@ -65,7 +69,9 @@ void main() {
     expect(page.offset, 0);
   });
 
-  testWidgets('у начала карусели колесо вверх отдаётся странице', (tester) async {
+  testWidgets('у начала карусели колесо вверх отдаётся странице', (
+    tester,
+  ) async {
     final (page, carousel) = await _pump(tester);
     page.jumpTo(40);
     await tester.pump();

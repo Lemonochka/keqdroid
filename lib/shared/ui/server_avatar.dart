@@ -9,11 +9,7 @@ import '../../models/server_flag.dart';
 import 'app_theme.dart';
 import 'expressive_elements.dart';
 
-enum ServerIconPalette {
-  protocol,
-
-  themed,
-}
+enum ServerIconPalette { protocol, themed }
 
 class ServerIconPaletteTheme extends ThemeExtension<ServerIconPaletteTheme> {
   const ServerIconPaletteTheme({this.palette = ServerIconPalette.themed});
@@ -41,17 +37,16 @@ class ServerIconPaletteTheme extends ThemeExtension<ServerIconPaletteTheme> {
 ({Color background, Color foreground}) serverIconColors(
   BuildContext context,
   String protocol,
-) =>
-    switch (ServerIconPaletteTheme.of(context)) {
-      ServerIconPalette.themed => (
-          background: AppTheme.accentContainer(context),
-          foreground: AppTheme.onAccentContainer(context),
-        ),
-      ServerIconPalette.protocol => (
-          background: serverProtocolColor(context, protocol),
-          foreground: Colors.white,
-        ),
-    };
+) => switch (ServerIconPaletteTheme.of(context)) {
+  ServerIconPalette.themed => (
+    background: AppTheme.accentContainer(context),
+    foreground: AppTheme.onAccentContainer(context),
+  ),
+  ServerIconPalette.protocol => (
+    background: serverProtocolColor(context, protocol),
+    foreground: Colors.white,
+  ),
+};
 
 Color serverProtocolColor(BuildContext context, String protocol) =>
     switch (protocol) {
@@ -206,10 +201,9 @@ const _flatFlags = <String, _FlatFlagArt>{
   // 🏴 чёрный
   '\u{1F3F4}': _FlatFlagArt([Color(0xFF1B1B1B)]),
   // 🏴‍☠️ пиратский
-  '\u{1F3F4}\u{200D}\u{2620}': _FlatFlagArt(
-    [Color(0xFF1B1B1B)],
-    emblem: '\u{2620}\u{FE0F}',
-  ),
+  '\u{1F3F4}\u{200D}\u{2620}': _FlatFlagArt([
+    Color(0xFF1B1B1B),
+  ], emblem: '\u{2620}\u{FE0F}'),
   // 🏳️‍🌈 радужный
   '\u{1F3F3}\u{200D}\u{1F308}': _FlatFlagArt([
     Color(0xFFE40303),

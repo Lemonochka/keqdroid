@@ -84,8 +84,10 @@ class PacedClock extends ChangeNotifier {
       if (force) SchedulerBinding.instance.scheduleFrame();
       return;
     }
-    _callbackId = SchedulerBinding.instance
-        .scheduleFrameCallback(_onFrame, scheduleNewFrame: force);
+    _callbackId = SchedulerBinding.instance.scheduleFrameCallback(
+      _onFrame,
+      scheduleNewFrame: force,
+    );
   }
 
   void _onFrame(Duration stamp) {
@@ -159,10 +161,10 @@ class FramePace {
 
   // на 90 Гц шаг 1: 45 к/с заметно хуже 60, а на 144 шаг 2 даёт 72
   int strideFor(Duration vsync) => math.max(
-        1,
-        (_governor.frameInterval.inMicroseconds / vsync.inMicroseconds + 0.25)
-            .floor(),
-      );
+    1,
+    (_governor.frameInterval.inMicroseconds / vsync.inMicroseconds + 0.25)
+        .floor(),
+  );
 
   @visibleForTesting
   void reset([FramePaceGovernor? governor]) {
@@ -184,7 +186,9 @@ class FramePace {
   void _onTimings(List<FrameTiming> timings) {
     for (final t in timings) {
       _governor.addFrame(
-        at: Duration(microseconds: t.timestampInMicroseconds(FramePhase.vsyncStart)),
+        at: Duration(
+          microseconds: t.timestampInMicroseconds(FramePhase.vsyncStart),
+        ),
         build: t.buildDuration,
         raster: t.rasterDuration,
       );

@@ -18,11 +18,17 @@ void main() {
     test('участвует в равенстве, иначе переключатель не перерисует экран', () {
       const base = AppSettings();
       expect(base.copyWith(autostartInTray: true), isNot(base));
-      expect(base.copyWith(autostartInTray: true).hashCode, isNot(base.hashCode));
+      expect(
+        base.copyWith(autostartInTray: true).hashCode,
+        isNot(base.hashCode),
+      );
     });
 
     test('в резервную копию не едет: это про автозапуск этой машины', () {
-      expect(SettingsBackupService.portableSettingKeys, isNot(contains('autostartInTray')));
+      expect(
+        SettingsBackupService.portableSettingKeys,
+        isNot(contains('autostartInTray')),
+      );
     });
   });
 }

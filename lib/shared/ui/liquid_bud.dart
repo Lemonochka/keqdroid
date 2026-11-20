@@ -42,6 +42,7 @@ class LiquidBud {
       put(r.right);
       put(r.bottom);
     }
+
     void color(Color c) {
       put(c.r);
       put(c.g);

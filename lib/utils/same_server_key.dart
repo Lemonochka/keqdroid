@@ -26,8 +26,7 @@ List<String> withoutNameCopies(
   final best = <String, String>{};
   for (var i = 0; i < configs.length; i++) {
     final current = best[keys[i]];
-    if (current == null ||
-        (rank != null && rank(configs[i]) > rank(current))) {
+    if (current == null || (rank != null && rank(configs[i]) > rank(current))) {
       best[keys[i]] = configs[i];
     }
   }
@@ -57,8 +56,9 @@ String? _vmessWithoutName(String link) {
         .replaceAll(RegExp(r'\s+'), '')
         .replaceAll('-', '+')
         .replaceAll('_', '/');
-    final decoded =
-        jsonDecode(utf8.decode(base64.decode(base64.normalize(payload))));
+    final decoded = jsonDecode(
+      utf8.decode(base64.decode(base64.normalize(payload))),
+    );
     if (decoded is Map<String, dynamic>) {
       return 'vmess://${jsonEncode({...decoded}..remove('ps'))}';
     }

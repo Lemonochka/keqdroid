@@ -7,7 +7,8 @@ import 'package:keqdroid/services/exit_ip_service.dart';
 /// Выход подключения: адрес и страна из трассировки Cloudflare, и только
 /// через локальный инбаунд ядра — прямой запрос показал бы адрес без VPN.
 void main() {
-  const trace = 'fl=12f34\n'
+  const trace =
+      'fl=12f34\n'
       'h=one.one.one.one\n'
       'ip=45.131.212.234\n'
       'ts=1760000000.123\n'
@@ -24,8 +25,7 @@ void main() {
     });
 
     test('IPv6 тоже адрес', () {
-      final exit =
-          ExitIpService.parseTrace('ip=2a01:4f8:c0c:1::1\nloc=de\n')!;
+      final exit = ExitIpService.parseTrace('ip=2a01:4f8:c0c:1::1\nloc=de\n')!;
       expect(exit.ip, '2a01:4f8:c0c:1::1');
       expect(exit.countryCode, 'DE');
     });

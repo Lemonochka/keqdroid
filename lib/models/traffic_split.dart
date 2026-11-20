@@ -100,15 +100,15 @@ class TrafficSplitState {
       coreUpload >= this.coreUpload;
 
   Map<String, Object?> toJson() => {
-        'v': 1,
-        'session': session,
-        'core': [coreDownload, coreUpload],
-        'vpn': [vpnDownload, vpnUpload],
-        'direct': [directDownload, directUpload],
-        'conns': {
-          for (final e in connections.entries) e.key: [e.value.$1, e.value.$2],
-        },
-      };
+    'v': 1,
+    'session': session,
+    'core': [coreDownload, coreUpload],
+    'vpn': [vpnDownload, vpnUpload],
+    'direct': [directDownload, directUpload],
+    'conns': {
+      for (final e in connections.entries) e.key: [e.value.$1, e.value.$2],
+    },
+  };
 
   static TrafficSplitState? fromJson(Object? json) {
     if (json is! Map) return null;

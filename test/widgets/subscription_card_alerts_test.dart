@@ -58,12 +58,14 @@ class _DeviceLimitService extends SubscriptionService {
   _DeviceLimitService(super.storage);
 
   @override
-  Future<UpdateResult> updateSubscription(Subscription sub, {cancelToken}) async =>
-      UpdateResult(
-        success: false,
-        error: 'HTTP 429: max-devices-reached',
-        subscription: sub,
-      );
+  Future<UpdateResult> updateSubscription(
+    Subscription sub, {
+    cancelToken,
+  }) async => UpdateResult(
+    success: false,
+    error: 'HTTP 429: max-devices-reached',
+    subscription: sub,
+  );
 }
 
 Future<ProviderContainer> _pump(
@@ -105,15 +107,20 @@ Future<ProviderContainer> _pump(
 
 void _setError(ProviderContainer container, Object? error) => container
     .read(subscriptionRefreshErrorsProvider.notifier)
-    .update((m) => {...m}..remove('a')..addAll({'a': ?error}));
+    .update(
+      (m) => {...m}
+        ..remove('a')
+        ..addAll({'a': ?error}),
+    );
 
 Finder get _anyErrorText => find.textContaining('max-devices');
 
 void main() {
   setUp(() => _subs = [_live]);
 
-  testWidgets('неудачное обновление показывает ошибку словами приложения',
-      (tester) async {
+  testWidgets('неудачное обновление показывает ошибку словами приложения', (
+    tester,
+  ) async {
     final container = await _pump(tester);
     await expectLater(
       container.read(subscriptionsProvider.notifier).refreshTracked(_live),
@@ -124,7 +131,10 @@ void main() {
     expect(find.text(_ru.errorDeviceLimitMessage), findsOneWidget);
     expect(find.textContaining('Device Limit'), findsNothing);
     // в развёрнутой карточке причину видно целиком: на немецком при крупном шрифте она обрезалась
-    expect(tester.widget<Text>(find.text(_ru.errorDeviceLimitMessage)).maxLines, isNull);
+    expect(
+      tester.widget<Text>(find.text(_ru.errorDeviceLimitMessage)).maxLines,
+      isNull,
+    );
   });
 
   testWidgets('ошибка уходит, когда обновление прошло', (tester) async {
@@ -156,16 +166,18 @@ void main() {
     ('zh', '订阅已到期（3 天前）'),
     ('fa', 'اشتراک 3 روز پیش منقضی شد'),
   ]) {
-    testWidgets('плашка истёкшей подписки читается по-человечески: $code',
-        (tester) async {
+    testWidgets('плашка истёкшей подписки читается по-человечески: $code', (
+      tester,
+    ) async {
       _subs = [_expired];
       await _pump(tester, locale: Locale(code));
       expect(find.text(title), findsOneWidget);
     });
   }
 
-  testWidgets('свёрнутая карточка ошибку не прячет, как и объявление',
-      (tester) async {
+  testWidgets('свёрнутая карточка ошибку не прячет, как и объявление', (
+    tester,
+  ) async {
     final container = await _pump(tester);
     container
         .read(collapsedSubscriptionCardsProvider.notifier)
@@ -174,7 +186,10 @@ void main() {
     _setError(container, 'HTTP 429: max-devices-reached');
     await tester.pumpAndSettle();
     expect(find.text(_ru.errorDeviceLimitTitle), findsOneWidget);
-    expect(tester.widget<Text>(find.text(_ru.errorDeviceLimitMessage)).maxLines, 2);
+    expect(
+      tester.widget<Text>(find.text(_ru.errorDeviceLimitMessage)).maxLines,
+      2,
+    );
   });
 
   testWidgets('плашка ошибки выезжает, а не появляется рывком', (tester) async {

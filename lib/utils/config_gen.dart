@@ -116,13 +116,13 @@ class ConfigGeneratorV2 {
 
   // тот же DoH, что в боевом конфиге: UDP-53 к 8.8.8.8 у части провайдеров подменяют, и пинг краснел бы на живом
   static Map<String, dynamic> _pingDns() => {
-        'servers': [
-          'https+local://1.1.1.1/dns-query',
-          'https+local://8.8.8.8/dns-query',
-          'localhost',
-        ],
-        'queryStrategy': 'UseIPv4',
-      };
+    'servers': [
+      'https+local://1.1.1.1/dns-query',
+      'https+local://8.8.8.8/dns-query',
+      'localhost',
+    ],
+    'queryStrategy': 'UseIPv4',
+  };
 
   static const int ephemeralPingPort = 28150;
 
@@ -145,7 +145,11 @@ class ConfigGeneratorV2 {
 
   static List<String>? _splitAlpn(String? raw) {
     if (raw == null || raw.trim().isEmpty) return null;
-    final list = raw.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+    final list = raw
+        .split(',')
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
     return list.isEmpty ? null : list;
   }
 
@@ -153,11 +157,11 @@ class ConfigGeneratorV2 {
   // одиночный alpn=h2 не трогаем, его могли поставить осознанно
   static List<String> _alpnForNetwork(String network, List<String> alpn) =>
       (network == 'ws' || network == 'httpupgrade') &&
-              alpn.length == 2 &&
-              alpn[0] == 'h2' &&
-              alpn[1] == 'http/1.1'
-          ? const ['http/1.1']
-          : alpn;
+          alpn.length == 2 &&
+          alpn[0] == 'h2' &&
+          alpn[1] == 'http/1.1'
+      ? const ['http/1.1']
+      : alpn;
 
   // allowInsecure не пишем никогда: ядро поле снесло, и один сервер с insecure=1 ронял всю подписку.
   // pcs и vcn читаем: сертификат сверяется с настоящим именем, а в ClientHello уходит маскировочное
@@ -170,9 +174,7 @@ class ConfigGeneratorV2 {
     String? pinnedPeerCertSha256,
     String? verifyPeerCertByName,
   }) {
-    final tls = <String, dynamic>{
-      'serverName': serverName,
-    };
+    final tls = <String, dynamic>{'serverName': serverName};
     final fp = fingerprint.trim();
     if (fp.isNotEmpty) {
       tls['fingerprint'] = fp;
@@ -247,7 +249,9 @@ class ConfigGeneratorV2 {
         : OwnerGuard.off;
 
     final chain = ProxyChainConfig.tryParse(trimmed);
-    final parsedCustom = chain == null ? CustomXrayConfig.tryParse(trimmed) : null;
+    final parsedCustom = chain == null
+        ? CustomXrayConfig.tryParse(trimmed)
+        : null;
     final custom = settings.ignoreProviderRules
         ? parsedCustom?.withoutProviderRules()
         : parsedCustom;
@@ -270,8 +274,9 @@ class ConfigGeneratorV2 {
       config = _buildCustomConfig(
         custom,
         settings,
-        providerExit:
-            settings.ignoreProviderRules ? parsedCustom?.providerExit : null,
+        providerExit: settings.ignoreProviderRules
+            ? parsedCustom?.providerExit
+            : null,
         resolvedServerIp: resolvedServerIp,
         pingSocksPort: pingSocksPort,
         pingHttpInbound: pingHttpInbound,
@@ -308,10 +313,11 @@ class ConfigGeneratorV2 {
   }
 
   static ({Map<String, dynamic> outbound, String address, int port})
-      _buildLinkOutbound(String trimmed, AppSettings settings) {
+  _buildLinkOutbound(String trimmed, AppSettings settings) {
     final bool isVmess = trimmed.toLowerCase().startsWith('vmess://');
     final lowerTrimmed = trimmed.toLowerCase();
-    final bool isHysteria = lowerTrimmed.startsWith('hysteria://') ||
+    final bool isHysteria =
+        lowerTrimmed.startsWith('hysteria://') ||
         lowerTrimmed.startsWith('hysteria2://') ||
         lowerTrimmed.startsWith('hy2://');
 
@@ -340,7 +346,9 @@ class ConfigGeneratorV2 {
     try {
       if (isVmess) {
         vmessConfig = _parseVmessPayload(trimmed);
-        uri = vmessConfig != null ? Uri.parse('vmess://proxy') : Uri.parse(trimmed);
+        uri = vmessConfig != null
+            ? Uri.parse('vmess://proxy')
+            : Uri.parse(trimmed);
       } else if (isHysteria) {
         // Uri.parse не берёт порт вида host:20000-20050
         uri = Uri.parse(HysteriaLinkParams.splitPorts(trimmed).$1);
@@ -349,7 +357,9 @@ class ConfigGeneratorV2 {
       }
     } catch (e) {
       // без самого конфига: в нём UUID и пароль, а ошибки уходят в журнал
-      final scheme = RegExp(r'^([a-zA-Z][a-zA-Z0-9+.-]*):').firstMatch(trimmed)?.group(1);
+      final scheme = RegExp(
+        r'^([a-zA-Z][a-zA-Z0-9+.-]*):',
+      ).firstMatch(trimmed)?.group(1);
       throw ArgumentError(
         'Invalid URI format in server config'
         '${scheme != null ? ' (scheme: $scheme)' : ''}',
@@ -357,13 +367,14 @@ class ConfigGeneratorV2 {
     }
 
     final scheme = isVmess ? 'vmess' : uri.scheme.toLowerCase();
-    final address =
-        vmessConfig != null ? (vmessConfig['add']?.toString() ?? '') : uri.host;
+    final address = vmessConfig != null
+        ? (vmessConfig['add']?.toString() ?? '')
+        : uri.host;
     final port = vmessConfig != null
         ? int.tryParse(vmessConfig['port']?.toString() ?? '') ?? 0
         : isHysteria
-            ? HysteriaLinkParams.port(trimmed)
-            : uri.port;
+        ? HysteriaLinkParams.port(trimmed)
+        : uri.port;
 
     String getParam(String key, [String def = '']) {
       if (vmessConfig != null) {
@@ -388,16 +399,42 @@ class ConfigGeneratorV2 {
     Map<String, dynamic> streamSettings = {'network': networkType};
 
     if (scheme == 'vless') {
-      outbound = _buildVlessOutbound(uri, getParam, address, port, streamSettings);
+      outbound = _buildVlessOutbound(
+        uri,
+        getParam,
+        address,
+        port,
+        streamSettings,
+      );
     } else if (scheme == 'trojan') {
-      outbound = _buildTrojanOutbound(uri, getParam, vmessConfig, address, port, streamSettings);
+      outbound = _buildTrojanOutbound(
+        uri,
+        getParam,
+        vmessConfig,
+        address,
+        port,
+        streamSettings,
+      );
     } else if (scheme == 'ss') {
       outbound = _buildShadowsocksOutbound(uri, getParam, address, port);
     } else if (scheme == 'vmess') {
-      outbound = _buildVmessOutbound(uri, vmessConfig, getParam, address, port, streamSettings);
+      outbound = _buildVmessOutbound(
+        uri,
+        vmessConfig,
+        getParam,
+        address,
+        port,
+        streamSettings,
+      );
     } else if (isHysteria) {
       outbound = _buildHysteriaOutbound(
-          uri, trimmed, getParam, address, port, streamSettings);
+        uri,
+        trimmed,
+        getParam,
+        address,
+        port,
+        streamSettings,
+      );
     } else {
       throw ArgumentError('Unsupported protocol: $scheme');
     }
@@ -411,8 +448,8 @@ class ConfigGeneratorV2 {
   // оба числа больше нуля, иначе ядро молча возвращается к перебору по очереди (dialer.go)
   static Map<String, dynamic>? _happyEyeballs(XrayCoreSettings core) =>
       core.concurrentDial
-          ? const <String, dynamic>{'tryDelayMs': 250, 'maxConcurrentTry': 4}
-          : null;
+      ? const <String, dynamic>{'tryDelayMs': 250, 'maxConcurrentTry': 4}
+      : null;
 
   static void _applyHappyEyeballs(
     Map<String, dynamic> outbound,
@@ -601,13 +638,18 @@ class ConfigGeneratorV2 {
       if (custom != null) {
         final outbounds = custom.routeOutbounds(server.tag);
         if (outbounds == null) {
-          throw ArgumentError('Route server ${server.tag}: its dialerProxy '
-              'points outside the config');
+          throw ArgumentError(
+            'Route server ${server.tag}: its dialerProxy '
+            'points outside the config',
+          );
         }
         out.addAll(outbounds);
         continue;
       }
-      final outbound = _buildLinkOutbound(server.config.trim(), settings).outbound;
+      final outbound = _buildLinkOutbound(
+        server.config.trim(),
+        settings,
+      ).outbound;
       outbound['tag'] = server.tag;
       _applyMux(outbound, settings.xrayCore);
       out.add(outbound);
@@ -616,11 +658,11 @@ class ConfigGeneratorV2 {
   }
 
   static ({List<String> domains, List<String> geoip, List<String> ips})
-      _routeServerMatch(RouteServerOutbound server) =>
-          _entriesMatch(server.entries, server.listDomains);
+  _routeServerMatch(RouteServerOutbound server) =>
+      _entriesMatch(server.entries, server.listDomains);
 
   static ({List<String> domains, List<String> geoip, List<String> ips})
-      _entriesMatch(String entries, List<String> listDomains) {
+  _entriesMatch(String entries, List<String> listDomains) {
     final split = splitDomainsAndIps(_parseRuleList(entries));
     final geo = splitGeoipTokens(split.ips);
     return (
@@ -638,30 +680,29 @@ class ConfigGeneratorV2 {
   static List<Map<String, dynamic>> _routeServerRules(
     List<RouteServerOutbound> servers,
     Map<String, dynamic> Function(String tag, Map<String, dynamic> fields) rule,
-  ) =>
-      [
-        for (final server in servers)
-          ...() {
-            final match = _routeServerMatch(server);
-            return [
-              if (match.domains.isNotEmpty)
-                rule('${server.tag}-domains', {
-                  'domain': match.domains,
-                  'outboundTag': server.tag,
-                }),
-              if (match.geoip.isNotEmpty)
-                rule('${server.tag}-geoip', {
-                  'ip': [for (final c in match.geoip) 'geoip:$c'],
-                  'outboundTag': server.tag,
-                }),
-              if (match.ips.isNotEmpty)
-                rule('${server.tag}-ips', {
-                  'ip': match.ips,
-                  'outboundTag': server.tag,
-                }),
-            ];
-          }(),
-      ];
+  ) => [
+    for (final server in servers)
+      ...() {
+        final match = _routeServerMatch(server);
+        return [
+          if (match.domains.isNotEmpty)
+            rule('${server.tag}-domains', {
+              'domain': match.domains,
+              'outboundTag': server.tag,
+            }),
+          if (match.geoip.isNotEmpty)
+            rule('${server.tag}-geoip', {
+              'ip': [for (final c in match.geoip) 'geoip:$c'],
+              'outboundTag': server.tag,
+            }),
+          if (match.ips.isNotEmpty)
+            rule('${server.tag}-ips', {
+              'ip': match.ips,
+              'outboundTag': server.tag,
+            }),
+        ];
+      }(),
+  ];
 
   // процесс в правиле xray проверяет последним и только у совпавших по сайту,
   // поэтому владельца спрашивают не у каждого соединения
@@ -669,41 +710,44 @@ class ConfigGeneratorV2 {
     List<RouteAppRules> routes,
     String Function(RouteAppRules route) target,
     Map<String, dynamic> Function(String tag, Map<String, dynamic> fields) rule,
-  ) =>
-      [
-        for (final route in routes)
-          ...() {
-            Map<String, dynamic> fields([Map<String, dynamic> what = const {}]) => {
-                  if (!route.forAllApps) 'inboundTag': [_tunInboundTag],
-                  ...what,
-                  if (route.network != RouteNetwork.any)
-                    'network': route.network.name,
-                  if (route.ports.isNotEmpty)
-                    'port': [
-                      for (final (from, to) in route.ports)
-                        from == to ? '$from' : '$from-$to',
-                    ].join(','),
-                  if (!route.forAllApps) 'process': route.apps,
-                  'outboundTag': target(route),
-                };
-            if (route.allTraffic) return [rule(route.tag, fields())];
-            final match = _entriesMatch(route.entries, route.listDomains);
-            return [
-              if (match.domains.isNotEmpty)
-                rule('${route.tag}-domains', fields({'domain': match.domains})),
-              if (match.geoip.isNotEmpty)
-                rule('${route.tag}-geoip', fields({
-                  'ip': [for (final c in match.geoip) 'geoip:$c'],
-                })),
-              if (match.ips.isNotEmpty)
-                rule('${route.tag}-ips', fields({'ip': match.ips})),
-            ];
-          }(),
-      ];
+  ) => [
+    for (final route in routes)
+      ...() {
+        Map<String, dynamic> fields([Map<String, dynamic> what = const {}]) => {
+          if (!route.forAllApps) 'inboundTag': [_tunInboundTag],
+          ...what,
+          if (route.network != RouteNetwork.any) 'network': route.network.name,
+          if (route.ports.isNotEmpty)
+            'port': [
+              for (final (from, to) in route.ports)
+                from == to ? '$from' : '$from-$to',
+            ].join(','),
+          if (!route.forAllApps) 'process': route.apps,
+          'outboundTag': target(route),
+        };
+        if (route.allTraffic) return [rule(route.tag, fields())];
+        final match = _entriesMatch(route.entries, route.listDomains);
+        return [
+          if (match.domains.isNotEmpty)
+            rule('${route.tag}-domains', fields({'domain': match.domains})),
+          if (match.geoip.isNotEmpty)
+            rule(
+              '${route.tag}-geoip',
+              fields({
+                'ip': [for (final c in match.geoip) 'geoip:$c'],
+              }),
+            ),
+          if (match.ips.isNotEmpty)
+            rule('${route.tag}-ips', fields({'ip': match.ips})),
+        ];
+      }(),
+  ];
 
   // перетащенные на экране маршруты всех приложений: в правила встают по месту в списке, а не по цели
-  static List<RouteAppRules> _placedRoutes(List<RouteAppRules> routes) =>
-      [for (final r in routes) if (r.forAllApps && r.ownOrder) r];
+  static List<RouteAppRules> _placedRoutes(List<RouteAppRules> routes) => [
+    for (final r in routes)
+      if (r.forAllApps && r.ownOrder) r,
+  ];
 
   // обход со своим местом лежит в правилах маршрутов, а не в directRules, DNS берёт его отсюда.
   // lifted: домены маршрутов выше обхода, иначе сплит отдал бы их системному резолверу вместе с зоной из обхода
@@ -759,8 +803,12 @@ class ConfigGeneratorV2 {
   static List<RouteAppRules> _appRoutesForInbound(
     List<RouteAppRules> routes, {
     required bool nativeTunInbound,
-  }) =>
-      nativeTunInbound ? routes : [for (final r in routes) if (r.forAllApps) r];
+  }) => nativeTunInbound
+      ? routes
+      : [
+          for (final r in routes)
+            if (r.forAllApps) r,
+        ];
 
   static String Function(RouteAppRules route) _appRouteTarget({
     required String proxyTag,
@@ -768,32 +816,34 @@ class ConfigGeneratorV2 {
     required String blockTag,
   }) =>
       (route) => switch (route.target) {
-            RouteTarget.block => blockTag,
-            RouteTarget.direct => directTag,
-            RouteTarget.vpn => proxyTag,
-            RouteTarget.server =>
-              route.serverTag.isEmpty ? proxyTag : route.serverTag,
-          };
+        RouteTarget.block => blockTag,
+        RouteTarget.direct => directTag,
+        RouteTarget.vpn => proxyTag,
+        RouteTarget.server =>
+          route.serverTag.isEmpty ? proxyTag : route.serverTag,
+      };
 
   // к самим серверам маршрутов мимо туннеля, как к активному, иначе круг
   static List<Map<String, dynamic>> _routeServerDirectRules(
     List<RouteServerOutbound> servers,
     String directTag,
     Map<String, dynamic> Function(String tag, Map<String, dynamic> fields) rule,
-  ) =>
-      [
-        for (var i = 0; i < servers.length; i++)
-          if (servers[i].address.trim().isNotEmpty)
-            rule(
-              'route-server-$i',
-              _isIpLiteral(servers[i].address.trim())
-                  ? {'ip': [servers[i].address.trim()], 'outboundTag': directTag}
-                  : {
-                      'domain': ['full:${servers[i].address.trim()}'],
-                      'outboundTag': directTag,
-                    },
-            ),
-      ];
+  ) => [
+    for (var i = 0; i < servers.length; i++)
+      if (servers[i].address.trim().isNotEmpty)
+        rule(
+          'route-server-$i',
+          _isIpLiteral(servers[i].address.trim())
+              ? {
+                  'ip': [servers[i].address.trim()],
+                  'outboundTag': directTag,
+                }
+              : {
+                  'domain': ['full:${servers[i].address.trim()}'],
+                  'outboundTag': directTag,
+                },
+        ),
+  ];
 
   static String _freedomDomainStrategy(XrayCoreSettings core) =>
       _dialStrategy(core);
@@ -819,7 +869,8 @@ class ConfigGeneratorV2 {
     for (final outbound in proxyOutbounds) {
       final stream = outbound['streamSettings'];
       if (stream is! Map<String, dynamic>) continue;
-      final dialer = (stream['sockopt'] as Map<String, dynamic>?)?['dialerProxy']
+      final dialer =
+          (stream['sockopt'] as Map<String, dynamic>?)?['dialerProxy']
               ?.toString() ??
           '';
       if (dialer.isNotEmpty) continue;
@@ -828,10 +879,7 @@ class ConfigGeneratorV2 {
       final finalmask = Map<String, dynamic>.from(
         (stream['finalmask'] as Map<String, dynamic>?) ?? {},
       );
-      final udp = [
-        ...((finalmask['udp'] as List?) ?? const []),
-        noise,
-      ];
+      final udp = [...((finalmask['udp'] as List?) ?? const []), noise];
       finalmask['udp'] = udp;
       stream['finalmask'] = finalmask;
     }
@@ -839,8 +887,8 @@ class ConfigGeneratorV2 {
 
   static bool _isDatagramOutbound(Map<String, dynamic> outbound) {
     if (outbound['protocol'] == 'hysteria') return true;
-    final network = (outbound['streamSettings']
-                as Map<String, dynamic>?)?['network']
+    final network =
+        (outbound['streamSettings'] as Map<String, dynamic>?)?['network']
             ?.toString()
             .toLowerCase() ??
         '';
@@ -852,25 +900,26 @@ class ConfigGeneratorV2 {
 
   // цена правила без условия на вход: для этого хоста правила пользователя в xray не действуют
   static Map<String, dynamic> _exitIpProbeFields(String outboundTag) => {
-        'domain': ['full:$kExitIpProbeHost'],
-        'outboundTag': outboundTag,
-      };
+    'domain': ['full:$kExitIpProbeHost'],
+    'outboundTag': outboundTag,
+  };
 
-  static List<String> _normalizeDomains(List<String> domains) =>
-      domains.map((d) {
-        final c = d.trim().toLowerCase();
-        if (c.startsWith('domain:') ||
-            c.startsWith('full:') ||
-            c.startsWith('regexp:') ||
-            c.startsWith('geosite:')) {
-          return c;
-        }
-        if (!c.contains('.')) return 'regexp:.*\\.$c\$';
-        // звёздочку xray сравнивает буквально (strmatcher), *.vk.com не совпадало ни с чем
-        if (c.startsWith('*.')) return 'domain:${c.substring(2)}';
-        if (c.startsWith('.')) return 'domain:${c.substring(1)}';
-        return 'domain:$c';
-      }).toList();
+  static List<String> _normalizeDomains(List<String> domains) => domains.map((
+    d,
+  ) {
+    final c = d.trim().toLowerCase();
+    if (c.startsWith('domain:') ||
+        c.startsWith('full:') ||
+        c.startsWith('regexp:') ||
+        c.startsWith('geosite:')) {
+      return c;
+    }
+    if (!c.contains('.')) return 'regexp:.*\\.$c\$';
+    // звёздочку xray сравнивает буквально (strmatcher), *.vk.com не совпадало ни с чем
+    if (c.startsWith('*.')) return 'domain:${c.substring(2)}';
+    if (c.startsWith('.')) return 'domain:${c.substring(1)}';
+    return 'domain:$c';
+  }).toList();
 
   static const _pingDirectTag = 'keq-ping-direct';
 
@@ -883,26 +932,28 @@ class ConfigGeneratorV2 {
   // xray включает UDP по маршрутам каждого адреса, увидев этот выход: tool/patches/xray-android-udp-per-exit.patch
   static const udpPerExitTag = 'keq-udp-per-exit';
 
-  static Map<String, dynamic> _udpPerExitMark() => {'protocol': 'blackhole', 'tag': udpPerExitTag};
+  static Map<String, dynamic> _udpPerExitMark() => {
+    'protocol': 'blackhole',
+    'tag': udpPerExitTag,
+  };
 
   // nonIPQuery ядро объявило к удалению, а удалённые поля роняют конфиг; без правил вышел бы пустой ответ вместо REFUSED
   static Map<String, dynamic> _dnsOutboundSettings() => {
-        'rules': [
-          {'action': 'hijack', 'qType': '1,28'},
-          {'action': 'return', 'rCode': 5},
-        ],
-      };
+    'rules': [
+      {'action': 'hijack', 'qType': '1,28'},
+      {'action': 'return', 'rCode': 5},
+    ],
+  };
 
   static bool _fakeDnsApplies(
     AppSettings settings, {
     required bool nativeTunInbound,
     required bool isPingMode,
-  }) =>
-      settings.fakeIp && nativeTunInbound && !isPingMode;
+  }) => settings.fakeIp && nativeTunInbound && !isPingMode;
 
   static List<Map<String, dynamic>> _fakeDnsPool() => [
-        {'ipPool': kFakeIpRange, 'poolSize': 65535},
-      ];
+    {'ipPool': kFakeIpRange, 'poolSize': 65535},
+  ];
 
   // без снифера подменный адрес так и уехал бы на сервер, поэтому тут он включён и при выключенном в настройках
   static Map<String, dynamic> _fakeDnsSniffing(XrayCoreSettings core) {
@@ -924,7 +975,8 @@ class ConfigGeneratorV2 {
   // исключениям своя запись с skipFallback, иначе она отвечала бы раньше подмены
   static Map<String, dynamic> _withFakeDns(Map<String, dynamic> dns) {
     final servers = [...((dns['servers'] as List?) ?? const [])];
-    bool inFallback(Object? s) => s is String || (s is Map && s['skipFallback'] != true);
+    bool inFallback(Object? s) =>
+        s is String || (s is Map && s['skipFallback'] != true);
     final at = servers.indexWhere(inFallback);
     final general = at < 0 ? null : servers[at];
     return {
@@ -933,7 +985,9 @@ class ConfigGeneratorV2 {
         ...servers.take(at < 0 ? servers.length : at),
         if (general != null)
           {
-            ...(general is Map ? general.cast<String, dynamic>() : {'address': general}),
+            ...(general is Map
+                ? general.cast<String, dynamic>()
+                : {'address': general}),
             'domains': fakeIpFilterAsRules(),
             'skipFallback': true,
           },
@@ -1052,10 +1106,12 @@ class ConfigGeneratorV2 {
     final ownDns = settings.ignoreProviderDns;
     final effectiveDns = ownDns
         ? fallbackDns
-        : CustomXrayConfig.mergeDns(custom.authorDns, fallbackDns) ?? fallbackDns;
+        : CustomXrayConfig.mergeDns(custom.authorDns, fallbackDns) ??
+              fallbackDns;
 
     // с fakedns перехват всё ломает: домен из фейкового адреса достаёт только снифер с fakedns, а у нас его нет
-    final usesFakeDns = (!ownDns && custom.json.containsKey('fakedns')) ||
+    final usesFakeDns =
+        (!ownDns && custom.json.containsKey('fakedns')) ||
         _dnsUsesFakeIp(effectiveDns);
 
     final dnsOutTag = _existingOutboundTag(custom, 'dns') ?? _customDnsTag;
@@ -1113,7 +1169,8 @@ class ConfigGeneratorV2 {
 
     // при авторском IPIfNonMatch ловушка любая сеть отменила бы его же правила по адресу для соединений по домену, см. _wrapConfig
     final authorRouting = custom.json['routing'];
-    final resolvesForIpRules = authorRouting is Map &&
+    final resolvesForIpRules =
+        authorRouting is Map &&
         authorRouting['domainStrategy'] == 'IPIfNonMatch';
     Map<String, dynamic> customRule(String tag, Map<String, dynamic> fields) =>
         {'type': 'field', 'ruleTag': tag, ...fields};
@@ -1161,17 +1218,18 @@ class ConfigGeneratorV2 {
     };
 
     // его правила выброшены, а балансировщик нет: ради него конфиг часто и собран
-    List<Map<String, dynamic>> viaProviderExit(List<Map<String, dynamic>> rules) =>
-        providerExit == null
-            ? rules
-            : [
-                for (final rule in rules)
-                  rule['outboundTag'] == custom.primaryOutboundTag
-                      ? ({...rule}
-                        ..remove('outboundTag')
-                        ..addAll(providerExit))
-                      : rule,
-              ];
+    List<Map<String, dynamic>> viaProviderExit(
+      List<Map<String, dynamic>> rules,
+    ) => providerExit == null
+        ? rules
+        : [
+            for (final rule in rules)
+              rule['outboundTag'] == custom.primaryOutboundTag
+                  ? ({...rule}
+                      ..remove('outboundTag')
+                      ..addAll(providerExit))
+                  : rule,
+          ];
 
     final config = custom.buildSessionConfig(
       inbounds: inbounds,
@@ -1236,7 +1294,9 @@ class ConfigGeneratorV2 {
     }
     if (resolvesForIpRules && finalTag != custom.primaryOutboundTag) {
       final outbounds = [...config['outbounds'] as List];
-      final index = outbounds.indexWhere((o) => o is Map && o['tag'] == finalTag);
+      final index = outbounds.indexWhere(
+        (o) => o is Map && o['tag'] == finalTag,
+      );
       if (index > 0) outbounds.insert(0, outbounds.removeAt(index));
       config['outbounds'] = outbounds;
     }
@@ -1265,9 +1325,7 @@ class ConfigGeneratorV2 {
         String s => s,
         Map<Object?, Object?> m => m['address']?.toString() ?? '',
         _ => '',
-      }
-          .trim()
-          .toLowerCase();
+      }.trim().toLowerCase();
       if (address.isEmpty) continue;
       if (address == 'localhost' || address == 'fakedns') continue;
       final scheme = RegExp(r'^([a-z][a-z0-9.+-]*)://').firstMatch(address);
@@ -1290,8 +1348,11 @@ class ConfigGeneratorV2 {
     List<RouteAppRules> appRoutes = const [],
   }) {
     final rules = <Map<String, dynamic>>[];
-    Map<String, dynamic> rule(String tag, Map<String, dynamic> fields) =>
-        {'type': 'field', 'ruleTag': tag, ...fields};
+    Map<String, dynamic> rule(String tag, Map<String, dynamic> fields) => {
+      'type': 'field',
+      'ruleTag': tag,
+      ...fields,
+    };
     final appTarget = _appRouteTarget(
       proxyTag: proxyTag,
       directTag: directTag,
@@ -1306,13 +1367,13 @@ class ConfigGeneratorV2 {
         if (!r.forAllApps && r.target != RouteTarget.block) r,
     ];
     List<Map<String, dynamic>> protocol(RouteTarget target) => _appRouteRules(
-          [
-            for (final r in appRoutes)
-              if (r.forAllApps && !r.ownOrder && r.target == target) r,
-          ],
-          appTarget,
-          rule,
-        );
+      [
+        for (final r in appRoutes)
+          if (r.forAllApps && !r.ownOrder && r.target == target) r,
+      ],
+      appTarget,
+      rule,
+    );
 
     void addGroup(String source, String outboundTag, String tagPrefix) {
       final split = splitDomainsAndIps(_parseRuleList(source));
@@ -1353,10 +1414,12 @@ class ConfigGeneratorV2 {
       ..addAll(_appRouteRules(appBlock, appTarget, rule))
       ..addAll(protocol(RouteTarget.block));
     if (appOther.isNotEmpty) {
-      rules.add(rule('app-private', {
-        'ip': [...kBasePrivateRanges],
-        'outboundTag': directTag,
-      }));
+      rules.add(
+        rule('app-private', {
+          'ip': [...kBasePrivateRanges],
+          'outboundTag': directTag,
+        }),
+      );
       rules.addAll(_appRouteRules(appOther, appTarget, rule));
     }
     rules.addAll(protocol(RouteTarget.direct));
@@ -1392,8 +1455,7 @@ class ConfigGeneratorV2 {
     required String proxyTag,
   }) {
     final rules = <Map<String, dynamic>>[];
-    final isServerIp =
-        serverAddress.isNotEmpty && _isIpLiteral(serverAddress);
+    final isServerIp = serverAddress.isNotEmpty && _isIpLiteral(serverAddress);
     if (isServerIp) {
       rules.add({
         'type': 'field',
@@ -1419,16 +1481,18 @@ class ConfigGeneratorV2 {
     rules.add({
       'type': 'field',
       'ip': [
-        '0.0.0.0/8', '10.0.0.0/8', '127.0.0.0/8', '172.16.0.0/12',
-        '192.168.0.0/16', '::1/128', 'fc00::/7', 'fe80::/10',
+        '0.0.0.0/8',
+        '10.0.0.0/8',
+        '127.0.0.0/8',
+        '172.16.0.0/12',
+        '192.168.0.0/16',
+        '::1/128',
+        'fc00::/7',
+        'fe80::/10',
       ],
       'outboundTag': _pingDirectTag,
     });
-    rules.add({
-      'type': 'field',
-      'outboundTag': proxyTag,
-      'network': 'tcp,udp',
-    });
+    rules.add({'type': 'field', 'outboundTag': proxyTag, 'network': 'tcp,udp'});
     return rules;
   }
 
@@ -1489,8 +1553,9 @@ class ConfigGeneratorV2 {
     const muxable = {'vless', 'vmess', 'trojan'};
     if (!muxable.contains(outbound['protocol']?.toString())) return;
     final stream = outbound['streamSettings'];
-    final network =
-        stream is Map<String, dynamic> ? stream['network']?.toString() : null;
+    final network = stream is Map<String, dynamic>
+        ? stream['network']?.toString()
+        : null;
     if (network == 'xhttp' || network == 'splithttp') return;
 
     // vision пускает в пачку только UDP, TCP внутри рвёт всё mux-соединение (common/mux/server.go)
@@ -1502,8 +1567,9 @@ class ConfigGeneratorV2 {
   static bool _hasVisionFlow(Map<String, dynamic> outbound) {
     final settings = outbound['settings'];
     if (settings is! Map) return false;
-    return (settings['flow']?.toString().trim() ?? '')
-        .startsWith('xtls-rprx-vision');
+    return (settings['flow']?.toString().trim() ?? '').startsWith(
+      'xtls-rprx-vision',
+    );
   }
 
   static void _applyXrayStreamExtras(
@@ -1530,7 +1596,12 @@ class ConfigGeneratorV2 {
   }
 
   static Map<String, dynamic> _buildVlessOutbound(
-      Uri uri, String Function(String, [String]) getParam, String address, int port, Map<String, dynamic> streamSettings) {
+    Uri uri,
+    String Function(String, [String]) getParam,
+    String address,
+    int port,
+    Map<String, dynamic> streamSettings,
+  ) {
     final uuid = uri.userInfo;
     if (uuid.isEmpty) {
       throw ArgumentError('VLESS requires UUID in userInfo');
@@ -1557,15 +1628,21 @@ class ConfigGeneratorV2 {
   }
 
   static Map<String, dynamic> _buildVmessOutbound(
-      Uri uri, Map<String, dynamic>? vmessConfig, String Function(String, [String]) getParam,
-      String address, int port, Map<String, dynamic> streamSettings) {
+    Uri uri,
+    Map<String, dynamic>? vmessConfig,
+    String Function(String, [String]) getParam,
+    String address,
+    int port,
+    Map<String, dynamic> streamSettings,
+  ) {
     final uuid = (vmessConfig?['id'] ?? uri.userInfo).toString();
     if (uuid.isEmpty) {
       throw ArgumentError('VMess requires id in payload');
     }
 
     // у AEAD-ссылки шифр в encryption, так его читает и mihomo
-    final vmessSecurity = vmessConfig?['security']?.toString() ??
+    final vmessSecurity =
+        vmessConfig?['security']?.toString() ??
         vmessConfig?['scy']?.toString() ??
         (vmessConfig == null ? getParam('encryption', 'auto') : 'auto');
     final flow = vmessConfig?['flow']?.toString() ?? getParam('flow');
@@ -1592,7 +1669,8 @@ class ConfigGeneratorV2 {
   // type в json задаёт заголовок маскировки, транспорт лежит в net, а security бывает шифром;
   // имя gRPC-сервиса и seed mKCP v2rayN кладёт в path
   static String Function(String, [String]) _vmessStreamParams(
-      Map<String, dynamic>? cfg) {
+    Map<String, dynamic>? cfg,
+  ) {
     String raw(String key) {
       final value = cfg?[key];
       if (value == null) return '';
@@ -1608,9 +1686,10 @@ class ConfigGeneratorV2 {
         'headerType' => raw('type'),
         'security' => raw('tls').toLowerCase() == 'tls' ? 'tls' : '',
         'serviceName' => raw('path'),
-        'seed' => const {'kcp', 'mkcp'}.contains(raw('net').toLowerCase())
-            ? raw('path')
-            : raw('seed'),
+        'seed' =>
+          const {'kcp', 'mkcp'}.contains(raw('net').toLowerCase())
+              ? raw('path')
+              : raw('seed'),
         _ => raw(key),
       };
       return value.isEmpty ? def : value;
@@ -1629,8 +1708,13 @@ class ConfigGeneratorV2 {
   }
 
   static Map<String, dynamic> _buildTrojanOutbound(
-      Uri uri, String Function(String, [String]) getParam, Map<String, dynamic>? vmessConfig,
-      String address, int port, Map<String, dynamic> streamSettings) {
+    Uri uri,
+    String Function(String, [String]) getParam,
+    Map<String, dynamic>? vmessConfig,
+    String address,
+    int port,
+    Map<String, dynamic> streamSettings,
+  ) {
     final password = vmessConfig != null
         ? (vmessConfig['id']?.toString() ?? '')
         : _decodedUserInfo(uri);
@@ -1671,12 +1755,18 @@ class ConfigGeneratorV2 {
   }
 
   static Map<String, dynamic> _buildShadowsocksOutbound(
-      Uri uri, String Function(String, [String]) getParam, String address, int port) {
+    Uri uri,
+    String Function(String, [String]) getParam,
+    String address,
+    int port,
+  ) {
     // sip002: ss://base64(method:password@host:port) или ss://method:password@host:port
     // также бывает ss://base64(method:password)@host:port
     final withoutScheme = uri.toString().replaceFirst('ss://', '').trim();
     final hashIdx = withoutScheme.indexOf('#');
-    final beforeHash = hashIdx >= 0 ? withoutScheme.substring(0, hashIdx) : withoutScheme;
+    final beforeHash = hashIdx >= 0
+        ? withoutScheme.substring(0, hashIdx)
+        : withoutScheme;
     final atIdx = beforeHash.lastIndexOf('@');
 
     String method;
@@ -1722,19 +1812,21 @@ class ConfigGeneratorV2 {
   }
 
   static Map<String, dynamic> _buildHysteriaOutbound(
-      Uri uri,
-      String rawLink,
-      String Function(String, [String]) getParam,
-      String address,
-      int port,
-      Map<String, dynamic> streamSettings,
+    Uri uri,
+    String rawLink,
+    String Function(String, [String]) getParam,
+    String address,
+    int port,
+    Map<String, dynamic> streamSettings,
   ) {
     var auth = getParam('auth', getParam('password', '')).trim();
     if (auth.isEmpty && uri.userInfo.isNotEmpty) {
       auth = _decodedUserInfo(uri).trim();
     }
     if (auth.isEmpty) {
-      throw ArgumentError('Hysteria requires auth/password in URI (query or userInfo)');
+      throw ArgumentError(
+        'Hysteria requires auth/password in URI (query or userInfo)',
+      );
     }
 
     final udpIdleTimeout = int.tryParse(getParam('udpIdleTimeout', '60')) ?? 60;
@@ -1743,10 +1835,19 @@ class ConfigGeneratorV2 {
       final type = getParam('masqueradeType', getParam('masqType', ''));
       final dir = getParam('masqueradeDir', getParam('masqDir', ''));
       final url = getParam('masqueradeUrl', getParam('masqUrl', ''));
-      final content = getParam('masqueradeContent', getParam('masqContent', ''));
-      final statusCode = int.tryParse(getParam('masqueradeStatusCode', getParam('masqStatusCode', '')));
+      final content = getParam(
+        'masqueradeContent',
+        getParam('masqContent', ''),
+      );
+      final statusCode = int.tryParse(
+        getParam('masqueradeStatusCode', getParam('masqStatusCode', '')),
+      );
 
-      if (type.isEmpty && dir.isEmpty && url.isEmpty && content.isEmpty && statusCode == null) {
+      if (type.isEmpty &&
+          dir.isEmpty &&
+          url.isEmpty &&
+          content.isEmpty &&
+          statusCode == null) {
         return null;
       }
 
@@ -1762,7 +1863,10 @@ class ConfigGeneratorV2 {
 
     // из исходной ссылки: список портов из адреса при разборе уже вынули
     final hyParams = HysteriaLinkParams.fromConfig(rawLink);
-    final sni = getParam('sni', hyParams.sni.isNotEmpty ? hyParams.sni : address);
+    final sni = getParam(
+      'sni',
+      hyParams.sni.isNotEmpty ? hyParams.sni : address,
+    );
     // схема hysteria:// одна на обе версии, первая собиралась бы как вторая
     final version = int.tryParse(getParam('version', '2')) ?? 2;
     if (version != 2 || HysteriaLinkParams.isV1(uri.toString())) {
@@ -1795,9 +1899,7 @@ class ConfigGeneratorV2 {
 
     // полоса и перебор портов в xray 26 живут в finalmask.quicParams, из hysteriaSettings ядро их выбрасывает
     final quicParams = <String, dynamic>{};
-    final up = HysteriaLinkParams.formatBandwidth(
-      getParam('up', hyParams.up),
-    );
+    final up = HysteriaLinkParams.formatBandwidth(getParam('up', hyParams.up));
     final down = HysteriaLinkParams.formatBandwidth(
       getParam('down', hyParams.down),
     );
@@ -1820,11 +1922,7 @@ class ConfigGeneratorV2 {
     return {
       'tag': 'proxy',
       'protocol': 'hysteria',
-      'settings': {
-        'address': address,
-        'port': port,
-        'version': version,
-      },
+      'settings': {'address': address, 'port': port, 'version': version},
       'streamSettings': streamSettings,
     };
   }
@@ -1904,7 +2002,8 @@ class ConfigGeneratorV2 {
           'multiMode': getParam('mode') == 'multi',
           if (authority.isNotEmpty) 'authority': authority,
         };
-      case 'xhttp': case 'splithttp':
+      case 'xhttp':
+      case 'splithttp':
         final host = getParam('host');
         stream['xhttpSettings'] = {
           'path': getParam('path', '/'),
@@ -1944,7 +2043,9 @@ class ConfigGeneratorV2 {
               'request': {
                 if (method.isNotEmpty) 'method': method,
                 if (path.isNotEmpty) 'path': [path],
-                'headers': {'Host': [getParam('host', address)]},
+                'headers': {
+                  'Host': [getParam('host', address)],
+                },
               },
             },
           };
@@ -2010,9 +2111,21 @@ class ConfigGeneratorV2 {
   }
 
   static Map<String, dynamic> _wrapConfig(
-      List<Map<String, dynamic>> proxyOutbounds, AppSettings settings, String serverAddress, int serverPort,
-      {String? originalServerAddress, List<String> extraServerAddresses = const [], int? pingSocksPort, bool pingHttpInbound = false, bool localInboundsNoAuth = false, bool nativeTunInbound = false, DesktopTunOptions? desktopTun, List<RouteServerOutbound> routeServers = const [], List<RouteAppRules> appRoutes = const [], OwnerGuard ownerGuard = OwnerGuard.off}) {
-
+    List<Map<String, dynamic>> proxyOutbounds,
+    AppSettings settings,
+    String serverAddress,
+    int serverPort, {
+    String? originalServerAddress,
+    List<String> extraServerAddresses = const [],
+    int? pingSocksPort,
+    bool pingHttpInbound = false,
+    bool localInboundsNoAuth = false,
+    bool nativeTunInbound = false,
+    DesktopTunOptions? desktopTun,
+    List<RouteServerOutbound> routeServers = const [],
+    List<RouteAppRules> appRoutes = const [],
+    OwnerGuard ownerGuard = OwnerGuard.off,
+  }) {
     originalServerAddress ??= serverAddress;
     final isPingMode = pingSocksPort != null;
     // пинг меряет один сервер, маршрутам там места нет
@@ -2035,29 +2148,33 @@ class ConfigGeneratorV2 {
     );
     final routeOutbounds = _buildRouteServerOutbounds(routes, settings);
 
-    final directSplit  = splitDomainsAndIps(_parseRuleList(settings.directRules));
-    final proxySplit   = splitDomainsAndIps(_parseRuleList(settings.proxyRules));
-    final blockedSplit = splitDomainsAndIps(_parseRuleList(settings.blockedRules));
+    final directSplit = splitDomainsAndIps(
+      _parseRuleList(settings.directRules),
+    );
+    final proxySplit = splitDomainsAndIps(_parseRuleList(settings.proxyRules));
+    final blockedSplit = splitDomainsAndIps(
+      _parseRuleList(settings.blockedRules),
+    );
 
-    final directGeo    = splitGeoipTokens(directSplit.ips);
-    final proxyGeo     = splitGeoipTokens(proxySplit.ips);
-    final blockedGeo   = splitGeoipTokens(blockedSplit.ips);
+    final directGeo = splitGeoipTokens(directSplit.ips);
+    final proxyGeo = splitGeoipTokens(proxySplit.ips);
+    final blockedGeo = splitGeoipTokens(blockedSplit.ips);
 
-    final directDomains  = _normalizeDomains(directSplit.domains);
+    final directDomains = _normalizeDomains(directSplit.domains);
     final blockedDomains = _normalizeDomains(blockedSplit.domains);
-    final proxyDomains   = _normalizeDomains(proxySplit.domains);
-    final directIps      = directGeo.plainIps
+    final proxyDomains = _normalizeDomains(proxySplit.domains);
+    final directIps = directGeo.plainIps
         .where((e) => !e.trim().toLowerCase().startsWith('geoip:'))
         .toList();
-    final proxyIps       = proxyGeo.plainIps
+    final proxyIps = proxyGeo.plainIps
         .where((e) => !e.trim().toLowerCase().startsWith('geoip:'))
         .toList();
-    final blockedIps     = blockedGeo.plainIps
+    final blockedIps = blockedGeo.plainIps
         .where((e) => !e.trim().toLowerCase().startsWith('geoip:'))
         .toList();
-    final directGeoip    = directGeo.geoipCodes;
-    final proxyGeoip     = proxyGeo.geoipCodes;
-    final blockedGeoip   = blockedGeo.geoipCodes;
+    final directGeoip = directGeo.geoipCodes;
+    final proxyGeoip = proxyGeo.geoipCodes;
+    final blockedGeoip = blockedGeo.geoipCodes;
 
     // приватные диапазоны не считаем пользовательскими IP-правилами, иначе стратегию поднимало бы всегда
     final extraDirectIps = directIps
@@ -2068,29 +2185,35 @@ class ConfigGeneratorV2 {
 
     // с AsIs xray не резолвит домен из CONNECT, и пользовательское IP-правило (корп. 10.x в Direct) молчит.
     // IPIfNonMatch только при своих IP-правилах: проксируемые домены без них не резолвим, так приватнее
-    final hasUserIpRules = extraDirectIps.isNotEmpty ||
+    final hasUserIpRules =
+        extraDirectIps.isNotEmpty ||
         proxyIps.isNotEmpty ||
         blockedIps.isNotEmpty ||
         routes.any((r) => _routeServerMatch(r).ips.isNotEmpty) ||
-        apps.any((r) => _entriesMatch(r.entries, const [])
-            .ips
-            .any((ip) => !_presetPrivate(r, ip)));
+        apps.any(
+          (r) => _entriesMatch(
+            r.entries,
+            const [],
+          ).ips.any((ip) => !_presetPrivate(r, ip)),
+        );
     final placed = _placedRoutes(apps);
     final placedDns = _placedDnsDomains(placed);
     final effectiveDomainStrategy =
         (!isPingMode && hasUserIpRules && core.routingDomainStrategy == 'AsIs')
-            ? 'IPIfNonMatch'
-            : core.routingDomainStrategy;
+        ? 'IPIfNonMatch'
+        : core.routingDomainStrategy;
     final bootstrapDomains = <String>[
       for (final addr in [
         originalServerAddress,
         ...extraServerAddresses,
         for (final r in routes) r.address,
       ])
-        if (addr.trim().isNotEmpty && !_isIpLiteral(addr)) 'full:${addr.trim()}',
+        if (addr.trim().isNotEmpty && !_isIpLiteral(addr))
+          'full:${addr.trim()}',
     ];
 
-    final globalProxy = settings.finalOutbound == AppSettings.finalOutboundProxy;
+    final globalProxy =
+        settings.finalOutbound == AppSettings.finalOutboundProxy;
 
     final dns = isPingMode
         ? _pingDns()
@@ -2103,197 +2226,263 @@ class ConfigGeneratorV2 {
 
     // ruleTag печатается в логе на Info, по нему экран Соединения показывает правило
     final rules = <Map<String, dynamic>>[];
-    Map<String, dynamic> rule(
-      String tag,
-      Map<String, dynamic> fields,
-    ) => {
-          'type': 'field',
-          ...fields,
-          if (!isPingMode) 'ruleTag': tag,
-        };
+    Map<String, dynamic> rule(String tag, Map<String, dynamic> fields) => {
+      'type': 'field',
+      ...fields,
+      if (!isPingMode) 'ruleTag': tag,
+    };
     // маршрут с протоколом стоит на ступени своей цели, как такой же без протокола (routesIn)
     List<Map<String, dynamic>> protocol(RouteTarget target) => _appRouteRules(
-          [
-            for (final r in apps)
-              if (r.forAllApps && !r.ownOrder && r.target == target) r,
-          ],
-          appTarget,
-          rule,
-        );
+      [
+        for (final r in apps)
+          if (r.forAllApps && !r.ownOrder && r.target == target) r,
+      ],
+      appTarget,
+      rule,
+    );
 
     if (desktopTun != null) {
-      rules.addAll(_desktopTunHeadRules(
-        desktopTun,
-        dnsOutTag: 'dns-out',
-        directTag: 'direct',
-        rule: rule,
-      ));
+      rules.addAll(
+        _desktopTunHeadRules(
+          desktopTun,
+          dnsOutTag: 'dns-out',
+          directTag: 'direct',
+          rule: rule,
+        ),
+      );
     }
 
     final outsideVpn = _outsideVpnRule(ownerGuard, 'block');
     if (outsideVpn != null) rules.add(rule('outside-vpn', outsideVpn));
 
-    rules.add(rule('block-special', {
-      'ip': ['169.254.0.0/16', '224.0.0.0/4', '255.255.255.255/32'],
-      'outboundTag': 'block',
-    }));
+    rules.add(
+      rule('block-special', {
+        'ip': ['169.254.0.0/16', '224.0.0.0/4', '255.255.255.255/32'],
+        'outboundTag': 'block',
+      }),
+    );
 
     void addChainHopDirectRules() {
       for (var i = 0; i < extraServerAddresses.length; i++) {
         final addr = extraServerAddresses[i].trim();
         if (addr.isEmpty) continue;
-        rules.add(rule(
-          'chain-hop-$i',
-          _isIpLiteral(addr)
-              ? {'ip': [addr], 'outboundTag': 'direct'}
-              : {'domain': ['full:$addr'], 'outboundTag': 'direct'},
-        ));
+        rules.add(
+          rule(
+            'chain-hop-$i',
+            _isIpLiteral(addr)
+                ? {
+                    'ip': [addr],
+                    'outboundTag': 'direct',
+                  }
+                : {
+                    'domain': ['full:$addr'],
+                    'outboundTag': 'direct',
+                  },
+          ),
+        );
       }
     }
 
     if (isPingMode) {
       final isServerIp = _isIpLiteral(serverAddress);
       if (isServerIp) {
-        rules.add({'type': 'field', 'ip': [serverAddress], 'outboundTag': 'direct'});
+        rules.add({
+          'type': 'field',
+          'ip': [serverAddress],
+          'outboundTag': 'direct',
+        });
       }
       if (!_isIpLiteral(originalServerAddress)) {
-        rules.add({'type': 'field', 'domain': ['full:$originalServerAddress'], 'outboundTag': 'direct'});
+        rules.add({
+          'type': 'field',
+          'domain': ['full:$originalServerAddress'],
+          'outboundTag': 'direct',
+        });
       } else if (!isServerIp) {
-        rules.add({'type': 'field', 'ip': [originalServerAddress], 'outboundTag': 'direct'});
+        rules.add({
+          'type': 'field',
+          'ip': [originalServerAddress],
+          'outboundTag': 'direct',
+        });
       }
       addChainHopDirectRules();
       rules.add({
         'type': 'field',
         'ip': [
-          '0.0.0.0/8', '10.0.0.0/8', '127.0.0.0/8', '172.16.0.0/12',
-          '192.168.0.0/16', '::1/128', 'fc00::/7', 'fe80::/10',
+          '0.0.0.0/8',
+          '10.0.0.0/8',
+          '127.0.0.0/8',
+          '172.16.0.0/12',
+          '192.168.0.0/16',
+          '::1/128',
+          'fc00::/7',
+          'fe80::/10',
         ],
         'outboundTag': 'direct',
       });
     } else {
-    if (!isPingMode && settings.lanSharing) {
-      rules.add(rule('lan-allow', {
-        'inboundTag': ['socks-lan', 'http-lan'],
-        'source': [
-          '10.0.0.0/8',
-          '172.16.0.0/12',
-          '192.168.0.0/16',
-          '169.254.0.0/16',
-          '127.0.0.0/8',
-        ],
-        'outboundTag': 'proxy',
-      }));
-      rules.add(rule('lan-deny', {
-        'inboundTag': ['socks-lan', 'http-lan'],
-        'network': 'tcp,udp',
-        'outboundTag': 'block',
-      }));
-    }
-    // DNS устройства отвечает ядро, иначе каждый запрос шёл отдельным TCP до сервера, и пачка с Android выбивала
-    // лимит новых соединений; после lan-правил, иначе вышел бы открытый резолвер наружу
-    rules.add(rule('dns-out', {
-      'port': '53',
-      'network': 'tcp,udp',
-      'outboundTag': 'dns-out',
-    }));
-    rules.add(rule('exit-ip-probe', _exitIpProbeFields('proxy')));
-    if (blockedDomains.isNotEmpty) {
-      rules.add(rule('block-domains',
-          {'domain': blockedDomains, 'outboundTag': 'block'}));
-    }
-    if (blockedGeoip.isNotEmpty) {
-      // отдельного поля geoip у xray нет: голый ключ выбрасывается, и ядро падает на this rule has no effective fields
-      rules.add(rule('block-geoip', {
-        'ip': blockedGeoip.map((c) => 'geoip:$c').toList(),
-        'outboundTag': 'block',
-      }));
-    }
-    if (blockedIps.isNotEmpty) {
-      rules.add(rule('block-ips', {'ip': blockedIps, 'outboundTag': 'block'}));
-    }
-    rules
-      ..addAll(_appRouteRules(appBlock, appTarget, rule))
-      ..addAll(protocol(RouteTarget.block));
-    final isServerIp = _isIpLiteral(serverAddress);
-    if (isServerIp) {
-      rules.add(rule('server-ip',
-          {'ip': [serverAddress], 'outboundTag': 'direct'}));
-    }
-    if (!_isIpLiteral(originalServerAddress)) {
-      rules.add(rule('server-domain', {
-        'domain': ['full:$originalServerAddress'],
-        'outboundTag': 'direct',
-      }));
-    } else if (!isServerIp) {
-      rules.add(rule('server-address',
-          {'ip': [originalServerAddress], 'outboundTag': 'direct'}));
-    }
-    addChainHopDirectRules();
-    rules.addAll(_routeServerDirectRules(routes, 'direct', rule));
-    // весь трафик на сервер не должен увозить туда роутер и принтер
-    if (appOther.isNotEmpty) {
-      rules.add(rule('app-private', {
-        'ip': [...kBasePrivateRanges],
-        'outboundTag': 'direct',
-      }));
-      rules.addAll(_appRouteRules(appOther, appTarget, rule));
-    }
-    rules.addAll(protocol(RouteTarget.direct));
-    if (directDomains.isNotEmpty) {
-      rules.add(rule('direct-domains',
-          {'domain': directDomains, 'outboundTag': 'direct'}));
-    }
-    if (directGeoip.isNotEmpty) {
-      rules.add(rule('direct-geoip', {
-        'ip': directGeoip.map((c) => 'geoip:$c').toList(),
-        'outboundTag': 'direct',
-      }));
-    }
-    rules.add(rule('direct-private', {
-      'ip': [
-        ...extraDirectIps,
-        ...kBasePrivateRanges,
-      ],
-      'outboundTag': 'direct',
-    }));
-    final quicBlocked =
-        settings.finalOutbound == AppSettings.finalOutboundProxy &&
-            _visionRejectsQuic(proxyOutbounds);
-    // общий block-quic стоит ниже и этих правил уже не увидит, поэтому QUIC режется у каждого, что ведёт в proxy
-    for (final route in placed) {
-      final own = _appRouteRules([route], appTarget, rule);
-      if (quicBlocked && appTarget(route) == 'proxy') {
-        rules.addAll([for (final r in own) ?_quicBlock(r)]);
+      if (!isPingMode && settings.lanSharing) {
+        rules.add(
+          rule('lan-allow', {
+            'inboundTag': ['socks-lan', 'http-lan'],
+            'source': [
+              '10.0.0.0/8',
+              '172.16.0.0/12',
+              '192.168.0.0/16',
+              '169.254.0.0/16',
+              '127.0.0.0/8',
+            ],
+            'outboundTag': 'proxy',
+          }),
+        );
+        rules.add(
+          rule('lan-deny', {
+            'inboundTag': ['socks-lan', 'http-lan'],
+            'network': 'tcp,udp',
+            'outboundTag': 'block',
+          }),
+        );
       }
-      rules.addAll(own);
-    }
-    // между обходом и через VPN, как в разделе всех приложений (routesIn)
-    rules
-      ..addAll(protocol(RouteTarget.server))
-      ..addAll(_routeServerRules(routes, rule));
-    // vision отвергает UDP/443 только после полного TCP+TLS до сервера, и каждый повтор QUIC стоил рукопожатия;
-    // только при глобальном прокси, вариант -udp443 не трогаем
-    if (quicBlocked) {
-      rules.add(rule('block-quic', {
-        'network': 'udp',
-        'port': '443',
-        'outboundTag': 'block',
-      }));
-    }
-    rules.addAll(protocol(RouteTarget.vpn));
-    if (proxyDomains.isNotEmpty) {
-      rules.add(rule('proxy-domains',
-          {'domain': proxyDomains, 'outboundTag': 'proxy'}));
-    }
-    if (proxyGeoip.isNotEmpty) {
-      rules.add(rule('proxy-geoip', {
-        'ip': proxyGeoip.map((c) => 'geoip:$c').toList(),
-        'outboundTag': 'proxy',
-      }));
-    }
-    if (proxyIps.isNotEmpty) {
-      rules.add(rule('proxy-ips', {'ip': proxyIps, 'outboundTag': 'proxy'}));
-    }
+      // DNS устройства отвечает ядро, иначе каждый запрос шёл отдельным TCP до сервера, и пачка с Android выбивала
+      // лимит новых соединений; после lan-правил, иначе вышел бы открытый резолвер наружу
+      rules.add(
+        rule('dns-out', {
+          'port': '53',
+          'network': 'tcp,udp',
+          'outboundTag': 'dns-out',
+        }),
+      );
+      rules.add(rule('exit-ip-probe', _exitIpProbeFields('proxy')));
+      if (blockedDomains.isNotEmpty) {
+        rules.add(
+          rule('block-domains', {
+            'domain': blockedDomains,
+            'outboundTag': 'block',
+          }),
+        );
+      }
+      if (blockedGeoip.isNotEmpty) {
+        // отдельного поля geoip у xray нет: голый ключ выбрасывается, и ядро падает на this rule has no effective fields
+        rules.add(
+          rule('block-geoip', {
+            'ip': blockedGeoip.map((c) => 'geoip:$c').toList(),
+            'outboundTag': 'block',
+          }),
+        );
+      }
+      if (blockedIps.isNotEmpty) {
+        rules.add(
+          rule('block-ips', {'ip': blockedIps, 'outboundTag': 'block'}),
+        );
+      }
+      rules
+        ..addAll(_appRouteRules(appBlock, appTarget, rule))
+        ..addAll(protocol(RouteTarget.block));
+      final isServerIp = _isIpLiteral(serverAddress);
+      if (isServerIp) {
+        rules.add(
+          rule('server-ip', {
+            'ip': [serverAddress],
+            'outboundTag': 'direct',
+          }),
+        );
+      }
+      if (!_isIpLiteral(originalServerAddress)) {
+        rules.add(
+          rule('server-domain', {
+            'domain': ['full:$originalServerAddress'],
+            'outboundTag': 'direct',
+          }),
+        );
+      } else if (!isServerIp) {
+        rules.add(
+          rule('server-address', {
+            'ip': [originalServerAddress],
+            'outboundTag': 'direct',
+          }),
+        );
+      }
+      addChainHopDirectRules();
+      rules.addAll(_routeServerDirectRules(routes, 'direct', rule));
+      // весь трафик на сервер не должен увозить туда роутер и принтер
+      if (appOther.isNotEmpty) {
+        rules.add(
+          rule('app-private', {
+            'ip': [...kBasePrivateRanges],
+            'outboundTag': 'direct',
+          }),
+        );
+        rules.addAll(_appRouteRules(appOther, appTarget, rule));
+      }
+      rules.addAll(protocol(RouteTarget.direct));
+      if (directDomains.isNotEmpty) {
+        rules.add(
+          rule('direct-domains', {
+            'domain': directDomains,
+            'outboundTag': 'direct',
+          }),
+        );
+      }
+      if (directGeoip.isNotEmpty) {
+        rules.add(
+          rule('direct-geoip', {
+            'ip': directGeoip.map((c) => 'geoip:$c').toList(),
+            'outboundTag': 'direct',
+          }),
+        );
+      }
+      rules.add(
+        rule('direct-private', {
+          'ip': [...extraDirectIps, ...kBasePrivateRanges],
+          'outboundTag': 'direct',
+        }),
+      );
+      final quicBlocked =
+          settings.finalOutbound == AppSettings.finalOutboundProxy &&
+          _visionRejectsQuic(proxyOutbounds);
+      // общий block-quic стоит ниже и этих правил уже не увидит, поэтому QUIC режется у каждого, что ведёт в proxy
+      for (final route in placed) {
+        final own = _appRouteRules([route], appTarget, rule);
+        if (quicBlocked && appTarget(route) == 'proxy') {
+          rules.addAll([for (final r in own) ?_quicBlock(r)]);
+        }
+        rules.addAll(own);
+      }
+      // между обходом и через VPN, как в разделе всех приложений (routesIn)
+      rules
+        ..addAll(protocol(RouteTarget.server))
+        ..addAll(_routeServerRules(routes, rule));
+      // vision отвергает UDP/443 только после полного TCP+TLS до сервера, и каждый повтор QUIC стоил рукопожатия;
+      // только при глобальном прокси, вариант -udp443 не трогаем
+      if (quicBlocked) {
+        rules.add(
+          rule('block-quic', {
+            'network': 'udp',
+            'port': '443',
+            'outboundTag': 'block',
+          }),
+        );
+      }
+      rules.addAll(protocol(RouteTarget.vpn));
+      if (proxyDomains.isNotEmpty) {
+        rules.add(
+          rule('proxy-domains', {
+            'domain': proxyDomains,
+            'outboundTag': 'proxy',
+          }),
+        );
+      }
+      if (proxyGeoip.isNotEmpty) {
+        rules.add(
+          rule('proxy-geoip', {
+            'ip': proxyGeoip.map((c) => 'geoip:$c').toList(),
+            'outboundTag': 'proxy',
+          }),
+        );
+      }
+      if (proxyIps.isNotEmpty) {
+        rules.add(rule('proxy-ips', {'ip': proxyIps, 'outboundTag': 'proxy'}));
+      }
     }
 
     final finalTag = isPingMode
@@ -2308,23 +2497,32 @@ class ConfigGeneratorV2 {
     final resolvesForIpRules =
         !isPingMode && effectiveDomainStrategy == 'IPIfNonMatch';
     if (desktopTun != null) {
-      rules.addAll(_desktopTunTailRules(
-        desktopTun,
-        directTag: 'direct',
-        blockTag: 'block',
-        rule: rule,
-      ));
+      rules.addAll(
+        _desktopTunTailRules(
+          desktopTun,
+          directTag: 'direct',
+          blockTag: 'block',
+          rule: rule,
+        ),
+      );
     }
-    rules.add(rule(
-      'final',
-      resolvesForIpRules
-          ? {'ip': ['0.0.0.0/0', '::/0'], 'outboundTag': finalTag}
-          : {'outboundTag': finalTag, 'network': 'tcp,udp'},
-    ));
+    rules.add(
+      rule(
+        'final',
+        resolvesForIpRules
+            ? {
+                'ip': ['0.0.0.0/0', '::/0'],
+                'outboundTag': finalTag,
+              }
+            : {'outboundTag': finalTag, 'network': 'tcp,udp'},
+      ),
+    );
 
     // и в пробе: она обязана дозваниваться так же, как потом боевое соединение
-    final fragmentOutbound =
-        _applyFragment([...proxyOutbounds, ...routeOutbounds], core);
+    final fragmentOutbound = _applyFragment([
+      ...proxyOutbounds,
+      ...routeOutbounds,
+    ], core);
 
     _applyUdpNoise([...proxyOutbounds, ...routeOutbounds], core);
 
@@ -2343,26 +2541,26 @@ class ConfigGeneratorV2 {
     );
 
     final outbounds = <Map<String, dynamic>>[
-        ...proxyOutbounds,
-        ...routeOutbounds,
-        {
-          'protocol': 'freedom',
-          'tag': 'direct',
-          if (core.concurrentDial)
-            'streamSettings': {
-              'sockopt': {'happyEyeballs': _happyEyeballs(core)},
-            },
-        },
-        {'protocol': 'blackhole', 'tag': 'block'},
-        // не раньше прокси-аутбаунда: первый у xray основной
-        ?fragmentOutbound,
-        if (!isPingMode)
-          {
-            'protocol': 'dns',
-            'tag': 'dns-out',
-            'settings': _dnsOutboundSettings(),
+      ...proxyOutbounds,
+      ...routeOutbounds,
+      {
+        'protocol': 'freedom',
+        'tag': 'direct',
+        if (core.concurrentDial)
+          'streamSettings': {
+            'sockopt': {'happyEyeballs': _happyEyeballs(core)},
           },
-        if (!isPingMode && core.udpPerAddress) _udpPerExitMark(),
+      },
+      {'protocol': 'blackhole', 'tag': 'block'},
+      // не раньше прокси-аутбаунда: первый у xray основной
+      ?fragmentOutbound,
+      if (!isPingMode)
+        {
+          'protocol': 'dns',
+          'tag': 'dns-out',
+          'settings': _dnsOutboundSettings(),
+        },
+      if (!isPingMode && core.udpPerAddress) _udpPerExitMark(),
     ];
     if (resolvesForIpRules && finalTag != 'proxy') {
       final index = outbounds.indexWhere((o) => o['tag'] == finalTag);
@@ -2414,7 +2612,8 @@ class ConfigGeneratorV2 {
   // и маршрут ::/0, и плитка с перезапуском берут её из того же конфига на диске
   static void _markNativeTunIpv6(Map<String, dynamic> config) {
     for (final inbound in (config['inbounds'] as List? ?? const [])) {
-      if (inbound is! Map<String, dynamic> || inbound['tag'] != _tunInboundTag) {
+      if (inbound is! Map<String, dynamic> ||
+          inbound['tag'] != _tunInboundTag) {
         continue;
       }
       final settings = inbound['settings'];
@@ -2429,7 +2628,11 @@ class ConfigGeneratorV2 {
     DesktopTunOptions tun, {
     required String? dnsOutTag,
     required String directTag,
-    required Map<String, dynamic> Function(String tag, Map<String, dynamic> fields) rule,
+    required Map<String, dynamic> Function(
+      String tag,
+      Map<String, dynamic> fields,
+    )
+    rule,
   }) {
     Map<String, dynamic> fromTun(String tag, Map<String, dynamic> fields) =>
         rule(tag, {
@@ -2467,13 +2670,13 @@ class ConfigGeneratorV2 {
       if (selected.isNotEmpty)
         ?switch (tun.routingMode) {
           AppRoutingMode.onlySelected => fromTun('tun-unselected', {
-              'process': [for (final name in selected) '!$name'],
-              'outboundTag': directTag,
-            }),
+            'process': [for (final name in selected) '!$name'],
+            'outboundTag': directTag,
+          }),
           AppRoutingMode.allExceptSelected => fromTun('tun-excluded', {
-              'process': selected,
-              'outboundTag': directTag,
-            }),
+            'process': selected,
+            'outboundTag': directTag,
+          }),
           AppRoutingMode.allProxy => null,
         },
     ];
@@ -2483,9 +2686,14 @@ class ConfigGeneratorV2 {
     DesktopTunOptions tun, {
     required String directTag,
     required String blockTag,
-    required Map<String, dynamic> Function(String tag, Map<String, dynamic> fields) rule,
+    required Map<String, dynamic> Function(
+      String tag,
+      Map<String, dynamic> fields,
+    )
+    rule,
   }) {
-    final unnamedSelection = tun.routingMode == AppRoutingMode.onlySelected &&
+    final unnamedSelection =
+        tun.routingMode == AppRoutingMode.onlySelected &&
         tun.managedProcessNames.every((name) => name.trim().isEmpty);
     return [
       // по тегу tun-ipv6 ядро отвечает сбросом ещё до рукопожатия (tool/patches/xray-tun-refuse-before-handshake.patch),
@@ -2572,11 +2780,12 @@ class ConfigGeneratorV2 {
           'settings': desktopTun == null
               ? {'name': _tunInterfaceName, 'mtu': _defaultTunMtu}
               : _desktopTunSettings(desktopTun),
-          'sniffing': _fakeDnsApplies(
-            settings,
-            nativeTunInbound: nativeTunInbound,
-            isPingMode: isPingMode,
-          )
+          'sniffing':
+              _fakeDnsApplies(
+                settings,
+                nativeTunInbound: nativeTunInbound,
+                isPingMode: isPingMode,
+              )
               ? _fakeDnsSniffing(core)
               : core.buildSniffing(),
         },
@@ -2598,83 +2807,80 @@ class ConfigGeneratorV2 {
           'settings': {'auth': 'noauth', 'udp': true},
         }
       else ...[
-      {
-        'tag': 'socks-in',
-        'port': socksPort,
-        'listen': '127.0.0.1',
-        'protocol': 'socks',
-        'settings': useNoAuthInbound
-            ? {'auth': 'noauth', 'udp': true}
-            : {
-                'auth': 'password',
-                'udp': true,
-                'accounts': [
-                  {
-                    'user': Socks5Credentials().username,
-                    'pass': Socks5Credentials().password,
-                  }
-                ],
-              },
-        'sniffing': core.buildSniffing(),
-      },
-      {
-        'tag': 'http-in',
-        'port': settings.httpPort,
-        'listen': '127.0.0.1',
-        'protocol': 'http',
-        'settings': useNoAuthInbound
-            ? {'allowTransparent': false}
-            : {
-                'allowTransparent': false,
-                'accounts': [
-                  {
-                    'user': Socks5Credentials().username,
-                    'pass': Socks5Credentials().password,
-                  }
-                ],
-              },
-      },
-      if (settings.lanSharing) ...[
         {
-          'tag': 'socks-lan',
-          'port': settings.lanSocksPort,
-          'listen': '0.0.0.0',
+          'tag': 'socks-in',
+          'port': socksPort,
+          'listen': '127.0.0.1',
           'protocol': 'socks',
-          'settings': _lanAuthEnabled(settings)
-              ? {
+          'settings': useNoAuthInbound
+              ? {'auth': 'noauth', 'udp': true}
+              : {
                   'auth': 'password',
                   'udp': true,
                   'accounts': [
                     {
-                      'user': settings.lanUsername.trim(),
-                      'pass': settings.lanPassword,
-                    }
+                      'user': Socks5Credentials().username,
+                      'pass': Socks5Credentials().password,
+                    },
                   ],
-                }
-              : {
-                  'auth': 'noauth',
-                  'udp': true,
                 },
           'sniffing': core.buildSniffing(),
         },
         {
-          'tag': 'http-lan',
-          'port': settings.lanHttpPort,
-          'listen': '0.0.0.0',
+          'tag': 'http-in',
+          'port': settings.httpPort,
+          'listen': '127.0.0.1',
           'protocol': 'http',
-          'settings': _lanAuthEnabled(settings)
-              ? {
+          'settings': useNoAuthInbound
+              ? {'allowTransparent': false}
+              : {
                   'allowTransparent': false,
                   'accounts': [
                     {
-                      'user': settings.lanUsername.trim(),
-                      'pass': settings.lanPassword,
-                    }
+                      'user': Socks5Credentials().username,
+                      'pass': Socks5Credentials().password,
+                    },
                   ],
-                }
-              : {'allowTransparent': false},
+                },
         },
-      ],
+        if (settings.lanSharing) ...[
+          {
+            'tag': 'socks-lan',
+            'port': settings.lanSocksPort,
+            'listen': '0.0.0.0',
+            'protocol': 'socks',
+            'settings': _lanAuthEnabled(settings)
+                ? {
+                    'auth': 'password',
+                    'udp': true,
+                    'accounts': [
+                      {
+                        'user': settings.lanUsername.trim(),
+                        'pass': settings.lanPassword,
+                      },
+                    ],
+                  }
+                : {'auth': 'noauth', 'udp': true},
+            'sniffing': core.buildSniffing(),
+          },
+          {
+            'tag': 'http-lan',
+            'port': settings.lanHttpPort,
+            'listen': '0.0.0.0',
+            'protocol': 'http',
+            'settings': _lanAuthEnabled(settings)
+                ? {
+                    'allowTransparent': false,
+                    'accounts': [
+                      {
+                        'user': settings.lanUsername.trim(),
+                        'pass': settings.lanPassword,
+                      },
+                    ],
+                  }
+                : {'allowTransparent': false},
+          },
+        ],
       ],
     ];
   }

@@ -365,7 +365,9 @@ void main() {
         subscriptionId: 'own',
         ownAnswered: false,
         othersAnswered: true,
-        now: t0.add(SubscriptionOutage.forgetAfter + const Duration(seconds: 1)),
+        now: t0.add(
+          SubscriptionOutage.forgetAfter + const Duration(seconds: 1),
+        ),
       );
       expect(outage.rounds, 1);
       expect(outage.shouldJump, isFalse);
@@ -408,25 +410,30 @@ void main() {
         home = home.afterCheck(homeAnswered: answers[i]);
       }
       expect(home.shouldReturn, isTrue);
-      expect(NeighbourHomePace.every * AutoSelectHome.returnAfter,
-          lessThanOrEqualTo(const Duration(minutes: 2)));
+      expect(
+        NeighbourHomePace.every * AutoSelectHome.returnAfter,
+        lessThanOrEqualTo(const Duration(minutes: 2)),
+      );
     });
 
-    test('после пяти промахов подряд пауза 15 минут, потом снова пять попыток', () {
-      var pace = const NeighbourHomePace();
-      for (var i = 0; i < NeighbourHomePace.missesBeforePause; i++) {
-        expect(pace.due(minute(i)), isTrue);
-        pace = pace.afterCheck(homeAnswered: false, now: minute(i));
-      }
-      final last = minute(NeighbourHomePace.missesBeforePause - 1);
-      expect(pace.due(last.add(const Duration(minutes: 14))), isFalse);
-      final resumed = last.add(const Duration(minutes: 15));
-      expect(pace.due(resumed), isTrue);
+    test(
+      'после пяти промахов подряд пауза 15 минут, потом снова пять попыток',
+      () {
+        var pace = const NeighbourHomePace();
+        for (var i = 0; i < NeighbourHomePace.missesBeforePause; i++) {
+          expect(pace.due(minute(i)), isTrue);
+          pace = pace.afterCheck(homeAnswered: false, now: minute(i));
+        }
+        final last = minute(NeighbourHomePace.missesBeforePause - 1);
+        expect(pace.due(last.add(const Duration(minutes: 14))), isFalse);
+        final resumed = last.add(const Duration(minutes: 15));
+        expect(pace.due(resumed), isTrue);
 
-      pace = pace.afterCheck(homeAnswered: false, now: resumed);
-      expect(pace.misses, 1);
-      expect(pace.due(resumed.add(NeighbourHomePace.every)), isTrue);
-    });
+        pace = pace.afterCheck(homeAnswered: false, now: resumed);
+        expect(pace.misses, 1);
+        expect(pace.due(resumed.add(NeighbourHomePace.every)), isTrue);
+      },
+    );
 
     test('ответ своего сбрасывает счёт промахов', () {
       var pace = const NeighbourHomePace();

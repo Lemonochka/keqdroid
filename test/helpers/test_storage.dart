@@ -8,4 +8,3 @@ Future<StorageService> buildStorageService({
   final prefs = await SharedPreferences.getInstance();
   return StorageService(prefs);
 }
-

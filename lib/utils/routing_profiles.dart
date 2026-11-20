@@ -7,8 +7,7 @@ import 'provider_routing.dart';
 RoutingProfile? profileForServer(
   List<RoutingProfile> profiles,
   ServerItem server,
-) =>
-    profileForSubscription(profiles, server.subscriptionId);
+) => profileForSubscription(profiles, server.subscriptionId);
 
 RoutingProfile? profileForSubscription(
   List<RoutingProfile> profiles,
@@ -26,17 +25,18 @@ List<RoutingProfile> withSubscriptions(
   List<RoutingProfile> profiles,
   String profileId,
   List<String> subscriptionIds,
-) =>
-    [
-      for (final p in profiles)
-        if (p.id == profileId)
-          p.copyWith(subscriptionIds: subscriptionIds)
-        else
-          p.copyWith(subscriptionIds: [
-            for (final s in p.subscriptionIds)
-              if (!subscriptionIds.contains(s)) s,
-          ]),
-    ];
+) => [
+  for (final p in profiles)
+    if (p.id == profileId)
+      p.copyWith(subscriptionIds: subscriptionIds)
+    else
+      p.copyWith(
+        subscriptionIds: [
+          for (final s in p.subscriptionIds)
+            if (!subscriptionIds.contains(s)) s,
+        ],
+      ),
+];
 
 // свой профиль у подписки провайдеру не уступает: его профиль тогда не нужен и уходит
 List<RoutingProfile> withProviderRouting(
@@ -72,11 +72,10 @@ List<RoutingProfile> withProviderRouting(
 List<RoutingProfile> withoutProviderProfileOf(
   List<RoutingProfile> profiles,
   String subscriptionId,
-) =>
-    [
-      for (final p in profiles)
-        if (p.providerSubscriptionId != subscriptionId) p,
-    ];
+) => [
+  for (final p in profiles)
+    if (p.providerSubscriptionId != subscriptionId) p,
+];
 
 List<TrafficRoute> withRoute(List<TrafficRoute> routes, TrafficRoute route) {
   final exists = routes.any((r) => r.id == route.id);
@@ -88,6 +87,6 @@ List<TrafficRoute> withRoute(List<TrafficRoute> routes, TrafficRoute route) {
 }
 
 List<TrafficRoute> withoutRoute(List<TrafficRoute> routes, String id) => [
-      for (final r in routes)
-        if (r.id != id) r,
-    ];
+  for (final r in routes)
+    if (r.id != id) r,
+];

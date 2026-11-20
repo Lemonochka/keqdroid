@@ -35,8 +35,14 @@ class HysteriaLinkParams {
     }
     final params = uri.queryParameters;
     if (params['version']?.trim() == '1') return true;
-    return const ['upmbps', 'downmbps', 'peer', 'obfsParam', 'protocol', 'auth_str']
-        .any((key) => (params[key] ?? '').trim().isNotEmpty);
+    return const [
+      'upmbps',
+      'downmbps',
+      'peer',
+      'obfsParam',
+      'protocol',
+      'auth_str',
+    ].any((key) => (params[key] ?? '').trim().isNotEmpty);
   }
 
   // без порта 443 (Hysteria 2 URI Scheme); явный :0 оставляем, как v2rayN, Uri его от пропуска не отличает

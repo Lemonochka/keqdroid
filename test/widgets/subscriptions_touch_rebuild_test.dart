@@ -79,15 +79,18 @@ Future<void> _pump(WidgetTester tester) async {
 // на Pixel 6a первый кадр свайпа с подписок обратно на серверы стоил 43-49 мс: палец ложится на карточку,
 // список готовит перетаскивание и перестраивает все карточки (трасса 18.11.2026)
 void main() {
-  testWidgets('касание карточки не пересобирает карточки списка', (tester) async {
+  testWidgets('касание карточки не пересобирает карточки списка', (
+    tester,
+  ) async {
     await _pump(tester);
     expect(find.text('Provider 0'), findsOneWidget);
 
     final rebuilt = <Widget>[];
     debugOnRebuildDirtyWidget = (e, _) => rebuilt.add(e.widget);
     addTearDown(() => debugOnRebuildDirtyWidget = null);
-    final gesture =
-        await tester.startGesture(tester.getCenter(find.text('Provider 0')));
+    final gesture = await tester.startGesture(
+      tester.getCenter(find.text('Provider 0')),
+    );
     await tester.pump(const Duration(milliseconds: 16));
     debugOnRebuildDirtyWidget = null;
 
@@ -102,7 +105,9 @@ void main() {
     await tester.pumpAndSettle();
   });
 
-  testWidgets('карточку по-прежнему можно перетащить на другое место', (tester) async {
+  testWidgets('карточку по-прежнему можно перетащить на другое место', (
+    tester,
+  ) async {
     await _pump(tester);
     final first = tester.getCenter(find.text('Provider 0'));
     final step = tester.getCenter(find.text('Provider 1')).dy - first.dy;

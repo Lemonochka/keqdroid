@@ -41,7 +41,9 @@ class ProcessExit {
       reasonName: map['reasonName'] as String? ?? '$reason',
       status: map['status'] as int? ?? 0,
       importance: map['importance'] as int? ?? 0,
-      description: description == null || description.isEmpty ? null : description,
+      description: description == null || description.isEmpty
+          ? null
+          : description,
       vpnStatus: map['vpnStatus'] as String?,
       sdkInt: sdkInt,
     );
@@ -65,14 +67,14 @@ class ProcessExit {
   bool get vpnWasOn => vpnStatus == 'connected' || vpnStatus == 'connecting';
 
   ProcessExitCause get cause => switch (reason) {
-        1 => ProcessExitCause.self,
-        3 => ProcessExitCause.memory,
-        4 || 5 || 6 || 7 => ProcessExitCause.crash,
-        10 when (sdkInt ?? 34) < 34 => ProcessExitCause.userOrUpdate,
-        10 || 11 => ProcessExitCause.user,
-        8 || 15 || 16 => ProcessExitCause.update,
-        _ => ProcessExitCause.system,
-      };
+    1 => ProcessExitCause.self,
+    3 => ProcessExitCause.memory,
+    4 || 5 || 6 || 7 => ProcessExitCause.crash,
+    10 when (sdkInt ?? 34) < 34 => ProcessExitCause.userOrUpdate,
+    10 || 11 => ProcessExitCause.user,
+    8 || 15 || 16 => ProcessExitCause.update,
+    _ => ProcessExitCause.system,
+  };
 }
 
 enum ProcessExitCause {
@@ -91,13 +93,7 @@ enum ProcessExitCause {
   self,
 }
 
-enum CoreRole {
-  core,
-
-  proxy,
-
-  tun,
-}
+enum CoreRole { core, proxy, tun }
 
 class CoreInfo {
   const CoreInfo({
@@ -113,13 +109,13 @@ class CoreInfo {
   });
 
   const CoreInfo.missing({required this.name, required this.role})
-      : version = null,
-        goVersion = null,
-        path = null,
-        sizeBytes = null,
-        modified = null,
-        engines = const {},
-        missing = true;
+    : version = null,
+      goVersion = null,
+      path = null,
+      sizeBytes = null,
+      modified = null,
+      engines = const {},
+      missing = true;
 
   final String name;
 

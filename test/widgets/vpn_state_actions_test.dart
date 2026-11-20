@@ -4,7 +4,9 @@ import 'package:keqdroid/l10n/app_localizations.dart';
 import 'package:keqdroid/shared/ui/bottom_nav.dart';
 
 void main() {
-  testWidgets('bottom nav shows connected badge for servers tab', (tester) async {
+  testWidgets('bottom nav shows connected badge for servers tab', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -26,4 +28,3 @@ void main() {
 }
 
 void _noop(int _) {}
-

@@ -182,10 +182,10 @@ class WindowsDesktopService {
   }) async {
     if (!Platform.isWindows || tunIndex <= 0) return null;
     try {
-      final alias = await _channel.invokeMethod<String>('getTunBypassInterface', {
-        'tunIndex': tunIndex,
-        'rule': mihomoRule ? 'mihomo' : 'xray',
-      });
+      final alias = await _channel.invokeMethod<String>(
+        'getTunBypassInterface',
+        {'tunIndex': tunIndex, 'rule': mihomoRule ? 'mihomo' : 'xray'},
+      );
       return alias == null || alias.isEmpty ? null : alias;
     } on PlatformException {
       return null;

@@ -116,7 +116,10 @@ void main() {
     test('countryCode есть только у страновых флагов', () {
       expect(ServerNameUtils.extractCountryCode('🇩🇪 Germany 01'), 'DE');
       // Субъект принадлежит стране — код у него её.
-      expect(ServerNameUtils.extractCountryCode('🏴󠁧󠁢󠁳󠁣󠁴󠁿 Scotland'), 'GB');
+      expect(
+        ServerNameUtils.extractCountryCode('🏴󠁧󠁢󠁳󠁣󠁴󠁿 Scotland'),
+        'GB',
+      );
       // Не-страна, но код региона у неё есть — он и возвращается.
       expect(ServerNameUtils.extractCountryCode('🇪🇺 Europe'), 'EU');
       // А у 🏴‍☠️ и 🏁 кода нет, и придумывать его не надо.
@@ -132,14 +135,22 @@ void main() {
     });
 
     test('без эмодзи флаг всё ещё угадывается по названию', () {
-      expect(ServerNameUtils.extractFlag('Estonia | 2 | HY2'), const FlagArt('ee'));
+      expect(
+        ServerNameUtils.extractFlag('Estonia | 2 | HY2'),
+        const FlagArt('ee'),
+      );
       expect(ServerNameUtils.extractFlag('Cloudflare Warp-1'), isNull);
     });
 
     test('cleanDisplayName убирает флаг любого вида', () {
-      expect(ServerNameUtils.cleanDisplayName('🏳️‍🌈 Pride node'), 'Pride node');
-      expect(ServerNameUtils.cleanDisplayName('🇷🇺 Белый интернет #1'),
-          'Белый интернет #1');
+      expect(
+        ServerNameUtils.cleanDisplayName('🏳️‍🌈 Pride node'),
+        'Pride node',
+      );
+      expect(
+        ServerNameUtils.cleanDisplayName('🇷🇺 Белый интернет #1'),
+        'Белый интернет #1',
+      );
     });
   });
 }

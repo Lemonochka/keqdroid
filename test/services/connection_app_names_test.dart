@@ -16,16 +16,15 @@ void main() {
       String host = '216.58.198.162',
       String destIp = '',
       bool closed = false,
-    }) =>
-        ConnectionEntry(
-          id: 'tcp:$host:443:$source',
-          network: 'tcp',
-          host: host,
-          destPort: 443,
-          destIp: destIp,
-          source: source,
-          closed: closed,
-        );
+    }) => ConnectionEntry(
+      id: 'tcp:$host:443:$source',
+      network: 'tcp',
+      host: host,
+      destPort: 443,
+      destIp: destIp,
+      source: source,
+      closed: closed,
+    );
 
     test('спрашивает по сокету из самой записи', () async {
       List<Map<String, Object?>>? asked;
@@ -50,7 +49,7 @@ void main() {
           'srcPort': 41234,
           'dstIp': '216.58.198.162',
           'dstPort': 443,
-        }
+        },
       ]);
       expect(result.entries.single.process, 'Chrome');
     });
@@ -112,9 +111,15 @@ void main() {
       }
 
       await ConnectionsService.withAppNamesFromSource(
-        _snapshot([entry]), resolve: resolve, cache: cache);
+        _snapshot([entry]),
+        resolve: resolve,
+        cache: cache,
+      );
       final again = await ConnectionsService.withAppNamesFromSource(
-        _snapshot([entry]), resolve: resolve, cache: cache);
+        _snapshot([entry]),
+        resolve: resolve,
+        cache: cache,
+      );
 
       expect(calls, 1);
       expect(again.entries.single.process, 'Chrome');

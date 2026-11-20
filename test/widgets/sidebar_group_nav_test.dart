@@ -53,13 +53,13 @@ class _FakeVpn extends VpnStateNotifier {
 }
 
 ServerItem _server(String id, {String? subscriptionId}) => ServerItem(
-      id: id,
-      config: 'vless://uuid@$id.example:443?type=tcp&security=none',
-      type: subscriptionId == null
-          ? ServerItemType.manual
-          : ServerItemType.subscription,
-      subscriptionId: subscriptionId,
-    );
+  id: id,
+  config: 'vless://uuid@$id.example:443?type=tcp&security=none',
+  type: subscriptionId == null
+      ? ServerItemType.manual
+      : ServerItemType.subscription,
+  subscriptionId: subscriptionId,
+);
 
 Subscription _sub(String id, String name) =>
     Subscription(id: id, name: name, url: 'https://example.com/$id');
@@ -90,7 +90,10 @@ Future<List<int>> _pumpNav(
       overrides: [
         serversProvider.overrideWith(
           () => _FakeServers(
-            ServersState(servers: servers ?? _threeGroups, activeServerId: activeServerId),
+            ServersState(
+              servers: servers ?? _threeGroups,
+              activeServerId: activeServerId,
+            ),
           ),
         ),
         subscriptionsProvider.overrideWith(() => _FakeSubs(subs ?? _subs)),
@@ -119,7 +122,11 @@ Future<List<int>> _pumpNav(
                         child: CustomScrollView(
                           key: const Key('list'),
                           slivers: [
-                            for (final key in ['sub-a', 'sub-b', kManualServerGroupKey])
+                            for (final key in [
+                              'sub-a',
+                              'sub-b',
+                              kManualServerGroupKey,
+                            ])
                               SliverToBoxAdapter(
                                 child: ServerGroupAnchor(
                                   groupKey: key,
@@ -143,33 +150,48 @@ Future<List<int>> _pumpNav(
 
 ScrollPosition _carouselPosition(WidgetTester tester) => tester
     .state<ScrollableState>(
-      find.descendant(of: find.byType(CarouselView), matching: find.byType(Scrollable)),
+      find.descendant(
+        of: find.byType(CarouselView),
+        matching: find.byType(Scrollable),
+      ),
     )
     .position;
 
-final _covers = find.byWidgetPredicate((w) => w.runtimeType.toString() == '_GroupCover');
+final _covers = find.byWidgetPredicate(
+  (w) => w.runtimeType.toString() == '_GroupCover',
+);
 
 Finder _cover(String groupKey) => find.byWidgetPredicate(
-      (w) => w.runtimeType.toString() == '_GroupCover' && (w as dynamic).group.key == groupKey,
-    );
+  (w) =>
+      w.runtimeType.toString() == '_GroupCover' &&
+      (w as dynamic).group.key == groupKey,
+);
 
-double _coverTop(WidgetTester tester, String groupKey) => tester.getRect(_cover(groupKey)).top;
+double _coverTop(WidgetTester tester, String groupKey) =>
+    tester.getRect(_cover(groupKey)).top;
 
 // по подписи большую обложку не узнать: названия на всех
 String _big(WidgetTester tester) {
-  final tallest = _covers
-      .evaluate()
-      .reduce((a, b) => a.size!.height >= b.size!.height ? a : b);
+  final tallest = _covers.evaluate().reduce(
+    (a, b) => a.size!.height >= b.size!.height ? a : b,
+  );
   return (tallest.widget as dynamic).group.key as String;
 }
 
 // панель пересобирается на каждом кадре, как от анимации вкладок
-Future<void> _expectNoRollback(WidgetTester tester, ScrollPosition position) async {
+Future<void> _expectNoRollback(
+  WidgetTester tester,
+  ScrollPosition position,
+) async {
   var peak = position.pixels;
   for (var i = 0; i < 90; i++) {
     tester.element(find.byType(SidebarGroupNav)).markNeedsBuild();
     await tester.pump(const Duration(milliseconds: 16));
-    expect(position.pixels, greaterThanOrEqualTo(peak - 0.5), reason: 'кадр ${i * 16} мс');
+    expect(
+      position.pixels,
+      greaterThanOrEqualTo(peak - 0.5),
+      reason: 'кадр ${i * 16} мс',
+    );
     peak = math.max(peak, position.pixels);
   }
   await tester.pumpAndSettle();
@@ -217,7 +239,10 @@ Future<ScrollPosition> _pumpOnScreen(WidgetTester tester, double dpr) async {
         vpnStateProvider.overrideWith(() => _FakeVpn(VpnStatus.disconnected)),
       ],
       child: MaterialApp(
-        theme: ThemeData(colorScheme: scheme, scaffoldBackgroundColor: Colors.black),
+        theme: ThemeData(
+          colorScheme: scheme,
+          scaffoldBackgroundColor: Colors.black,
+        ),
         locale: const Locale('en'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
@@ -267,7 +292,11 @@ Stream<_CoverFrame> _slowScroll(
     if (_cover(groupKey).evaluate().isEmpty) continue;
     final cover = tester.getRect(_cover(groupKey));
     if (cover.height < 40) continue;
-    yield (cover: cover, frame: await DesktopSkiaFrame.capture(tester), dpr: dpr);
+    yield (
+      cover: cover,
+      frame: await DesktopSkiaFrame.capture(tester),
+      dpr: dpr,
+    );
   }
 }
 
@@ -286,39 +315,43 @@ double _captionTop(_CoverFrame f) {
 void main() {
   setUp(() => ServerGroupAnchors.instance.currentGroup.value = null);
 
-  testWidgets('большая обложка у группы, на которой стоит список, и едет за ним', (
-    tester,
-  ) async {
-    await _pumpNav(tester);
-    expect(_big(tester), 'sub-a');
+  testWidgets(
+    'большая обложка у группы, на которой стоит список, и едет за ним',
+    (tester) async {
+      await _pumpNav(tester);
+      expect(_big(tester), 'sub-a');
 
-    ServerGroupAnchors.instance.currentGroup.value = 'sub-b';
-    await tester.pumpAndSettle();
-    expect(_big(tester), 'sub-b');
-    // число серверов группы рядом с названием
-    expect(find.text('2'), findsOneWidget);
+      ServerGroupAnchors.instance.currentGroup.value = 'sub-b';
+      await tester.pumpAndSettle();
+      expect(_big(tester), 'sub-b');
+      // число серверов группы рядом с названием
+      expect(find.text('2'), findsOneWidget);
 
-    ServerGroupAnchors.instance.currentGroup.value = kManualServerGroupKey;
-    await tester.pumpAndSettle();
-    expect(_big(tester), kManualServerGroupKey);
-    // ручная группа берёт название из локализации
-    expect(find.text('Manual servers'), findsOneWidget);
-  });
+      ServerGroupAnchors.instance.currentGroup.value = kManualServerGroupKey;
+      await tester.pumpAndSettle();
+      expect(_big(tester), kManualServerGroupKey);
+      // ручная группа берёт название из локализации
+      expect(find.text('Manual servers'), findsOneWidget);
+    },
+  );
 
-  testWidgets('названия и на маленьких обложках: там посередине, на большой у нижнего края', (
-    tester,
-  ) async {
-    await _pumpNav(tester);
-    final small = tester.getRect(_cover('sub-b'));
-    final smallTitle = tester.getRect(find.text('Bravo'));
-    expect((smallTitle.center.dy - small.center.dy).abs(), lessThan(3));
-    final big = tester.getRect(_cover('sub-a'));
-    final bigTitle = tester.getRect(find.text('Alpha'));
-    expect(big.bottom - bigTitle.bottom, moreOrLessEquals(14, epsilon: 0.5));
-  });
+  testWidgets(
+    'названия и на маленьких обложках: там посередине, на большой у нижнего края',
+    (tester) async {
+      await _pumpNav(tester);
+      final small = tester.getRect(_cover('sub-b'));
+      final smallTitle = tester.getRect(find.text('Bravo'));
+      expect((smallTitle.center.dy - small.center.dy).abs(), lessThan(3));
+      final big = tester.getRect(_cover('sub-a'));
+      final bigTitle = tester.getRect(find.text('Alpha'));
+      expect(big.bottom - bigTitle.bottom, moreOrLessEquals(14, epsilon: 0.5));
+    },
+  );
 
   // картинка, затемнение и фон сглаживались по краю каждое само, и по краю светилась полоска
-  testWidgets('обложка скругляется одним слоем, а её фон шире её на 1 dp', (tester) async {
+  testWidgets('обложка скругляется одним слоем, а её фон шире её на 1 dp', (
+    tester,
+  ) async {
     await _pumpNav(tester);
     expect(
       tester.widget<CarouselView>(find.byType(CarouselView)).itemClipBehavior,
@@ -327,7 +360,9 @@ void main() {
     final background = find.descendant(
       of: _cover('sub-a'),
       matching: find.byWidgetPredicate(
-        (w) => w is CustomPaint && w.painter.runtimeType.toString() == '_DefaultCoverPainter',
+        (w) =>
+            w is CustomPaint &&
+            w.painter.runtimeType.toString() == '_DefaultCoverPainter',
       ),
     );
     expect(
@@ -336,147 +371,199 @@ void main() {
     );
   });
 
-  testWidgets('надпись над первой обложкой с запуска и после пересборки панели', (tester) async {
-    await _pumpNav(tester);
-    double gap() => _coverTop(tester, 'sub-a') - tester.getRect(find.text('Jump to')).bottom;
-    final atStart = gap();
-    expect(atStart, inInclusiveRange(0, 40), reason: 'надпись висит над пустым местом');
-    // так панель пересобирается от каждой анимации вкладок
-    tester.element(find.byType(SidebarGroupNav)).markNeedsBuild();
-    await tester.pump();
-    expect(gap(), moreOrLessEquals(atStart, epsilon: 0.5), reason: 'обложка заехала на надпись');
-  });
+  testWidgets(
+    'надпись над первой обложкой с запуска и после пересборки панели',
+    (tester) async {
+      await _pumpNav(tester);
+      double gap() =>
+          _coverTop(tester, 'sub-a') -
+          tester.getRect(find.text('Jump to')).bottom;
+      final atStart = gap();
+      expect(
+        atStart,
+        inInclusiveRange(0, 40),
+        reason: 'надпись висит над пустым местом',
+      );
+      // так панель пересобирается от каждой анимации вкладок
+      tester.element(find.byType(SidebarGroupNav)).markNeedsBuild();
+      await tester.pump();
+      expect(
+        gap(),
+        moreOrLessEquals(atStart, epsilon: 0.5),
+        reason: 'обложка заехала на надпись',
+      );
+    },
+  );
 
-  testWidgets('у последней группы под большой обложкой нет пустого места', (tester) async {
+  testWidgets('у последней группы под большой обложкой нет пустого места', (
+    tester,
+  ) async {
     await _pumpNav(tester);
     ServerGroupAnchors.instance.currentGroup.value = kManualServerGroupKey;
     await tester.pumpAndSettle();
     expect(_big(tester), kManualServerGroupKey);
     final panel = tester.getRect(find.byType(SidebarGroupNav));
     final big = tester.getRect(_cover(kManualServerGroupKey));
-    expect(panel.bottom - big.bottom, lessThan(12), reason: 'снизу пустая доля');
+    expect(
+      panel.bottom - big.bottom,
+      lessThan(12),
+      reason: 'снизу пустая доля',
+    );
     // надпись едет вместе со стопкой и не наезжает на верхнюю обложку
     final label = tester.getRect(find.text('Jump to'));
     expect(label.bottom, lessThanOrEqualTo(_coverTop(tester, 'sub-b') + 0.5));
     expect(label.top, greaterThanOrEqualTo(panel.top));
   });
 
-  testWidgets('к верхней группе карусель едет назад, а не крутит круг вперёд', (tester) async {
+  testWidgets('к верхней группе карусель едет назад, а не крутит круг вперёд', (
+    tester,
+  ) async {
     await _pumpNav(tester);
     ServerGroupAnchors.instance.currentGroup.value = kManualServerGroupKey;
     await tester.pumpAndSettle();
     final position = tester
         .state<ScrollableState>(
-          find.descendant(of: find.byType(CarouselView), matching: find.byType(Scrollable)),
+          find.descendant(
+            of: find.byType(CarouselView),
+            matching: find.byType(Scrollable),
+          ),
         )
         .position;
     var last = position.pixels;
     ServerGroupAnchors.instance.currentGroup.value = 'sub-a';
     for (var i = 0; i < 60; i++) {
       await tester.pump(const Duration(milliseconds: 16));
-      expect(position.pixels, lessThanOrEqualTo(last + 0.5), reason: 'кадр ${i * 16} мс');
+      expect(
+        position.pixels,
+        lessThanOrEqualTo(last + 0.5),
+        reason: 'кадр ${i * 16} мс',
+      );
       last = position.pixels;
     }
     await tester.pumpAndSettle();
     expect(_big(tester), 'sub-a');
   });
 
-  testWidgets('каждый щелчок колеса сразу шаг, список догоняет один раз, когда колесо встало', (
-    tester,
-  ) async {
-    final opened = await _pumpNav(tester);
-    final center = tester.getCenter(find.byType(CarouselView));
-    final mouse = TestPointer(1, PointerDeviceKind.mouse);
-    await tester.sendEventToBinding(mouse.hover(center));
-    Future<void> notch(double dy) => tester.sendEventToBinding(mouse.scroll(Offset(0, dy)));
+  testWidgets(
+    'каждый щелчок колеса сразу шаг, список догоняет один раз, когда колесо встало',
+    (tester) async {
+      final opened = await _pumpNav(tester);
+      final center = tester.getCenter(find.byType(CarouselView));
+      final mouse = TestPointer(1, PointerDeviceKind.mouse);
+      await tester.sendEventToBinding(mouse.hover(center));
+      Future<void> notch(double dy) =>
+          tester.sendEventToBinding(mouse.scroll(Offset(0, dy)));
 
-    await notch(100);
-    await tester.pump(const Duration(milliseconds: 60));
-    // второй щелчок посреди анимации первого: не ждёт её, а добавляет шаг
-    await notch(100);
-    await tester.pump(const Duration(milliseconds: 400));
-    await tester.pumpAndSettle();
-    expect(_big(tester), kManualServerGroupKey);
-    expect(opened, [1]);
+      await notch(100);
+      await tester.pump(const Duration(milliseconds: 60));
+      // второй щелчок посреди анимации первого: не ждёт её, а добавляет шаг
+      await notch(100);
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pumpAndSettle();
+      expect(_big(tester), kManualServerGroupKey);
+      expect(opened, [1]);
 
-    await notch(-100);
-    await tester.pump(const Duration(milliseconds: 400));
-    await tester.pumpAndSettle();
-    expect(_big(tester), 'sub-b');
-    expect(opened, [1, 1]);
-  });
+      await notch(-100);
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pumpAndSettle();
+      expect(_big(tester), 'sub-b');
+      expect(opened, [1, 1]);
+    },
+  );
 
   // список едет к группе анимацией через промежуточные группы, и карусель шла за ним назад:
   // пролистанная обложка вспухала и сжималась
-  testWidgets('колесом через группу: пока список догоняет, карусель не откатывается', (
-    tester,
-  ) async {
-    await _pumpNav(tester, withList: true);
-    final position = _carouselPosition(tester);
-    final mouse = TestPointer(1, PointerDeviceKind.mouse);
-    await tester.sendEventToBinding(mouse.hover(tester.getCenter(find.byType(CarouselView))));
-    await tester.sendEventToBinding(mouse.scroll(const Offset(0, 100)));
-    await tester.pump(const Duration(milliseconds: 40));
-    await tester.sendEventToBinding(mouse.scroll(const Offset(0, 100)));
-    await _expectNoRollback(tester, position);
-    expect(_big(tester), kManualServerGroupKey);
-    expect(ServerGroupAnchors.instance.currentGroup.value, kManualServerGroupKey);
-  });
+  testWidgets(
+    'колесом через группу: пока список догоняет, карусель не откатывается',
+    (tester) async {
+      await _pumpNav(tester, withList: true);
+      final position = _carouselPosition(tester);
+      final mouse = TestPointer(1, PointerDeviceKind.mouse);
+      await tester.sendEventToBinding(
+        mouse.hover(tester.getCenter(find.byType(CarouselView))),
+      );
+      await tester.sendEventToBinding(mouse.scroll(const Offset(0, 100)));
+      await tester.pump(const Duration(milliseconds: 40));
+      await tester.sendEventToBinding(mouse.scroll(const Offset(0, 100)));
+      await _expectNoRollback(tester, position);
+      expect(_big(tester), kManualServerGroupKey);
+      expect(
+        ServerGroupAnchors.instance.currentGroup.value,
+        kManualServerGroupKey,
+      );
+    },
+  );
 
-  testWidgets('мышкой через группу: пока список догоняет, карусель не откатывается', (
-    tester,
-  ) async {
-    await _pumpNav(tester, withList: true);
-    final position = _carouselPosition(tester);
-    final gesture = await tester.startGesture(
-      tester.getCenter(find.byType(CarouselView)),
-      kind: PointerDeviceKind.mouse,
-    );
-    for (var i = 0; i < 13; i++) {
-      await gesture.moveBy(const Offset(0, -50));
-      await tester.pump(const Duration(milliseconds: 50));
-    }
-    await tester.pump(const Duration(milliseconds: 300));
-    tester.element(find.byType(SidebarGroupNav)).markNeedsBuild();
-    await gesture.up();
-    await _expectNoRollback(tester, position);
-    expect(_big(tester), kManualServerGroupKey);
-    expect(ServerGroupAnchors.instance.currentGroup.value, kManualServerGroupKey);
-  });
+  testWidgets(
+    'мышкой через группу: пока список догоняет, карусель не откатывается',
+    (tester) async {
+      await _pumpNav(tester, withList: true);
+      final position = _carouselPosition(tester);
+      final gesture = await tester.startGesture(
+        tester.getCenter(find.byType(CarouselView)),
+        kind: PointerDeviceKind.mouse,
+      );
+      for (var i = 0; i < 13; i++) {
+        await gesture.moveBy(const Offset(0, -50));
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      await tester.pump(const Duration(milliseconds: 300));
+      tester.element(find.byType(SidebarGroupNav)).markNeedsBuild();
+      await gesture.up();
+      await _expectNoRollback(tester, position);
+      expect(_big(tester), kManualServerGroupKey);
+      expect(
+        ServerGroupAnchors.instance.currentGroup.value,
+        kManualServerGroupKey,
+      );
+    },
+  );
 
-  testWidgets('прыжок списка перебили прокруткой: карусель встаёт туда, где список остановился', (
-    tester,
-  ) async {
-    await _pumpNav(tester, withList: true);
-    final list = tester
-        .state<ScrollableState>(
-          find.descendant(of: find.byKey(const Key('list')), matching: find.byType(Scrollable)),
-        )
-        .position;
-    final mouse = TestPointer(1, PointerDeviceKind.mouse);
-    await tester.sendEventToBinding(mouse.hover(tester.getCenter(find.byType(CarouselView))));
-    await tester.sendEventToBinding(mouse.scroll(const Offset(0, 100)));
-    await tester.pump(const Duration(milliseconds: 40));
-    await tester.sendEventToBinding(mouse.scroll(const Offset(0, 100)));
-    for (var i = 0; i < 60 && list.pixels <= 600; i++) {
-      await tester.pump(const Duration(milliseconds: 16));
-    }
-    expect(ServerGroupAnchors.instance.currentGroup.value, 'sub-b');
-    list.jumpTo(600);
-    await tester.pumpAndSettle();
-    expect(_big(tester), 'sub-b');
-  });
+  testWidgets(
+    'прыжок списка перебили прокруткой: карусель встаёт туда, где список остановился',
+    (tester) async {
+      await _pumpNav(tester, withList: true);
+      final list = tester
+          .state<ScrollableState>(
+            find.descendant(
+              of: find.byKey(const Key('list')),
+              matching: find.byType(Scrollable),
+            ),
+          )
+          .position;
+      final mouse = TestPointer(1, PointerDeviceKind.mouse);
+      await tester.sendEventToBinding(
+        mouse.hover(tester.getCenter(find.byType(CarouselView))),
+      );
+      await tester.sendEventToBinding(mouse.scroll(const Offset(0, 100)));
+      await tester.pump(const Duration(milliseconds: 40));
+      await tester.sendEventToBinding(mouse.scroll(const Offset(0, 100)));
+      for (var i = 0; i < 60 && list.pixels <= 600; i++) {
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+      expect(ServerGroupAnchors.instance.currentGroup.value, 'sub-b');
+      list.jumpTo(600);
+      await tester.pumpAndSettle();
+      expect(_big(tester), 'sub-b');
+    },
+  );
 
   testWidgets('на ПК у карусели нет полосы прокрутки сбоку', (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.windows;
     addTearDown(() => debugDefaultTargetPlatformOverride = null);
     await _pumpNav(tester);
     expect(
-      find.descendant(of: find.byType(SidebarGroupNav), matching: find.byType(Scrollbar)),
+      find.descendant(
+        of: find.byType(SidebarGroupNav),
+        matching: find.byType(Scrollbar),
+      ),
       findsNothing,
     );
     expect(
-      find.descendant(of: find.byType(SidebarGroupNav), matching: find.byType(RawScrollbar)),
+      find.descendant(
+        of: find.byType(SidebarGroupNav),
+        matching: find.byType(RawScrollbar),
+      ),
       findsNothing,
     );
     debugDefaultTargetPlatformOverride = null;
@@ -502,7 +589,9 @@ void main() {
     await tester.pumpAndSettle();
   });
 
-  testWidgets('бросок мышью ведёт к соседней обложке и не проскакивает её', (tester) async {
+  testWidgets('бросок мышью ведёт к соседней обложке и не проскакивает её', (
+    tester,
+  ) async {
     for (final step in [25.0, 50.0]) {
       await _pumpNav(tester);
       final position = _carouselPosition(tester);
@@ -512,7 +601,10 @@ void main() {
       );
       // 1500 и 3000 пикселей в секунду
       for (var i = 0; i < 6; i++) {
-        await gesture.moveBy(Offset(0, -step), timeStamp: Duration(milliseconds: 16 * (i + 1)));
+        await gesture.moveBy(
+          Offset(0, -step),
+          timeStamp: Duration(milliseconds: 16 * (i + 1)),
+        );
         await tester.pump(const Duration(milliseconds: 16));
       }
       await gesture.up(timeStamp: const Duration(milliseconds: 100));
@@ -530,32 +622,37 @@ void main() {
     }
   });
 
-  testWidgets('тяга мышкой не в шесть раз резвее: 60 пикселей мало, 300 хватает', (tester) async {
-    Future<void> slowDrag(double dy) async {
-      final gesture = await tester.startGesture(
-        tester.getCenter(find.byType(CarouselView)),
-        kind: PointerDeviceKind.mouse,
-      );
-      for (var i = 0; i < 10; i++) {
-        await gesture.moveBy(Offset(0, dy / 10));
-        await tester.pump(const Duration(milliseconds: 50));
+  testWidgets(
+    'тяга мышкой не в шесть раз резвее: 60 пикселей мало, 300 хватает',
+    (tester) async {
+      Future<void> slowDrag(double dy) async {
+        final gesture = await tester.startGesture(
+          tester.getCenter(find.byType(CarouselView)),
+          kind: PointerDeviceKind.mouse,
+        );
+        for (var i = 0; i < 10; i++) {
+          await gesture.moveBy(Offset(0, dy / 10));
+          await tester.pump(const Duration(milliseconds: 50));
+        }
+        // замираем перед отпусканием: без скорости броска решает только пройденное
+        await tester.pump(const Duration(milliseconds: 300));
+        await gesture.up();
+        await tester.pumpAndSettle();
       }
-      // замираем перед отпусканием: без скорости броска решает только пройденное
-      await tester.pump(const Duration(milliseconds: 300));
-      await gesture.up();
-      await tester.pumpAndSettle();
-    }
 
-    final opened = await _pumpNav(tester);
-    await slowDrag(-60);
-    expect(_big(tester), 'sub-a');
-    expect(opened, isEmpty);
-    await slowDrag(-300);
-    expect(_big(tester), 'sub-b');
-    expect(opened, [1]);
-  });
+      final opened = await _pumpNav(tester);
+      await slowDrag(-60);
+      expect(_big(tester), 'sub-a');
+      expect(opened, isEmpty);
+      await slowDrag(-300);
+      expect(_big(tester), 'sub-b');
+      expect(opened, [1]);
+    },
+  );
 
-  testWidgets('карусель тянется мышкой, и список идёт туда, где она осела', (tester) async {
+  testWidgets('карусель тянется мышкой, и список идёт туда, где она осела', (
+    tester,
+  ) async {
     final opened = await _pumpNav(tester);
     final gesture = await tester.startGesture(
       tester.getCenter(find.byType(CarouselView)),
@@ -572,34 +669,39 @@ void main() {
     expect(opened, [1]);
   });
 
-  testWidgets('с последней группы к первой назад по одной, через край не перескакивает', (
+  testWidgets(
+    'с последней группы к первой назад по одной, через край не перескакивает',
+    (tester) async {
+      await _pumpNav(tester);
+      ServerGroupAnchors.instance.currentGroup.value = kManualServerGroupKey;
+      await tester.pumpAndSettle();
+      final mouse = TestPointer(1, PointerDeviceKind.mouse);
+      await tester.sendEventToBinding(
+        mouse.hover(tester.getCenter(find.byType(CarouselView))),
+      );
+      Future<void> wheel(double dy, int ms) async {
+        await tester.sendEventToBinding(
+          mouse.scroll(Offset(0, dy), timeStamp: Duration(milliseconds: ms)),
+        );
+        await tester.pump(const Duration(milliseconds: 400));
+        await tester.pumpAndSettle();
+      }
+
+      // у последней группы вниз листать некуда: первая под ней не выглядывает
+      await wheel(100, 1000);
+      expect(_big(tester), kManualServerGroupKey);
+      await wheel(-100, 2000);
+      expect(_big(tester), 'sub-b');
+      await wheel(-100, 3000);
+      expect(_big(tester), 'sub-a');
+      await wheel(-100, 4000);
+      expect(_big(tester), 'sub-a');
+    },
+  );
+
+  testWidgets('клик по краю следующей обложки открывает вкладку серверов', (
     tester,
   ) async {
-    await _pumpNav(tester);
-    ServerGroupAnchors.instance.currentGroup.value = kManualServerGroupKey;
-    await tester.pumpAndSettle();
-    final mouse = TestPointer(1, PointerDeviceKind.mouse);
-    await tester.sendEventToBinding(mouse.hover(tester.getCenter(find.byType(CarouselView))));
-    Future<void> wheel(double dy, int ms) async {
-      await tester.sendEventToBinding(
-        mouse.scroll(Offset(0, dy), timeStamp: Duration(milliseconds: ms)),
-      );
-      await tester.pump(const Duration(milliseconds: 400));
-      await tester.pumpAndSettle();
-    }
-
-    // у последней группы вниз листать некуда: первая под ней не выглядывает
-    await wheel(100, 1000);
-    expect(_big(tester), kManualServerGroupKey);
-    await wheel(-100, 2000);
-    expect(_big(tester), 'sub-b');
-    await wheel(-100, 3000);
-    expect(_big(tester), 'sub-a');
-    await wheel(-100, 4000);
-    expect(_big(tester), 'sub-a');
-  });
-
-  testWidgets('клик по краю следующей обложки открывает вкладку серверов', (tester) async {
     final opened = await _pumpNav(tester);
     final nav = tester.getRect(find.byType(SidebarGroupNav));
     await tester.tapAt(Offset(nav.center.dx, nav.bottom - 20));
@@ -609,40 +711,52 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('у групп без картинки обложка из форм, а не значок на пустой плашке', (
-    tester,
-  ) async {
-    await _pumpNav(tester);
-    expect(
-      find.byWidgetPredicate(
-        (w) => w is CustomPaint && w.painter.runtimeType.toString() == '_DefaultCoverPainter',
-      ),
-      findsWidgets,
-    );
-    expect(find.byIcon(Icons.edit_rounded), findsNothing);
-    expect(find.byIcon(Icons.cloud_rounded), findsNothing);
-  });
-
-  testWidgets('большая обложка с картинкой выше 320 dp раскладывается без ошибок', (tester) async {
-    SubscriptionCardTheme.customDirectory = '/data/app/card_themes';
-    addTearDown(() => SubscriptionCardTheme.customDirectory = null);
-    await _pumpNav(
-      tester,
-      subs: [
-        Subscription(
-          id: 'sub-a',
-          name: 'Alpha',
-          url: 'https://example.com/sub-a',
-          cardThemeId: '${SubscriptionCardTheme.filePrefix}pic.png',
+  testWidgets(
+    'у групп без картинки обложка из форм, а не значок на пустой плашке',
+    (tester) async {
+      await _pumpNav(tester);
+      expect(
+        find.byWidgetPredicate(
+          (w) =>
+              w is CustomPaint &&
+              w.painter.runtimeType.toString() == '_DefaultCoverPainter',
         ),
-        _sub('sub-b', 'Bravo'),
-      ],
-    );
-    expect(tester.getSize(_cover('sub-a')).height, greaterThan(320));
-    expect(tester.takeException(), isNull);
-    final picture = find.descendant(of: _cover('sub-a'), matching: find.byType(OverflowBox));
-    expect(tester.getSize(picture).width, tester.getSize(_cover('sub-a')).width + 2);
-  });
+        findsWidgets,
+      );
+      expect(find.byIcon(Icons.edit_rounded), findsNothing);
+      expect(find.byIcon(Icons.cloud_rounded), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'большая обложка с картинкой выше 320 dp раскладывается без ошибок',
+    (tester) async {
+      SubscriptionCardTheme.customDirectory = '/data/app/card_themes';
+      addTearDown(() => SubscriptionCardTheme.customDirectory = null);
+      await _pumpNav(
+        tester,
+        subs: [
+          Subscription(
+            id: 'sub-a',
+            name: 'Alpha',
+            url: 'https://example.com/sub-a',
+            cardThemeId: '${SubscriptionCardTheme.filePrefix}pic.png',
+          ),
+          _sub('sub-b', 'Bravo'),
+        ],
+      );
+      expect(tester.getSize(_cover('sub-a')).height, greaterThan(320));
+      expect(tester.takeException(), isNull);
+      final picture = find.descendant(
+        of: _cover('sub-a'),
+        matching: find.byType(OverflowBox),
+      );
+      expect(
+        tester.getSize(picture).width,
+        tester.getSize(_cover('sub-a')).width + 2,
+      );
+    },
+  );
 
   testWidgets('одна группа: переходить некуда, карусели нет', (tester) async {
     await _pumpNav(
@@ -673,13 +787,15 @@ void main() {
     );
   });
 
-  testWidgets('у группы, через которую подключено, точка у названия', (tester) async {
+  testWidgets('у группы, через которую подключено, точка у названия', (
+    tester,
+  ) async {
     Finder dot() => find.byWidgetPredicate(
-          (w) =>
-              w is Container &&
-              w.decoration is BoxDecoration &&
-              (w.decoration! as BoxDecoration).shape == BoxShape.circle,
-        );
+      (w) =>
+          w is Container &&
+          w.decoration is BoxDecoration &&
+          (w.decoration! as BoxDecoration).shape == BoxShape.circle,
+    );
     await _pumpNav(tester, activeServerId: 'a1', status: VpnStatus.connected);
     expect(dot(), findsOneWidget);
   });
@@ -687,131 +803,167 @@ void main() {
   // её экран: 100 %, 144 Гц
   const frame144 = Duration(microseconds: 6944);
 
-  testWidgets('на ПК второй щелчок колеса не останавливает карусель ни на кадр', (tester) async {
-    final position = await _pumpOnScreen(tester, 1);
-    final mouse = TestPointer(1, PointerDeviceKind.mouse);
-    await tester.sendEventToBinding(mouse.hover(tester.getCenter(find.byType(CarouselView))));
-    await tester.sendEventToBinding(mouse.scroll(const Offset(0, 100)));
-    final steps = <double>[];
-    for (var i = 0; i < 30; i++) {
-      if (i == 12) await tester.sendEventToBinding(mouse.scroll(const Offset(0, 100)));
-      final before = position.pixels;
-      await tester.pump(frame144);
-      steps.add(position.pixels - before);
-    }
-    // первый кадр после щелчка пружина только трогается
-    expect(steps.skip(1).every((s) => s > 0.1), isTrue, reason: '$steps');
-  });
-
-  testWidgets('на ПК подпись доезжает до остановки вместе с обложкой, без прыжков на пиксель', (
-    tester,
-  ) async {
-    await _pumpOnScreen(tester, 1);
-    Future<double> captionNow(String key) async {
-      final cover = tester.getRect(_cover(key));
-      return _captionTop((cover: cover, frame: await DesktopSkiaFrame.capture(tester), dpr: 1.0));
-    }
-
-    final atStart = await captionNow('sub-a');
-    final mouse = TestPointer(1, PointerDeviceKind.mouse);
-    await tester.sendEventToBinding(mouse.hover(tester.getCenter(find.byType(CarouselView))));
-    await tester.sendEventToBinding(mouse.scroll(const Offset(0, 100)));
-    _CoverFrame? last;
-    var slow = 0;
-    for (var i = 0; i < 160; i++) {
-      await tester.pump(frame144);
-      final cover = tester.getRect(_cover('sub-a'));
-      final f = (cover: cover, frame: await DesktopSkiaFrame.capture(tester), dpr: 1.0);
-      final prev = last;
-      last = f;
-      if (prev == null || cover.height < 40) continue;
-      // пока обложка почти стоит, подпись не может прыгать на целый пиксель
-      final coverMoved = math.max(
-        (cover.top - prev.cover.top).abs(),
-        (cover.bottom - prev.cover.bottom).abs(),
+  testWidgets(
+    'на ПК второй щелчок колеса не останавливает карусель ни на кадр',
+    (tester) async {
+      final position = await _pumpOnScreen(tester, 1);
+      final mouse = TestPointer(1, PointerDeviceKind.mouse);
+      await tester.sendEventToBinding(
+        mouse.hover(tester.getCenter(find.byType(CarouselView))),
       );
-      if (coverMoved > 0.3) continue;
-      slow++;
-      expect((_captionTop(f) - _captionTop(prev)).abs(), lessThan(0.6), reason: 'кадр $i');
-    }
-    expect(slow, greaterThan(40));
-    // туда и обратно: встав, подпись стоит в том же целом пикселе, что до прокрутки, текст чёткий
-    await tester.pumpAndSettle();
-    await tester.sendEventToBinding(mouse.scroll(const Offset(0, -100)));
-    // подсветка наведения тонирует обложку и сбивает замер по яркости
-    await tester.sendEventToBinding(mouse.hover(const Offset(124, 2)));
-    await tester.pumpAndSettle();
-    expect(await captionNow('sub-a'), closeTo(atStart, 0.02));
-  });
+      await tester.sendEventToBinding(mouse.scroll(const Offset(0, 100)));
+      final steps = <double>[];
+      for (var i = 0; i < 30; i++) {
+        if (i == 12) {
+          await tester.sendEventToBinding(mouse.scroll(const Offset(0, 100)));
+        }
+        final before = position.pixels;
+        await tester.pump(frame144);
+        steps.add(position.pixels - before);
+      }
+      // первый кадр после щелчка пружина только трогается
+      expect(steps.skip(1).every((s) => s > 0.1), isTrue, reason: '$steps');
+    },
+  );
+
+  testWidgets(
+    'на ПК подпись доезжает до остановки вместе с обложкой, без прыжков на пиксель',
+    (tester) async {
+      await _pumpOnScreen(tester, 1);
+      Future<double> captionNow(String key) async {
+        final cover = tester.getRect(_cover(key));
+        return _captionTop((
+          cover: cover,
+          frame: await DesktopSkiaFrame.capture(tester),
+          dpr: 1.0,
+        ));
+      }
+
+      final atStart = await captionNow('sub-a');
+      final mouse = TestPointer(1, PointerDeviceKind.mouse);
+      await tester.sendEventToBinding(
+        mouse.hover(tester.getCenter(find.byType(CarouselView))),
+      );
+      await tester.sendEventToBinding(mouse.scroll(const Offset(0, 100)));
+      _CoverFrame? last;
+      var slow = 0;
+      for (var i = 0; i < 160; i++) {
+        await tester.pump(frame144);
+        final cover = tester.getRect(_cover('sub-a'));
+        final f = (
+          cover: cover,
+          frame: await DesktopSkiaFrame.capture(tester),
+          dpr: 1.0,
+        );
+        final prev = last;
+        last = f;
+        if (prev == null || cover.height < 40) continue;
+        // пока обложка почти стоит, подпись не может прыгать на целый пиксель
+        final coverMoved = math.max(
+          (cover.top - prev.cover.top).abs(),
+          (cover.bottom - prev.cover.bottom).abs(),
+        );
+        if (coverMoved > 0.3) continue;
+        slow++;
+        expect(
+          (_captionTop(f) - _captionTop(prev)).abs(),
+          lessThan(0.6),
+          reason: 'кадр $i',
+        );
+      }
+      expect(slow, greaterThan(40));
+      // туда и обратно: встав, подпись стоит в том же целом пикселе, что до прокрутки, текст чёткий
+      await tester.pumpAndSettle();
+      await tester.sendEventToBinding(mouse.scroll(const Offset(0, -100)));
+      // подсветка наведения тонирует обложку и сбивает замер по яркости
+      await tester.sendEventToBinding(mouse.hover(const Offset(124, 2)));
+      await tester.pumpAndSettle();
+      expect(await captionNow('sub-a'), closeTo(atStart, 0.02));
+    },
+  );
 
   for (final dpr in [1.25, 1.5]) {
-    testWidgets('на ПК подпись растущей обложки едет за ней и не отскакивает назад, масштаб $dpr', (
-      tester,
-    ) async {
-      final position = await _pumpOnScreen(tester, dpr);
-      final unit = position.viewportDimension / 8;
-      final tops = [
-        await for (final f in _slowScroll(tester, position, 0, unit, 'sub-b')) _captionTop(f),
-      ];
-      expect(tops.length, greaterThan(100));
-      // на Linux FreeType сглаживает строку на ходу чуть иначе, чем в покое: верх буквы меряется
-      // на десятую пикселя ниже. отскок, который ловим, был на целый пиксель
-      for (var i = 1; i < tops.length; i++) {
-        expect(tops[i], lessThanOrEqualTo(tops[i - 1] + 0.25), reason: 'кадр $i');
-      }
-    });
-
-    testWidgets('на ПК подпись нижней обложки стоит, пока стопка садится на дно, масштаб $dpr', (
-      tester,
-    ) async {
-      final position = await _pumpOnScreen(tester, dpr);
-      final unit = position.viewportDimension / 8;
-      // до первой раскладки у конца карусель знает только оценку своей длины
-      ServerGroupAnchors.instance.currentGroup.value = kManualServerGroupKey;
-      await tester.pumpAndSettle();
-      final end = position.maxScrollExtent;
-      final rows = {
-        await for (final f in _slowScroll(tester, position, end - unit, end, kManualServerGroupKey))
-          _captionTop(f).round(),
-      };
-      expect(rows, hasLength(1));
-    });
-
-    testWidgets('на ПК рисунок обложки едет вместе с её краем, а не прилипает к пикселям, масштаб $dpr', (
-      tester,
-    ) async {
-      final position = await _pumpOnScreen(tester, dpr);
-      final unit = position.viewportDimension / 8;
-      final gaps = <double>[];
-      await for (final f in _slowScroll(tester, position, 0, unit, 'sub-a')) {
-        // пока обложка выше своей ширины, формы стоят на одном месте от её верха
-        if (f.cover.height < f.cover.width + 8) break;
-        final from = (f.cover.top * f.dpr).floor() - 3;
-        final top = f.frame
-            .edges(
-              ((f.cover.left + f.cover.width * 0.6) * f.dpr).floor(),
-              (c) => c.r + c.b,
-              from: from,
-              to: (f.cover.bottom * f.dpr).ceil(),
-            )!
-            .top;
-        for (final side in [0.15, 0.85]) {
-          final shape = f.frame.edges(
-            ((f.cover.left + f.cover.width * side) * f.dpr).floor(),
-            (c) => c.g < 0.03 && c.b < 0.6 ? c.b / 0.3 : 0,
-            from: from,
-            to: ((f.cover.top + f.cover.width * 0.6) * f.dpr).ceil(),
+    testWidgets(
+      'на ПК подпись растущей обложки едет за ней и не отскакивает назад, масштаб $dpr',
+      (tester) async {
+        final position = await _pumpOnScreen(tester, dpr);
+        final unit = position.viewportDimension / 8;
+        final tops = [
+          await for (final f in _slowScroll(tester, position, 0, unit, 'sub-b'))
+            _captionTop(f),
+        ];
+        expect(tops.length, greaterThan(100));
+        // на Linux FreeType сглаживает строку на ходу чуть иначе, чем в покое: верх буквы меряется
+        // на десятую пикселя ниже. отскок, который ловим, был на целый пиксель
+        for (var i = 1; i < tops.length; i++) {
+          expect(
+            tops[i],
+            lessThanOrEqualTo(tops[i - 1] + 0.25),
+            reason: 'кадр $i',
           );
-          if (shape != null) {
-            gaps.add(shape.bottom - top);
-            break;
+        }
+      },
+    );
+
+    testWidgets(
+      'на ПК подпись нижней обложки стоит, пока стопка садится на дно, масштаб $dpr',
+      (tester) async {
+        final position = await _pumpOnScreen(tester, dpr);
+        final unit = position.viewportDimension / 8;
+        // до первой раскладки у конца карусель знает только оценку своей длины
+        ServerGroupAnchors.instance.currentGroup.value = kManualServerGroupKey;
+        await tester.pumpAndSettle();
+        final end = position.maxScrollExtent;
+        final rows = {
+          await for (final f in _slowScroll(
+            tester,
+            position,
+            end - unit,
+            end,
+            kManualServerGroupKey,
+          ))
+            _captionTop(f).round(),
+        };
+        expect(rows, hasLength(1));
+      },
+    );
+
+    testWidgets(
+      'на ПК рисунок обложки едет вместе с её краем, а не прилипает к пикселям, масштаб $dpr',
+      (tester) async {
+        final position = await _pumpOnScreen(tester, dpr);
+        final unit = position.viewportDimension / 8;
+        final gaps = <double>[];
+        await for (final f in _slowScroll(tester, position, 0, unit, 'sub-a')) {
+          // пока обложка выше своей ширины, формы стоят на одном месте от её верха
+          if (f.cover.height < f.cover.width + 8) break;
+          final from = (f.cover.top * f.dpr).floor() - 3;
+          final top = f.frame
+              .edges(
+                ((f.cover.left + f.cover.width * 0.6) * f.dpr).floor(),
+                (c) => c.r + c.b,
+                from: from,
+                to: (f.cover.bottom * f.dpr).ceil(),
+              )!
+              .top;
+          for (final side in [0.15, 0.85]) {
+            final shape = f.frame.edges(
+              ((f.cover.left + f.cover.width * side) * f.dpr).floor(),
+              (c) => c.g < 0.03 && c.b < 0.6 ? c.b / 0.3 : 0,
+              from: from,
+              to: ((f.cover.top + f.cover.width * 0.6) * f.dpr).ceil(),
+            );
+            if (shape != null) {
+              gaps.add(shape.bottom - top);
+              break;
+            }
           }
         }
-      }
-      expect(gaps.length, greaterThan(20));
-      // край формы косой, и по одному столбцу его место мерится с ошибкой до четверти пикселя;
-      // прилипшая к пикселям форма отходит от края на целый
-      expect(gaps.reduce(math.max) - gaps.reduce(math.min), lessThan(0.5));
-    });
+        expect(gaps.length, greaterThan(20));
+        // край формы косой, и по одному столбцу его место мерится с ошибкой до четверти пикселя;
+        // прилипшая к пикселям форма отходит от края на целый
+        expect(gaps.reduce(math.max) - gaps.reduce(math.min), lessThan(0.5));
+      },
+    );
   }
 }

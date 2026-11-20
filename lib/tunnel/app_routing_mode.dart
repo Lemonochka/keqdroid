@@ -1,5 +1,1 @@
-enum AppRoutingMode {
-  allProxy,
-  onlySelected,
-  allExceptSelected,
-}
+enum AppRoutingMode { allProxy, onlySelected, allExceptSelected }

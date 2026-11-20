@@ -116,7 +116,9 @@ void main() {
     expect(jsonDecode(query['extra']!), {'xPaddingBytes': '100-1000'});
   });
 
-  testWidgets('vmess на xhttp: режим и extra видны и сохраняются', (tester) async {
+  testWidgets('vmess на xhttp: режим и extra видны и сохраняются', (
+    tester,
+  ) async {
     final payload = {
       'v': '2',
       'add': 'example.com',
@@ -147,9 +149,13 @@ void main() {
     await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
 
-    final saved = jsonDecode(
-      utf8.decode(base64.decode(servers.saved!.substring('vmess://'.length))),
-    ) as Map;
+    final saved =
+        jsonDecode(
+              utf8.decode(
+                base64.decode(servers.saved!.substring('vmess://'.length)),
+              ),
+            )
+            as Map;
     expect(saved['mode'], 'packet-up');
     expect(saved['extra'], {
       'xmux': {'maxConcurrency': 8},
@@ -158,16 +164,17 @@ void main() {
 
   // 12.11.2026: «зачем информация про паддинг в двух местах дублируется»
   group('набивка в одном месте', () {
-    const base = 'vless://716e3485-d4f9-4471-9660-fb4b0b838100@example.com:443'
+    const base =
+        'vless://716e3485-d4f9-4471-9660-fb4b0b838100@example.com:443'
         '?type=xhttp&security=reality&sni=example.com'
         '&pbk=oYXosxG2YU6_mQkkPTS8JUnoRxqvaBaG5mH-y0pc2nA';
 
     TextField paddingField(WidgetTester tester) => tester.widget<TextField>(
-          find.ancestor(
-            of: find.text('xPaddingBytes'),
-            matching: find.byType(TextField),
-          ),
-        );
+      find.ancestor(
+        of: find.text('xPaddingBytes'),
+        matching: find.byType(TextField),
+      ),
+    );
 
     testWidgets('из extra: в транспорте поля набивки нет', (tester) async {
       await _open(
@@ -191,7 +198,9 @@ void main() {
       expect(paddingField(tester).controller!.text, '100-1342');
     });
 
-    testWidgets('плоская из ссылки показана там же, где из extra', (tester) async {
+    testWidgets('плоская из ссылки показана там же, где из extra', (
+      tester,
+    ) async {
       await _open(tester, '$base&x_padding_bytes=100-1000#n');
       expect(find.text('Padding, bytes'), findsNothing);
       expect(paddingField(tester).controller!.text, '100-1000');
@@ -261,9 +270,11 @@ void main() {
 
   // 31.10.2026: extra XHTTP был одной строкой JSON, её «никак не потыкать, не посмотреть»
   group('extra XHTTP полями', () {
-    const extra = '{"xPaddingBytes":"50-150","xmux":{"maxConcurrency":"16-32"},'
+    const extra =
+        '{"xPaddingBytes":"50-150","xmux":{"maxConcurrency":"16-32"},'
         '"headers":{"X-Api":"1"}}';
-    final link = 'vless://716e3485-d4f9-4471-9660-fb4b0b838100@example.com:443'
+    final link =
+        'vless://716e3485-d4f9-4471-9660-fb4b0b838100@example.com:443'
         '?type=xhttp&security=reality&sni=example.com'
         '&pbk=oYXosxG2YU6_mQkkPTS8JUnoRxqvaBaG5mH-y0pc2nA'
         '&extra=${Uri.encodeQueryComponent(extra)}#node';
@@ -276,7 +287,9 @@ void main() {
       return Uri.parse(servers.saved!).queryParameters['extra']!;
     }
 
-    testWidgets('заданные параметры видны полями, неизвестные в остальном', (tester) async {
+    testWidgets('заданные параметры видны полями, неизвестные в остальном', (
+      tester,
+    ) async {
       await _open(tester, link);
       expect(find.text('XHTTP details'), findsOneWidget);
       expect(find.text('xPaddingBytes'), findsOneWidget);
@@ -347,7 +360,9 @@ void main() {
       expect(find.text('xPaddingBytes'), findsOneWidget);
     });
 
-    testWidgets('правка поля доезжает до ссылки, остальное как было', (tester) async {
+    testWidgets('правка поля доезжает до ссылки, остальное как было', (
+      tester,
+    ) async {
       final servers = await _open(tester, link);
       final field = find.ancestor(
         of: find.text('maxConcurrency'),
@@ -364,7 +379,10 @@ void main() {
 
     testWidgets('нетронутый extra уходит байт в байт', (tester) async {
       final servers = await _open(tester, link);
-      await tester.enterText(find.byType(TextField).first, 'edited.example.com');
+      await tester.enterText(
+        find.byType(TextField).first,
+        'edited.example.com',
+      );
       await tester.pumpAndSettle();
       expect(await save(tester, servers), extra);
     });
@@ -372,7 +390,8 @@ void main() {
 
   // 31.10.2026: сервер из Clash-подписки открывался красным «нет outbounds, это не конфиг Xray»
   group('узел Clash', () {
-    const clash = '{"name":"DE","proxies":[{"name":"DE","type":"hysteria2",'
+    const clash =
+        '{"name":"DE","proxies":[{"name":"DE","type":"hysteria2",'
         '"server":"198.51.100.90","port":443,"password":"password",'
         '"sni":"de.example","alpn":["h3"],"udp":true}],"rules":["MATCH,DE"]}';
 
@@ -385,7 +404,9 @@ void main() {
       expect(find.textContaining('outbounds'), findsNothing);
     });
 
-    testWidgets('открывается полями по слоям, неизвестное в остальном', (tester) async {
+    testWidgets('открывается полями по слоям, неизвестное в остальном', (
+      tester,
+    ) async {
       await _open(tester, clash);
       expect(find.text('Server'), findsWidgets);
       expect(find.text('server'), findsOneWidget);

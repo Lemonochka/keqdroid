@@ -99,7 +99,6 @@ abstract final class SmoothFade {
 
   static ui.FragmentShader? newFadeShader() => _fade?.fragmentShader();
 
-
   static Shader shader(
     ui.FragmentShader? program,
     Rect rect, {

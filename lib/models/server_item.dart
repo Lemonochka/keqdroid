@@ -73,25 +73,24 @@ class ServerItem {
   }) : addedAt = addedAt ?? DateTime.now();
 
   factory ServerItem.fromRaw(
-      String config, {
-        String? subscriptionId,
-        String? subscriptionName,
-      }) =>
-      ServerItem(
-        id: const Uuid().v4(),
-        config: config,
-        type: subscriptionId != null
-            ? ServerItemType.subscription
-            : ServerItemType.manual,
-        subscriptionId: subscriptionId,
-        subscriptionName: subscriptionName,
-      );
+    String config, {
+    String? subscriptionId,
+    String? subscriptionName,
+  }) => ServerItem(
+    id: const Uuid().v4(),
+    config: config,
+    type: subscriptionId != null
+        ? ServerItemType.subscription
+        : ServerItemType.manual,
+    subscriptionId: subscriptionId,
+    subscriptionName: subscriptionName,
+  );
 
   factory ServerItem.fromJson(Map<String, dynamic> json) => ServerItem(
     id: json['id'] as String,
     config: json['config'] as String,
     type: ServerItemType.values.firstWhere(
-          (e) => e.name == json['type'],
+      (e) => e.name == json['type'],
       orElse: () => ServerItemType.manual,
     ),
     subscriptionId: json['subscriptionId'] as String?,
@@ -137,7 +136,8 @@ class ServerItem {
     if (pingSamples.isNotEmpty)
       'pingSamples': [for (final s in pingSamples) s.toJson()],
     if (ipv6Exit != null) 'ipv6Exit': ipv6Exit,
-    if (ipv6CheckedAt != null) 'ipv6CheckedAt': ipv6CheckedAt!.toIso8601String(),
+    if (ipv6CheckedAt != null)
+      'ipv6CheckedAt': ipv6CheckedAt!.toIso8601String(),
   };
 
   ServerItem copyWith({
@@ -157,38 +157,36 @@ class ServerItem {
     List<PingSample>? pingSamples,
     Object? ipv6Exit = _sentinel,
     Object? ipv6CheckedAt = _sentinel,
-  }) =>
-      ServerItem(
-        id: id ?? this.id,
-        config: config ?? this.config,
-        type: type ?? this.type,
-        subscriptionId: subscriptionId ?? this.subscriptionId,
-        subscriptionName: subscriptionName ?? this.subscriptionName,
-        addedAt: addedAt ?? this.addedAt,
-        customName:
-            customName == _sentinel ? this.customName : customName as String?,
-        pinnedAt:
-            pinnedAt == _sentinel ? this.pinnedAt : pinnedAt as DateTime?,
-        configOverridden: configOverridden ?? this.configOverridden,
-        autoSkip: autoSkip ?? this.autoSkip,
-        pingMs: pingMs == _sentinel ? this.pingMs : pingMs as int?,
-        lastTestedAt: lastTestedAt == _sentinel
-            ? this.lastTestedAt
-            : lastTestedAt as DateTime?,
-        lastPingType: lastPingType == _sentinel
-            ? this.lastPingType
-            : lastPingType as String?,
-        pingSamples: pingSamples ?? this.pingSamples,
-        ipv6Exit: ipv6Exit == _sentinel ? this.ipv6Exit : ipv6Exit as bool?,
-        ipv6CheckedAt: ipv6CheckedAt == _sentinel
-            ? this.ipv6CheckedAt
-            : ipv6CheckedAt as DateTime?,
-      );
+  }) => ServerItem(
+    id: id ?? this.id,
+    config: config ?? this.config,
+    type: type ?? this.type,
+    subscriptionId: subscriptionId ?? this.subscriptionId,
+    subscriptionName: subscriptionName ?? this.subscriptionName,
+    addedAt: addedAt ?? this.addedAt,
+    customName: customName == _sentinel
+        ? this.customName
+        : customName as String?,
+    pinnedAt: pinnedAt == _sentinel ? this.pinnedAt : pinnedAt as DateTime?,
+    configOverridden: configOverridden ?? this.configOverridden,
+    autoSkip: autoSkip ?? this.autoSkip,
+    pingMs: pingMs == _sentinel ? this.pingMs : pingMs as int?,
+    lastTestedAt: lastTestedAt == _sentinel
+        ? this.lastTestedAt
+        : lastTestedAt as DateTime?,
+    lastPingType: lastPingType == _sentinel
+        ? this.lastPingType
+        : lastPingType as String?,
+    pingSamples: pingSamples ?? this.pingSamples,
+    ipv6Exit: ipv6Exit == _sentinel ? this.ipv6Exit : ipv6Exit as bool?,
+    ipv6CheckedAt: ipv6CheckedAt == _sentinel
+        ? this.ipv6CheckedAt
+        : ipv6CheckedAt as DateTime?,
+  );
 
   bool get isPinned => pinnedAt != null;
 
-  String get sameServerKey =>
-      _cachedSameServerKey ??= sameServerKeyOf(config);
+  String get sameServerKey => _cachedSameServerKey ??= sameServerKeyOf(config);
 
   String get displayName {
     final custom = customName?.trim();
@@ -256,7 +254,6 @@ class ServerItem {
     return _cachedDerivedName!;
   }
 
-
   static String _chainRouteLabel(ProxyChainConfig chain) {
     final parts = [
       for (final hop in chain.hops)
@@ -273,10 +270,12 @@ class ServerItem {
       _flagParsed = true;
       if (protocol == 'chain') {
         // автоимя цепочки начинается с флага входа, а в кружке нужна страна выхода
-        _cachedFlag = ServerNameUtils.extractFlag(customName ?? '') ??
+        _cachedFlag =
+            ServerNameUtils.extractFlag(customName ?? '') ??
             ServerNameUtils.extractFlag(chainConfig!.exit.name);
       } else {
-        _cachedFlag = ServerNameUtils.extractFlag(displayName) ??
+        _cachedFlag =
+            ServerNameUtils.extractFlag(displayName) ??
             ServerNameUtils.extractFlag(derivedName);
       }
     }
@@ -292,9 +291,9 @@ class ServerItem {
   }
 
   String? get countryCode => switch (flag) {
-        FlagArt(:final countryCode) => countryCode,
-        _ => null,
-      };
+    FlagArt(:final countryCode) => countryCode,
+    _ => null,
+  };
 
   // из сырой строки: Uri.parse приводит host к нижнему регистру, а base64 к нему чувствителен
   Map<String, dynamic>? _vmessPayload() {
@@ -339,7 +338,9 @@ class ServerItem {
       if (protocol == 'ssr') return SsrLink.tryParse(config)?.host ?? '';
       if (protocol == 'mieru') return MieruLink.tryParse(config)?.host ?? '';
       if (protocol == 'socks') return SocksLink.tryParse(config)?.host ?? '';
-      return Uri.parse(config.replaceFirst(RegExp(r'^[a-z]+://'), 'https://')).host;
+      return Uri.parse(
+        config.replaceFirst(RegExp(r'^[a-z]+://'), 'https://'),
+      ).host;
     } catch (_) {
       return '';
     }
@@ -371,7 +372,9 @@ class ServerItem {
       if (protocol == 'mieru') return MieruLink.tryParse(config)?.port ?? 0;
       if (protocol == 'ssr') return SsrLink.tryParse(config)?.port ?? 0;
       if (protocol == 'socks') return SocksLink.tryParse(config)?.port ?? 0;
-      return Uri.parse(config.replaceFirst(RegExp(r'^[a-z]+://'), 'https://')).port;
+      return Uri.parse(
+        config.replaceFirst(RegExp(r'^[a-z]+://'), 'https://'),
+      ).port;
     } catch (_) {
       return 0;
     }
@@ -404,20 +407,17 @@ class ServerItem {
     return _cachedChain;
   }
 
-  static ServerItem _hopItem(String hopConfig) => ServerItem(
-        id: '',
-        config: hopConfig,
-        type: ServerItemType.manual,
-      );
+  static ServerItem _hopItem(String hopConfig) =>
+      ServerItem(id: '', config: hopConfig, type: ServerItemType.manual);
 
   List<ServerItem> get chainHopItems {
     final chain = chainConfig;
     if (chain == null) return const [];
     return [
       for (final hop in chain.hops)
-        _hopItem(hop.config).copyWith(
-          customName: hop.name.isEmpty ? null : hop.name,
-        ),
+        _hopItem(
+          hop.config,
+        ).copyWith(customName: hop.name.isEmpty ? null : hop.name),
     ];
   }
 
@@ -454,7 +454,10 @@ class ServerItem {
     bool hasSurrogate = false;
     for (var i = 0; i < input.length; i++) {
       final c = input.codeUnitAt(i);
-      if (c >= 0xD800 && c <= 0xDFFF) { hasSurrogate = true; break; }
+      if (c >= 0xD800 && c <= 0xDFFF) {
+        hasSurrogate = true;
+        break;
+      }
     }
     if (!hasSurrogate) return input;
 

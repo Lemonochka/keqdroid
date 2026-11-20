@@ -39,8 +39,7 @@ class SubscriptionAccentService {
   static SubscriptionAccent? cached({
     required String themeId,
     required ColorScheme scheme,
-  }) =>
-      _cache[_key(themeId, scheme.brightness, scheme.primary)];
+  }) => _cache[_key(themeId, scheme.brightness, scheme.primary)];
 
   static Future<SubscriptionAccent?> resolve({
     required String themeId,

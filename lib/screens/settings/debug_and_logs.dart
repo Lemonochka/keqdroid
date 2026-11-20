@@ -11,7 +11,9 @@ class _DebugModeCard extends ConsumerWidget {
     final enabled = settings.debugMode;
 
     Future<void> save(bool value) async {
-      await ref.read(settingsNotifierProvider.notifier).save(settings.copyWith(debugMode: value));
+      await ref
+          .read(settingsNotifierProvider.notifier)
+          .save(settings.copyWith(debugMode: value));
     }
 
     final textTheme = Theme.of(context).textTheme;
@@ -40,8 +42,14 @@ class _DebugModeCard extends ConsumerWidget {
                       ),
                     ),
                     Text(
-                      enabled ? l10n.settingsDebugModeOn : l10n.settingsDebugModeOff,
-                      style: textTheme.bodyMedium?.copyWith(color: enabled ? AppTheme.orange(context) : AppTheme.textLight(context)),
+                      enabled
+                          ? l10n.settingsDebugModeOn
+                          : l10n.settingsDebugModeOff,
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: enabled
+                            ? AppTheme.orange(context)
+                            : AppTheme.textLight(context),
+                      ),
                     ),
                   ],
                 ),
@@ -58,14 +66,19 @@ class _DebugModeCard extends ConsumerWidget {
             PlatformBootstrap.isDesktop
                 ? l10n.settingsDebugHintDesktop
                 : l10n.settingsDebugHintMobile,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context), height: 1.35),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: AppTheme.textLight(context),
+              height: 1.35,
+            ),
           ),
           if (enabled) ...[
             const SizedBox(height: 12),
             OutlinedButton.icon(
               onPressed: () => Navigator.push(
                 context,
-                MaterialPageRoute<void>(builder: (_) => const _XrayLogsScreen()),
+                MaterialPageRoute<void>(
+                  builder: (_) => const _XrayLogsScreen(),
+                ),
               ),
               icon: const Icon(Icons.terminal_rounded),
               label: Text(l10n.settingsOpenXrayLogs),
@@ -74,7 +87,9 @@ class _DebugModeCard extends ConsumerWidget {
             OutlinedButton.icon(
               onPressed: () => Navigator.push(
                 context,
-                MaterialPageRoute<void>(builder: (_) => const _ConnectionsScreen()),
+                MaterialPageRoute<void>(
+                  builder: (_) => const _ConnectionsScreen(),
+                ),
               ),
               icon: const Icon(Icons.lan_rounded),
               label: Text(l10n.settingsOpenConnections),
@@ -102,7 +117,10 @@ class _XrayLogsScreenState extends ConsumerState<_XrayLogsScreen> {
   void initState() {
     super.initState();
     _refreshLogs();
-    _pollTimer = Timer.periodic(const Duration(seconds: 2), (_) => _refreshLogs());
+    _pollTimer = Timer.periodic(
+      const Duration(seconds: 2),
+      (_) => _refreshLogs(),
+    );
   }
 
   @override
@@ -131,9 +149,9 @@ class _XrayLogsScreenState extends ConsumerState<_XrayLogsScreen> {
   Future<void> _copyLogs(AppLocalizations l10n) async {
     await Clipboard.setData(ClipboardData(text: _logs));
     if (!mounted) return;
-    AppSnack.of(context).showSnackBar(
-      SnackBar(content: Text(l10n.serversCopiedToClipboard)),
-    );
+    AppSnack.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(l10n.serversCopiedToClipboard)));
   }
 
   @override
@@ -162,24 +180,27 @@ class _XrayLogsScreenState extends ConsumerState<_XrayLogsScreen> {
       body: _loading
           ? const Center(child: ShapeLoadingIndicator())
           : Padding(
-        padding: const EdgeInsets.all(12),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: AppTheme.inset(context),
-            borderRadius: BorderRadius.circular(ExpressiveShape.large),
-            border: Border.all(color: AppTheme.divider(context)),
-          ),
-          child: SingleChildScrollView(
-            child: SelectableText(
-              _logs,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(fontFamily: 'monospace', color: AppTheme.text(context), height: 1.35),
+              padding: const EdgeInsets.all(12),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.inset(context),
+                  borderRadius: BorderRadius.circular(ExpressiveShape.large),
+                  border: Border.all(color: AppTheme.divider(context)),
+                ),
+                child: SingleChildScrollView(
+                  child: SelectableText(
+                    _logs,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      fontFamily: 'monospace',
+                      color: AppTheme.text(context),
+                      height: 1.35,
+                    ),
+                  ),
+                ),
+              ),
             ),
-          ),
-        ),
-      ),
     );
   }
 }
-

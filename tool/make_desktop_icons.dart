@@ -30,33 +30,40 @@ void main() {
     exit(1);
   }
   final src = _Premultiplied(decoded);
-  final frames = {for (final s in {..._traySizes, ..._appSizes}) s: src.shrink(s)};
+  final frames = {
+    for (final s in {..._traySizes, ..._appSizes}) s: src.shrink(s),
+  };
 
   final plain = [for (final s in _traySizes) frames[s]!];
   final connected = [for (final frame in plain) withDot(frame)];
   final png = _traySizes.indexOf(_pngSize);
 
   File('assets/icon.png').writeAsBytesSync(img.encodePng(plain[png]));
-  File('assets/icon_connected.png')
-      .writeAsBytesSync(img.encodePng(connected[png]));
-  File('assets/tray_icon.ico')
-      .writeAsBytesSync(img.IcoEncoder().encodeImages(plain));
-  File('assets/tray_icon_connected.ico')
-      .writeAsBytesSync(img.IcoEncoder().encodeImages(connected));
+  File(
+    'assets/icon_connected.png',
+  ).writeAsBytesSync(img.encodePng(connected[png]));
+  File(
+    'assets/tray_icon.ico',
+  ).writeAsBytesSync(img.IcoEncoder().encodeImages(plain));
+  File(
+    'assets/tray_icon_connected.ico',
+  ).writeAsBytesSync(img.IcoEncoder().encodeImages(connected));
   File('windows/runner/resources/app_icon.ico').writeAsBytesSync(
     img.IcoEncoder().encodeImages([for (final s in _appSizes) frames[s]!]),
   );
-  stdout.writeln('Wrote icon.png, icon_connected.png, tray_icon.ico, '
-      'tray_icon_connected.ico (${_traySizes.join(', ')}), '
-      'app_icon.ico (${_appSizes.join(', ')})');
+  stdout.writeln(
+    'Wrote icon.png, icon_connected.png, tray_icon.ico, '
+    'tray_icon_connected.ico (${_traySizes.join(', ')}), '
+    'app_icon.ico (${_appSizes.join(', ')})',
+  );
 }
 
 // усреднение по площади с премультиплицированной альфой: иначе прозрачный фон темнит края штриха
 class _Premultiplied {
   _Premultiplied(img.Image image)
-      : width = image.width,
-        height = image.height,
-        _rgba = Float64List(image.width * image.height * 4) {
+    : width = image.width,
+      height = image.height,
+      _rgba = Float64List(image.width * image.height * 4) {
     var i = 0;
     for (final p in image.convert(numChannels: 4)) {
       final a = p.a / 255;

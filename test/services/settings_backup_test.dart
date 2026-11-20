@@ -76,18 +76,21 @@ void main() {
             .difference(SettingsBackupService.portableSettingKeys)
             .difference(_machineLocalKeys),
         isEmpty,
-        reason: 'новое поле AppSettings: реши, переносится оно между машинами '
+        reason:
+            'новое поле AppSettings: реши, переносится оно между машинами '
             'или описывает эту машину, и допиши в нужный список',
       );
       expect(
         SettingsBackupService.portableSettingKeys.difference(all),
         isEmpty,
-        reason: 'в белом списке ключ, которого нет в toJson() — опечатка или '
+        reason:
+            'в белом списке ключ, которого нет в toJson() — опечатка или '
             'переименованное поле',
       );
       expect(
-        SettingsBackupService.portableSettingKeys
-            .intersection(_machineLocalKeys),
+        SettingsBackupService.portableSettingKeys.intersection(
+          _machineLocalKeys,
+        ),
         isEmpty,
       );
     });
@@ -167,8 +170,9 @@ void main() {
     // именем `mihomoFakeIp`: восстановление старой копии не должно его терять.
     test('fake-ip из старой копии доезжает под новым именем', () async {
       final from = _MockStorageService();
-      when(() => from.getSettings())
-          .thenAnswer((_) async => const AppSettings(fakeIp: true));
+      when(
+        () => from.getSettings(),
+      ).thenAnswer((_) async => const AppSettings(fakeIp: true));
       when(() => from.getRoutes()).thenAnswer((_) async => const []);
       when(() => from.getRoutingProfiles()).thenAnswer((_) async => const []);
       final built = await SettingsBackupService.buildBackup(
@@ -307,30 +311,42 @@ void main() {
       expect(built.data.containsKey('cardImages'), isFalse);
     });
 
-    test('бэкап без картинок читается — старые файлы никуда не делись', () async {
-      final backup = KeqdroidBackup.fromJson(jsonDecode(jsonEncode({
-        'format': 'keqdis_backup',
-        'version': 1,
-        'exportedAt': DateTime.utc(2026, 1, 1).toIso8601String(),
-        'data': {
-          'subscriptions': [
-            const Subscription(id: 's1', name: 'S', url: 'https://a').toJson(),
-          ],
-        },
-      })) as Map<String, dynamic>);
+    test(
+      'бэкап без картинок читается — старые файлы никуда не делись',
+      () async {
+        final backup = KeqdroidBackup.fromJson(
+          jsonDecode(
+                jsonEncode({
+                  'format': 'keqdis_backup',
+                  'version': 1,
+                  'exportedAt': DateTime.utc(2026, 1, 1).toIso8601String(),
+                  'data': {
+                    'subscriptions': [
+                      const Subscription(
+                        id: 's1',
+                        name: 'S',
+                        url: 'https://a',
+                      ).toJson(),
+                    ],
+                  },
+                }),
+              )
+              as Map<String, dynamic>,
+        );
 
-      final to = _MockStorageService();
-      when(() => to.saveSubscriptions(any())).thenAnswer((_) async {});
+        final to = _MockStorageService();
+        when(() => to.saveSubscriptions(any())).thenAnswer((_) async {});
 
-      await expectLater(
-        SettingsBackupService.applyBackup(
-          to,
-          backup: backup,
-          sections: {BackupSection.subscriptions},
-        ),
-        completes,
-      );
-    });
+        await expectLater(
+          SettingsBackupService.applyBackup(
+            to,
+            backup: backup,
+            sections: {BackupSection.subscriptions},
+          ),
+          completes,
+        );
+      },
+    );
 
     test('имя файла из бэкапа не выводит за каталог картинок', () async {
       // Бэкап — файл откуда угодно, и ключ в нём это имя файла, а не путь.
@@ -395,19 +411,22 @@ void main() {
     // экранированные кавычки и скобки внутри строк, как на жалобе
     // («}omain:rshb.ru\",\n …»).
     KeqdroidBackup backupWithRules(List<String> rules) => KeqdroidBackup(
-          version: 1,
-          exportedAt: DateTime.utc(2026, 9, 28),
-          data: {
-            'appSettings': {'directRules': jsonEncode(rules)},
-          },
-        );
+      version: 1,
+      exportedAt: DateTime.utc(2026, 9, 28),
+      data: {
+        'appSettings': {'directRules': jsonEncode(rules)},
+      },
+    );
 
-    List<int> bytesOf(KeqdroidBackup backup) => utf8.encode(backup.toJsonString());
+    List<int> bytesOf(KeqdroidBackup backup) =>
+        utf8.encode(backup.toJsonString());
 
     // Ровно то, что оставляет запись без обрезки: новый файл с начала, дальше
     // конец старого с того же байта.
-    List<int> overwritten(List<int> fresh, List<int> old) =>
-        [...fresh, ...old.sublist(fresh.length)];
+    List<int> overwritten(List<int> fresh, List<int> old) => [
+      ...fresh,
+      ...old.sublist(fresh.length),
+    ];
 
     test('целый файл читается как раньше', () {
       final text = backupWithRules(['domain:rt.ru']).toJsonString();
@@ -416,11 +435,13 @@ void main() {
     });
 
     test('новый бэкап поверх более длинного старого читается без хвоста', () {
-      final old = bytesOf(backupWithRules([
-        for (var i = 0; i < 40; i++) 'domain:site$i.ru',
-        'domain:rshb.ru',
-        'domain:rt.ru',
-      ]));
+      final old = bytesOf(
+        backupWithRules([
+          for (var i = 0; i < 40; i++) 'domain:site$i.ru',
+          'domain:rshb.ru',
+          'domain:rt.ru',
+        ]),
+      );
       final fresh = backupWithRules(['domain:{x}.ru', 'regexp:"q"']);
       final onDisk = overwritten(bytesOf(fresh), old);
       expect(() => jsonDecode(utf8.decode(onDisk)), throwsFormatException);
@@ -429,14 +450,14 @@ void main() {
     });
 
     test('хвост, начатый с середины русской буквы, тоже отрезается', () {
-      final old = bytesOf(backupWithRules([
-        for (var i = 0; i < 40; i++) 'domain:сайт$i.рф',
-      ]));
+      final old = bytesOf(
+        backupWithRules([for (var i = 0; i < 40; i++) 'domain:сайт$i.рф']),
+      );
       // Подбираем длину нового так, чтобы граница пришлась на второй байт
       // кириллической буквы старого файла.
       late KeqdroidBackup fresh;
       late List<int> freshBytes;
-      for (var pad = 0;; pad++) {
+      for (var pad = 0; ; pad++) {
         fresh = backupWithRules(['domain:${'x' * pad}.ru']);
         freshBytes = bytesOf(fresh);
         final next = old[freshBytes.length];
@@ -457,9 +478,9 @@ void main() {
     });
 
     test('мусор внутри объекта не прячется за обрезкой', () {
-      final text = backupWithRules(['domain:rt.ru'])
-          .toJsonString()
-          .replaceFirst('"version"', 'version');
+      final text = backupWithRules([
+        'domain:rt.ru',
+      ]).toJsonString().replaceFirst('"version"', 'version');
       expect(
         () => KeqdroidBackup.parse(utf8.encode('$text tail')),
         throwsFormatException,

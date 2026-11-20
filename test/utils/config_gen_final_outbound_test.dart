@@ -12,8 +12,8 @@ const _server =
 /// domain/ip/inboundTag.
 String _finalTag(String configJson) {
   final map = jsonDecode(configJson) as Map<String, dynamic>;
-  final rules =
-      ((map['routing'] as Map)['rules'] as List).cast<Map<String, dynamic>>();
+  final rules = ((map['routing'] as Map)['rules'] as List)
+      .cast<Map<String, dynamic>>();
   final catchAll = rules.last;
   expect(catchAll['network'], 'tcp,udp');
   expect(catchAll.containsKey('domain'), isFalse);
@@ -27,7 +27,10 @@ void main() {
 
   group('ConfigGeneratorV2 final outbound', () {
     test('default settings send unmatched traffic to proxy', () {
-      final cfg = ConfigGeneratorV2.generateConfig(_server, const AppSettings());
+      final cfg = ConfigGeneratorV2.generateConfig(
+        _server,
+        const AppSettings(),
+      );
       expect(_finalTag(cfg), 'proxy');
     });
 
@@ -48,7 +51,10 @@ void main() {
     });
 
     test('the three outbound tags all exist so any final resolves', () {
-      final cfg = ConfigGeneratorV2.generateConfig(_server, const AppSettings());
+      final cfg = ConfigGeneratorV2.generateConfig(
+        _server,
+        const AppSettings(),
+      );
       final map = jsonDecode(cfg) as Map<String, dynamic>;
       final tags = (map['outbounds'] as List)
           .map((o) => (o as Map)['tag'] ?? (o)['protocol'])
@@ -56,14 +62,16 @@ void main() {
       expect(tags, containsAll(<String>['proxy', 'direct', 'block']));
     });
 
-    test('ping config always uses proxy as catch-all, ignoring finalOutbound',
-        () {
-      final cfg = ConfigGeneratorV2.generatePingConfig(
-        _server,
-        const AppSettings(finalOutbound: AppSettings.finalOutboundDirect),
-        socksPort: ConfigGeneratorV2.ephemeralPingPort,
-      );
-      expect(_finalTag(cfg), 'proxy');
-    });
+    test(
+      'ping config always uses proxy as catch-all, ignoring finalOutbound',
+      () {
+        final cfg = ConfigGeneratorV2.generatePingConfig(
+          _server,
+          const AppSettings(finalOutbound: AppSettings.finalOutboundDirect),
+          socksPort: ConfigGeneratorV2.ephemeralPingPort,
+        );
+        expect(_finalTag(cfg), 'proxy');
+      },
+    );
   });
 }

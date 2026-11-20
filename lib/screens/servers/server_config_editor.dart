@@ -159,7 +159,8 @@ class _ServerConfigEditorScreenState
     final isActive =
         ref.read(serversProvider).activeServerId == widget.serverId;
     final status = ref.read(vpnStateProvider).value?.status;
-    final reconnect = isActive &&
+    final reconnect =
+        isActive &&
         (status == VpnStatus.connected || status == VpnStatus.connecting);
     if (reconnect) {
       unawaited(
@@ -171,14 +172,17 @@ class _ServerConfigEditorScreenState
     }
 
     final messenger = AppSnack.of(context);
-    final msg =
-        reconnect ? l10n.serverEditorReconnecting : l10n.serverEditorSaved;
+    final msg = reconnect
+        ? l10n.serverEditorReconnecting
+        : l10n.serverEditorSaved;
     Navigator.of(context).pop();
     messenger.showSnackBar(
       SnackBar(
         content: Text(msg),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ExpressiveShape.medium)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(ExpressiveShape.medium),
+        ),
       ),
     );
   }
@@ -252,55 +256,56 @@ class _ServerConfigEditorScreenState
 
     Widget body = SmoothScroll(
       builder: (_, controller) => SingleChildScrollView(
-      controller: controller,
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _identity(server, name, l10n),
-          if (!_rawOnly) _modeSwitch(l10n),
-          if (server.type == ServerItemType.subscription)
-            _subscriptionBanner(server, l10n),
-          if (_error != null) _errorBanner(),
-          ?_issuesNotice(l10n),
-          if (_rawMode)
-            EditorLayers([_rawSection(l10n)])
-          else if (_protocol == 'clash')
-            ClashNodeFields(
-              json: _v('clashNode'),
-              decoration: _inputDecoration,
-              onChanged: (json) => setState(() => _ctrl('clashNode').text = json),
-            )
-          else
-            EditorLayers(_formSections(l10n)),
-          const SizedBox(height: 16),
-          SizedBox(
-            height: 52,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.accentContainer(context),
-                foregroundColor: AppTheme.onAccentContainer(context),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(ExpressiveShape.large),
+        controller: controller,
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _identity(server, name, l10n),
+            if (!_rawOnly) _modeSwitch(l10n),
+            if (server.type == ServerItemType.subscription)
+              _subscriptionBanner(server, l10n),
+            if (_error != null) _errorBanner(),
+            ?_issuesNotice(l10n),
+            if (_rawMode)
+              EditorLayers([_rawSection(l10n)])
+            else if (_protocol == 'clash')
+              ClashNodeFields(
+                json: _v('clashNode'),
+                decoration: _inputDecoration,
+                onChanged: (json) =>
+                    setState(() => _ctrl('clashNode').text = json),
+              )
+            else
+              EditorLayers(_formSections(l10n)),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 52,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.accentContainer(context),
+                  foregroundColor: AppTheme.onAccentContainer(context),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(ExpressiveShape.large),
+                  ),
+                  elevation: 0,
                 ),
-                elevation: 0,
+                onPressed: _saving ? null : _save,
+                child: _saving
+                    ? ShapeLoadingIndicator(
+                        size: 20,
+                        color: AppTheme.onAccentContainer(context),
+                      )
+                    : Text(
+                        l10n.subscriptionsSave,
+                        style: Theme.of(context).textTheme.emphasized(
+                          Theme.of(context).textTheme.labelLarge,
+                        ),
+                      ),
               ),
-              onPressed: _saving ? null : _save,
-              child: _saving
-                  ? ShapeLoadingIndicator(
-                      size: 20,
-                      color: AppTheme.onAccentContainer(context),
-                    )
-                  : Text(
-                      l10n.subscriptionsSave,
-                      style: Theme.of(context)
-                          .textTheme
-                          .emphasized(Theme.of(context).textTheme.labelLarge),
-                    ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
       ),
     );
 
@@ -316,14 +321,13 @@ class _ServerConfigEditorScreenState
       backgroundColor: AppTheme.bg(context),
       appBar: ExpressiveScrolledUnderBar(
         builder: (context, background) => AppBar(
-        backgroundColor: background,
-        title: Text(
-          l10n.serverEditorTitle,
-          style: Theme.of(context)
-              .textTheme
-              .emphasized(Theme.of(context).textTheme.titleMedium)
-              ?.copyWith(color: AppTheme.text(context)),
-        ),
+          backgroundColor: background,
+          title: Text(
+            l10n.serverEditorTitle,
+            style: Theme.of(context).textTheme
+                .emphasized(Theme.of(context).textTheme.titleMedium)
+                ?.copyWith(color: AppTheme.text(context)),
+          ),
         ),
       ),
       body: body,
@@ -359,15 +363,15 @@ class _ServerConfigEditorScreenState
           l10n.serverEditorIssueRealityTransport,
         ServerRuleIssue.realityNeedsPublicKey =>
           l10n.serverEditorIssueRealityKey,
-        ServerRuleIssue.encryptionMalformed =>
-          l10n.serverEditorIssueEncryption,
+        ServerRuleIssue.encryptionMalformed => l10n.serverEditorIssueEncryption,
         ServerRuleIssue.noSecurityAtAll => l10n.serverEditorIssueNoSecurity,
       };
 
   Widget _subscriptionBanner(ServerItem server, AppLocalizations l10n) {
     final overridden = server.configOverridden;
-    final color =
-        overridden ? AppTheme.orange(context) : AppTheme.accent(context);
+    final color = overridden
+        ? AppTheme.orange(context)
+        : AppTheme.accent(context);
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(10),
@@ -381,7 +385,9 @@ class _ServerConfigEditorScreenState
           Row(
             children: [
               Icon(
-                overridden ? Icons.edit_note_rounded : Icons.info_outline_rounded,
+                overridden
+                    ? Icons.edit_note_rounded
+                    : Icons.info_outline_rounded,
                 size: 18,
                 color: color,
               ),
@@ -391,10 +397,9 @@ class _ServerConfigEditorScreenState
                   overridden
                       ? l10n.serverEditorOverriddenNote
                       : l10n.serverEditorSubscriptionNote,
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodySmall
-                      ?.copyWith(color: AppTheme.text(context)),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppTheme.text(context),
+                  ),
                 ),
               ),
             ],
@@ -416,10 +421,9 @@ class _ServerConfigEditorScreenState
                 icon: Icon(Icons.restore_rounded, size: 16, color: color),
                 label: Text(
                   l10n.serverEditorRevert,
-                  style: Theme.of(context)
-                      .textTheme
-                      .labelMedium
-                      ?.copyWith(color: color),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelMedium?.copyWith(color: color),
                 ),
               ),
             ),
@@ -438,10 +442,9 @@ class _ServerConfigEditorScreenState
       ),
       child: Text(
         _error!,
-        style: Theme.of(context)
-            .textTheme
-            .bodySmall
-            ?.copyWith(color: AppTheme.red(context)),
+        style: Theme.of(
+          context,
+        ).textTheme.bodySmall?.copyWith(color: AppTheme.red(context)),
       ),
     );
   }
@@ -470,62 +473,58 @@ class _ServerConfigEditorScreenState
     final problem = !isJson
         ? null
         : clash
-            ? CustomClashConfig.describeProblem(raw)
-            : CustomXrayConfig.describeProblem(raw);
+        ? CustomClashConfig.describeProblem(raw)
+        : CustomXrayConfig.describeProblem(raw);
     final green = AppTheme.green(context);
     final red = AppTheme.red(context);
 
-    return _section(
-      icon: Icons.code_rounded,
-      l10n.serverEditorRawConfig,
-      [
-        TextField(
-          controller: _rawCtrl,
-          textDirection: technicalInputDirection,
-          maxLines: isJson ? 26 : 10,
-          minLines: isJson ? 14 : 4,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppTheme.text(context),
-                fontFamily: 'monospace',
-              ),
-          onChanged: (_) => setState(() {}),
-          decoration: _inputDecoration(),
+    return _section(icon: Icons.code_rounded, l10n.serverEditorRawConfig, [
+      TextField(
+        controller: _rawCtrl,
+        textDirection: technicalInputDirection,
+        maxLines: isJson ? 26 : 10,
+        minLines: isJson ? 14 : 4,
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: AppTheme.text(context),
+          fontFamily: 'monospace',
         ),
-        if (isJson) ...[
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Icon(
-                problem == null ? Icons.check_circle_outline_rounded : Icons.error_outline_rounded,
-                size: 16,
-                color: problem == null ? green : red,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  problem ??
-                      (clash
-                          ? l10n.serverEditorClashValid
-                          : l10n.serverEditorJsonValid),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: problem == null ? green : red,
-                      ),
+        onChanged: (_) => setState(() {}),
+        decoration: _inputDecoration(),
+      ),
+      if (isJson) ...[
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Icon(
+              problem == null
+                  ? Icons.check_circle_outline_rounded
+                  : Icons.error_outline_rounded,
+              size: 16,
+              color: problem == null ? green : red,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                problem ??
+                    (clash
+                        ? l10n.serverEditorClashValid
+                        : l10n.serverEditorJsonValid),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: problem == null ? green : red,
                 ),
               ),
-              const SizedBox(width: 8),
-              TextButton.icon(
-                onPressed: _rawJsonParses(raw) ? _formatRawJson : null,
-                icon: const Icon(Icons.format_align_left_rounded, size: 16),
-                label: Text(l10n.serverEditorJsonFormat),
-                style: TextButton.styleFrom(
-                  visualDensity: VisualDensity.compact,
-                ),
-              ),
-            ],
-          ),
-        ],
+            ),
+            const SizedBox(width: 8),
+            TextButton.icon(
+              onPressed: _rawJsonParses(raw) ? _formatRawJson : null,
+              icon: const Icon(Icons.format_align_left_rounded, size: 16),
+              label: Text(l10n.serverEditorJsonFormat),
+              style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+            ),
+          ],
+        ),
       ],
-    );
+    ]);
   }
 
   static bool _rawJsonParses(String raw) {
@@ -540,17 +539,13 @@ class _ServerConfigEditorScreenState
   EditorLayer? _xhttpDetailsSection(AppLocalizations l10n) {
     if (normalizeTransport(_drop['type'] ?? 'tcp') != 'xhttp') return null;
     if (XhttpExtraFields.parse(_v('extra')) == null) return null;
-    return _section(
-      icon: Icons.tune_rounded,
-      l10n.serverEditorXhttpDetails,
-      [
-        XhttpExtraFields(
-          json: _v('extra'),
-          decoration: _inputDecoration,
-          onChanged: (json) => setState(() => _ctrl('extra').text = json),
-        ),
-      ],
-    );
+    return _section(icon: Icons.tune_rounded, l10n.serverEditorXhttpDetails, [
+      XhttpExtraFields(
+        json: _v('extra'),
+        decoration: _inputDecoration,
+        onChanged: (json) => setState(() => _ctrl('extra').text = json),
+      ),
+    ]);
   }
 
   List<EditorLayer> _formSections(AppLocalizations l10n) {
@@ -589,59 +584,47 @@ class _ServerConfigEditorScreenState
     }
   }
 
-  EditorLayer _generalSection(AppLocalizations l10n, {required String credLabel}) {
-    return _section(
-      icon: Icons.dns_rounded,
-      l10n.serverEditorSectionGeneral,
-      [
-        _addressPortRow(l10n),
-        _textField('userInfo', credLabel, obscurable: true),
-        if (_protocol == 'vless')
-          _textField(
-            'encryption',
-            l10n.serverEditorEncryption,
-            hint: 'none',
+  EditorLayer _generalSection(
+    AppLocalizations l10n, {
+    required String credLabel,
+  }) {
+    return _section(icon: Icons.dns_rounded, l10n.serverEditorSectionGeneral, [
+      _addressPortRow(l10n),
+      _textField('userInfo', credLabel, obscurable: true),
+      if (_protocol == 'vless')
+        _textField('encryption', l10n.serverEditorEncryption, hint: 'none'),
+      // vision на xhttp и ws ядро отвергает: XTLS only supports TLS and REALITY directly
+      if (_protocol == 'vless')
+        _dropdown(
+          'flow',
+          'Flow',
+          flowOptionsFor(
+            protocol: _protocol,
+            transport: _drop['type'] ?? 'tcp',
+            security: _drop['security'] ?? 'none',
+            encryption: _v('encryption'),
           ),
-        // vision на xhttp и ws ядро отвергает: XTLS only supports TLS and REALITY directly
-        if (_protocol == 'vless')
-          _dropdown(
-            'flow',
-            'Flow',
-            flowOptionsFor(
-              protocol: _protocol,
-              transport: _drop['type'] ?? 'tcp',
-              security: _drop['security'] ?? 'none',
-              encryption: _v('encryption'),
-            ),
-          ),
-      ],
-    );
+        ),
+    ]);
   }
 
   EditorLayer _vlessSecuritySection(AppLocalizations l10n) => _section(
-        icon: Icons.shield_rounded,
-        l10n.serverEditorSectionSecurity,
-        _securityFields(l10n, reality: true),
-      );
+    icon: Icons.shield_rounded,
+    l10n.serverEditorSectionSecurity,
+    _securityFields(l10n, reality: true),
+  );
 
-  List<Widget> _securityFields(
-    AppLocalizations l10n, {
-    required bool reality,
-  }) {
+  List<Widget> _securityFields(AppLocalizations l10n, {required bool reality}) {
     final transport = _drop['type'] ?? 'tcp';
     final security = _drop['security'] ?? 'none';
-    final allowed =
-        reality ? securityOptionsFor(transport) : const ['none', 'tls'];
-    final options = [
-      ...allowed,
-      if (!allowed.contains(security)) security,
-    ];
+    final allowed = reality
+        ? securityOptionsFor(transport)
+        : const ['none', 'tls'];
+    final options = [...allowed, if (!allowed.contains(security)) security];
     return [
-      _segmented(
-        'security',
-        l10n.serverEditorSecurityMode,
-        [for (final o in options) (o, o == 'none' ? '—' : o.toUpperCase())],
-      ),
+      _segmented('security', l10n.serverEditorSecurityMode, [
+        for (final o in options) (o, o == 'none' ? '—' : o.toUpperCase()),
+      ]),
       if (security == 'tls' || security == 'reality') ...[
         _textField('sni', 'SNI'),
         _fpDropdown(l10n),
@@ -663,10 +646,10 @@ class _ServerConfigEditorScreenState
   }
 
   EditorLayer _tlsSection(AppLocalizations l10n) => _section(
-        icon: Icons.shield_rounded,
-        l10n.serverEditorSectionSecurity,
-        _securityFields(l10n, reality: true),
-      );
+    icon: Icons.shield_rounded,
+    l10n.serverEditorSectionSecurity,
+    _securityFields(l10n, reality: true),
+  );
 
   EditorLayer _transportSection(AppLocalizations l10n) {
     final type = normalizeTransport(_drop['type'] ?? 'tcp');
@@ -689,11 +672,13 @@ class _ServerConfigEditorScreenState
         if (type == 'xhttp') ...[
           _textField('path', l10n.serverEditorPath, hint: '/'),
           _textField('host', 'Host'),
-          _dropdown(
-            'mode',
-            l10n.serverEditorMode,
-            const ['', 'auto', 'packet-up', 'stream-up', 'stream-one'],
-          ),
+          _dropdown('mode', l10n.serverEditorMode, const [
+            '',
+            'auto',
+            'packet-up',
+            'stream-up',
+            'stream-one',
+          ]),
           // битый extra полями не показать, его чинят строкой
           if (XhttpExtraFields.parse(_v('extra')) == null) ...[
             _textField(
@@ -714,20 +699,16 @@ class _ServerConfigEditorScreenState
         ],
         if (type == 'kcp') ...[
           // других имён заголовков mkcp ядро не знает и роняет конфиг
-          _dropdown(
-            'headerType',
-            l10n.serverEditorHeaderType,
-            const [
-              '',
-              'none',
-              'srtp',
-              'utp',
-              'wechat-video',
-              'dtls',
-              'wireguard',
-              'dns',
-            ],
-          ),
+          _dropdown('headerType', l10n.serverEditorHeaderType, const [
+            '',
+            'none',
+            'srtp',
+            'utp',
+            'wechat-video',
+            'dtls',
+            'wireguard',
+            'dns',
+          ]),
           _textField('seed', l10n.serverEditorSeed),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -769,53 +750,38 @@ class _ServerConfigEditorScreenState
     );
   }
 
-  EditorLayer _vmessSecuritySection(AppLocalizations l10n) => _section(
-        icon: Icons.shield_rounded,
-        l10n.serverEditorSectionSecurity,
-        [
-          _dropdown(
-            'scy',
-            l10n.serverEditorMethod,
-            const [
-              '',
-              'auto',
-              'none',
-              'zero',
-              'aes-128-gcm',
-              'chacha20-poly1305',
-            ],
-          ),
-          // в vmess-ссылке REALITY передать нечем
-          ..._securityFields(l10n, reality: false),
-        ],
-      );
+  EditorLayer _vmessSecuritySection(AppLocalizations l10n) =>
+      _section(icon: Icons.shield_rounded, l10n.serverEditorSectionSecurity, [
+        _dropdown('scy', l10n.serverEditorMethod, const [
+          '',
+          'auto',
+          'none',
+          'zero',
+          'aes-128-gcm',
+          'chacha20-poly1305',
+        ]),
+        // в vmess-ссылке REALITY передать нечем
+        ..._securityFields(l10n, reality: false),
+      ]);
 
   EditorLayer _ssSection(AppLocalizations l10n) {
-    return _section(
-      icon: Icons.dns_rounded,
-      l10n.serverEditorSectionGeneral,
-      [
-        _addressPortRow(l10n),
-        _dropdown(
-          'ss-method-unused',
-          l10n.serverEditorMethod,
-          const [],
-          textFallbackId: 'method',
-        ),
-        _textField('password', l10n.serverEditorPassword, obscurable: true),
-      ],
-    );
+    return _section(icon: Icons.dns_rounded, l10n.serverEditorSectionGeneral, [
+      _addressPortRow(l10n),
+      _dropdown(
+        'ss-method-unused',
+        l10n.serverEditorMethod,
+        const [],
+        textFallbackId: 'method',
+      ),
+      _textField('password', l10n.serverEditorPassword, obscurable: true),
+    ]);
   }
 
   EditorLayer _hysteriaGeneralSection(AppLocalizations l10n) {
-    return _section(
-      icon: Icons.dns_rounded,
-      l10n.serverEditorSectionGeneral,
-      [
-        _addressPortRow(l10n),
-        _textField('auth', l10n.serverEditorAuth, obscurable: true),
-      ],
-    );
+    return _section(icon: Icons.dns_rounded, l10n.serverEditorSectionGeneral, [
+      _addressPortRow(l10n),
+      _textField('auth', l10n.serverEditorAuth, obscurable: true),
+    ]);
   }
 
   EditorLayer _hysteriaTlsSection(AppLocalizations l10n) {
@@ -866,7 +832,10 @@ class _ServerConfigEditorScreenState
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(flex: 3, child: _textField('address', l10n.serverEditorAddress)),
+        Expanded(
+          flex: 3,
+          child: _textField('address', l10n.serverEditorAddress),
+        ),
         const SizedBox(width: 10),
         Expanded(
           flex: 1,
@@ -882,23 +851,19 @@ class _ServerConfigEditorScreenState
   }
 
   Widget _fpDropdown(AppLocalizations l10n) {
-    return _dropdown(
-      'fp',
-      l10n.serverEditorFingerprint,
-      const [
-        '',
-        'chrome',
-        'firefox',
-        'safari',
-        'ios',
-        'android',
-        'edge',
-        '360',
-        'qq',
-        'random',
-        'randomized',
-      ],
-    );
+    return _dropdown('fp', l10n.serverEditorFingerprint, const [
+      '',
+      'chrome',
+      'firefox',
+      'safari',
+      'ios',
+      'android',
+      'edge',
+      '360',
+      'qq',
+      'random',
+      'randomized',
+    ]);
   }
 
   Widget _insecureToggle(AppLocalizations l10n) {
@@ -912,10 +877,9 @@ class _ServerConfigEditorScreenState
         activeTrackColor: AppTheme.accent(context).withValues(alpha: 0.32),
         title: Text(
           l10n.serverEditorAllowInsecure,
-          style: Theme.of(context)
-              .textTheme
-              .bodyMedium
-              ?.copyWith(color: AppTheme.text(context)),
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: AppTheme.text(context)),
         ),
         onChanged: (v) => setState(() => _toggle['insecure'] = v),
       ),
@@ -926,7 +890,9 @@ class _ServerConfigEditorScreenState
     final clash = server.clashConfig;
     if (clash != null) {
       final proxies = clash.proxies;
-      return proxies.length == 1 ? 'Clash · ${proxies.single['type']}' : 'Clash';
+      return proxies.length == 1
+          ? 'Clash · ${proxies.single['type']}'
+          : 'Clash';
     }
     return server.protocol.toUpperCase();
   }
@@ -960,8 +926,9 @@ class _ServerConfigEditorScreenState
                   _protocolLabel(server),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: textTheme.bodySmall
-                      ?.copyWith(color: AppTheme.textLight(context)),
+                  style: textTheme.bodySmall?.copyWith(
+                    color: AppTheme.textLight(context),
+                  ),
                 ),
               ],
             ),
@@ -997,42 +964,44 @@ class _ServerConfigEditorScreenState
   }
 
   Widget _modeSwitch(AppLocalizations l10n) => Padding(
-        padding: const EdgeInsets.only(bottom: 12),
-        child: ExpressiveConnectedButtons<bool>(
-          segments: [
-            ExpressiveSegment(
-              value: false,
-              label: l10n.serverEditorModeFields,
-              icon: Icons.tune_rounded,
-            ),
-            ExpressiveSegment(
-              value: true,
-              label: l10n.serverEditorModeText,
-              icon: Icons.code_rounded,
-            ),
-          ],
-          selected: _rawMode,
-          onChanged: (raw) {
-            if (raw != _rawMode) _toggleRawMode();
-          },
+    padding: const EdgeInsets.only(bottom: 12),
+    child: ExpressiveConnectedButtons<bool>(
+      segments: [
+        ExpressiveSegment(
+          value: false,
+          label: l10n.serverEditorModeFields,
+          icon: Icons.tune_rounded,
         ),
-      );
+        ExpressiveSegment(
+          value: true,
+          label: l10n.serverEditorModeText,
+          icon: Icons.code_rounded,
+        ),
+      ],
+      selected: _rawMode,
+      onChanged: (raw) {
+        if (raw != _rawMode) _toggleRawMode();
+      },
+    ),
+  );
 
-  EditorLayer _section(String title, List<Widget> children, {required IconData icon}) =>
-      EditorLayer(icon, title, children);
+  EditorLayer _section(
+    String title,
+    List<Widget> children, {
+    required IconData icon,
+  }) => EditorLayer(icon, title, children);
 
   InputDecoration _inputDecoration({String? label, String? hint}) {
     final scheme = Theme.of(context).colorScheme;
     return InputDecoration(
       labelText: label,
       hintText: hint,
-      labelStyle: Theme.of(context)
-          .textTheme
-          .bodySmall
-          ?.copyWith(color: AppTheme.textLight(context)),
+      labelStyle: Theme.of(
+        context,
+      ).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
       hintStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: AppTheme.textLight(context).withValues(alpha: 0.4),
-          ),
+        color: AppTheme.textLight(context).withValues(alpha: 0.4),
+      ),
       isDense: true,
       filled: true,
       fillColor: scheme.surfaceContainerHighest,
@@ -1067,10 +1036,9 @@ class _ServerConfigEditorScreenState
             padding: const EdgeInsets.only(left: 4, bottom: 6),
             child: Text(
               label,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: AppTheme.textLight(context)),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppTheme.textLight(context),
+              ),
             ),
           ),
           ExpressiveConnectedButtons<String>(
@@ -1102,9 +1070,9 @@ class _ServerConfigEditorScreenState
         controller: _ctrl(id),
         textDirection: technicalInputDirection,
         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: AppTheme.text(context),
-              fontFamily: obscurable ? 'monospace' : null,
-            ),
+          color: AppTheme.text(context),
+          fontFamily: obscurable ? 'monospace' : null,
+        ),
         keyboardType: keyboardType,
         inputFormatters: inputFormatters,
         onChanged: (_) => setState(() {}),
@@ -1122,7 +1090,11 @@ class _ServerConfigEditorScreenState
     final isText = textFallbackId != null;
     final current = isText ? _v(textFallbackId) : (_drop[id] ?? '');
 
-    Widget dropdownRow(BuildContext ctx, String text, {required bool selected}) {
+    Widget dropdownRow(
+      BuildContext ctx,
+      String text, {
+      required bool selected,
+    }) {
       final scheme = Theme.of(ctx).colorScheme;
       final textTheme = Theme.of(ctx).textTheme;
       return Container(
@@ -1151,7 +1123,11 @@ class _ServerConfigEditorScreenState
               ),
             ),
             if (selected)
-              Icon(Icons.check_rounded, size: 16, color: scheme.onSecondaryContainer),
+              Icon(
+                Icons.check_rounded,
+                size: 16,
+                color: scheme.onSecondaryContainer,
+              ),
           ],
         ),
       );
@@ -1182,10 +1158,9 @@ class _ServerConfigEditorScreenState
         initialValue: current,
         isExpanded: true,
         dropdownColor: AppTheme.card(context),
-        style: Theme.of(context)
-            .textTheme
-            .bodyMedium
-            ?.copyWith(color: AppTheme.text(context)),
+        style: Theme.of(
+          context,
+        ).textTheme.bodyMedium?.copyWith(color: AppTheme.text(context)),
         icon: Icon(
           Icons.expand_more_rounded,
           size: 18,
@@ -1243,8 +1218,9 @@ class _ServerConfigEditorScreenState
             padding: const EdgeInsetsDirectional.only(start: 4, bottom: 6),
             child: Text(
               label,
-              style: textTheme.bodySmall
-                  ?.copyWith(color: AppTheme.textLight(context)),
+              style: textTheme.bodySmall?.copyWith(
+                color: AppTheme.textLight(context),
+              ),
             ),
           ),
           Wrap(
@@ -1284,14 +1260,17 @@ class _ServerConfigEditorScreenState
                           ],
                           Text(
                             o.isEmpty ? '—' : o,
-                            style: (o == current
-                                    ? textTheme.emphasized(textTheme.labelLarge)
-                                    : textTheme.labelLarge)
-                                ?.copyWith(
-                              color: o == current
-                                  ? scheme.onPrimary
-                                  : scheme.onSurfaceVariant,
-                            ),
+                            style:
+                                (o == current
+                                        ? textTheme.emphasized(
+                                            textTheme.labelLarge,
+                                          )
+                                        : textTheme.labelLarge)
+                                    ?.copyWith(
+                                      color: o == current
+                                          ? scheme.onPrimary
+                                          : scheme.onSurfaceVariant,
+                                    ),
                           ),
                         ],
                       ),

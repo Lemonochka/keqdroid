@@ -17,7 +17,8 @@ double _cell(double screenWidth, double gap) =>
 
 final _server = ServerItem(
   id: 'nl',
-  config: 'vless://00000000-0000-0000-0000-000000000000@nl.example.com:443'
+  config:
+      'vless://00000000-0000-0000-0000-000000000000@nl.example.com:443'
       '#Нидерланды Amsterdam Hysteria',
   type: ServerItemType.manual,
   pinnedAt: DateTime(2026),
@@ -44,9 +45,9 @@ Future<void> _pumpRow(
         ColorScheme.fromSeed(seedColor: const Color(0xFF7B61FF)),
       ),
       builder: (context, child) => MediaQuery(
-        data: MediaQuery.of(context).copyWith(
-          textScaler: TextScaler.linear(scale),
-        ),
+        data: MediaQuery.of(
+          context,
+        ).copyWith(textScaler: TextScaler.linear(scale)),
         child: child!,
       ),
       home: Scaffold(
@@ -65,10 +66,8 @@ Future<void> _pumpRow(
                 emphasizeTitle: true,
                 opaqueBadge: true,
                 layout: layout,
-                trailing:
-                    isCard ? null : const SizedBox.square(dimension: 32),
-                status:
-                    isCard ? const SizedBox.square(dimension: 16) : null,
+                trailing: isCard ? null : const SizedBox.square(dimension: 32),
+                status: isCard ? const SizedBox.square(dimension: 16) : null,
               ),
             ),
           ),

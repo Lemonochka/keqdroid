@@ -23,9 +23,9 @@ class SystemAccentCandidates {
   });
 
   const SystemAccentCandidates.empty()
-      : themeSetting = null,
-        wallpaper = null,
-        systemResource = null;
+    : themeSetting = null,
+      wallpaper = null,
+      systemResource = null;
 
   final int? themeSetting;
   final int? wallpaper;

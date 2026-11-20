@@ -52,9 +52,8 @@ class _WhoPickerSheetState extends ConsumerState<_WhoPickerSheet> {
   }
 
   void _toggle(AppInfo app) => setState(
-        () => _selected =
-            SplitTunnelingNotifier.toggledEntries(_selected, app),
-      );
+    () => _selected = SplitTunnelingNotifier.toggledEntries(_selected, app),
+  );
 
   Future<void> _addByHand() async {
     final raw = await showAddProcessDialog(context);
@@ -131,12 +130,16 @@ class _WhoPickerSheetState extends ConsumerState<_WhoPickerSheet> {
                             ? l10n.splitHideSystemApps
                             : l10n.splitShowSystemApps,
                         isSelected: _showSystem,
-                        icon: Icon(PlatformBootstrap.isDesktop
-                            ? Icons.computer_outlined
-                            : Icons.android_outlined),
-                        selectedIcon: Icon(PlatformBootstrap.isDesktop
-                            ? Icons.computer_rounded
-                            : Icons.android_rounded),
+                        icon: Icon(
+                          PlatformBootstrap.isDesktop
+                              ? Icons.computer_outlined
+                              : Icons.android_outlined,
+                        ),
+                        selectedIcon: Icon(
+                          PlatformBootstrap.isDesktop
+                              ? Icons.computer_rounded
+                              : Icons.android_rounded,
+                        ),
                         onPressed: () => setState(() {
                           _showSystem = !_showSystem;
                           _rows = null;
@@ -165,8 +168,9 @@ class _WhoPickerSheetState extends ConsumerState<_WhoPickerSheet> {
                     filled: true,
                     fillColor: AppTheme.inset(context),
                     border: OutlineInputBorder(
-                      borderRadius:
-                          ExpressiveShape.radius(ExpressiveShape.medium),
+                      borderRadius: ExpressiveShape.radius(
+                        ExpressiveShape.medium,
+                      ),
                       borderSide: BorderSide.none,
                     ),
                   ),
@@ -195,14 +199,13 @@ class _WhoPickerSheetState extends ConsumerState<_WhoPickerSheet> {
     List<AppInfo> rows,
     SplitSelection selection,
   ) {
-    final muted = Theme.of(context)
-        .textTheme
-        .bodyMedium
-        ?.copyWith(color: AppTheme.textLight(context));
+    final muted = Theme.of(
+      context,
+    ).textTheme.bodyMedium?.copyWith(color: AppTheme.textLight(context));
     Widget message(String text) => Padding(
-          padding: const EdgeInsets.fromLTRB(32, 16, 32, 24),
-          child: Text(text, textAlign: TextAlign.center, style: muted),
-        );
+      padding: const EdgeInsets.fromLTRB(32, 16, 32, 24),
+      child: Text(text, textAlign: TextAlign.center, style: muted),
+    );
     if (_rows == null) {
       return appsAsync.hasError
           ? message(l10n.splitFailedLoadApps('${appsAsync.error}'))
@@ -231,8 +234,9 @@ class _WhoPickerSheetState extends ConsumerState<_WhoPickerSheet> {
             index: i,
             count: rows.length,
           ).resolve(direction),
-          margin:
-              ExpressiveListSegment.segmentMargin(index: i).resolve(direction),
+          margin: ExpressiveListSegment.segmentMargin(
+            index: i,
+          ).resolve(direction),
           onTap: () => _toggle(app),
         );
       },

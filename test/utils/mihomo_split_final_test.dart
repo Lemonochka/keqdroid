@@ -3,7 +3,6 @@ import 'package:keqdroid/models/app_settings.dart';
 import 'package:keqdroid/tunnel/app_routing_mode.dart';
 import 'package:keqdroid/utils/mihomo_config_gen.dart';
 
-
 /// Режим сплита без правил по процессам отправлял ВЕСЬ трафик мимо прокси.
 ///
 /// «Только выбранные» без имён процессов держит финал `DIRECT`. Там, где ядро

@@ -155,7 +155,9 @@ void main() {
     });
 
     // AnimatedCrossFade прячет поля в ExcludeFocus, и это тоже потеря фокуса
-    testWidgets('выключили XMUX посреди ввода: введённое не пропало', (tester) async {
+    testWidgets('выключили XMUX посреди ввода: введённое не пропало', (
+      tester,
+    ) async {
       final fake = await _pumpSettings(tester, _xmuxOn);
       await _open(tester, _coreSettings);
       await _type(tester, 'Max concurrency', '8');
@@ -185,106 +187,150 @@ void main() {
   group('Отдельный резолвер для direct-доменов', () {
     const label = 'Split resolver for direct domains';
 
-    testWidgets('со своим DNS из одного сервера не показан: он бы ничего не менял',
-        (tester) async {
-      await _pumpSettings(
-        tester,
-        const AppSettings(
-          xrayCore: XrayCoreSettings(
-            dnsUseCustom: true,
-            dnsServers: 'https+local://8.8.8.8/dns-query',
+    testWidgets(
+      'со своим DNS из одного сервера не показан: он бы ничего не менял',
+      (tester) async {
+        await _pumpSettings(
+          tester,
+          const AppSettings(
+            xrayCore: XrayCoreSettings(
+              dnsUseCustom: true,
+              dnsServers: 'https+local://8.8.8.8/dns-query',
+            ),
           ),
-        ),
-      );
-      await _open(tester, _coreSettings);
-      expect(find.text(label), findsNothing);
-    });
+        );
+        await _open(tester, _coreSettings);
+        expect(find.text(label), findsNothing);
+      },
+    );
 
     testWidgets('с двумя своими серверами показан', (tester) async {
       await _pumpSettings(
         tester,
         const AppSettings(
-          xrayCore: XrayCoreSettings(dnsUseCustom: true, dnsServers: '1.1.1.1, 8.8.8.8'),
+          xrayCore: XrayCoreSettings(
+            dnsUseCustom: true,
+            dnsServers: '1.1.1.1, 8.8.8.8',
+          ),
         ),
       );
       await _open(tester, _coreSettings);
       expect(find.text(label), findsOneWidget);
     });
 
-    testWidgets('без своего DNS показан: прямые домены идут в системный резолвер',
-        (tester) async {
-      await _pumpSettings(tester, const AppSettings());
-      await _open(tester, _coreSettings);
-      expect(find.text(label), findsOneWidget);
-      // buildDnsBlock кладёт их на localhost, первого своего сервера тут нет
-      expect(find.text('Domains from the direct list are resolved by the system DNS'),
-          findsOneWidget);
-      expect(find.text('Uses first server for domains from direct list'), findsNothing);
-    });
+    testWidgets(
+      'без своего DNS показан: прямые домены идут в системный резолвер',
+      (tester) async {
+        await _pumpSettings(tester, const AppSettings());
+        await _open(tester, _coreSettings);
+        expect(find.text(label), findsOneWidget);
+        // buildDnsBlock кладёт их на localhost, первого своего сервера тут нет
+        expect(
+          find.text(
+            'Domains from the direct list are resolved by the system DNS',
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.text('Uses first server for domains from direct list'),
+          findsNothing,
+        );
+      },
+    );
 
-    testWidgets('со своими серверами подпись про первый сервер', (tester) async {
+    testWidgets('со своими серверами подпись про первый сервер', (
+      tester,
+    ) async {
       await _pumpSettings(
         tester,
         const AppSettings(
-          xrayCore: XrayCoreSettings(dnsUseCustom: true, dnsServers: '1.1.1.1, 8.8.8.8'),
+          xrayCore: XrayCoreSettings(
+            dnsUseCustom: true,
+            dnsServers: '1.1.1.1, 8.8.8.8',
+          ),
         ),
       );
       await _open(tester, _coreSettings);
-      expect(find.text('Uses first server for domains from direct list'), findsOneWidget);
+      expect(
+        find.text('Uses first server for domains from direct list'),
+        findsOneWidget,
+      );
     });
   });
 
   group('Подписи и выбор по ядру', () {
     const customDns = AppSettings(
-      xrayCore: XrayCoreSettings(dnsUseCustom: true, dnsServers: '1.1.1.1, 8.8.8.8'),
+      xrayCore: XrayCoreSettings(
+        dnsUseCustom: true,
+        dnsServers: '1.1.1.1, 8.8.8.8',
+      ),
     );
 
     // app/dns/nameserver.go в Xray 26.10: схемы tls нет, такой адрес выбрасывается
     testWidgets('на Xray подпись своих DNS не обещает DoT', (tester) async {
       await _pumpSettings(tester, customDns);
       await _open(tester, _coreSettings);
-      expect(find.text('One address per line (DoH or plain), Xray has no DoT'),
-          findsOneWidget);
+      expect(
+        find.text('One address per line (DoH or plain), Xray has no DoT'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('на mihomo DoT в подписи остаётся', (tester) async {
       await _pumpSettings(tester, customDns, backend: VpnBackend.mihomo);
       await _open(tester, _coreSettings);
-      expect(find.text('One address per line (DoH, DoT, or plain)'), findsOneWidget);
+      expect(
+        find.text('One address per line (DoH, DoT, or plain)'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('стратегия доменов видна и на mihomo', (tester) async {
-      await _pumpSettings(tester, const AppSettings(), backend: VpnBackend.mihomo);
+      await _pumpSettings(
+        tester,
+        const AppSettings(),
+        backend: VpnBackend.mihomo,
+      );
       await _open(tester, _coreSettings);
       await tester.scrollUntilVisible(
         find.text('IPOnDemand'),
         300,
         scrollable: find
-            .descendant(of: find.byType(CustomScrollView), matching: find.byType(Scrollable))
+            .descendant(
+              of: find.byType(CustomScrollView),
+              matching: find.byType(Scrollable),
+            )
             .first,
       );
       expect(find.text('Routing domain strategy'), findsOneWidget);
       expect(find.text('IPIfNonMatch'), findsOneWidget);
     });
 
-    testWidgets('стратегия запросов на mihomo только из двух, сохранённая показана как UseIP',
-        (tester) async {
-      await _pumpSettings(
-        tester,
-        const AppSettings(xrayCore: XrayCoreSettings(dnsQueryStrategy: 'PreferIPv4')),
-        backend: VpnBackend.mihomo,
-      );
-      await _open(tester, _coreSettings);
-      expect(find.text('UseIPv4'), findsOneWidget);
-      expect(find.text('UseIP'), findsOneWidget);
-      for (final gone in const ['UseIPv6', 'PreferIPv4', 'PreferIPv6']) {
-        expect(find.text(gone), findsNothing, reason: gone);
-      }
-      final group = tester.widget<RadioGroup<String>>(
-        find.ancestor(of: find.text('UseIP'), matching: find.byType(RadioGroup<String>)),
-      );
-      expect(group.groupValue, 'UseIP');
-    });
+    testWidgets(
+      'стратегия запросов на mihomo только из двух, сохранённая показана как UseIP',
+      (tester) async {
+        await _pumpSettings(
+          tester,
+          const AppSettings(
+            xrayCore: XrayCoreSettings(dnsQueryStrategy: 'PreferIPv4'),
+          ),
+          backend: VpnBackend.mihomo,
+        );
+        await _open(tester, _coreSettings);
+        expect(find.text('UseIPv4'), findsOneWidget);
+        expect(find.text('UseIP'), findsOneWidget);
+        for (final gone in const ['UseIPv6', 'PreferIPv4', 'PreferIPv6']) {
+          expect(find.text(gone), findsNothing, reason: gone);
+        }
+        final group = tester.widget<RadioGroup<String>>(
+          find.ancestor(
+            of: find.text('UseIP'),
+            matching: find.byType(RadioGroup<String>),
+          ),
+        );
+        expect(group.groupValue, 'UseIP');
+      },
+    );
 
     testWidgets('стратегия запросов на Xray все пять', (tester) async {
       await _pumpSettings(tester, const AppSettings());
@@ -344,7 +390,9 @@ void main() {
       );
     });
 
-    testWidgets('неверный адрес по потере фокуса не сохраняется', (tester) async {
+    testWidgets('неверный адрес по потере фокуса не сохраняется', (
+      tester,
+    ) async {
       final fake = await _pumpSettings(tester, custom);
       await _open(tester, const ['Advanced', 'Server ping']);
       await _type(tester, 'URL', 'http://127.0.0.1/');

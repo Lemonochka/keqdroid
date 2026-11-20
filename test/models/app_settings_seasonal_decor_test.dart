@@ -19,11 +19,17 @@ void main() {
     test('участвует в равенстве — иначе переключатель не перерисует экран', () {
       const base = AppSettings();
       expect(base.copyWith(seasonalDecor: false), isNot(base));
-      expect(base.copyWith(seasonalDecor: false).hashCode, isNot(base.hashCode));
+      expect(
+        base.copyWith(seasonalDecor: false).hashCode,
+        isNot(base.hashCode),
+      );
     });
 
     test('уезжает в резервную копию вместе с остальным внешним видом', () {
-      expect(SettingsBackupService.portableSettingKeys, contains('seasonalDecor'));
+      expect(
+        SettingsBackupService.portableSettingKeys,
+        contains('seasonalDecor'),
+      );
     });
   });
 }

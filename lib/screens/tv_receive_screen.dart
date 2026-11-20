@@ -18,9 +18,9 @@ import '../utils/subscription_url.dart';
 class TvReceiveScreen extends ConsumerStatefulWidget {
   const TvReceiveScreen({super.key});
 
-  static Future<void> open(BuildContext context) => Navigator.of(context).push(
-        MaterialPageRoute<void>(builder: (_) => const TvReceiveScreen()),
-      );
+  static Future<void> open(BuildContext context) => Navigator.of(
+    context,
+  ).push(MaterialPageRoute<void>(builder: (_) => const TvReceiveScreen()));
 
   @override
   ConsumerState<TvReceiveScreen> createState() => _TvReceiveScreenState();
@@ -54,8 +54,10 @@ class _TvReceiveScreenState extends ConsumerState<TvReceiveScreen> {
         setState(() => _phase = _Phase.noNetwork);
         return;
       }
-      final server =
-          await TvReceiveServer.start(lanAddress: lan, onOffer: _onOffer);
+      final server = await TvReceiveServer.start(
+        lanAddress: lan,
+        onOffer: _onOffer,
+      );
       if (!mounted) {
         await server.close();
         return;
@@ -140,8 +142,9 @@ class _TvReceiveScreenState extends ConsumerState<TvReceiveScreen> {
           const SizedBox(height: ExpressiveSpacing.medium),
           Text(
             l10n.tvReceiveHint,
-            style: textTheme.bodyLarge
-                ?.copyWith(color: AppTheme.textLight(context)),
+            style: textTheme.bodyLarge?.copyWith(
+              color: AppTheme.textLight(context),
+            ),
           ),
           const SizedBox(height: ExpressiveSpacing.largeIncreased),
           _status(context, l10n),
@@ -165,11 +168,7 @@ class _TvReceiveScreenState extends ConsumerState<TvReceiveScreen> {
                 child: wide
                     ? Row(
                         mainAxisSize: MainAxisSize.min,
-                        children: [
-                          qr,
-                          const SizedBox(width: 40),
-                          info,
-                        ],
+                        children: [qr, const SizedBox(width: 40), info],
                       )
                     : Column(
                         mainAxisSize: MainAxisSize.min,
@@ -190,25 +189,25 @@ class _TvReceiveScreenState extends ConsumerState<TvReceiveScreen> {
   Widget _status(BuildContext context, AppLocalizations l10n) {
     final (Widget icon, String text, Color color) = switch (_phase) {
       _Phase.starting || _Phase.waiting => (
-          ShapeLoadingIndicator(size: 24, color: AppTheme.accent(context)),
-          l10n.tvReceiveWaiting,
-          AppTheme.accent(context),
-        ),
+        ShapeLoadingIndicator(size: 24, color: AppTheme.accent(context)),
+        l10n.tvReceiveWaiting,
+        AppTheme.accent(context),
+      ),
       _Phase.received => (
-          Icon(Icons.check_circle_rounded, color: AppTheme.green(context)),
-          l10n.tvReceiveGot(_detail),
-          AppTheme.green(context),
-        ),
+        Icon(Icons.check_circle_rounded, color: AppTheme.green(context)),
+        l10n.tvReceiveGot(_detail),
+        AppTheme.green(context),
+      ),
       _Phase.failed => (
-          Icon(Icons.error_outline_rounded, color: AppTheme.red(context)),
-          l10n.tvReceiveFailed(_detail),
-          AppTheme.red(context),
-        ),
+        Icon(Icons.error_outline_rounded, color: AppTheme.red(context)),
+        l10n.tvReceiveFailed(_detail),
+        AppTheme.red(context),
+      ),
       _Phase.noNetwork => (
-          Icon(Icons.wifi_off_rounded, color: AppTheme.red(context)),
-          l10n.tvReceiveNoNetwork,
-          AppTheme.red(context),
-        ),
+        Icon(Icons.wifi_off_rounded, color: AppTheme.red(context)),
+        l10n.tvReceiveNoNetwork,
+        AppTheme.red(context),
+      ),
     };
     return Row(
       children: [
@@ -217,10 +216,9 @@ class _TvReceiveScreenState extends ConsumerState<TvReceiveScreen> {
         Flexible(
           child: Text(
             text,
-            style: Theme.of(context)
-                .textTheme
-                .titleMedium
-                ?.copyWith(color: color),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(color: color),
           ),
         ),
       ],

@@ -142,8 +142,9 @@ abstract final class AutoServerSelect {
     return [
       for (final id in subscriptionIds)
         ..._ranked(
-          eligible(servers.where((s) => s.subscriptionId == id))
-              .where((s) => !skip.contains(s.id)),
+          eligible(
+            servers.where((s) => s.subscriptionId == id),
+          ).where((s) => !skip.contains(s.id)),
           at,
         ).take(perSubscription),
     ];
@@ -167,9 +168,7 @@ abstract final class AutoServerSelect {
 
   // не ответил никто: виновата сеть (лифт, метро, переезд с Wi-Fi), а не серверы;
   // такой провал сутки штрафовал бы лучших и уводил их в конец очереди замеров
-  static bool worthRecording(
-    Iterable<ServerLatency> results,
-  ) =>
+  static bool worthRecording(Iterable<ServerLatency> results) =>
       results.any((r) => r.success);
 
   // на переезде решает не один удачный ответ: ровный сервер обходит того, кто сегодня скакал и падал
@@ -214,8 +213,12 @@ abstract final class AutoServerSelect {
         best = r;
       }
     }
-    if (current != null && current.success) return const AutoSelectVerdict.stay();
-    if (current != null && best != null) return AutoSelectVerdict.switchTo(best.id);
+    if (current != null && current.success) {
+      return const AutoSelectVerdict.stay();
+    }
+    if (current != null && best != null) {
+      return AutoSelectVerdict.switchTo(best.id);
+    }
     return batchComplete
         ? const AutoSelectVerdict.stay()
         : const AutoSelectVerdict.undecided();

@@ -17,10 +17,17 @@ class DesktopSkiaFrame {
 
   Uint8List get rgba => _rgba;
 
-  static Future<DesktopSkiaFrame> capture(WidgetTester tester, {bool snap = true}) async {
+  static Future<DesktopSkiaFrame> capture(
+    WidgetTester tester, {
+    bool snap = true,
+  }) async {
     final recorder = ui.PictureRecorder();
-    final canvas = Canvas(recorder)..drawColor(const Color(0xFF000000), BlendMode.src);
-    _Compositor(canvas, snap).paint(tester.binding.renderViews.first.debugLayer!, Matrix4.identity());
+    final canvas = Canvas(recorder)
+      ..drawColor(const Color(0xFF000000), BlendMode.src);
+    _Compositor(
+      canvas,
+      snap,
+    ).paint(tester.binding.renderViews.first.debugLayer!, Matrix4.identity());
     final picture = recorder.endRecording();
     final size = tester.view.physicalSize;
     final w = size.width.toInt(), h = size.height.toInt();
@@ -44,7 +51,9 @@ class DesktopSkiaFrame {
   }) {
     double at(int y) {
       final i = (y * width + x) * 4;
-      return coverage(Color.fromARGB(255, _rgba[i], _rgba[i + 1], _rgba[i + 2])).clamp(0.0, 1.0);
+      return coverage(
+        Color.fromARGB(255, _rgba[i], _rgba[i + 1], _rgba[i + 2]),
+      ).clamp(0.0, 1.0);
     }
 
     int? first, last;
@@ -67,8 +76,17 @@ class _Compositor {
 
   Matrix4 _integral(Matrix4 ctm) {
     final m = ctm.storage;
-    final scaleTranslate = m[1] == 0 && m[2] == 0 && m[3] == 0 && m[4] == 0 && m[6] == 0 &&
-        m[7] == 0 && m[8] == 0 && m[9] == 0 && m[11] == 0 && m[15] == 1;
+    final scaleTranslate =
+        m[1] == 0 &&
+        m[2] == 0 &&
+        m[3] == 0 &&
+        m[4] == 0 &&
+        m[6] == 0 &&
+        m[7] == 0 &&
+        m[8] == 0 &&
+        m[9] == 0 &&
+        m[11] == 0 &&
+        m[15] == 1;
     if (!snap || !scaleTranslate) return ctm;
     final out = ctm.clone();
     out.storage[12] = m[12].roundToDouble();
@@ -77,7 +95,11 @@ class _Compositor {
   }
 
   void _children(ContainerLayer layer, Matrix4 ctm) {
-    for (var child = layer.firstChild; child != null; child = child.nextSibling) {
+    for (
+      var child = layer.firstChild;
+      child != null;
+      child = child.nextSibling
+    ) {
       paint(child, ctm);
     }
   }
@@ -85,7 +107,10 @@ class _Compositor {
   void _clip(ContainerLayer layer, Path path, Clip behavior, Matrix4 ctm) {
     canvas
       ..save()
-      ..clipPath(path.transform(ctm.storage), doAntiAlias: behavior != Clip.hardEdge);
+      ..clipPath(
+        path.transform(ctm.storage),
+        doAntiAlias: behavior != Clip.hardEdge,
+      );
     if (behavior == Clip.antiAliasWithSaveLayer) {
       canvas.saveLayer(null, Paint());
       _children(layer, _integral(ctm));
@@ -109,16 +134,31 @@ class _Compositor {
           ..multiply(layer.transform!);
         _children(layer, ctm.multiplied(t));
       case OpacityLayer():
-        final at = ctm.multiplied(Matrix4.translationValues(layer.offset.dx, layer.offset.dy, 0));
-        canvas.saveLayer(null, Paint()..color = Color.fromARGB(layer.alpha ?? 255, 0, 0, 0));
+        final at = ctm.multiplied(
+          Matrix4.translationValues(layer.offset.dx, layer.offset.dy, 0),
+        );
+        canvas.saveLayer(
+          null,
+          Paint()..color = Color.fromARGB(layer.alpha ?? 255, 0, 0, 0),
+        );
         _children(layer, _integral(at));
         canvas.restore();
       case OffsetLayer():
-        _children(layer, ctm.multiplied(Matrix4.translationValues(layer.offset.dx, layer.offset.dy, 0)));
+        _children(
+          layer,
+          ctm.multiplied(
+            Matrix4.translationValues(layer.offset.dx, layer.offset.dy, 0),
+          ),
+        );
       case ClipRectLayer():
         _clip(layer, Path()..addRect(layer.clipRect!), layer.clipBehavior, ctm);
       case ClipRRectLayer():
-        _clip(layer, Path()..addRRect(layer.clipRRect!), layer.clipBehavior, ctm);
+        _clip(
+          layer,
+          Path()..addRRect(layer.clipRRect!),
+          layer.clipBehavior,
+          ctm,
+        );
       case ClipPathLayer():
         _clip(layer, layer.clipPath!, layer.clipBehavior, ctm);
       case AnnotatedRegionLayer():
@@ -126,7 +166,9 @@ class _Compositor {
       case ContainerLayer() when layer.runtimeType == ContainerLayer:
         _children(layer, ctm);
       default:
-        throw UnsupportedError('${layer.runtimeType} пока не умеет: допиши по flow/layers');
+        throw UnsupportedError(
+          '${layer.runtimeType} пока не умеет: допиши по flow/layers',
+        );
     }
   }
 }

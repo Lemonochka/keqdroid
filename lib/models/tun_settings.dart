@@ -35,7 +35,11 @@ class TunSettings {
   static const strictRouteAuto = 'auto';
   static const strictRouteOn = 'on';
   static const strictRouteOff = 'off';
-  static const strictRouteModes = [strictRouteAuto, strictRouteOn, strictRouteOff];
+  static const strictRouteModes = [
+    strictRouteAuto,
+    strictRouteOn,
+    strictRouteOff,
+  ];
 
   static const ipv6Close = 'close';
   static const ipv6Vpn = 'vpn';
@@ -58,10 +62,10 @@ class TunSettings {
   bool get isDefault => this == const TunSettings();
 
   bool strictRouteEnabled({required bool windows}) => switch (strictRoute) {
-        strictRouteOn => true,
-        strictRouteOff => false,
-        _ => !windows,
-      };
+    strictRouteOn => true,
+    strictRouteOff => false,
+    _ => !windows,
+  };
 
   static String normalizeStack(String? raw) {
     final v = raw?.trim().toLowerCase();
@@ -84,16 +88,16 @@ class TunSettings {
       v.clamp(minUdpTimeoutSec, maxUdpTimeoutSec);
 
   Map<String, dynamic> toJson() => {
-        'stack': stack,
-        'mtu': mtu,
-        'strictRoute': strictRoute,
-        'udpTimeoutSec': udpTimeoutSec,
-        'autoRoute': autoRoute,
-        'ipv6': ipv6,
-        // версии до выбора из трёх читают только переключатель
-        'blockIpv6Leak': ipv6 != ipv6Bypass,
-        'defaultsVersion': _defaultsVersion,
-      };
+    'stack': stack,
+    'mtu': mtu,
+    'strictRoute': strictRoute,
+    'udpTimeoutSec': udpTimeoutSec,
+    'autoRoute': autoRoute,
+    'ipv6': ipv6,
+    // версии до выбора из трёх читают только переключатель
+    'blockIpv6Leak': ipv6 != ipv6Bypass,
+    'defaultsVersion': _defaultsVersion,
+  };
 
   factory TunSettings.fromJson(Map<String, dynamic>? json) {
     if (json == null) return const TunSettings();
@@ -128,15 +132,14 @@ class TunSettings {
     int? udpTimeoutSec,
     bool? autoRoute,
     String? ipv6,
-  }) =>
-      TunSettings(
-        stack: stack ?? this.stack,
-        mtu: mtu ?? this.mtu,
-        strictRoute: strictRoute ?? this.strictRoute,
-        udpTimeoutSec: udpTimeoutSec ?? this.udpTimeoutSec,
-        autoRoute: autoRoute ?? this.autoRoute,
-        ipv6: ipv6 ?? this.ipv6,
-      );
+  }) => TunSettings(
+    stack: stack ?? this.stack,
+    mtu: mtu ?? this.mtu,
+    strictRoute: strictRoute ?? this.strictRoute,
+    udpTimeoutSec: udpTimeoutSec ?? this.udpTimeoutSec,
+    autoRoute: autoRoute ?? this.autoRoute,
+    ipv6: ipv6 ?? this.ipv6,
+  );
 
   @override
   bool operator ==(Object other) =>
@@ -151,14 +154,8 @@ class TunSettings {
           ipv6 == other.ipv6;
 
   @override
-  int get hashCode => Object.hash(
-        stack,
-        mtu,
-        strictRoute,
-        udpTimeoutSec,
-        autoRoute,
-        ipv6,
-      );
+  int get hashCode =>
+      Object.hash(stack, mtu, strictRoute, udpTimeoutSec, autoRoute, ipv6);
 
   String toJsonString() => jsonEncode(toJson());
 

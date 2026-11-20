@@ -26,17 +26,38 @@ class _Kind {
 
 // размеры и уровни те же, что на согласованных макетах
 const _kinds = [
-  _Kind('drop', 76, 76, Offset(38, 38),
-      LiquidLevels(idle: 0.06, busy: 0.34, quiet: 0.60, loud: 0.72)),
-  _Kind('glass', 174, 174, Offset(130, 130),
-      LiquidLevels(idle: 0.05, busy: 0.26, quiet: 0.42, loud: 0.56)),
-  _Kind('plaque', 363, 76, Offset(38, 38),
-      LiquidLevels(idle: 0.06, busy: 0.30, quiet: 0.44, loud: 0.56)),
+  _Kind(
+    'drop',
+    76,
+    76,
+    Offset(38, 38),
+    LiquidLevels(idle: 0.06, busy: 0.34, quiet: 0.60, loud: 0.72),
+  ),
+  _Kind(
+    'glass',
+    174,
+    174,
+    Offset(130, 130),
+    LiquidLevels(idle: 0.05, busy: 0.26, quiet: 0.42, loud: 0.56),
+  ),
+  _Kind(
+    'plaque',
+    363,
+    76,
+    Offset(38, 38),
+    LiquidLevels(idle: 0.06, busy: 0.30, quiet: 0.44, loud: 0.56),
+  ),
 ];
 
 class _Layer {
   const _Layer(
-      this.name, this.length, this.pace, this.lift, this.phase, this.alpha);
+    this.name,
+    this.length,
+    this.pace,
+    this.lift,
+    this.phase,
+    this.alpha,
+  );
   final String name;
   final double length;
   final double pace;
@@ -89,9 +110,15 @@ List<double> _xs(double from, double to, double step) {
   return xs..add(to);
 }
 
-String _waterPath(_Kind k, _Layer l, List<double> xs,
-    double Function(double x) level, double amp, double phase,
-    {required double bottom}) {
+String _waterPath(
+  _Kind k,
+  _Layer l,
+  List<double> xs,
+  double Function(double x) level,
+  double amp,
+  double phase, {
+  required double bottom,
+}) {
   final b = StringBuffer();
   for (final (i, x) in xs.indexed) {
     final y = k.h - level(x) * k.h - l.lift - _wave(x, l, amp, phase);
@@ -101,7 +128,8 @@ String _waterPath(_Kind k, _Layer l, List<double> xs,
   return b.toString();
 }
 
-String _vectorOpen(double w, double h) => '''
+String _vectorOpen(double w, double h) =>
+    '''
     <vector
         android:width="${_n(w)}dp"
         android:height="${_n(h)}dp"
@@ -112,10 +140,17 @@ String _vectorOpen(double w, double h) => '''
 List<double> _waterXs(_Kind k) => _xs(0, k.w, 3);
 
 String _stillPath(_Kind k, _Layer l, _State s) => _waterPath(
-    k, l, _waterXs(k), (_) => k.levels.target(s.phase, 0), s.amp, l.phase,
-    bottom: k.h);
+  k,
+  l,
+  _waterXs(k),
+  (_) => k.levels.target(s.phase, 0),
+  s.amp,
+  l.phase,
+  bottom: k.h,
+);
 
-String _stillWater(_Kind k, _Layer l, _State s) => '''
+String _stillWater(_Kind k, _Layer l, _State s) =>
+    '''
 <?xml version="1.0" encoding="utf-8"?>
 $_header
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
@@ -149,28 +184,38 @@ String _pourWater(_Kind k, _Layer l, _State from, _State to) {
     final t = f * frameDt;
     final ramp = Curves.easeOut.transform(min(1.0, t / 0.8));
     final amp = from.amp + (to.amp - from.amp) * ramp;
-    final phase = l.phase -
+    final phase =
+        l.phase -
         l.pace * to.speed * _pourSeconds / 2 * pow(1 - t / _pourSeconds, 2);
     final last = f == _pourFrames;
     if (last) {
       final rest = [
-        for (final x in xs) (sim.levelAt((x / k.w).clamp(0.0, 1.0)) - target).abs(),
+        for (final x in xs)
+          (sim.levelAt((x / k.w).clamp(0.0, 1.0)) - target).abs(),
       ].reduce(max);
-      expect(rest * k.h, lessThan(1.2),
-          reason: '${k.name} ${l.name}: the pour has not settled');
+      expect(
+        rest * k.h,
+        lessThan(1.2),
+        reason: '${k.name} ${l.name}: the pour has not settled',
+      );
     }
-    frames.add(_waterPath(
-      k,
-      l,
-      xs,
-      (x) => last ? target : sim.levelAt((x / k.w).clamp(0.0, 1.0)),
-      amp,
-      phase,
-      bottom: bottom,
-    ));
+    frames.add(
+      _waterPath(
+        k,
+        l,
+        xs,
+        (x) => last ? target : sim.levelAt((x / k.w).clamp(0.0, 1.0)),
+        amp,
+        phase,
+        bottom: bottom,
+      ),
+    );
   }
-  expect(frames.last, _stillPath(k, l, to),
-      reason: '${k.name} ${l.name}: the pour does not end on the still picture');
+  expect(
+    frames.last,
+    _stillPath(k, l, to),
+    reason: '${k.name} ${l.name}: the pour does not end on the still picture',
+  );
   final morphs = StringBuffer();
   for (var f = 0; f < _pourFrames; f++) {
     morphs.write('''
@@ -218,7 +263,9 @@ String _logoWavePath() {
   for (var i = 0; i <= 180; i++) {
     final a = (_tail + 2.0 * i) * pi / 180;
     final r = 9.39 + 0.6945 * cos(9 * (a - 25 * pi / 180));
-    b.write('${i == 0 ? 'M' : 'L'}${_n(12 + r * cos(a))},${_n(12 + r * sin(a))} ');
+    b.write(
+      '${i == 0 ? 'M' : 'L'}${_n(12 + r * cos(a))},${_n(12 + r * sin(a))} ',
+    );
   }
   return b.toString().trim();
 }
@@ -233,10 +280,12 @@ String _logoTrackPath() {
       'A10.07,10.07 0 1,1 ${_n(x)},${_n(y)}';
 }
 
-const _dot = 'M12,9.048A2.952,2.952 0 1,1 12,14.952A2.952,2.952 0 1,1 12,9.048Z';
+const _dot =
+    'M12,9.048A2.952,2.952 0 1,1 12,14.952A2.952,2.952 0 1,1 12,9.048Z';
 
 String _logoLoading() {
-  String trims(String prop, double full, double short) => '''
+  String trims(String prop, double full, double short) =>
+      '''
                 <propertyValuesHolder android:propertyName="$prop">
                     <keyframe android:fraction="0" android:value="${_n4(full)}" />
                     <keyframe
@@ -319,7 +368,8 @@ ${trims('trimPathStart', (_fullSweep + _gap) / 360, (_shortSweep + _gap) / 360)}
 String _n4(double v) => v.toStringAsFixed(4);
 
 // после загрузки логотип не встаёт рывком, а доворачивается с её скорости
-String _logoSettle(List<String> logoPaths) => '''
+String _logoSettle(List<String> logoPaths) =>
+    '''
 <?xml version="1.0" encoding="utf-8"?>
 $_header
 <animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
@@ -379,34 +429,38 @@ const _roles = {
 };
 
 Color _role(ColorScheme s, String role) => switch (role) {
-      'surfaceContainer' => s.surfaceContainer,
-      'surfaceContainerHighest' => s.surfaceContainerHighest,
-      'onSurface' => s.onSurface,
-      'onSurfaceVariant' => s.onSurfaceVariant,
-      'primary' => s.primary,
-      'onPrimary' => s.onPrimary,
-      'primaryContainer' => s.primaryContainer,
-      'onPrimaryContainer' => s.onPrimaryContainer,
-      'secondaryContainer' => s.secondaryContainer,
-      'onSecondaryContainer' => s.onSecondaryContainer,
-      'error' => s.error,
-      'errorContainer' => s.errorContainer,
-      'onErrorContainer' => s.onErrorContainer,
-      _ => throw ArgumentError(role),
-    };
+  'surfaceContainer' => s.surfaceContainer,
+  'surfaceContainerHighest' => s.surfaceContainerHighest,
+  'onSurface' => s.onSurface,
+  'onSurfaceVariant' => s.onSurfaceVariant,
+  'primary' => s.primary,
+  'onPrimary' => s.onPrimary,
+  'primaryContainer' => s.primaryContainer,
+  'onPrimaryContainer' => s.onPrimaryContainer,
+  'secondaryContainer' => s.secondaryContainer,
+  'onSecondaryContainer' => s.onSecondaryContainer,
+  'error' => s.error,
+  'errorContainer' => s.errorContainer,
+  'onErrorContainer' => s.onErrorContainer,
+  _ => throw ArgumentError(role),
+};
 
 // до первого запуска приложения виджет красится как приложение по умолчанию: Ocean, светлая
 String _colors() {
-  final scheme =
-      buildPresetScheme(resolveThemePreset('ocean'), Brightness.light);
+  final scheme = buildPresetScheme(
+    resolveThemePreset('ocean'),
+    Brightness.light,
+  );
   final b = StringBuffer()
     ..writeln('<?xml version="1.0" encoding="utf-8"?>')
     ..writeln(_header)
     ..writeln('<resources>');
   for (final e in _roles.entries) {
     final argb = _role(scheme, e.value).toARGB32();
-    b.writeln('    <color name="widget_${e.key}">'
-        '#${argb.toRadixString(16).padLeft(8, '0').toUpperCase()}</color>');
+    b.writeln(
+      '    <color name="widget_${e.key}">'
+      '#${argb.toRadixString(16).padLeft(8, '0').toUpperCase()}</color>',
+    );
   }
   b.writeln('</resources>');
   return b.toString();
@@ -415,33 +469,41 @@ String _colors() {
 String _attrs(Map<String, String> a, String indent) =>
     a.entries.map((e) => '$indent    ${e.key}="${e.value}"').join('\n');
 
-String _view(String tag, Map<String, String> a, String indent,
-        [String? children]) =>
-    children == null
-        ? '$indent<$tag\n${_attrs(a, indent)} />\n'
-        : '$indent<$tag\n${_attrs(a, indent)}>\n$children$indent</$tag>\n';
+String _view(
+  String tag,
+  Map<String, String> a,
+  String indent, [
+  String? children,
+]) => children == null
+    ? '$indent<$tag\n${_attrs(a, indent)} />\n'
+    : '$indent<$tag\n${_attrs(a, indent)}>\n$children$indent</$tag>\n';
 
 Map<String, String> _fill(String id, {bool gone = false}) => {
-      'android:id': '@+id/$id',
-      'android:layout_width': 'match_parent',
-      'android:layout_height': 'match_parent',
-      if (gone) 'android:visibility': 'gone',
-    };
+  'android:id': '@+id/$id',
+  'android:layout_width': 'match_parent',
+  'android:layout_height': 'match_parent',
+  if (gone) 'android:visibility': 'gone',
+};
 
-String _progress(String id, String drawable, String tint, String indent,
-        {String? size, bool gone = true}) =>
-    _view('ProgressBar', {
-      'android:id': '@+id/$id',
-      'android:layout_width': size ?? 'match_parent',
-      'android:layout_height': size ?? 'match_parent',
-      if (size != null) 'android:layout_gravity': 'center',
-      'android:importantForAccessibility': 'no',
-      'android:indeterminate': 'true',
-      'android:indeterminateDrawable': '@drawable/$drawable',
-      'android:indeterminateOnly': 'false',
-      'android:indeterminateTint': '@color/widget_$tint',
-      if (gone) 'android:visibility': 'gone',
-    }, indent);
+String _progress(
+  String id,
+  String drawable,
+  String tint,
+  String indent, {
+  String? size,
+  bool gone = true,
+}) => _view('ProgressBar', {
+  'android:id': '@+id/$id',
+  'android:layout_width': size ?? 'match_parent',
+  'android:layout_height': size ?? 'match_parent',
+  if (size != null) 'android:layout_gravity': 'center',
+  'android:importantForAccessibility': 'no',
+  'android:indeterminate': 'true',
+  'android:indeterminateDrawable': '@drawable/$drawable',
+  'android:indeterminateOnly': 'false',
+  'android:indeterminateTint': '@color/widget_$tint',
+  if (gone) 'android:visibility': 'gone',
+}, indent);
 
 String _logos(String s, int size, String tint, String indent) {
   final d = '${size}dp';
@@ -458,59 +520,62 @@ String _logos(String s, int size, String tint, String indent) {
       _progress('w_${s}_settle', 'widget_logo_settle', tint, indent, size: d);
 }
 
-String _button(String s, int size, int logo, Map<String, String> place,
-        String indent) =>
-    _view(
-      'FrameLayout',
-      {
-        'android:id': '@+id/w_${s}_btn',
-        'android:layout_width': '${size}dp',
-        'android:layout_height': '${size}dp',
-        ...place,
-      },
-      indent,
-      _view('ImageView', {
-            ..._fill('w_${s}_btn_bg'),
-            'android:importantForAccessibility': 'no',
-            'android:src': '@drawable/widget_circle',
-            'android:tint': '@color/widget_surface_container_highest',
-          }, '$indent    ') +
-          _logos(s, logo, 'on_surface_variant', '$indent    '),
-    );
+String _button(
+  String s,
+  int size,
+  int logo,
+  Map<String, String> place,
+  String indent,
+) => _view(
+  'FrameLayout',
+  {
+    'android:id': '@+id/w_${s}_btn',
+    'android:layout_width': '${size}dp',
+    'android:layout_height': '${size}dp',
+    ...place,
+  },
+  indent,
+  _view('ImageView', {
+        ..._fill('w_${s}_btn_bg'),
+        'android:importantForAccessibility': 'no',
+        'android:src': '@drawable/widget_circle',
+        'android:tint': '@color/widget_surface_container_highest',
+      }, '$indent    ') +
+      _logos(s, logo, 'on_surface_variant', '$indent    '),
+);
 
-Map<String, String> _text(String id, int sp, String color,
-        {bool medium = false, bool gone = false}) =>
-    {
-      'android:id': '@+id/$id',
-      'android:layout_width': 'wrap_content',
-      'android:layout_height': 'wrap_content',
-      if (medium) 'android:fontFamily': 'sans-serif-medium',
-      'android:ellipsize': 'end',
-      'android:singleLine': 'true',
-      'android:textColor': '@color/widget_$color',
-      'android:textSize': '${sp}sp',
-      if (gone) 'android:visibility': 'gone',
-    };
+Map<String, String> _text(
+  String id,
+  int sp,
+  String color, {
+  bool medium = false,
+  bool gone = false,
+}) => {
+  'android:id': '@+id/$id',
+  'android:layout_width': 'wrap_content',
+  'android:layout_height': 'wrap_content',
+  if (medium) 'android:fontFamily': 'sans-serif-medium',
+  'android:ellipsize': 'end',
+  'android:singleLine': 'true',
+  'android:textColor': '@color/widget_$color',
+  'android:textSize': '${sp}sp',
+  if (gone) 'android:visibility': 'gone',
+};
 
 String _content(_Kind k, String s, String indent) {
   switch (k.name) {
     case 'drop':
       return _view(
-          'FrameLayout',
-          {..._fill('w_${s}_btn')},
-          indent,
-          _logos(s, 40, 'on_surface_variant', '$indent    '));
+        'FrameLayout',
+        {..._fill('w_${s}_btn')},
+        indent,
+        _logos(s, 40, 'on_surface_variant', '$indent    '),
+      );
     case 'plaque':
-      return _button(
-            s,
-            52,
-            31,
-            {
-              'android:layout_gravity': 'start|center_vertical',
-              'android:layout_marginStart': '12dp',
-            },
-            indent,
-          ) +
+      return _button(s, 52, 31, {
+            'android:layout_gravity': 'start|center_vertical',
+            'android:layout_marginStart': '12dp',
+          }, indent) +
           _view(
             'LinearLayout',
             {
@@ -522,14 +587,21 @@ String _content(_Kind k, String s, String indent) {
               'android:orientation': 'vertical',
             },
             indent,
-            _view('TextView', _text('w_${s}_name', 16, 'on_surface', medium: true),
-                    '$indent    ') +
-                _view('TextView', _text('w_${s}_status', 14, 'on_surface_variant'),
-                    '$indent    ') +
+            _view(
+                  'TextView',
+                  _text('w_${s}_name', 16, 'on_surface', medium: true),
+                  '$indent    ',
+                ) +
                 _view(
-                    'Chronometer',
-                    _text('w_${s}_clock', 14, 'on_surface_variant', gone: true),
-                    '$indent    '),
+                  'TextView',
+                  _text('w_${s}_status', 14, 'on_surface_variant'),
+                  '$indent    ',
+                ) +
+                _view(
+                  'Chronometer',
+                  _text('w_${s}_clock', 14, 'on_surface_variant', gone: true),
+                  '$indent    ',
+                ),
           );
     case 'glass':
       final inner = '$indent        ';
@@ -544,15 +616,15 @@ String _content(_Kind k, String s, String indent) {
               'android:paddingEnd': '16dp',
             },
             indent,
-            _view('TextView', _text('w_${s}_name', 16, 'on_surface', medium: true),
-                    '$indent    ') +
-                _view(
-                    'TextView',
-                    {
-                      ..._text('w_${s}_status', 14, 'on_surface_variant'),
-                      'android:layout_marginTop': '6dp',
-                    },
-                    '$indent    ') +
+            _view(
+                  'TextView',
+                  _text('w_${s}_name', 16, 'on_surface', medium: true),
+                  '$indent    ',
+                ) +
+                _view('TextView', {
+                  ..._text('w_${s}_status', 14, 'on_surface_variant'),
+                  'android:layout_marginTop': '6dp',
+                }, '$indent    ') +
                 _view(
                   'LinearLayout',
                   {
@@ -564,35 +636,33 @@ String _content(_Kind k, String s, String indent) {
                     'android:visibility': 'gone',
                   },
                   '$indent    ',
-                  _view('Chronometer', _text('w_${s}_clock', 30, 'on_surface'),
-                          inner) +
-                      _view(
-                          'TextView',
-                          {
-                            ..._text('w_${s}_ping', 12, 'on_secondary_container',
-                                medium: true),
-                            'android:layout_marginStart': '8dp',
-                            'android:background': '@drawable/widget_chip',
-                            'android:backgroundTint':
-                                '@color/widget_secondary_container',
-                            'android:paddingStart': '8dp',
-                            'android:paddingTop': '3dp',
-                            'android:paddingEnd': '8dp',
-                            'android:paddingBottom': '3dp',
-                          },
-                          inner),
+                  _view(
+                        'Chronometer',
+                        _text('w_${s}_clock', 30, 'on_surface'),
+                        inner,
+                      ) +
+                      _view('TextView', {
+                        ..._text(
+                          'w_${s}_ping',
+                          12,
+                          'on_secondary_container',
+                          medium: true,
+                        ),
+                        'android:layout_marginStart': '8dp',
+                        'android:background': '@drawable/widget_chip',
+                        'android:backgroundTint':
+                            '@color/widget_secondary_container',
+                        'android:paddingStart': '8dp',
+                        'android:paddingTop': '3dp',
+                        'android:paddingEnd': '8dp',
+                        'android:paddingBottom': '3dp',
+                      }, inner),
                 ),
           ) +
-          _button(
-            s,
-            56,
-            34,
-            {
-              'android:layout_gravity': 'bottom|end',
-              'android:layout_margin': '16dp',
-            },
-            indent,
-          );
+          _button(s, 56, 34, {
+            'android:layout_gravity': 'bottom|end',
+            'android:layout_margin': '16dp',
+          }, indent);
   }
   throw ArgumentError(k.name);
 }
@@ -605,23 +675,28 @@ String _slot(_Kind k, String s) {
   for (final l in _layers.reversed) {
     final tint = l.name == 'back' ? 'primary' : 'primary_container';
     final tag = l.name == 'back' ? 'b' : 'f';
-    water.write(_view(
-        'ImageView',
-        {
-          ..._fill('w_${s}_still_$tag'),
-          'android:importantForAccessibility': 'no',
-          'android:scaleType': 'fitXY',
-          'android:src': '@drawable/widget_water_${k.name}_idle_${l.name}',
-          'android:tint': '@color/widget_$tint',
-        },
-        '$i    '));
+    water.write(
+      _view('ImageView', {
+        ..._fill('w_${s}_still_$tag'),
+        'android:importantForAccessibility': 'no',
+        'android:scaleType': 'fitXY',
+        'android:src': '@drawable/widget_water_${k.name}_idle_${l.name}',
+        'android:tint': '@color/widget_$tint',
+      }, '$i    '),
+    );
   }
   for (final st in [_busy, _on]) {
     for (final l in _layers.reversed) {
       final tint = l.name == 'back' ? 'primary' : 'primary_container';
       final tag = l.name == 'back' ? 'b' : 'f';
-      water.write(_progress('w_${s}_pour_${st.name}_$tag',
-          'widget_water_${k.name}_pour_${st.name}_${l.name}', tint, '$i    '));
+      water.write(
+        _progress(
+          'w_${s}_pour_${st.name}_$tag',
+          'widget_water_${k.name}_pour_${st.name}_${l.name}',
+          tint,
+          '$i    ',
+        ),
+      );
     }
   }
   final gone = s == 'b';
@@ -641,24 +716,21 @@ String _slot(_Kind k, String s) {
         'android:clipToOutline': 'true',
       },
       i,
-      _view(
-            'ImageView',
-            {
-              ..._fill('w_${s}_bg'),
-              'android:importantForAccessibility': 'no',
-              'android:scaleType': 'fitXY',
-              'android:src': '@drawable/widget_bg',
-              'android:tint': '@color/widget_surface_container',
-            },
-            '$i    ',
-          ) +
+      _view('ImageView', {
+            ..._fill('w_${s}_bg'),
+            'android:importantForAccessibility': 'no',
+            'android:scaleType': 'fitXY',
+            'android:src': '@drawable/widget_bg',
+            'android:tint': '@color/widget_surface_container',
+          }, '$i    ') +
           water.toString() +
           _content(k, s, '$i    '),
     ),
   );
 }
 
-String _layout(_Kind k) => '''
+String _layout(_Kind k) =>
+    '''
 <?xml version="1.0" encoding="utf-8"?>
 $_header
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -669,12 +741,12 @@ ${_slot(k, 'a')}${_slot(k, 'b')}</FrameLayout>
 ''';
 
 Map<String, String> _generate() {
-  final notification =
-      File('$_res/drawable/ic_notification.xml').readAsStringSync();
-  final logoPaths = RegExp(r'android:pathData="([^"]*)"')
-      .allMatches(notification)
-      .map((m) => m[1]!)
-      .toList();
+  final notification = File(
+    '$_res/drawable/ic_notification.xml',
+  ).readAsStringSync();
+  final logoPaths = RegExp(
+    r'android:pathData="([^"]*)"',
+  ).allMatches(notification).map((m) => m[1]!).toList();
   return {
     for (final k in _kinds) ...{
       for (final l in _layers) ...{
@@ -713,9 +785,13 @@ void main() {
           : null;
       if (actual != e.value) stale.add(e.key);
     }
-    expect(stale, isEmpty,
-        reason: 'UPDATE_GOLDEN=1 flutter test '
-            'test/android/home_widget_resources_test.dart');
+    expect(
+      stale,
+      isEmpty,
+      reason:
+          'UPDATE_GOLDEN=1 flutter test '
+          'test/android/home_widget_resources_test.dart',
+    );
   });
 
   // сборка Windows и апдейтер спотыкаются о не-ASCII в генерируемых файлах
@@ -728,7 +804,11 @@ void main() {
   // RemoteViews раздувает только классы с @RemoteView: обычный View или Space роняет весь виджет
   test('widget layouts use only views RemoteViews can inflate', () {
     const allowed = {
-      'FrameLayout', 'LinearLayout', 'ImageView', 'ProgressBar', 'TextView',
+      'FrameLayout',
+      'LinearLayout',
+      'ImageView',
+      'ProgressBar',
+      'TextView',
       'Chronometer',
     };
     for (final k in _kinds) {
@@ -755,16 +835,21 @@ void main() {
   });
 
   // раньше конца налива стоячая картинка встала бы рывком
-  test('the widget swaps the pour for the still picture only after it ends', () {
-    final kotlin = File('$_kotlin/HomeWidget.kt').readAsStringSync();
-    final settle = RegExp(r'SETTLE_MS = (\d+)L').firstMatch(kotlin);
-    expect(settle, isNotNull);
-    expect(int.parse(settle![1]!), greaterThan(_pourSeconds * 1000));
-  });
+  test(
+    'the widget swaps the pour for the still picture only after it ends',
+    () {
+      final kotlin = File('$_kotlin/HomeWidget.kt').readAsStringSync();
+      final settle = RegExp(r'SETTLE_MS = (\d+)L').firstMatch(kotlin);
+      expect(settle, isNotNull);
+      expect(int.parse(settle![1]!), greaterThan(_pourSeconds * 1000));
+    },
+  );
 
   test('Dart sends every color role the widget paints', () {
-    final scheme =
-        buildPresetScheme(resolveThemePreset('ocean'), Brightness.dark);
+    final scheme = buildPresetScheme(
+      resolveThemePreset('ocean'),
+      Brightness.dark,
+    );
     final sent = homeWidgetColors(scheme);
     expect(sent.keys.toSet(), _roles.values.toSet());
     for (final role in _roles.values) {
@@ -774,10 +859,9 @@ void main() {
 
   test('widget texts exist in every app language', () {
     final base = File('$_res/values/strings.xml').readAsStringSync();
-    final keys = RegExp(r'<string name="(widget_\w+)"')
-        .allMatches(base)
-        .map((m) => m[1]!)
-        .toSet();
+    final keys = RegExp(
+      r'<string name="(widget_\w+)"',
+    ).allMatches(base).map((m) => m[1]!).toSet();
     expect(keys, isNotEmpty);
     for (final lang in ['ru', 'de', 'zh', 'fa']) {
       final xml = File('$_res/values-$lang/strings.xml').readAsStringSync();

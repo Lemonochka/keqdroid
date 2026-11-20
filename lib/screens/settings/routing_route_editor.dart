@@ -210,14 +210,17 @@ class _RouteEditorScreenState extends ConsumerState<_RouteEditorScreen> {
       builder: (_) => _WhoPickerSheet(initial: _route.apps),
     );
     if (apps == null || !mounted) return;
-    _change(_route.copyWith(
-      apps: apps,
-      content: apps.isEmpty &&
-              _route.content == RouteContent.allTraffic &&
-              !routeHasProtocol(_route)
-          ? RouteContent.sites
-          : _route.content,
-    ));
+    _change(
+      _route.copyWith(
+        apps: apps,
+        content:
+            apps.isEmpty &&
+                _route.content == RouteContent.allTraffic &&
+                !routeHasProtocol(_route)
+            ? RouteContent.sites
+            : _route.content,
+      ),
+    );
   }
 
   Widget _whatTile(AppLocalizations l10n) {
@@ -227,8 +230,8 @@ class _RouteEditorScreenState extends ConsumerState<_RouteEditorScreen> {
       subtitle: Text(switch (_route.content) {
         RouteContent.allTraffic => l10n.routeWhatAll,
         RouteContent.preset => l10n.routeWhatPresetValue(
-            _presetName(l10n, _route.presetId),
-          ),
+          _presetName(l10n, _route.presetId),
+        ),
         RouteContent.sites => l10n.routeWhatSitesValue(_sitesCount(l10n)),
       }),
     );
@@ -291,7 +294,8 @@ class _RouteEditorScreenState extends ConsumerState<_RouteEditorScreen> {
               ExpressiveActionTile(
                 icon: _presetIcon(preset.id),
                 title: _presetName(l10n, preset.id),
-                selected: _route.content == RouteContent.preset &&
+                selected:
+                    _route.content == RouteContent.preset &&
                     _route.presetId == preset.id,
                 onTap: () => Navigator.pop(ctx, _ContentPreset(preset)),
               ),
@@ -304,15 +308,17 @@ class _RouteEditorScreenState extends ConsumerState<_RouteEditorScreen> {
       case _ContentKind(:final content):
         _change(_route.copyWith(content: content));
       case _ContentPreset(:final preset):
-        setState(() => _route = _route.copyWith(
-              content: RouteContent.preset,
-              presetId: preset.id,
-              target: switch (preset.field) {
-                RoutingField.direct => RouteTarget.direct,
-                RoutingField.proxy => RouteTarget.vpn,
-                RoutingField.blocked => RouteTarget.block,
-              },
-            ));
+        setState(
+          () => _route = _route.copyWith(
+            content: RouteContent.preset,
+            presetId: preset.id,
+            target: switch (preset.field) {
+              RoutingField.direct => RouteTarget.direct,
+              RoutingField.proxy => RouteTarget.vpn,
+              RoutingField.blocked => RouteTarget.block,
+            },
+          ),
+        );
         // дождаться записи: соседние маршруты ниже перезаписали бы список, прочитанный до неё
         await _persist();
         if (!mounted) return;
@@ -347,31 +353,30 @@ class _RouteEditorScreenState extends ConsumerState<_RouteEditorScreen> {
     if (_finalOutboundFor(ref, widget.profileId) == value) return;
     await _saveFinalOutbound(ref, widget.profileId, value);
     if (!mounted || unmatched != RoutingField.direct) return;
-    AppSnack.of(context).showSnackBar(
-      SnackBar(content: Text(l10n.routeRefilterUnmatched)),
-    );
+    AppSnack.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(l10n.routeRefilterUnmatched)));
   }
 
   Widget _protocolTile(AppLocalizations l10n) => ExpressiveGroupTile(
-        onTap: () => unawaited(_pickProtocol()),
-        child: _RouteRowContent(
-          badge: const ExpressiveIconBadge(icon: Icons.cable_rounded),
-          title: Text(l10n.routeProtocol),
-          subtitle: Text(_protocolValue(l10n, _route)),
-        ),
-      );
+    onTap: () => unawaited(_pickProtocol()),
+    child: _RouteRowContent(
+      badge: const ExpressiveIconBadge(icon: Icons.cable_rounded),
+      title: Text(l10n.routeProtocol),
+      subtitle: Text(_protocolValue(l10n, _route)),
+    ),
+  );
 
   Future<void> _pickProtocol() => showModalBottomSheet<void>(
-        context: context,
-        isScrollControlled: true,
-        showDragHandle: true,
-        builder: (_) => _ProtocolSheet(
-          initial: _route,
-          onNetwork: (network) => _change(_route.copyWith(network: network)),
-          onPorts: (ports) =>
-              _change(_route.copyWith(ports: ports), typing: true),
-        ),
-      );
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (_) => _ProtocolSheet(
+      initial: _route,
+      onNetwork: (network) => _change(_route.copyWith(network: network)),
+      onPorts: (ports) => _change(_route.copyWith(ports: ports), typing: true),
+    ),
+  );
 
   Widget _whereTile(AppLocalizations l10n, List<ServerItem> servers) {
     final color = _targetColor(context, _route.target);
@@ -409,13 +414,13 @@ class _RouteEditorScreenState extends ConsumerState<_RouteEditorScreen> {
       current: _route.target,
       serverTile: caps.servers
           ? (ctx) => ExpressiveActionTile(
-                icon: _targetIcon(RouteTarget.server),
-                title: current == null
-                    ? l10n.chainPickNode
-                    : ServerNameUtils.cleanDisplayName(current.displayName),
-                selected: current != null,
-                onTap: () => Navigator.pop(ctx, RouteTarget.server),
-              )
+              icon: _targetIcon(RouteTarget.server),
+              title: current == null
+                  ? l10n.chainPickNode
+                  : ServerNameUtils.cleanDisplayName(current.displayName),
+              selected: current != null,
+              onTap: () => Navigator.pop(ctx, RouteTarget.server),
+            )
           : null,
     );
     if (target == null || !mounted) return;
@@ -452,8 +457,10 @@ class _RouteEditorScreenState extends ConsumerState<_RouteEditorScreen> {
     ].fold(0, (sum, s) => sum + s.domains);
     if (linked == 0) return l10n.settingsRoutingItemCount(entries.length);
     final plain = entries.where((e) => !isRuleListUrl(e)).length;
-    final links =
-        l10n.settingsRoutingLinkDomains(linked, _groupedCount(linked));
+    final links = l10n.settingsRoutingLinkDomains(
+      linked,
+      _groupedCount(linked),
+    );
     if (plain == 0) return links;
     return l10n.settingsRoutingCountWithLinks(
       l10n.settingsRoutingItemCount(plain),
@@ -472,9 +479,7 @@ class _RouteEditorScreenState extends ConsumerState<_RouteEditorScreen> {
         ref.watch(geoAssetIndexProvider).value ?? GeoAssetIndex.empty;
     final unknown = unknownGeoTokens(_sites.text, geoIndex);
     final statuses = ref.watch(ruleListsProvider);
-    final lists = [
-      for (final url in ruleListUrls(_sites.text)) ?statuses[url],
-    ];
+    final lists = [for (final url in ruleListUrls(_sites.text)) ?statuses[url]];
     final linkedDomains = lists.fold(0, (sum, s) => sum + s.domains);
     return [
       _sitesField(l10n, geoIndex),
@@ -578,33 +583,34 @@ class _RouteEditorScreenState extends ConsumerState<_RouteEditorScreen> {
     String when() => timeAgo(l10n, s.updatedAt!);
     final (IconData icon, Color color, String text) = switch (s) {
       _ when s.loading || (!s.loaded && s.failure == null) => (
-          Icons.cloud_sync_outlined,
-          scheme.onSurfaceVariant,
-          l10n.ruleListLoading(host),
-        ),
+        Icons.cloud_sync_outlined,
+        scheme.onSurfaceVariant,
+        l10n.ruleListLoading(host),
+      ),
       _ when s.loaded && s.failure == null => (
-          Icons.cloud_done_outlined,
-          scheme.onSurfaceVariant,
-          l10n.ruleListLoaded(host, domains(), when()),
-        ),
+        Icons.cloud_done_outlined,
+        scheme.onSurfaceVariant,
+        l10n.ruleListLoaded(host, domains(), when()),
+      ),
       _ when s.loaded => (
-          Icons.cloud_off_outlined,
-          AppTheme.orange(context),
-          l10n.ruleListLoadedStale(host, domains(), when()),
-        ),
+        Icons.cloud_off_outlined,
+        AppTheme.orange(context),
+        l10n.ruleListLoadedStale(host, domains(), when()),
+      ),
       _ => (
-          Icons.error_outline_rounded,
-          scheme.error,
-          switch (s.failure) {
-            RuleListFailure.insecure => l10n.ruleListFailedInsecure(host),
-            RuleListFailure.http =>
-              l10n.ruleListFailedHttp(host, s.httpStatus ?? 0),
-            RuleListFailure.tooLarge => l10n.ruleListFailedTooLarge(host),
-            RuleListFailure.empty => l10n.ruleListFailedEmpty(host),
-            RuleListFailure.network || null =>
-              l10n.ruleListFailedNetwork(host),
-          },
-        ),
+        Icons.error_outline_rounded,
+        scheme.error,
+        switch (s.failure) {
+          RuleListFailure.insecure => l10n.ruleListFailedInsecure(host),
+          RuleListFailure.http => l10n.ruleListFailedHttp(
+            host,
+            s.httpStatus ?? 0,
+          ),
+          RuleListFailure.tooLarge => l10n.ruleListFailedTooLarge(host),
+          RuleListFailure.empty => l10n.ruleListFailedEmpty(host),
+          RuleListFailure.network || null => l10n.ruleListFailedNetwork(host),
+        },
+      ),
     };
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
@@ -689,8 +695,9 @@ class _ProtocolSheet extends StatefulWidget {
 
 class _ProtocolSheetState extends State<_ProtocolSheet> {
   late RouteNetwork _network = widget.initial.network;
-  late final TextEditingController _ports =
-      TextEditingController(text: widget.initial.ports);
+  late final TextEditingController _ports = TextEditingController(
+    text: widget.initial.ports,
+  );
 
   @override
   void dispose() {
@@ -705,20 +712,26 @@ class _ProtocolSheetState extends State<_ProtocolSheet> {
     final scheme = theme.colorScheme;
     final radius = ExpressiveShape.radius(ExpressiveShape.large);
     final valid = routePortRanges(_ports.text) != null;
-    Widget tile(RouteNetwork network, IconData icon, String title, String sub) =>
-        ExpressiveActionTile(
-          icon: icon,
-          title: title,
-          subtitle: sub,
-          selected: _network == network,
-          onTap: () {
-            setState(() => _network = network);
-            widget.onNetwork(network);
-          },
-        );
+    Widget tile(
+      RouteNetwork network,
+      IconData icon,
+      String title,
+      String sub,
+    ) => ExpressiveActionTile(
+      icon: icon,
+      title: title,
+      subtitle: sub,
+      selected: _network == network,
+      onTap: () {
+        setState(() => _network = network);
+        widget.onNetwork(network);
+      },
+    );
     return SafeArea(
       child: Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.viewInsetsOf(context).bottom,
+        ),
         child: ConstrainedBox(
           constraints: BoxConstraints(
             maxHeight: MediaQuery.sizeOf(context).height * 0.85,
@@ -740,20 +753,33 @@ class _ProtocolSheetState extends State<_ProtocolSheet> {
                 ),
                 ExpressiveGroup(
                   children: [
-                    tile(RouteNetwork.any, Icons.all_inclusive_rounded,
-                        l10n.routeProtocolAny, l10n.routeProtocolAnySubtitle),
-                    tile(RouteNetwork.tcp, Icons.swap_horiz_rounded, 'TCP',
-                        l10n.routeProtocolTcpSubtitle),
-                    tile(RouteNetwork.udp, Icons.graphic_eq_rounded, 'UDP',
-                        l10n.routeProtocolUdpSubtitle),
+                    tile(
+                      RouteNetwork.any,
+                      Icons.all_inclusive_rounded,
+                      l10n.routeProtocolAny,
+                      l10n.routeProtocolAnySubtitle,
+                    ),
+                    tile(
+                      RouteNetwork.tcp,
+                      Icons.swap_horiz_rounded,
+                      'TCP',
+                      l10n.routeProtocolTcpSubtitle,
+                    ),
+                    tile(
+                      RouteNetwork.udp,
+                      Icons.graphic_eq_rounded,
+                      'UDP',
+                      l10n.routeProtocolUdpSubtitle,
+                    ),
                   ],
                 ),
                 ExpressiveSectionHeader(l10n.routePort),
                 TextField(
                   controller: _ports,
                   textDirection: technicalInputDirection,
-                  style: theme.textTheme.bodyMedium
-                      ?.copyWith(color: scheme.onSurface),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: scheme.onSurface,
+                  ),
                   decoration: InputDecoration(
                     hintText: l10n.routePortHint,
                     errorText: valid ? null : l10n.routePortsInvalid,
@@ -782,8 +808,9 @@ class _ProtocolSheetState extends State<_ProtocolSheet> {
                   padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
                   child: Text(
                     l10n.routePortHelp,
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: AppTheme.textLight(context)),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: AppTheme.textLight(context),
+                    ),
                   ),
                 ),
               ],

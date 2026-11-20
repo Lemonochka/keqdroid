@@ -50,21 +50,21 @@ class RuleListStatus {
   bool get loaded => updatedAt != null;
 
   RuleListStatus copyWith({bool? loading}) => RuleListStatus(
-        url: url,
-        domains: domains,
-        updatedAt: updatedAt,
-        failure: failure,
-        httpStatus: httpStatus,
-        loading: loading ?? this.loading,
-      );
+    url: url,
+    domains: domains,
+    updatedAt: updatedAt,
+    failure: failure,
+    httpStatus: httpStatus,
+    loading: loading ?? this.loading,
+  );
 
   Map<String, dynamic> toJson() => {
-        'url': url,
-        'domains': domains,
-        if (updatedAt != null) 'updatedAt': updatedAt!.millisecondsSinceEpoch,
-        if (failure != null) 'failure': failure!.name,
-        if (httpStatus != null) 'httpStatus': httpStatus,
-      };
+    'url': url,
+    'domains': domains,
+    if (updatedAt != null) 'updatedAt': updatedAt!.millisecondsSinceEpoch,
+    if (failure != null) 'failure': failure!.name,
+    if (httpStatus != null) 'httpStatus': httpStatus,
+  };
 
   static RuleListStatus fromJson(String url, Map<String, dynamic> json) {
     final updated = json['updatedAt'];
@@ -89,8 +89,8 @@ class RuleListService {
     Future<Directory> Function()? root,
     @visibleForTesting this.allowPlainHttp = false,
     @visibleForTesting this.maxBytes = defaultMaxBytes,
-  })  : _localProxyPort = localProxyPort,
-        _root = root ?? getApplicationSupportDirectory;
+  }) : _localProxyPort = localProxyPort,
+       _root = root ?? getApplicationSupportDirectory;
 
   final LocalProxyPortResolver? _localProxyPort;
   final Future<Directory> Function() _root;
@@ -127,7 +127,8 @@ class RuleListService {
   Future<RuleListStatus> refresh(String url) async {
     final previous = await status(url);
     final uri = Uri.tryParse(url.trim());
-    final secure = uri != null &&
+    final secure =
+        uri != null &&
         uri.host.isNotEmpty &&
         (uri.scheme == 'https' || (allowPlainHttp && uri.scheme == 'http'));
     if (!secure) {
@@ -140,10 +141,12 @@ class RuleListService {
     final resolver = _localProxyPort;
     if (resolver != null) configureHttpClientForLocalVpnProxy(client, resolver);
     try {
-      final request =
-          await client.getUrl(uri).timeout(const Duration(seconds: 20));
-      final response =
-          await request.close().timeout(const Duration(seconds: 30));
+      final request = await client
+          .getUrl(uri)
+          .timeout(const Duration(seconds: 20));
+      final response = await request.close().timeout(
+        const Duration(seconds: 30),
+      );
       if (response.statusCode != HttpStatus.ok) {
         await response.drain<void>().catchError((_) {});
         return _saveFailure(
@@ -157,8 +160,7 @@ class RuleListService {
         return _saveFailure(previous, RuleListFailure.tooLarge);
       }
       final bytes = BytesBuilder(copy: false);
-      await for (final chunk
-          in response.timeout(const Duration(seconds: 60))) {
+      await for (final chunk in response.timeout(const Duration(seconds: 60))) {
         bytes.add(chunk);
         if (bytes.length > maxBytes) {
           return _saveFailure(previous, RuleListFailure.tooLarge);
@@ -201,8 +203,9 @@ class RuleListService {
       return RuleListDomains.none;
     }
     final dir = (await _dir()).path;
-    List<String> paths(List<String> urls) =>
-        [for (final url in urls) p.join(dir, '${fileId(url)}.txt')];
+    List<String> paths(List<String> urls) => [
+      for (final url in urls) p.join(dir, '${fileId(url)}.txt'),
+    ];
     final directPaths = paths(direct);
     final proxyPaths = paths(proxy);
     final blockedPaths = paths(blocked);

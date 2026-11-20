@@ -22,18 +22,21 @@ void main() {
 
   setUp(() => Socks5Credentials().init('u', 'p'));
 
-  const reality = 'vless://$uuid@198.51.100.40:443?type=xhttp&security=reality'
+  const reality =
+      'vless://$uuid@198.51.100.40:443?type=xhttp&security=reality'
       '&sni=decoy.example&pbk=publickey&sid=aabb&fp=chrome&path=%2Fx#de';
   const hysteria = 'hysteria2://password@198.51.100.41:443?sni=hy2.example#hy';
   final chain = ProxyChainConfig(
     name: 'chain',
     hops: [
       ProxyChainHop(
-        config: 'vless://$uuid@198.51.100.42:443?type=tcp&security=reality'
+        config:
+            'vless://$uuid@198.51.100.42:443?type=tcp&security=reality'
             '&sni=decoy.example&pbk=publickey&sid=aabb&fp=chrome#hop1',
       ),
       const ProxyChainHop(
-        config: 'trojan://pass@198.51.100.43:8443?sni=tr.example&type=ws&path=%2Fw#hop2',
+        config:
+            'trojan://pass@198.51.100.43:8443?sni=tr.example&type=ws&path=%2Fw#hop2',
       ),
     ],
   ).encode();
@@ -77,25 +80,27 @@ void main() {
 
   Map<String, dynamic> xray(String input, {String? bind, AppSettings? s}) =>
       jsonDecode(
-        ConfigGeneratorV2.generatePingConfig(
-          input,
-          s ?? settings,
-          socksPort: 28150,
-          httpInbound: true,
-          outboundInterface: bind,
-        ),
-      ) as Map<String, dynamic>;
+            ConfigGeneratorV2.generatePingConfig(
+              input,
+              s ?? settings,
+              socksPort: 28150,
+              httpInbound: true,
+              outboundInterface: bind,
+            ),
+          )
+          as Map<String, dynamic>;
 
   Map<String, dynamic> byTag(Map<String, dynamic> config, String tag) =>
-      (config['outbounds'] as List)
-          .cast<Map<String, dynamic>>()
-          .firstWhere((o) => o['tag'] == tag);
+      (config['outbounds'] as List).cast<Map<String, dynamic>>().firstWhere(
+        (o) => o['tag'] == tag,
+      );
 
   Object? boundTo(Map<String, dynamic> outbound) =>
       ((outbound['streamSettings'] as Map?)?['sockopt'] as Map?)?['interface'];
 
   Object? strategyOf(Map<String, dynamic> outbound) =>
-      ((outbound['streamSettings'] as Map?)?['sockopt'] as Map?)?['domainStrategy'];
+      ((outbound['streamSettings'] as Map?)?['sockopt']
+          as Map?)?['domainStrategy'];
 
   List<Object?> dnsServers(Map<String, dynamic> config) =>
       (config['dns'] as Map)['servers'] as List;
@@ -124,39 +129,48 @@ void main() {
   }
 
   String customWith(Map<String, dynamic> proxy) => jsonEncode({
-        'outbounds': [
-          {'tag': 'proxy', ...proxy},
-          {'tag': 'direct', 'protocol': 'freedom'},
-        ],
-      });
+    'outbounds': [
+      {'tag': 'proxy', ...proxy},
+      {'tag': 'direct', 'protocol': 'freedom'},
+    ],
+  });
 
-  Map<String, dynamic> vlessTo(String address, {Map<String, dynamic>? sockopt}) => {
-        'protocol': 'vless',
-        'settings': {
-          'vnext': [
-            {
-              'address': address,
-              'port': 443,
-              'users': [
-                {'id': uuid, 'encryption': 'none'},
-              ],
-            },
+  Map<String, dynamic> vlessTo(
+    String address, {
+    Map<String, dynamic>? sockopt,
+  }) => {
+    'protocol': 'vless',
+    'settings': {
+      'vnext': [
+        {
+          'address': address,
+          'port': 443,
+          'users': [
+            {'id': uuid, 'encryption': 'none'},
           ],
         },
-        'streamSettings': {
-          'network': 'tcp',
-          'sockopt': ?sockopt,
-        },
-      };
+      ],
+    },
+    'streamSettings': {'network': 'tcp', 'sockopt': ?sockopt},
+  };
 
   group('без интерфейса', () {
     test('конфиг тот же, что раньше', () {
       for (final input in [reality, hysteria, chain, custom]) {
         expect(
-          ConfigGeneratorV2.generatePingConfig(input, settings,
-              socksPort: 28150, httpInbound: true, outboundInterface: null),
-          ConfigGeneratorV2.generatePingConfig(input, settings,
-              socksPort: 28150, httpInbound: true),
+          ConfigGeneratorV2.generatePingConfig(
+            input,
+            settings,
+            socksPort: 28150,
+            httpInbound: true,
+            outboundInterface: null,
+          ),
+          ConfigGeneratorV2.generatePingConfig(
+            input,
+            settings,
+            socksPort: 28150,
+            httpInbound: true,
+          ),
         );
       }
     });
@@ -195,12 +209,15 @@ void main() {
       expect(strategyOf(proxy), 'UseIPv4');
     });
 
-    test('готовый JSON: DNS пинга тот же, что у ссылок, без простого UDP-53', () {
-      final bound = xray(custom, bind: iface);
-      expect(bound['dns'], xray(reality, bind: iface)['dns']);
-      expect(dnsServers(bound).first, startsWith('https+local://'));
-      expect(dnsServers(bound), isNot(contains('8.8.8.8')));
-    });
+    test(
+      'готовый JSON: DNS пинга тот же, что у ссылок, без простого UDP-53',
+      () {
+        final bound = xray(custom, bind: iface);
+        expect(bound['dns'], xray(reality, bind: iface)['dns']);
+        expect(dnsServers(bound).first, startsWith('https+local://'));
+        expect(dnsServers(bound), isNot(contains('8.8.8.8')));
+      },
+    );
 
     test('у ссылок DNS пинга с привязкой прежний', () {
       for (final input in [reality, hysteria, chain]) {
@@ -210,12 +227,16 @@ void main() {
 
     test('стратегию автора оставляем, AsIs заменяем', () {
       final own = xray(
-        customWith(vlessTo('nl.example.com', sockopt: {'domainStrategy': 'ForceIPv6'})),
+        customWith(
+          vlessTo('nl.example.com', sockopt: {'domainStrategy': 'ForceIPv6'}),
+        ),
         bind: iface,
       );
       expect(strategyOf(byTag(own, 'proxy')), 'ForceIPv6');
       final asIs = xray(
-        customWith(vlessTo('nl.example.com', sockopt: {'domainStrategy': 'AsIs'})),
+        customWith(
+          vlessTo('nl.example.com', sockopt: {'domainStrategy': 'AsIs'}),
+        ),
         bind: iface,
       );
       expect(strategyOf(byTag(asIs, 'proxy')), 'UseIPv4');
@@ -229,14 +250,22 @@ void main() {
       final s = settings.copyWith(
         xrayCore: const XrayCoreSettings(fragmentEnabled: true),
       );
-      final config = xray(reality.replaceFirst('security=reality', 'security=tls'),
-          bind: iface, s: s);
+      final config = xray(
+        reality.replaceFirst('security=reality', 'security=tls'),
+        bind: iface,
+        s: s,
+      );
       final proxy = byTag(config, 'proxy');
-      expect((proxy['streamSettings'] as Map)['sockopt'], {'dialerProxy': 'fragment'});
+      expect((proxy['streamSettings'] as Map)['sockopt'], {
+        'dialerProxy': 'fragment',
+      });
       final fragment = byTag(config, 'fragment');
       expect(boundTo(fragment), iface);
-      expect(((fragment['streamSettings'] as Map)['sockopt'] as Map)['domainStrategy'],
-          'UseIPv4');
+      expect(
+        ((fragment['streamSettings'] as Map)['sockopt']
+            as Map)['domainStrategy'],
+        'UseIPv4',
+      );
     });
 
     test('в цепочке наружу выходит только первое звено', () {
@@ -261,15 +290,17 @@ void main() {
   });
 
   group('mihomo', () {
-    Map<String, dynamic> mihomo({String? bind}) => jsonDecode(
-          MihomoConfigGen.generatePingConfig(
-            reality.replaceFirst('type=xhttp', 'type=tcp'),
-            settings,
-            socksPort: 28150,
-            httpInbound: true,
-            outboundInterface: bind,
-          ),
-        ) as Map<String, dynamic>;
+    Map<String, dynamic> mihomo({String? bind}) =>
+        jsonDecode(
+              MihomoConfigGen.generatePingConfig(
+                reality.replaceFirst('type=xhttp', 'type=tcp'),
+                settings,
+                socksPort: 28150,
+                httpInbound: true,
+                outboundInterface: bind,
+              ),
+            )
+            as Map<String, dynamic>;
 
     test('без интерфейса ключа нет', () {
       expect(mihomo().containsKey('interface-name'), isFalse);

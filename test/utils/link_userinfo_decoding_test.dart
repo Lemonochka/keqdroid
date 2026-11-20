@@ -15,31 +15,38 @@ import 'package:keqdroid/utils/socks5_credentials.dart';
 /// разборе.
 
 Map<String, dynamic> _xrayProxy(String link) {
-  final config = jsonDecode(
-    ConfigGeneratorV2.generateConfig(link, const AppSettings()),
-  ) as Map<String, dynamic>;
-  return (config['outbounds'] as List)
-      .cast<Map<String, dynamic>>()
-      .firstWhere((o) => o['tag'] == 'proxy');
+  final config =
+      jsonDecode(ConfigGeneratorV2.generateConfig(link, const AppSettings()))
+          as Map<String, dynamic>;
+  return (config['outbounds'] as List).cast<Map<String, dynamic>>().firstWhere(
+    (o) => o['tag'] == 'proxy',
+  );
 }
 
 Map<String, dynamic> _mihomoProxy(String link) =>
-    (MihomoConfigGen.build(link, const AppSettings(), socksPort: 2080)['proxies']
-            as List)
-        .first as Map<String, dynamic>;
+    (MihomoConfigGen.build(
+                  link,
+                  const AppSettings(),
+                  socksPort: 2080,
+                )['proxies']
+                as List)
+            .first
+        as Map<String, dynamic>;
 
 String _xrayTrojanPassword(String link) =>
     (_xrayProxy(link)['settings'] as Map)['password'] as String;
 
 String _xrayHysteriaAuth(String link) =>
     ((_xrayProxy(link)['streamSettings'] as Map)['hysteriaSettings']
-        as Map)['auth'] as String;
+            as Map)['auth']
+        as String;
 
 void main() {
   setUp(() => Socks5Credentials().init('u', 'p'));
 
   test('trojan: закодированный пароль раскодирован на обоих ядрах', () {
-    const link = 'trojan://p%40ss%3Aw@198.51.100.44:443?security=tls'
+    const link =
+        'trojan://p%40ss%3Aw@198.51.100.44:443?security=tls'
         '&sni=t.example#t';
     expect(_xrayTrojanPassword(link), 'p@ss:w');
     expect(_mihomoProxy(link)['password'], 'p@ss:w');

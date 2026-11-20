@@ -51,33 +51,29 @@ class FakeTunnelBackend extends TunnelBackend {
   @override
   Future<List<Map<String, dynamic>>> getInstalledApps({
     bool includeSystem = false,
-  }) async =>
-      const [];
+  }) async => const [];
 
   @override
   Future<
-      List<({
-        String id,
-        bool success,
-        int? latencyMs,
-        String error,
-        int? httpStatus,
-      })>> xrayUrlTestBatch({
+    List<
+      ({String id, bool success, int? latencyMs, String error, int? httpStatus})
+    >
+  >
+  xrayUrlTestBatch({
     required List<(String id, String xrayConfig)> items,
     required int socksPort,
     VpnBackend core = VpnBackend.xray,
     String testUrl = 'https://connectivitycheck.gstatic.com/generate_204',
     int timeoutMs = 15000,
     bool keepAlive = true,
-  }) async =>
-      [
-        for (final item in items)
-          (
-            id: item.$1,
-            success: false,
-            latencyMs: null,
-            error: 'fake backend',
-            httpStatus: null,
-          ),
-      ];
+  }) async => [
+    for (final item in items)
+      (
+        id: item.$1,
+        success: false,
+        latencyMs: null,
+        error: 'fake backend',
+        httpStatus: null,
+      ),
+  ];
 }

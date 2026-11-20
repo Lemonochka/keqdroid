@@ -10,23 +10,66 @@ import 'editor_layers.dart';
 // Раскладка ключей узла mihomo по тем же слоям, что у ссылки. Подписи ключами, как в docs/config/proxies:
 // узлы бывают двадцати типов, и перевод каждого поля разошёлся бы с тем, что пишет провайдер
 const _serverKeys = {
-  'server', 'port', 'uuid', 'password', 'username', 'cipher', 'auth',
-  'auth-str', 'token', 'psk', 'version', 'private-key', 'public-key',
-  'pre-shared-key', 'ip', 'ipv6', 'peers',
+  'server',
+  'port',
+  'uuid',
+  'password',
+  'username',
+  'cipher',
+  'auth',
+  'auth-str',
+  'token',
+  'psk',
+  'version',
+  'private-key',
+  'public-key',
+  'pre-shared-key',
+  'ip',
+  'ipv6',
+  'peers',
 };
 const _securityKeys = {
-  'tls', 'sni', 'servername', 'alpn', 'skip-cert-verify', 'client-fingerprint',
-  'fingerprint', 'reality-opts', 'ech-opts',
+  'tls',
+  'sni',
+  'servername',
+  'alpn',
+  'skip-cert-verify',
+  'client-fingerprint',
+  'fingerprint',
+  'reality-opts',
+  'ech-opts',
 };
 const _transportKeys = {
-  'network', 'flow', 'encryption', 'packet-encoding', 'ws-opts', 'grpc-opts',
-  'h2-opts', 'http-opts', 'xhttp-opts', 'smux', 'plugin', 'plugin-opts',
-  'udp-over-tcp', 'udp-over-tcp-version',
+  'network',
+  'flow',
+  'encryption',
+  'packet-encoding',
+  'ws-opts',
+  'grpc-opts',
+  'h2-opts',
+  'http-opts',
+  'xhttp-opts',
+  'smux',
+  'plugin',
+  'plugin-opts',
+  'udp-over-tcp',
+  'udp-over-tcp-version',
 };
 const _tuningKeys = {
-  'up', 'down', 'obfs', 'obfs-password', 'ports', 'hop-interval',
-  'congestion-controller', 'udp-relay-mode', 'reduce-rtt', 'mtu', 'reserved',
-  'allowed-ips', 'persistent-keepalive', 'amnezia-wg-option',
+  'up',
+  'down',
+  'obfs',
+  'obfs-password',
+  'ports',
+  'hop-interval',
+  'congestion-controller',
+  'udp-relay-mode',
+  'reduce-rtt',
+  'mtu',
+  'reserved',
+  'allowed-ips',
+  'persistent-keepalive',
+  'amnezia-wg-option',
 };
 // имя и тип в шапке: смена типа даёт другой протокол, её делают текстом
 const _hidden = {'name', 'type'};
@@ -96,8 +139,9 @@ class _ClashNodeFieldsState extends State<ClashNodeFields> {
       for (final e in _node.entries)
         if (!_classified(e.key)) e.key: e.value,
     };
-    _rest.text =
-        rest.isEmpty ? '' : const JsonEncoder.withIndent('  ').convert(rest);
+    _rest.text = rest.isEmpty
+        ? ''
+        : const JsonEncoder.withIndent('  ').convert(rest);
   }
 
   void _emit() {
@@ -117,7 +161,8 @@ class _ClashNodeFieldsState extends State<ClashNodeFields> {
     final t = text.trim();
     if (was is List) {
       final parts = [
-        for (final p in t.split(',')) if (p.trim().isNotEmpty) p.trim(),
+        for (final p in t.split(','))
+          if (p.trim().isNotEmpty) p.trim(),
       ];
       final numeric = was.isNotEmpty && was.every((e) => e is num);
       return [for (final p in parts) numeric ? (num.tryParse(p) ?? p) : p];
@@ -127,7 +172,12 @@ class _ClashNodeFieldsState extends State<ClashNodeFields> {
     return t;
   }
 
-  Widget _jsonField(String id, String label, Object? value, ValueChanged<Object?> set) {
+  Widget _jsonField(
+    String id,
+    String label,
+    Object? value,
+    ValueChanged<Object?> set,
+  ) {
     final ctrl = _ctrls.putIfAbsent(
       id,
       () => TextEditingController(
@@ -142,10 +192,12 @@ class _ClashNodeFieldsState extends State<ClashNodeFields> {
         minLines: 2,
         maxLines: 10,
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: AppTheme.text(context),
-              fontFamily: 'monospace',
-            ),
-        decoration: widget.decoration(label: label).copyWith(
+          color: AppTheme.text(context),
+          fontFamily: 'monospace',
+        ),
+        decoration: widget
+            .decoration(label: label)
+            .copyWith(
               errorText: _invalid.contains(id)
                   ? AppLocalizations.of(context)!.serverEditorXhttpRestInvalid
                   : null,
@@ -178,10 +230,9 @@ class _ClashNodeFieldsState extends State<ClashNodeFields> {
         activeTrackColor: AppTheme.accent(context).withValues(alpha: 0.32),
         title: Text(
           key,
-          style: Theme.of(context)
-              .textTheme
-              .bodyMedium
-              ?.copyWith(color: AppTheme.text(context)),
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: AppTheme.text(context)),
         ),
         onChanged: (v) {
           setState(() => target[key] = v);
@@ -195,13 +246,16 @@ class _ClashNodeFieldsState extends State<ClashNodeFields> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsetsDirectional.only(start: 4, top: 4, bottom: 8),
+            padding: const EdgeInsetsDirectional.only(
+              start: 4,
+              top: 4,
+              bottom: 8,
+            ),
             child: Text(
               key,
-              style: Theme.of(context)
-                  .textTheme
-                  .labelLarge
-                  ?.copyWith(color: AppTheme.textLight(context)),
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: AppTheme.textLight(context),
+              ),
             ),
           ),
           for (final child in nested.keys.toList())
@@ -213,18 +267,19 @@ class _ClashNodeFieldsState extends State<ClashNodeFields> {
     if (value is List && !scalarList) {
       return _jsonField(id, key, value, (v) => target[key] = v);
     }
-    final ctrl =
-        _ctrls.putIfAbsent(id, () => TextEditingController(text: _show(value)));
+    final ctrl = _ctrls.putIfAbsent(
+      id,
+      () => TextEditingController(text: _show(value)),
+    );
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: TextField(
         controller: ctrl,
         textDirection: technicalInputDirection,
         keyboardType: value is num ? TextInputType.number : TextInputType.text,
-        style: Theme.of(context)
-            .textTheme
-            .bodyMedium
-            ?.copyWith(color: AppTheme.text(context)),
+        style: Theme.of(
+          context,
+        ).textTheme.bodyMedium?.copyWith(color: AppTheme.text(context)),
         decoration: widget.decoration(label: key),
         onChanged: (text) {
           target[key] = _typed(value, text);
@@ -258,7 +313,9 @@ class _ClashNodeFieldsState extends State<ClashNodeFields> {
         parsed = null;
       }
     }
-    setState(() => parsed == null ? _invalid.add('rest') : _invalid.remove('rest'));
+    setState(
+      () => parsed == null ? _invalid.add('rest') : _invalid.remove('rest'),
+    );
     if (parsed == null) return;
     _node.removeWhere((key, _) => !_classified(key));
     _node.addAll(parsed);
@@ -270,9 +327,21 @@ class _ClashNodeFieldsState extends State<ClashNodeFields> {
     final l10n = AppLocalizations.of(context)!;
     return EditorLayers([
       ?_layer(Icons.dns_rounded, l10n.serverEditorSectionGeneral, _serverKeys),
-      ?_layer(Icons.shield_rounded, l10n.serverEditorSectionSecurity, _securityKeys),
-      ?_layer(Icons.alt_route_rounded, l10n.serverEditorSectionTransport, _transportKeys),
-      ?_layer(Icons.speed_rounded, l10n.serverEditorSectionProtocol, _tuningKeys),
+      ?_layer(
+        Icons.shield_rounded,
+        l10n.serverEditorSectionSecurity,
+        _securityKeys,
+      ),
+      ?_layer(
+        Icons.alt_route_rounded,
+        l10n.serverEditorSectionTransport,
+        _transportKeys,
+      ),
+      ?_layer(
+        Icons.speed_rounded,
+        l10n.serverEditorSectionProtocol,
+        _tuningKeys,
+      ),
       EditorLayer(Icons.data_object_rounded, l10n.serverEditorClashRest, [
         Padding(
           padding: const EdgeInsets.only(bottom: 10),
@@ -282,10 +351,12 @@ class _ClashNodeFieldsState extends State<ClashNodeFields> {
             minLines: 2,
             maxLines: 12,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppTheme.text(context),
-                  fontFamily: 'monospace',
-                ),
-            decoration: widget.decoration(hint: '{ }').copyWith(
+              color: AppTheme.text(context),
+              fontFamily: 'monospace',
+            ),
+            decoration: widget
+                .decoration(hint: '{ }')
+                .copyWith(
                   errorText: _invalid.contains('rest')
                       ? l10n.serverEditorXhttpRestInvalid
                       : null,

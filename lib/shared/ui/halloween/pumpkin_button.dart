@@ -39,12 +39,15 @@ abstract final class _Curves {
   static const overshoot = Cubic(.34, 1.56, .64, 1);
 }
 
-class _PumpkinConnectButtonState extends State<PumpkinConnectButton> with TickerProviderStateMixin {
+class _PumpkinConnectButtonState extends State<PumpkinConnectButton>
+    with TickerProviderStateMixin {
   late final Ticker _ticker = createTicker(_onTick);
   final _frame = ValueNotifier<int>(0);
 
   // без границ, иначе при отпускании срежется перелёт пружинистой кривой
-  late final AnimationController _press = AnimationController.unbounded(vsync: this)..addListener(_repaint);
+  late final AnimationController _press = AnimationController.unbounded(
+    vsync: this,
+  )..addListener(_repaint);
 
   _Mode _mode = _Mode.off;
   Duration _tick = Duration.zero;
@@ -125,20 +128,32 @@ class _PumpkinConnectButtonState extends State<PumpkinConnectButton> with Ticker
 
   void _setPressed(bool pressed) {
     if (pressed) {
-      _press.animateTo(1, duration: const Duration(milliseconds: 80), curve: _Curves.easeOut);
+      _press.animateTo(
+        1,
+        duration: const Duration(milliseconds: 80),
+        curve: _Curves.easeOut,
+      );
     } else {
-      _press.animateTo(0, duration: const Duration(milliseconds: 450), curve: _Curves.overshoot);
+      _press.animateTo(
+        0,
+        duration: const Duration(milliseconds: 450),
+        curve: _Curves.overshoot,
+      );
     }
   }
 
-  static double _progress(double t, double delay, double duration, Curve curve) =>
-      curve.transform(((t - delay) / duration).clamp(0.0, 1.0));
+  static double _progress(
+    double t,
+    double delay,
+    double duration,
+    Curve curve,
+  ) => curve.transform(((t - delay) / duration).clamp(0.0, 1.0));
 
   static List<double> _faceTarget(_Mode m) => switch (m) {
-        _Mode.off => _Face.sleep,
-        _Mode.connecting || _Mode.on => _Face.lit,
-        _Mode.error => _Face.sad,
-      };
+    _Mode.off => _Face.sleep,
+    _Mode.connecting || _Mode.on => _Face.lit,
+    _Mode.error => _Face.sad,
+  };
 
   List<double> _faceAt(double t) {
     final (delay, duration) = switch (_mode) {
@@ -148,7 +163,9 @@ class _PumpkinConnectButtonState extends State<PumpkinConnectButton> with Ticker
     };
     final k = _progress(t, delay, duration, _Curves.emphasized);
     final to = _faceTarget(_mode);
-    return [for (var i = 0; i < to.length; i++) lerpDouble(_faceFrom[i], to[i], k)!];
+    return [
+      for (var i = 0; i < to.length; i++) lerpDouble(_faceFrom[i], to[i], k)!,
+    ];
   }
 
   Color _tintAt(double t) {
@@ -162,25 +179,38 @@ class _PumpkinConnectButtonState extends State<PumpkinConnectButton> with Ticker
   }
 
   Color _tintTarget(_Mode m) => switch (m) {
-        _Mode.connecting => _Colors.glowDim,
-        _Mode.on => _Colors.glow,
-        _Mode.off || _Mode.error => _sleepInk,
-      };
+    _Mode.connecting => _Colors.glowDim,
+    _Mode.on => _Colors.glow,
+    _Mode.off || _Mode.error => _sleepInk,
+  };
 
   double _opacityAt(double t) {
     switch (_mode) {
       case _Mode.off:
         if (_calm) return 1;
-        return lerpDouble(_opacityFrom, 1, _progress(t, 0, 450, _Curves.easeOut))!;
+        return lerpDouble(
+          _opacityFrom,
+          1,
+          _progress(t, 0, 450, _Curves.easeOut),
+        )!;
       case _Mode.connecting:
-        if (_calm || t < 350) return lerpDouble(_opacityFrom, .5, _progress(t, 0, 300, _Curves.ease))!;
+        if (_calm || t < 350) {
+          return lerpDouble(
+            _opacityFrom,
+            .5,
+            _progress(t, 0, 300, _Curves.ease),
+          )!;
+        }
         return _Keys.flicker((t - 350) % 1100 / 1100);
       case _Mode.on:
         if (_calm) return 1;
         return _Keys.candle(t % 2600 / 2600);
       case _Mode.error:
         if (_calm) return 1;
-        return _Keys.dying(_opacityFrom, _progress(t, 0, 1400, _Curves.easeOut));
+        return _Keys.dying(
+          _opacityFrom,
+          _progress(t, 0, 1400, _Curves.easeOut),
+        );
     }
   }
 
@@ -212,7 +242,12 @@ class _PumpkinConnectButtonState extends State<PumpkinConnectButton> with Ticker
         final p = _Curves.emphasized.transform(t / 1000);
         if (p < .55) {
           final k = p / .55;
-          return (tilt: _tiltFrom * (1 - k), dy: 0, sx: 1 + .03 * k, sy: 1 - .06 * k);
+          return (
+            tilt: _tiltFrom * (1 - k),
+            dy: 0,
+            sx: 1 + .03 * k,
+            sy: 1 - .06 * k,
+          );
         }
         final k = (p - .55) / .45;
         return (tilt: 0, dy: 0, sx: 1.03 - .03 * k, sy: .94 + .06 * k);
@@ -238,7 +273,9 @@ class _PumpkinConnectButtonState extends State<PumpkinConnectButton> with Ticker
       child: FocusableActionDetector(
         enabled: enabled,
         actions: {
-          ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: (_) => _activate()),
+          ActivateIntent: CallbackAction<ActivateIntent>(
+            onInvoke: (_) => _activate(),
+          ),
         },
         child: Semantics(
           button: true,
@@ -280,7 +317,16 @@ abstract final class _Colors {
 }
 
 abstract final class _Keys {
-  static const _flicker = [(0.0, .15), (.12, .5), (.20, .25), (.35, .65), (.48, .35), (.62, .7), (.75, .3), (.88, .55)];
+  static const _flicker = [
+    (0.0, .15),
+    (.12, .5),
+    (.20, .25),
+    (.35, .65),
+    (.48, .35),
+    (.62, .7),
+    (.75, .3),
+    (.88, .55),
+  ];
 
   static double flicker(double p) {
     var v = _flicker.first.$2;
@@ -290,23 +336,33 @@ abstract final class _Keys {
     return v;
   }
 
-  static double candle(double p) => _smooth(p, const [(0, 1), (.4, .86), (.55, .97), (.7, .9), (1, 1)]);
+  static double candle(double p) =>
+      _smooth(p, const [(0, 1), (.4, .86), (.55, .97), (.7, .9), (1, 1)]);
 
   // в градусах
-  static double wobble(double p) => _smooth(p, const [(0, -1.5), (.5, 1.5), (1, -1.5)]);
+  static double wobble(double p) =>
+      _smooth(p, const [(0, -1.5), (.5, 1.5), (1, -1.5)]);
 
   static double dying(double from, double p) =>
       _linear(p, [(0, from), (.15, .6), (.3, .3), (.45, .5), (.6, .4), (1, 1)]);
 
-  static double _smooth(double p, List<(double, double)> keys) => _interp(p, keys, _Curves.easeInOut);
+  static double _smooth(double p, List<(double, double)> keys) =>
+      _interp(p, keys, _Curves.easeInOut);
 
-  static double _linear(double p, List<(double, double)> keys) => _interp(p, keys, Curves.linear);
+  static double _linear(double p, List<(double, double)> keys) =>
+      _interp(p, keys, Curves.linear);
 
   static double _interp(double p, List<(double, double)> keys, Curve curve) {
     for (var i = 1; i < keys.length; i++) {
       final (a, va) = keys[i - 1];
       final (b, vb) = keys[i];
-      if (p <= b) return lerpDouble(va, vb, curve.transform(((p - a) / (b - a)).clamp(0.0, 1.0)))!;
+      if (p <= b) {
+        return lerpDouble(
+          va,
+          vb,
+          curve.transform(((p - a) / (b - a)).clamp(0.0, 1.0)),
+        )!;
+      }
     }
     return keys.last.$2;
   }
@@ -343,18 +399,23 @@ abstract final class _Face {
   static final commands = _commands(_litContours);
 
   static bool get sameShape =>
-      _same(_commands(_sleepContours), commands) && _same(_commands(_sadContours), commands);
+      _same(_commands(_sleepContours), commands) &&
+      _same(_commands(_sadContours), commands);
 
   static bool _same(List<String> a, List<String> b) =>
-      a.length == b.length && [for (var i = 0; i < a.length; i++) a[i] == b[i]].every((x) => x);
+      a.length == b.length &&
+      [for (var i = 0; i < a.length; i++) a[i] == b[i]].every((x) => x);
 
   static List<double> _numbers(List<String> contours, double stroke) => [
-        for (final d in contours) ...RegExp(r'-?\d*\.?\d+').allMatches(d).map((m) => double.parse(m[0]!)),
-        stroke,
-      ];
+    for (final d in contours)
+      ...RegExp(r'-?\d*\.?\d+').allMatches(d).map((m) => double.parse(m[0]!)),
+    stroke,
+  ];
 
-  static List<String> _commands(List<String> contours) =>
-      [for (final d in contours) RegExp('[MLQCZ]').allMatches(d).map((m) => m[0]!).join()];
+  static List<String> _commands(List<String> contours) => [
+    for (final d in contours)
+      RegExp('[MLQCZ]').allMatches(d).map((m) => m[0]!).join(),
+  ];
 
   static Path path(List<double> v) {
     final p = Path();
@@ -395,16 +456,28 @@ class _PumpkinPainter extends CustomPainter {
   final Color idleRibs;
 
   static final _stem = Path()
-    ..moveTo(61, 21)..cubicTo(62, 12, 61, 4, 58, -6)..lineTo(70, -7)
-    ..cubicTo(71, 3, 73, 12, 75, 21)..quadraticBezierTo(68, 18, 61, 21)..close();
+    ..moveTo(61, 21)
+    ..cubicTo(62, 12, 61, 4, 58, -6)
+    ..lineTo(70, -7)
+    ..cubicTo(71, 3, 73, 12, 75, 21)
+    ..quadraticBezierTo(68, 18, 61, 21)
+    ..close();
   static final _body = Path()
-    ..moveTo(48, 23)..cubicTo(26, 13, 3, 30, 3, 74)..cubicTo(3, 112, 26, 134, 46, 130)
-    ..quadraticBezierTo(57, 127, 68, 131)..quadraticBezierTo(79, 127, 90, 130)
-    ..cubicTo(110, 134, 133, 112, 133, 74)..cubicTo(133, 30, 110, 13, 88, 23)
-    ..cubicTo(82, 18, 75, 16, 68, 16)..cubicTo(61, 16, 54, 18, 48, 23)..close();
+    ..moveTo(48, 23)
+    ..cubicTo(26, 13, 3, 30, 3, 74)
+    ..cubicTo(3, 112, 26, 134, 46, 130)
+    ..quadraticBezierTo(57, 127, 68, 131)
+    ..quadraticBezierTo(79, 127, 90, 130)
+    ..cubicTo(110, 134, 133, 112, 133, 74)
+    ..cubicTo(133, 30, 110, 13, 88, 23)
+    ..cubicTo(82, 18, 75, 16, 68, 16)
+    ..cubicTo(61, 16, 54, 18, 48, 23)
+    ..close();
   static final _ribs = Path()
-    ..moveTo(34, 50)..cubicTo(40, 38, 50, 28, 60, 24)
-    ..moveTo(102, 50)..cubicTo(96, 38, 86, 28, 76, 24);
+    ..moveTo(34, 50)
+    ..cubicTo(40, 38, 50, 28, 60, 24)
+    ..moveTo(102, 50)
+    ..cubicTo(96, 38, 86, 28, 76, 24);
 
   static const _origin = Offset(68, 131);
 
@@ -428,7 +501,10 @@ class _PumpkinPainter extends CustomPainter {
       ..translate(-_origin.dx, -_origin.dy);
 
     canvas.drawPath(_stem, Paint()..color = _Colors.stem);
-    canvas.drawPath(_body, Paint()..color = Color.lerp(idleBody, _Colors.body, lit)!);
+    canvas.drawPath(
+      _body,
+      Paint()..color = Color.lerp(idleBody, _Colors.body, lit)!,
+    );
     canvas.drawPath(
       _ribs,
       Paint()
@@ -462,5 +538,8 @@ class _PumpkinPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_PumpkinPainter old) =>
-      old.state != state || old.sleepInk != sleepInk || old.idleBody != idleBody || old.idleRibs != idleRibs;
+      old.state != state ||
+      old.sleepInk != sleepInk ||
+      old.idleBody != idleBody ||
+      old.idleRibs != idleRibs;
 }

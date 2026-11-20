@@ -43,19 +43,23 @@ void main() {
 
   // Код работает только на Linux; Windows не даёт переименовать поверх файла,
   // который в ту же секунду заменяет другой поток.
-  test('parallel writers never leave a partial file', () async {
-    final path = '${tmp.path}/keqrnel';
-    final payload = List.filled(1 << 20, 'x').join();
-    await Future.wait([
-      for (var i = 0; i < 8; i++)
-        LinuxCorePaths.replaceAtomically(
-          path,
-          (t) => File(t).writeAsString(payload),
-        ),
-    ]);
-    expect(File(path).lengthSync(), payload.length);
-    expect(tmp.listSync(), hasLength(1));
-  }, skip: Platform.isWindows ? 'rename is atomic only on POSIX' : false);
+  test(
+    'parallel writers never leave a partial file',
+    () async {
+      final path = '${tmp.path}/keqrnel';
+      final payload = List.filled(1 << 20, 'x').join();
+      await Future.wait([
+        for (var i = 0; i < 8; i++)
+          LinuxCorePaths.replaceAtomically(
+            path,
+            (t) => File(t).writeAsString(payload),
+          ),
+      ]);
+      expect(File(path).lengthSync(), payload.length);
+      expect(tmp.listSync(), hasLength(1));
+    },
+    skip: Platform.isWindows ? 'rename is atomic only on POSIX' : false,
+  );
 
   group('stageExecutable', () {
     late File core;
@@ -69,10 +73,14 @@ void main() {
     // Раскладка, ждавшая сама себя, вешала подключение навсегда: ядро не
     // запускалось, а на экране висело «Подключение…».
     test('finishes, and so does the next call', () async {
-      final first = await LinuxCorePaths.stageExecutable(core.path, 'keqrnel')
-          .timeout(const Duration(seconds: 5));
-      final second = await LinuxCorePaths.stageExecutable(core.path, 'keqrnel')
-          .timeout(const Duration(seconds: 5));
+      final first = await LinuxCorePaths.stageExecutable(
+        core.path,
+        'keqrnel',
+      ).timeout(const Duration(seconds: 5));
+      final second = await LinuxCorePaths.stageExecutable(
+        core.path,
+        'keqrnel',
+      ).timeout(const Duration(seconds: 5));
 
       expect(first, second);
       expect(File(first).readAsStringSync(), 'core v1');
@@ -85,19 +93,17 @@ void main() {
       ]).timeout(const Duration(seconds: 5));
 
       expect(paths.toSet(), hasLength(1));
-      expect(
-        Directory('${tmp.path}/keqdroid/cores').listSync(),
-        hasLength(1),
-      );
+      expect(Directory('${tmp.path}/keqdroid/cores').listSync(), hasLength(1));
     });
 
     test('an updated core of another size replaces the cached one', () async {
-      final staged =
-          await LinuxCorePaths.stageExecutable(core.path, 'keqrnel');
+      final staged = await LinuxCorePaths.stageExecutable(core.path, 'keqrnel');
       core.writeAsStringSync('core v2, longer');
 
-      await LinuxCorePaths.stageExecutable(core.path, 'keqrnel')
-          .timeout(const Duration(seconds: 5));
+      await LinuxCorePaths.stageExecutable(
+        core.path,
+        'keqrnel',
+      ).timeout(const Duration(seconds: 5));
 
       expect(File(staged).readAsStringSync(), 'core v2, longer');
     });

@@ -18,7 +18,9 @@ void main() {
     backend = 'x11';
     sent = [];
     nativeFails = [];
-    messenger.setMockMethodCallHandler(HotkeyService.linuxChannel, (call) async {
+    messenger.setMockMethodCallHandler(HotkeyService.linuxChannel, (
+      call,
+    ) async {
       switch (call.method) {
         case 'getBackend':
           return backend;
@@ -56,7 +58,11 @@ void main() {
     test('the portal trigger follows the shortcuts spec', () {
       expect(ctrlAltK.portalTrigger, 'CTRL+ALT+k');
       expect(
-        const HotkeyBinding(shift: true, meta: true, key: 'pageUp').portalTrigger,
+        const HotkeyBinding(
+          shift: true,
+          meta: true,
+          key: 'pageUp',
+        ).portalTrigger,
         'SHIFT+LOGO+Page_Up',
       );
       expect(const HotkeyBinding(key: 'f9').portalTrigger, 'F9');
@@ -66,45 +72,53 @@ void main() {
       );
     });
 
-    test('the portal id changes with the combination, not between launches', () {
-      final id = ctrlAltK.portalId(HotkeyAction.toggleConnection);
-      expect(id, 'toggleConnection_ctrl_alt_keyK');
-      expect(ctrlAltK.portalId(HotkeyAction.toggleConnection), id);
-      expect(
-        const HotkeyBinding(ctrl: true, alt: true, key: 'keyL')
-            .portalId(HotkeyAction.toggleConnection),
-        isNot(id),
-      );
-    });
+    test(
+      'the portal id changes with the combination, not between launches',
+      () {
+        final id = ctrlAltK.portalId(HotkeyAction.toggleConnection);
+        expect(id, 'toggleConnection_ctrl_alt_keyK');
+        expect(ctrlAltK.portalId(HotkeyAction.toggleConnection), id);
+        expect(
+          const HotkeyBinding(
+            ctrl: true,
+            alt: true,
+            key: 'keyL',
+          ).portalId(HotkeyAction.toggleConnection),
+          isNot(id),
+        );
+      },
+    );
   });
 
   group('X11', () {
-    test('sends the physical key and modifiers, takes the key out of the window',
-        () async {
-      final failed = await HotkeyService.applyLinuxForTesting(
-        {HotkeyAction.toggleConnection: ctrlAltK},
-        descriptions: {HotkeyAction.toggleConnection: 'Connect'},
-      );
-      expect(failed, isEmpty);
-      expect(HotkeyService.isGlobal, isTrue);
-      expect(HotkeyService.systemConfirmsBindings, isFalse);
-      expect(sent.single, [
-        {
-          'action': 'toggleConnection',
-          'evdevCode': 37,
-          'modifiers': 3,
-          'portalId': 'toggleConnection_ctrl_alt_keyK',
-          'trigger': 'CTRL+ALT+k',
-          'description': 'Connect',
-        },
-      ]);
-    });
+    test(
+      'sends the physical key and modifiers, takes the key out of the window',
+      () async {
+        final failed = await HotkeyService.applyLinuxForTesting(
+          {HotkeyAction.toggleConnection: ctrlAltK},
+          descriptions: {HotkeyAction.toggleConnection: 'Connect'},
+        );
+        expect(failed, isEmpty);
+        expect(HotkeyService.isGlobal, isTrue);
+        expect(HotkeyService.systemConfirmsBindings, isFalse);
+        expect(sent.single, [
+          {
+            'action': 'toggleConnection',
+            'evdevCode': 37,
+            'modifiers': 3,
+            'portalId': 'toggleConnection_ctrl_alt_keyK',
+            'trigger': 'CTRL+ALT+k',
+            'description': 'Connect',
+          },
+        ]);
+      },
+    );
 
     test('a combination another client holds is reported as taken', () async {
       nativeFails = ['toggleConnection'];
-      final failed = await HotkeyService.applyLinuxForTesting(
-        {HotkeyAction.toggleConnection: ctrlAltK},
-      );
+      final failed = await HotkeyService.applyLinuxForTesting({
+        HotkeyAction.toggleConnection: ctrlAltK,
+      });
       expect(failed, ['toggleConnection']);
     });
 
@@ -116,9 +130,9 @@ void main() {
     });
 
     test('a press from the runner reaches the action', () async {
-      await HotkeyService.applyLinuxForTesting(
-        {HotkeyAction.toggleWindow: ctrlAltK},
-      );
+      await HotkeyService.applyLinuxForTesting({
+        HotkeyAction.toggleWindow: ctrlAltK,
+      });
       final pressed = <HotkeyAction>[];
       HotkeyService.onPressed = pressed.add;
       await messenger.handlePlatformMessage(
@@ -141,32 +155,35 @@ void main() {
 
     test('a declined dialog is not called "taken by another app"', () async {
       nativeFails = ['toggleConnection'];
-      final failed = await HotkeyService.applyLinuxForTesting(
-        {HotkeyAction.toggleConnection: ctrlAltK},
-      );
+      final failed = await HotkeyService.applyLinuxForTesting({
+        HotkeyAction.toggleConnection: ctrlAltK,
+      });
       expect(failed, isEmpty);
       expect(HotkeyService.systemConfirmsBindings, isTrue);
     });
 
-    test('recording a combination keeps the session, so no new dialog', () async {
-      await HotkeyService.applyLinuxForTesting(
-        {HotkeyAction.toggleConnection: ctrlAltK},
-      );
-      HotkeyService.captureMode = true;
-      await HotkeyService.applyLinuxForTesting(const {});
-      HotkeyService.captureMode = false;
-      await HotkeyService.applyLinuxForTesting(
-        {HotkeyAction.toggleConnection: ctrlAltK},
-      );
-      expect(sent, hasLength(1));
-    });
+    test(
+      'recording a combination keeps the session, so no new dialog',
+      () async {
+        await HotkeyService.applyLinuxForTesting({
+          HotkeyAction.toggleConnection: ctrlAltK,
+        });
+        HotkeyService.captureMode = true;
+        await HotkeyService.applyLinuxForTesting(const {});
+        HotkeyService.captureMode = false;
+        await HotkeyService.applyLinuxForTesting({
+          HotkeyAction.toggleConnection: ctrlAltK,
+        });
+        expect(sent, hasLength(1));
+      },
+    );
   });
 
   test('without a backend hotkeys stay inside the window', () async {
     backend = 'none';
-    final failed = await HotkeyService.applyLinuxForTesting(
-      {HotkeyAction.toggleConnection: ctrlAltK},
-    );
+    final failed = await HotkeyService.applyLinuxForTesting({
+      HotkeyAction.toggleConnection: ctrlAltK,
+    });
     expect(failed, isEmpty);
     expect(sent, isEmpty);
     expect(HotkeyService.isGlobal, isFalse);

@@ -64,11 +64,12 @@ class _SwitchBackend extends FakeTunnelBackend {
 }
 
 ServerItem _server(String id, String host) => ServerItem(
-      id: id,
-      type: ServerItemType.manual,
-      config: 'vless://00000000-0000-4000-8000-000000000000@$host:443'
-          '?type=tcp&security=tls&sni=$host#$id',
-    );
+  id: id,
+  type: ServerItemType.manual,
+  config:
+      'vless://00000000-0000-4000-8000-000000000000@$host:443'
+      '?type=tcp&security=tls&sni=$host#$id',
+);
 
 final _a = _server('a', 'a.example.com');
 final _b = _server('b', 'b.example.com');
@@ -104,16 +105,25 @@ Future<void> _switchTo(ProviderContainer container, ServerItem server) async {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('на xray смена сервера останавливает сессию и поднимает новую', () async {
-    final backend = _SwitchBackend();
-    final container = await _connected(backend, core: AppSettings.vpnCoreXray);
+  test(
+    'на xray смена сервера останавливает сессию и поднимает новую',
+    () async {
+      final backend = _SwitchBackend();
+      final container = await _connected(
+        backend,
+        core: AppSettings.vpnCoreXray,
+      );
 
-    await _switchTo(container, _b);
+      await _switchTo(container, _b);
 
-    expect(backend.calls, ['stop', 'start']);
-    expect(backend.sessions.last.xrayConfig, contains('b.example.com'));
-    expect(container.read(vpnStateProvider).value?.status, VpnStatus.connected);
-  });
+      expect(backend.calls, ['stop', 'start']);
+      expect(backend.sessions.last.xrayConfig, contains('b.example.com'));
+      expect(
+        container.read(vpnStateProvider).value?.status,
+        VpnStatus.connected,
+      );
+    },
+  );
 
   test('mihomo меняет сервер на ходу, туннель не снимается', () async {
     final backend = _SwitchBackend()..reloads = true;
@@ -160,9 +170,11 @@ void main() {
     final container = await _connected(backend);
     final storage = container.read(storageProvider);
     final settings = await storage.getSettings();
-    await storage.saveSettings(settings.copyWith(
-      connectionMode: settings.connectionMode == 'tun' ? 'proxy' : 'tun',
-    ));
+    await storage.saveSettings(
+      settings.copyWith(
+        connectionMode: settings.connectionMode == 'tun' ? 'proxy' : 'tun',
+      ),
+    );
 
     await _switchTo(container, _b);
 

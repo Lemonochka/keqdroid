@@ -25,7 +25,11 @@ void main() {
         // ошибка в номере тона дала бы нечитаемый текст без единого падения
         for (final (fg, bg, what) in [
           (s.onSurface, s.surface, 'текст на фоне'),
-          (s.onSurfaceVariant, s.surfaceContainerHigh, 'второстепенный текст на карточке'),
+          (
+            s.onSurfaceVariant,
+            s.surfaceContainerHigh,
+            'второстепенный текст на карточке',
+          ),
           (s.onPrimary, s.primary, 'текст на кнопке'),
           (s.onPrimaryContainer, s.primaryContainer, 'значок на кнопке «+»'),
           (s.onSecondaryContainer, s.secondaryContainer, 'текст выбранного'),

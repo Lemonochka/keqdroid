@@ -21,9 +21,9 @@ const _ipServer =
 const _secondHop = 'trojan://pass@de.example.com:8443?sni=de.example.com#DE';
 
 Map<String, dynamic> _outboundByTag(Map<String, dynamic> config, String tag) =>
-    (config['outbounds'] as List)
-        .cast<Map<String, dynamic>>()
-        .firstWhere((o) => o['tag'] == tag);
+    (config['outbounds'] as List).cast<Map<String, dynamic>>().firstWhere(
+      (o) => o['tag'] == tag,
+    );
 
 Map<String, dynamic>? _sockoptOf(Map<String, dynamic> outbound) {
   final stream = outbound['streamSettings'] as Map<String, dynamic>?;
@@ -32,16 +32,22 @@ Map<String, dynamic>? _sockoptOf(Map<String, dynamic> outbound) {
 
 Map<String, dynamic> _generate(String link, [AppSettings? settings]) =>
     jsonDecode(
-      ConfigGeneratorV2.generateConfig(link, settings ?? const AppSettings()),
-    ) as Map<String, dynamic>;
+          ConfigGeneratorV2.generateConfig(
+            link,
+            settings ?? const AppSettings(),
+          ),
+        )
+        as Map<String, dynamic>;
 
 void main() {
   setUp(() => Socks5Credentials().init('u', 'p'));
 
   test('домен сервера резолвится встроенным DNS', () {
     final config = _generate(_domainServer);
-    expect(_sockoptOf(_outboundByTag(config, 'proxy'))?['domainStrategy'],
-        'UseIPv4');
+    expect(
+      _sockoptOf(_outboundByTag(config, 'proxy'))?['domainStrategy'],
+      'UseIPv4',
+    );
   });
 
   test('IP-адрес сервера остаётся без стратегии — резолвить нечего', () {
@@ -53,9 +59,7 @@ void main() {
   test('семейство адресов совпадает с queryStrategy', () {
     final config = _generate(
       _domainServer,
-      const AppSettings(
-        xrayCore: XrayCoreSettings(dnsQueryStrategy: 'UseIP'),
-      ),
+      const AppSettings(xrayCore: XrayCoreSettings(dnsQueryStrategy: 'UseIP')),
     );
     expect(
       _sockoptOf(_outboundByTag(config, 'proxy'))?['domainStrategy'],
@@ -105,8 +109,10 @@ void main() {
   });
 
   test('DoH идёт первым, системный резолвер — запасным', () {
-    final all = ((_generate(_domainServer)['dns'] as Map<String, dynamic>)
-        ['servers'] as List).cast<Map<String, dynamic>>();
+    final all =
+        ((_generate(_domainServer)['dns'] as Map<String, dynamic>)['servers']
+                as List)
+            .cast<Map<String, dynamic>>();
     final servers = all
         // Записи со своим списком доменов общего резолва не касаются: это
         // bootstrap на адрес сервера и сплит-DNS для Direct-доменов.
@@ -127,21 +133,26 @@ void main() {
   // убирает сервер из общей очереди, но свалиться С записи на другие не мешает,
   // и промах ушёл бы в DoH, а тот — в ещё не поднятый туннель.
   test('адрес сервера резолвится в обход туннеля', () {
-    final servers = ((_generate(_domainServer)['dns'] as Map<String, dynamic>)
-        ['servers'] as List).cast<Map<String, dynamic>>();
+    final servers =
+        ((_generate(_domainServer)['dns'] as Map<String, dynamic>)['servers']
+                as List)
+            .cast<Map<String, dynamic>>();
     // Только bootstrap: direct-домены тоже несут `domains`, но с иными
     // префиксами — адреса серверов уходят сюда как `full:`.
     final bootstrap = servers
-        .where((s) =>
-            (s['domains'] as List?)
-                ?.any((d) => d.toString().startsWith('full:')) ??
-            false)
+        .where(
+          (s) =>
+              (s['domains'] as List?)?.any(
+                (d) => d.toString().startsWith('full:'),
+              ) ??
+              false,
+        )
         .toList();
 
-    expect(
-      bootstrap.map((s) => s['address']),
-      ['https+local://1.1.1.1/dns-query', 'localhost'],
-    );
+    expect(bootstrap.map((s) => s['address']), [
+      'https+local://1.1.1.1/dns-query',
+      'localhost',
+    ]);
     expect(bootstrap.every((s) => s['skipFallback'] == true), isTrue);
     expect(bootstrap.last['finalQuery'], isTrue);
     for (final server in bootstrap) {
@@ -157,23 +168,30 @@ void main() {
   // видно. Пока домены серверов в реестр не попадают, коннект не ломается, но
   // провайдеру уходит список узлов, к которым подключается пользователь.
   test('адрес сервера не ищется открытым UDP-53', () {
-    final servers = ((_generate(_domainServer)['dns'] as Map<String, dynamic>)
-        ['servers'] as List).cast<Map<String, dynamic>>();
-    final bootstrap = servers.firstWhere((s) =>
-        (s['domains'] as List?)
-            ?.any((d) => d.toString().startsWith('full:')) ??
-        false);
+    final servers =
+        ((_generate(_domainServer)['dns'] as Map<String, dynamic>)['servers']
+                as List)
+            .cast<Map<String, dynamic>>();
+    final bootstrap = servers.firstWhere(
+      (s) =>
+          (s['domains'] as List?)?.any(
+            (d) => d.toString().startsWith('full:'),
+          ) ??
+          false,
+    );
     expect(bootstrap['address'], startsWith('https+local://'));
   });
 
   test('пинг резолвит сервер тем же путём, что и подключение', () {
-    final ping = jsonDecode(
-      ConfigGeneratorV2.generatePingConfig(
-        _domainServer,
-        const AppSettings(),
-        socksPort: 10800,
-      ),
-    ) as Map<String, dynamic>;
+    final ping =
+        jsonDecode(
+              ConfigGeneratorV2.generatePingConfig(
+                _domainServer,
+                const AppSettings(),
+                socksPort: 10800,
+              ),
+            )
+            as Map<String, dynamic>;
 
     expect(
       _sockoptOf(_outboundByTag(ping, 'proxy'))?['domainStrategy'],

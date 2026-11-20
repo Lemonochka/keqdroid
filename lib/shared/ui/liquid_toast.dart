@@ -65,20 +65,22 @@ class AppSnack {
     }
     final color = bar.backgroundColor;
     final action = bar.action;
-    LiquidToast.show(LiquidToast(
-      message: bar.content,
-      color: color,
-      // значки в цветных уведомлениях покрашены под яркий фон, текст подстраиваем так же
-      ink: color == null
-          ? null
-          : ThemeData.estimateBrightnessForColor(color) == Brightness.dark
-          ? Colors.white
-          : _theme.colorScheme.surface,
-      duration: bar.duration,
-      actionLabel: action?.label,
-      onAction: action?.onPressed,
-      inPlace: replace,
-    ));
+    LiquidToast.show(
+      LiquidToast(
+        message: bar.content,
+        color: color,
+        // значки в цветных уведомлениях покрашены под яркий фон, текст подстраиваем так же
+        ink: color == null
+            ? null
+            : ThemeData.estimateBrightnessForColor(color) == Brightness.dark
+            ? Colors.white
+            : _theme.colorScheme.surface,
+        duration: bar.duration,
+        actionLabel: action?.label,
+        onAction: action?.onPressed,
+        inPlace: replace,
+      ),
+    );
   }
 
   void hideCurrent() {
@@ -103,10 +105,16 @@ class _LiquidToastHostState extends State<LiquidToastHost>
     with TickerProviderStateMixin {
   // вытекает чуть медленнее spatialSlow: 0,35 с были резковаты, теперь около 0,5 с;
   // уходит мягко, без перелёта, как лента
-  static const _riseSpring =
-      SpringDescription(mass: 1, stiffness: 100, damping: 2 * 0.85 * 10);
-  static const _sinkSpring =
-      SpringDescription(mass: 1, stiffness: 60, damping: 2 * 7.75);
+  static const _riseSpring = SpringDescription(
+    mass: 1,
+    stiffness: 100,
+    damping: 2 * 0.85 * 10,
+  );
+  static const _sinkSpring = SpringDescription(
+    mass: 1,
+    stiffness: 60,
+    damping: 2 * 7.75,
+  );
   static const _radius = 22.0;
   static const _goo = 40.0;
   static const _drop = Size(44, 36);
@@ -148,7 +156,8 @@ class _LiquidToastHostState extends State<LiquidToastHost>
     final next = LiquidToast.current.value;
     final generation = ++_generation;
     _timer?.cancel();
-    final inPlace = next != null && next.inPlace && _shown != null && _t.value > 0;
+    final inPlace =
+        next != null && next.inPlace && _shown != null && _t.value > 0;
     if (!inPlace && _shown != null && _t.value > 0) {
       await _sink();
       if (!mounted || generation != _generation) return;
@@ -161,9 +170,11 @@ class _LiquidToastHostState extends State<LiquidToastHost>
     });
     if (!inPlace) _pull.value = 0;
     if (next == null) return;
-    await ExpressiveMotion.springTo(_t, 1, spring: _riseSpring)
-        .orCancel
-        .catchError((_) {});
+    await ExpressiveMotion.springTo(
+      _t,
+      1,
+      spring: _riseSpring,
+    ).orCancel.catchError((_) {});
     if (!mounted || generation != _generation) return;
     _arm(next);
   }
@@ -175,8 +186,11 @@ class _LiquidToastHostState extends State<LiquidToastHost>
     });
   }
 
-  Future<void> _sink() =>
-      ExpressiveMotion.springTo(_t, 0, spring: _sinkSpring).orCancel.catchError((_) {});
+  Future<void> _sink() => ExpressiveMotion.springTo(
+    _t,
+    0,
+    spring: _sinkSpring,
+  ).orCancel.catchError((_) {});
 
   static double _width(Size screen, double edge) =>
       math.min(screen.width - edge - 2 * FloatingBar.margin, 560.0);
@@ -192,12 +206,19 @@ class _LiquidToastHostState extends State<LiquidToastHost>
     if (toast == null) return;
     final toEdge = (rtl ? 1 : -1) * (d.primaryVelocity ?? 0);
     // пороги как у Dismissible: бросок от 700 px/с или сдвиг на 0,4 ширины
-    final width = _width(MediaQuery.sizeOf(context), LiquidToast.source.value ?? 0);
+    final width = _width(
+      MediaQuery.sizeOf(context),
+      LiquidToast.source.value ?? 0,
+    );
     if (toEdge >= 700 || _pull.value >= 0.4 * width) {
       LiquidToast.hide();
       return;
     }
-    ExpressiveMotion.springTo(_pull, 0, spring: _riseSpring).orCancel.catchError((_) {});
+    ExpressiveMotion.springTo(
+      _pull,
+      0,
+      spring: _riseSpring,
+    ).orCancel.catchError((_) {});
     _arm(toast);
   }
 
@@ -232,19 +253,26 @@ class _LiquidToastHostState extends State<LiquidToastHost>
     final edgeAt = source ?? 0;
     final width = _width(mq.size, edgeAt);
     final rtl = Directionality.of(context) == TextDirection.rtl;
-    final restBottom = mq.padding.bottom +
+    final restBottom =
+        mq.padding.bottom +
         FloatingBar.bottomMargin +
         (_bar ? FloatingBar.height + 12 : 0);
     final centerY = mq.size.height - restBottom - _height / 2;
     final t = _t.value.clamp(0.0, 1.0);
     // капля выходит из-за края, а растекается в плитку уже на лету
     final grow = ((t - 0.2) / 0.8).clamp(0.0, 1.0);
-    final size = Size.lerp(_drop, Size(width, _height), Curves.easeOut.transform(grow))!;
+    final size = Size.lerp(
+      _drop,
+      Size(width, _height),
+      Curves.easeOut.transform(grow),
+    )!;
     // на ПК плитка стоит у своей кромки, на телефоне посередине
-    final restStart =
-        source == null ? (mq.size.width - width) / 2 : FloatingBar.margin;
+    final restStart = source == null
+        ? (mq.size.width - width) / 2
+        : FloatingBar.margin;
     // начало за краем на всю склейку: бугорок у края тает, а не обрывается
-    final start = edgeAt -
+    final start =
+        edgeAt -
         _drop.width -
         _goo +
         (restStart + _drop.width + _goo) * t -
@@ -261,67 +289,67 @@ class _LiquidToastHostState extends State<LiquidToastHost>
       _pull.value.clamp(0.0, _goo),
     );
     final radius = math.min(_radius, size.height / 2);
-    final edge =
-        rtl ? (-1.0, 0.0, edgeAt - mq.size.width) : (1.0, 0.0, edgeAt);
+    final edge = rtl ? (-1.0, 0.0, edgeAt - mq.size.width) : (1.0, 0.0, edgeAt);
     final drop = Stack(
-        children: [
-          Positioned.fill(
-            child: IgnorePointer(
-              child: CustomPaint(
-                painter: _DropPainter(
-                  shader: _shader,
-                  rect: rect,
-                  color: color,
-                  radius: radius,
-                  goo: goo,
-                  edge: edge,
-                  dpr: mq.devicePixelRatio,
-                ),
+      children: [
+        Positioned.fill(
+          child: IgnorePointer(
+            child: CustomPaint(
+              painter: _DropPainter(
+                shader: _shader,
+                rect: rect,
+                color: color,
+                radius: radius,
+                goo: goo,
+                edge: edge,
+                dpr: mq.devicePixelRatio,
               ),
             ),
           ),
-          Positioned.fromRect(
-            rect: rect,
-            child: GestureDetector(
-              onHorizontalDragUpdate: (d) => _onDragUpdate(d, rtl),
-              onHorizontalDragEnd: (d) => _onDragEnd(d, rtl),
-              onHorizontalDragCancel: () => _onDragEnd(DragEndDetails(), rtl),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(radius),
-                child: OverflowBox(
-                  alignment: AlignmentDirectional.centerStart,
-                  minWidth: width,
-                  maxWidth: width,
-                  minHeight: 0,
-                  maxHeight: double.infinity,
-                  child: _SizeReporter(
-                    onSize: _onSize,
-                    child: Material(
-                      type: MaterialType.transparency,
-                      child: ConstrainedBox(
-                        constraints:
-                            const BoxConstraints(minHeight: FloatingBar.height),
-                        child: Opacity(
-                          opacity: ((grow - 0.6) / 0.4).clamp(0.0, 1.0),
-                          child: AnimatedSwitcher(
-                            key: ValueKey(_appearance),
-                            duration: ExpressiveMotion.durationDefault,
-                            // старый текст гаснет до того, как проявится новый: внахлёст строки читались кашей
-                            transitionBuilder: (child, animation) => FadeTransition(
-                              opacity: CurvedAnimation(
-                                parent: animation,
-                                curve: const Interval(0.5, 1),
+        ),
+        Positioned.fromRect(
+          rect: rect,
+          child: GestureDetector(
+            onHorizontalDragUpdate: (d) => _onDragUpdate(d, rtl),
+            onHorizontalDragEnd: (d) => _onDragEnd(d, rtl),
+            onHorizontalDragCancel: () => _onDragEnd(DragEndDetails(), rtl),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(radius),
+              child: OverflowBox(
+                alignment: AlignmentDirectional.centerStart,
+                minWidth: width,
+                maxWidth: width,
+                minHeight: 0,
+                maxHeight: double.infinity,
+                child: _SizeReporter(
+                  onSize: _onSize,
+                  child: Material(
+                    type: MaterialType.transparency,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        minHeight: FloatingBar.height,
+                      ),
+                      child: Opacity(
+                        opacity: ((grow - 0.6) / 0.4).clamp(0.0, 1.0),
+                        child: AnimatedSwitcher(
+                          key: ValueKey(_appearance),
+                          duration: ExpressiveMotion.durationDefault,
+                          // старый текст гаснет до того, как проявится новый: внахлёст строки читались кашей
+                          transitionBuilder: (child, animation) =>
+                              FadeTransition(
+                                opacity: CurvedAnimation(
+                                  parent: animation,
+                                  curve: const Interval(0.5, 1),
+                                ),
+                                child: child,
                               ),
-                              child: child,
-                            ),
-                            layoutBuilder: (current, previous) => Stack(
-                              alignment: AlignmentDirectional.centerStart,
-                              children: [...previous, ?current],
-                            ),
-                            child: KeyedSubtree(
-                              key: ObjectKey(toast),
-                              child: _content(context, toast, ink),
-                            ),
+                          layoutBuilder: (current, previous) => Stack(
+                            alignment: AlignmentDirectional.centerStart,
+                            children: [...previous, ?current],
+                          ),
+                          child: KeyedSubtree(
+                            key: ObjectKey(toast),
+                            child: _content(context, toast, ink),
                           ),
                         ),
                       ),
@@ -331,7 +359,8 @@ class _LiquidToastHostState extends State<LiquidToastHost>
               ),
             ),
           ),
-        ],
+        ),
+      ],
     );
     if (edgeAt <= 0) return drop;
     // панель рисует себя сама: капля и текст только снаружи её кромки
@@ -349,7 +378,9 @@ class _LiquidToastHostState extends State<LiquidToastHost>
           ],
           Expanded(
             child: DefaultTextStyle.merge(
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: ink),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: ink),
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
               child: IconTheme.merge(
@@ -417,8 +448,9 @@ class _LiquidToastSourceState extends State<LiquidToastSource> {
   @override
   void dispose() {
     _cover?.removeListener(_publish);
-    WidgetsBinding.instance
-        .addPostFrameCallback((_) => LiquidToast.source.value = null);
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => LiquidToast.source.value = null,
+    );
     super.dispose();
   }
 
@@ -435,13 +467,13 @@ class _LiquidToastSourceState extends State<LiquidToastSource> {
 
   @override
   Widget build(BuildContext context) => _SizeReporter(
-        onSize: (size) {
-          if (size.width == _width) return;
-          _width = size.width;
-          _publish();
-        },
-        child: widget.child,
-      );
+    onSize: (size) {
+      if (size.width == _width) return;
+      _width = size.width;
+      _publish();
+    },
+    child: widget.child,
+  );
 }
 
 class _SizeReporter extends SingleChildRenderObjectWidget {
@@ -450,10 +482,14 @@ class _SizeReporter extends SingleChildRenderObjectWidget {
   final ValueChanged<Size> onSize;
 
   @override
-  RenderObject createRenderObject(BuildContext context) => _RenderSizeReporter(onSize);
+  RenderObject createRenderObject(BuildContext context) =>
+      _RenderSizeReporter(onSize);
 
   @override
-  void updateRenderObject(BuildContext context, _RenderSizeReporter renderObject) {
+  void updateRenderObject(
+    BuildContext context,
+    _RenderSizeReporter renderObject,
+  ) {
     renderObject.onSize = onSize;
   }
 }

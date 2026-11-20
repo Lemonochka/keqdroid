@@ -7,7 +7,8 @@ import 'package:keqdroid/utils/rule_lists.dart';
 void main() {
   group('ссылки в поле', () {
     test('находятся среди обычных записей, без повторов', () {
-      const field = 'ru, vk.com\n'
+      const field =
+          'ru, vk.com\n'
           'https://lists.example/ads.txt,\n'
           'geosite:category-ads-all, http://plain.example/x\n'
           'https://lists.example/ads.txt';
@@ -52,10 +53,11 @@ void main() {
       );
     });
 
-    test('AdBlock: путь, условия, регулярки и скрытие элементов пропускаются',
-        () {
-      expect(
-        parseFilterList(r'''
+    test(
+      'AdBlock: путь, условия, регулярки и скрытие элементов пропускаются',
+      () {
+        expect(
+          parseFilterList(r'''
 ||example.com/ads/banner.js
 ||thirdparty.example^$third-party
 ||scoped.example^$domain=site.example
@@ -68,9 +70,10 @@ example.com##.ad-banner
 example.com#@#.ad
 ||*.wild.example^
 '''),
-        isEmpty,
-      );
-    });
+          isEmpty,
+        );
+      },
+    );
 
     test('исключение @@ убирает домен', () {
       expect(
@@ -117,17 +120,19 @@ example.com#@#.ad
 
     test('голые домены, с точкой и звёздочкой в начале', () {
       expect(
-        parseFilterList('ads.example\n.track.example\n*.wild.example\n'
-            'not a domain\n1.2.3.4\nlocalhost\n'),
+        parseFilterList(
+          'ads.example\n.track.example\n*.wild.example\n'
+          'not a domain\n1.2.3.4\nlocalhost\n',
+        ),
         {'ads.example', 'track.example', 'wild.example'},
       );
     });
 
     test('Windows-переводы строк и BOM не мешают', () {
-      expect(
-        parseFilterList('﻿||a.example^\r\n0.0.0.0 b.example\r\n'),
-        {'a.example', 'b.example'},
-      );
+      expect(parseFilterList('﻿||a.example^\r\n0.0.0.0 b.example\r\n'), {
+        'a.example',
+        'b.example',
+      });
     });
   });
 }

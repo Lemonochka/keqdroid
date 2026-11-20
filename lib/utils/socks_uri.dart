@@ -17,7 +17,10 @@ class SocksLink {
   final String password;
   final String name;
 
-  static final _scheme = RegExp(r'^(socks|socks5|socks5h)://', caseSensitive: false);
+  static final _scheme = RegExp(
+    r'^(socks|socks5|socks5h)://',
+    caseSensitive: false,
+  );
 
   static bool isSocks(String config) => _scheme.hasMatch(config.trimLeft());
 

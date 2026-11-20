@@ -34,12 +34,14 @@ Future<void> _pumpUsageRow(
   );
 }
 
-double _dx(WidgetTester tester, Key key) => tester.getTopLeft(find.byKey(key)).dx;
+double _dx(WidgetTester tester, Key key) =>
+    tester.getTopLeft(find.byKey(key)).dx;
 
 void main() {
   group('subscription usage reads left-to-right in Farsi', () {
-    testWidgets('a bare Row mirrors the parts — this was the bug',
-        (tester) async {
+    testWidgets('a bare Row mirrors the parts — this was the bug', (
+      tester,
+    ) async {
       // Страховка от «починили и не заметили, что чинить было нечего»: без
       // LtrBlock порядок действительно обратный.
       await _pumpUsageRow(

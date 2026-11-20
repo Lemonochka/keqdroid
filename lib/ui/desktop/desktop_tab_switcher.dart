@@ -98,7 +98,9 @@ class _DesktopTabSwitcherState extends State<DesktopTabSwitcher>
     if (!mounted || _to != current) return;
     setState(() => _scene = k < scenes.length ? scenes[k] : null);
     if (_scene == null) return;
-    SchedulerBinding.instance.addPostFrameCallback((_) => _play(scenes, k + 1, current));
+    SchedulerBinding.instance.addPostFrameCallback(
+      (_) => _play(scenes, k + 1, current),
+    );
   }
 
   void _rebuildConsumers(Set<int> tabs) {
@@ -109,7 +111,9 @@ class _DesktopTabSwitcherState extends State<DesktopTabSwitcher>
 
     void find(Element e) {
       final key = e.widget.key;
-      if (e.widget is KeyedSubtree && key is ValueKey<int> && tabs.contains(key.value)) {
+      if (e.widget is KeyedSubtree &&
+          key is ValueKey<int> &&
+          tabs.contains(key.value)) {
         e.visitChildren(mark);
         return;
       }
@@ -147,7 +151,11 @@ class _DesktopTabSwitcherState extends State<DesktopTabSwitcher>
     _under = [
       for (final l in _under)
         if (l.index != widget.index && _underOpacity(l, t) > 0)
-          (index: l.index, opacity: _underOpacity(l, t), dy: _underOffset(l, t)),
+          (
+            index: l.index,
+            opacity: _underOpacity(l, t),
+            dy: _underOffset(l, t),
+          ),
       (
         index: _to,
         opacity: moving ? _inOpacity(t) : 1,
@@ -157,9 +165,12 @@ class _DesktopTabSwitcherState extends State<DesktopTabSwitcher>
     _dir = widget.index > _to ? 1 : -1;
     _to = widget.index;
     _t.value = 0;
-    ExpressiveMotion.springTo(_t, 1,
-            spring: ExpressiveMotion.spatialSlow, snapToEnd: true)
-        .whenComplete(() {
+    ExpressiveMotion.springTo(
+      _t,
+      1,
+      spring: ExpressiveMotion.spatialSlow,
+      snapToEnd: true,
+    ).whenComplete(() {
       if (mounted) setState(() => _under = []);
     });
   }
@@ -185,8 +196,13 @@ class _DesktopTabSwitcherState extends State<DesktopTabSwitcher>
               for (var i = 0; i < widget.children.length; i++)
                 if (!inScene.contains(i)) _layer(i, shown: false),
               for (final l in scene)
-                _layer(l.index,
-                    shown: l.index == _to, warm: true, opacity: l.opacity, dy: l.dy),
+                _layer(
+                  l.index,
+                  shown: l.index == _to,
+                  warm: true,
+                  opacity: l.opacity,
+                  dy: l.dy,
+                ),
             ],
           );
         }
@@ -198,8 +214,11 @@ class _DesktopTabSwitcherState extends State<DesktopTabSwitcher>
             for (var i = 0; i < widget.children.length; i++)
               if (i != _to && !under.contains(i)) _layer(i, shown: false),
             for (final l in _under)
-              _layer(l.index,
-                  opacity: _underOpacity(l, t), dy: _underOffset(l, t)),
+              _layer(
+                l.index,
+                opacity: _underOpacity(l, t),
+                dy: _underOffset(l, t),
+              ),
             if (_under.isEmpty)
               _layer(_to)
             else

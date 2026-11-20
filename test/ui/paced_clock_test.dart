@@ -54,7 +54,12 @@ void main() {
       _feed(governor, from: Duration.zero, seconds: 3, latePerTen: 3);
       expect(governor.level, 0);
 
-      _feed(governor, from: const Duration(seconds: 3), seconds: 2, latePerTen: 3);
+      _feed(
+        governor,
+        from: const Duration(seconds: 3),
+        seconds: 2,
+        latePerTen: 3,
+      );
       expect(governor.level, 1);
       expect(governor.frameInterval, const Duration(microseconds: 33333));
     });
@@ -72,19 +77,32 @@ void main() {
       expect(governor.level, 0);
     });
 
-    test('после 30 спокойных секунд обратно, срыв за минуту удваивает ожидание', () {
-      final governor = FramePaceGovernor();
-      _feed(governor, from: Duration.zero, seconds: 5, latePerTen: 5);
-      expect(governor.level, 1);
-      expect(governor.calmNeeded, 30);
+    test(
+      'после 30 спокойных секунд обратно, срыв за минуту удваивает ожидание',
+      () {
+        final governor = FramePaceGovernor();
+        _feed(governor, from: Duration.zero, seconds: 5, latePerTen: 5);
+        expect(governor.level, 1);
+        expect(governor.calmNeeded, 30);
 
-      _feed(governor, from: const Duration(seconds: 5), seconds: 33, latePerTen: 0);
-      expect(governor.level, 0);
+        _feed(
+          governor,
+          from: const Duration(seconds: 5),
+          seconds: 33,
+          latePerTen: 0,
+        );
+        expect(governor.level, 0);
 
-      _feed(governor, from: const Duration(seconds: 38), seconds: 5, latePerTen: 5);
-      expect(governor.level, 1);
-      expect(governor.calmNeeded, 60);
-    });
+        _feed(
+          governor,
+          from: const Duration(seconds: 38),
+          seconds: 5,
+          latePerTen: 5,
+        );
+        expect(governor.level, 1);
+        expect(governor.calmNeeded, 60);
+      },
+    );
 
     test('редкие кадры не судим: секунда с парой кадров ничего не решает', () {
       final governor = FramePaceGovernor();
@@ -115,12 +133,17 @@ void main() {
       });
     }
 
-    clockTest('на 60 Гц тикает каждый кадр, как часы по vsync',
-        (tester, clock) async {
+    clockTest('на 60 Гц тикает каждый кадр, как часы по vsync', (
+      tester,
+      clock,
+    ) async {
       final ticks = await _ticksOver(tester, clock, frame: _hz60, frames: 120);
 
       expect(ticks, 120);
-      expect(clock.lastElapsedDuration, greaterThan(const Duration(seconds: 1)));
+      expect(
+        clock.lastElapsedDuration,
+        greaterThan(const Duration(seconds: 1)),
+      );
     });
 
     clockTest('на 120 Гц тикает через кадр', (tester, clock) async {
@@ -137,8 +160,10 @@ void main() {
       expect(ticks, inInclusiveRange(143, 146));
     });
 
-    clockTest('сам будит кадр, когда больше никто не рисует',
-        (tester, clock) async {
+    clockTest('сам будит кадр, когда больше никто не рисует', (
+      tester,
+      clock,
+    ) async {
       await _ticksOver(tester, clock, frame: _hz120, frames: 4);
       await tester.pump(_hz120);
       expect(tester.binding.hasScheduledFrame, isFalse);
@@ -147,8 +172,10 @@ void main() {
       expect(tester.binding.hasScheduledFrame, isTrue);
     });
 
-    clockTest('когда телефон не успевает, на 60 Гц тикает через кадр',
-        (tester, clock) async {
+    clockTest('когда телефон не успевает, на 60 Гц тикает через кадр', (
+      tester,
+      clock,
+    ) async {
       final governor = FramePaceGovernor();
       _feed(governor, from: Duration.zero, seconds: 4, latePerTen: 5);
       FramePace.instance.reset(governor);
@@ -158,8 +185,10 @@ void main() {
       expect(ticks, inInclusiveRange(59, 62));
     });
 
-    clockTest('заглушённые часы не тикают и кадров не просят',
-        (tester, clock) async {
+    clockTest('заглушённые часы не тикают и кадров не просят', (
+      tester,
+      clock,
+    ) async {
       await tester.pump(_hz60);
 
       clock.muted = true;
@@ -174,8 +203,10 @@ void main() {
       expect(await _ticksOver(tester, clock, frame: _hz60, frames: 3), 3);
     });
 
-    clockTest('stop обнуляет время, repeat считает заново',
-        (tester, clock) async {
+    clockTest('stop обнуляет время, repeat считает заново', (
+      tester,
+      clock,
+    ) async {
       await _ticksOver(tester, clock, frame: _hz60, frames: 30);
       expect(clock.lastElapsedDuration, isNotNull);
 

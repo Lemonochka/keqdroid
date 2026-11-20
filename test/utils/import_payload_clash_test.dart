@@ -66,12 +66,14 @@ void main() {
       nodes.add((session['proxies'] as List).single as Map<String, dynamic>);
     }
 
-    expect([for (final n in nodes) n['name']], [
-      '[WARP-AWG] Default',
-      '[WARP-MASQUE] QUIC',
-      '[WARP-MASQUE] H2',
-    ]);
-    expect([for (final n in nodes) n['type']], ['wireguard', 'masque', 'masque']);
+    expect(
+      [for (final n in nodes) n['name']],
+      ['[WARP-AWG] Default', '[WARP-MASQUE] QUIC', '[WARP-MASQUE] H2'],
+    );
+    expect(
+      [for (final n in nodes) n['type']],
+      ['wireguard', 'masque', 'masque'],
+    );
     expect(
       (nodes[0]['amnezia-wg-option'] as Map)['i1'],
       '<b 0xc10000000114367096bb0fb3f58f3a3f>',

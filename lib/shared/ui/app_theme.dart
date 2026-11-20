@@ -18,7 +18,8 @@ class AppTheme {
   static Color onRed(BuildContext ctx) => _cs(ctx).onError;
   static Color divider(BuildContext ctx) => _cs(ctx).outlineVariant;
   static Color accentContainer(BuildContext ctx) => _cs(ctx).primaryContainer;
-  static Color onAccentContainer(BuildContext ctx) => _cs(ctx).onPrimaryContainer;
+  static Color onAccentContainer(BuildContext ctx) =>
+      _cs(ctx).onPrimaryContainer;
   static Color green(BuildContext ctx) => harmonize(ctx, _kGreen);
   static Color orange(BuildContext ctx) => harmonize(ctx, _kOrange);
 

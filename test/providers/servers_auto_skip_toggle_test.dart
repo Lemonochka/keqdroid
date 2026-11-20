@@ -52,8 +52,7 @@ const _quiet = Duration(milliseconds: 800);
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test(
-      'пометка видна сразу, а на диск уходит одной записью, когда нажатия '
+  test('пометка видна сразу, а на диск уходит одной записью, когда нажатия '
       'туда-обратно стихли', () async {
     final (container, storage) = await _seed();
     final notifier = container.read(serversProvider.notifier);
@@ -73,8 +72,7 @@ void main() {
     expect(await _markedOnDisk(storage), isTrue);
   });
 
-  test(
-      'пометка не перестраивает весь список: shape у неё прежний, у любой '
+  test('пометка не перестраивает весь список: shape у неё прежний, у любой '
       'другой перемены новый', () async {
     final (container, _) = await _seed();
     final notifier = container.read(serversProvider.notifier);
@@ -106,13 +104,22 @@ void main() {
     storage.fail = true;
 
     notifier.toggleAutoSkip(_server.id);
-    await expectLater(notifier.flushAutoSkip(), throwsA(isA<StorageException>()));
+    await expectLater(
+      notifier.flushAutoSkip(),
+      throwsA(isA<StorageException>()),
+    );
     expect(_marked(container), isFalse);
 
     notifier.toggleAutoSkip(_server.id);
     notifier.toggleAutoSkip(_server.id);
-    await expectLater(notifier.flushAutoSkip(), throwsA(isA<StorageException>()));
-    expect(_marked(container), isFalse,
-        reason: 'туда-обратно до сбоя: на диске не отмечен, так и остаётся');
+    await expectLater(
+      notifier.flushAutoSkip(),
+      throwsA(isA<StorageException>()),
+    );
+    expect(
+      _marked(container),
+      isFalse,
+      reason: 'туда-обратно до сбоя: на диске не отмечен, так и остаётся',
+    );
   });
 }

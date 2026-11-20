@@ -48,7 +48,11 @@ void main() {
           return {'installed': serviceInstalled, 'trusted': serviceInstalled};
         case 'install':
           serviceInstalled = installOk;
-          return {'ok': installOk, 'cancelled': false, 'code': installOk ? 0 : 5};
+          return {
+            'ok': installOk,
+            'cancelled': false,
+            'code': installOk ? 0 : 5,
+          };
       }
       return null;
     });
@@ -59,15 +63,18 @@ void main() {
   });
 
   group('старая задача автозапуска с правами', () {
-    test('без прав у процесса не трогается: снять её можно только через UAC', () async {
-      admin = false;
-      expect(
-        await WindowsDesktopService.retireElevatedAutostart(tun: true),
-        isFalse,
-      );
-      expect(calls, isNot(contains('setLaunchAtStartup')));
-      expect(calls, isNot(contains('install')));
-    });
+    test(
+      'без прав у процесса не трогается: снять её можно только через UAC',
+      () async {
+        admin = false;
+        expect(
+          await WindowsDesktopService.retireElevatedAutostart(tun: true),
+          isFalse,
+        );
+        expect(calls, isNot(contains('setLaunchAtStartup')));
+        expect(calls, isNot(contains('install')));
+      },
+    );
 
     test('без задачи ничего не делает', () async {
       task = false;
@@ -79,20 +86,23 @@ void main() {
       expect(calls, isNot(contains('install')));
     });
 
-    test('в Proxy служба не нужна, задача сменяется обычным автозапуском', () async {
-      expect(
-        await WindowsDesktopService.retireElevatedAutostart(tun: false),
-        isTrue,
-      );
-      expect(calls, isNot(contains('install')));
-      expect(setLaunch, {
-        'enabled': true,
-        'elevated': false,
-        'allowElevation': true,
-        // выключатель в Диспетчере задач переход не трогает, только нажатие в настройках
-        'approve': false,
-      });
-    });
+    test(
+      'в Proxy служба не нужна, задача сменяется обычным автозапуском',
+      () async {
+        expect(
+          await WindowsDesktopService.retireElevatedAutostart(tun: false),
+          isTrue,
+        );
+        expect(calls, isNot(contains('install')));
+        expect(setLaunch, {
+          'enabled': true,
+          'elevated': false,
+          'allowElevation': true,
+          // выключатель в Диспетчере задач переход не трогает, только нажатие в настройках
+          'approve': false,
+        });
+      },
+    );
 
     test('в TUN сперва ставится служба, потом снимается задача', () async {
       expect(
@@ -116,14 +126,17 @@ void main() {
       expect(calls, contains('setLaunchAtStartup'));
     });
 
-    test('служба не встала: задача остаётся, иначе TUN после входа не поднимется', () async {
-      installOk = false;
-      expect(
-        await WindowsDesktopService.retireElevatedAutostart(tun: true),
-        isFalse,
-      );
-      expect(calls, contains('install'));
-      expect(calls, isNot(contains('setLaunchAtStartup')));
-    });
+    test(
+      'служба не встала: задача остаётся, иначе TUN после входа не поднимется',
+      () async {
+        installOk = false;
+        expect(
+          await WindowsDesktopService.retireElevatedAutostart(tun: true),
+          isFalse,
+        );
+        expect(calls, contains('install'));
+        expect(calls, isNot(contains('setLaunchAtStartup')));
+      },
+    );
   }, skip: !Platform.isWindows);
 }

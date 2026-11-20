@@ -33,8 +33,7 @@ void showUpdateIntervalSheet(
               Text(
                 l10n.subscriptionsAutoUpdateInterval,
                 textAlign: TextAlign.center,
-                style: Theme.of(ctx)
-                    .textTheme
+                style: Theme.of(ctx).textTheme
                     .emphasized(Theme.of(ctx).textTheme.titleLarge)
                     ?.copyWith(color: textColor),
               ),
@@ -42,10 +41,9 @@ void showUpdateIntervalSheet(
               Text(
                 l10n.subscriptionsCurrentInterval(sub.updateIntervalHours),
                 textAlign: TextAlign.center,
-                style: Theme.of(ctx)
-                    .textTheme
-                    .bodySmall
-                    ?.copyWith(color: textLightColor),
+                style: Theme.of(
+                  ctx,
+                ).textTheme.bodySmall?.copyWith(color: textLightColor),
               ),
               const SizedBox(height: 12),
               Padding(

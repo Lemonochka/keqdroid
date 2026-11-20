@@ -29,10 +29,12 @@ class XrayConn {
 /// Тег выхода первого совпавшего правила; ни одно не совпало — первый выход,
 /// как default route у ядра.
 String? simulateXray(Map<String, dynamic> config, XrayConn conn) {
-  final fallback = ((config['outbounds'] as List).first as Map)['tag'] as String?;
+  final fallback =
+      ((config['outbounds'] as List).first as Map)['tag'] as String?;
   final routing = config['routing'] as Map;
   final rules = [
-    for (final r in routing['rules'] as List) (r as Map).cast<String, dynamic>(),
+    for (final r in routing['rules'] as List)
+      (r as Map).cast<String, dynamic>(),
   ];
   for (final rule in rules) {
     if (_matches(rule, conn, conn.ip)) return rule['outboundTag'] as String?;
@@ -40,22 +42,33 @@ String? simulateXray(Map<String, dynamic> config, XrayConn conn) {
   final strategy = routing['domainStrategy'] ?? 'AsIs';
   if (strategy != 'IPIfNonMatch' || conn.host.isEmpty) return fallback;
   for (final rule in rules) {
-    if (_matches(rule, conn, conn.resolvesTo)) return rule['outboundTag'] as String?;
+    if (_matches(rule, conn, conn.resolvesTo)) {
+      return rule['outboundTag'] as String?;
+    }
   }
   return fallback;
 }
 
 bool _matches(Map<String, dynamic> rule, XrayConn conn, String ip) {
   final known = {
-    'type', 'ruleTag', 'outboundTag', 'inboundTag', 'network', 'port',
-    'domain', 'ip', 'process', 'source',
+    'type',
+    'ruleTag',
+    'outboundTag',
+    'inboundTag',
+    'network',
+    'port',
+    'domain',
+    'ip',
+    'process',
+    'source',
   };
   for (final key in rule.keys) {
     if (!known.contains(key)) {
       throw UnsupportedError('симулятор не знает поля $key');
     }
   }
-  if (rule['inboundTag'] case final List<Object?> tags when !tags.contains(conn.inbound)) {
+  if (rule['inboundTag'] case final List<Object?> tags
+      when !tags.contains(conn.inbound)) {
     return false;
   }
   if (rule['source'] != null) return false;
@@ -71,10 +84,12 @@ bool _matches(Map<String, dynamic> rule, XrayConn conn, String ip) {
     return false;
   }
   if (rule['domain'] case final List<Object?> domains
-      when conn.host.isEmpty || !domains.any((e) => _domainMatches('$e', conn.host))) {
+      when conn.host.isEmpty ||
+          !domains.any((e) => _domainMatches('$e', conn.host))) {
     return false;
   }
-  if (rule['process'] case final List<Object?> names when !names.contains(conn.process)) {
+  if (rule['process'] case final List<Object?> names
+      when !names.contains(conn.process)) {
     return false;
   }
   return true;
@@ -106,10 +121,14 @@ bool _domainMatches(String rule, String host) {
 bool _ipMatches(String rule, String ip) {
   if (rule.startsWith('geoip:')) return false;
   final slash = rule.indexOf('/');
-  final net = InternetAddress.tryParse(slash < 0 ? rule : rule.substring(0, slash));
+  final net = InternetAddress.tryParse(
+    slash < 0 ? rule : rule.substring(0, slash),
+  );
   final addr = InternetAddress.tryParse(ip);
   if (net == null || addr == null || net.type != addr.type) return false;
-  final bits = slash < 0 ? net.rawAddress.length * 8 : int.parse(rule.substring(slash + 1));
+  final bits = slash < 0
+      ? net.rawAddress.length * 8
+      : int.parse(rule.substring(slash + 1));
   for (var i = 0; i < bits; i++) {
     final mask = 0x80 >> (i % 8);
     if ((addr.rawAddress[i ~/ 8] & mask) != (net.rawAddress[i ~/ 8] & mask)) {

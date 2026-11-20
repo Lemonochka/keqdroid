@@ -122,7 +122,10 @@ void main() {
     test('a log without the device prefix still parses', () {
       final withoutPrefix = _log
           .split('\n')
-          .map((l) => l.replaceFirst(RegExp(r'^\d{2}-\d{2} \d{2}:\d{2}:\d{2} '), ''))
+          .map(
+            (l) =>
+                l.replaceFirst(RegExp(r'^\d{2}-\d{2} \d{2}:\d{2}:\d{2} '), ''),
+          )
           .join('\n');
       final snapshot = XrayAccessLogParser.parse(withoutPrefix);
       final entry = _find(snapshot, 'googleads.g.doubleclick.net:443');
@@ -147,31 +150,34 @@ void main() {
       final snapshot = XrayAccessLogParser.parse(_log);
 
       expect(_find(snapshot, 's.youtube.com:443').closed, isFalse);
-      expect(_find(snapshot, 'googleads.g.doubleclick.net:443').closed, isFalse);
+      expect(
+        _find(snapshot, 'googleads.g.doubleclick.net:443').closed,
+        isFalse,
+      );
     });
 
-    test('closing one connection does not close the neighbour to the same host',
-        () {
-      // Два TCP-соединения к одному адресу: закрылось второе. Access-строка
-      // идентификатора сессии не несёт, и «последняя сессия этого назначения
-      // выигрывает» помечала закрытыми оба — живое соединение выглядело
-      // мёртвым и уезжало из списка.
-      const log = '''
+    test(
+      'closing one connection does not close the neighbour to the same host',
+      () {
+        // Два TCP-соединения к одному адресу: закрылось второе. Access-строка
+        // идентификатора сессии не несёт, и «последняя сессия этого назначения
+        // выигрывает» помечала закрытыми оба — живое соединение выглядело
+        // мёртвым и уезжало из списка.
+        const log = '''
 08-09 22:50:01 2026/08/09 18:50:01.000000 [Info] [1000] proxy/socks: TCP Connect request to tcp:5.5.5.5:443
 08-09 22:50:01 2026/08/09 18:50:01.100000 from tcp:127.0.0.1:40001 accepted tcp:5.5.5.5:443 [socks-in -> proxy]
 08-09 22:50:02 2026/08/09 18:50:02.000000 [Info] [1001] proxy/socks: TCP Connect request to tcp:5.5.5.5:443
 08-09 22:50:02 2026/08/09 18:50:02.100000 from tcp:127.0.0.1:40002 accepted tcp:5.5.5.5:443 [socks-in -> proxy]
 08-09 22:50:03 2026/08/09 18:50:03.000000 [Info] [1001] app/proxyman/inbound: connection ends > EOF
 ''';
-      final snapshot = XrayAccessLogParser.parse(log);
-      final bySource = {
-        for (final e in snapshot.entries) e.source: e,
-      };
+        final snapshot = XrayAccessLogParser.parse(log);
+        final bySource = {for (final e in snapshot.entries) e.source: e};
 
-      expect(bySource.length, 2);
-      expect(bySource['127.0.0.1:40001']!.closed, isFalse);
-      expect(bySource['127.0.0.1:40002']!.closed, isTrue);
-    });
+        expect(bySource.length, 2);
+        expect(bySource['127.0.0.1:40001']!.closed, isFalse);
+        expect(bySource['127.0.0.1:40002']!.closed, isTrue);
+      },
+    );
 
     test('closed ones sink below the live ones', () {
       final snapshot = XrayAccessLogParser.parse(_log);
@@ -220,8 +226,10 @@ void main() {
 ''';
 
     test('TCP: domain and rule come from the tun session', () {
-      final entry =
-          _find(XrayAccessLogParser.parse(tunLog), 'www.youtube.com:443');
+      final entry = _find(
+        XrayAccessLogParser.parse(tunLog),
+        'www.youtube.com:443',
+      );
 
       expect(entry.destIp, '142.250.74.46');
       expect(entry.rule, 'proxy-list');
@@ -230,35 +238,41 @@ void main() {
     });
 
     test('UDP to the same address gets its own domain', () {
-      final entry =
-          _find(XrayAccessLogParser.parse(tunLog), 'rr1.googlevideo.com:443');
+      final entry = _find(
+        XrayAccessLogParser.parse(tunLog),
+        'rr1.googlevideo.com:443',
+      );
 
       expect(entry.network, 'udp');
       expect(entry.destIp, '142.250.74.46');
     });
 
-    test('the owner is asked by a bare address the system understands',
-        () async {
-      // С приставкой `tcp:` система не находила владельца ни разу.
-      List<Map<String, Object?>>? asked;
-      await ConnectionsService.withAppNamesFromSource(
-        XrayAccessLogParser.parse(tunLog),
-        resolve: (requests) async {
-          asked = requests;
-          return List.filled(requests.length, 'YouTube');
-        },
-      );
+    test(
+      'the owner is asked by a bare address the system understands',
+      () async {
+        // С приставкой `tcp:` система не находила владельца ни разу.
+        List<Map<String, Object?>>? asked;
+        await ConnectionsService.withAppNamesFromSource(
+          XrayAccessLogParser.parse(tunLog),
+          resolve: (requests) async {
+            asked = requests;
+            return List.filled(requests.length, 'YouTube');
+          },
+        );
 
-      expect(
-        asked,
-        anyElement(equals({
-          'protocol': 'tcp',
-          'srcIp': '172.19.0.1',
-          'srcPort': 40100,
-          'dstIp': '142.250.74.46',
-          'dstPort': 443,
-        })),
-      );
-    });
+        expect(
+          asked,
+          anyElement(
+            equals({
+              'protocol': 'tcp',
+              'srcIp': '172.19.0.1',
+              'srcPort': 40100,
+              'dstIp': '142.250.74.46',
+              'dstPort': 443,
+            }),
+          ),
+        );
+      },
+    );
   });
 }

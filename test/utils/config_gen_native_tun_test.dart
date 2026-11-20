@@ -12,7 +12,8 @@ import 'package:keqdroid/utils/socks5_credentials.dart';
 /// интерфейс. Здесь проверяется всё остальное — что инбаунд появляется там,
 /// где должен, не появляется там, где не должен, и не отбирает у конфига
 /// ничего из уже работавшего.
-const _link = 'vless://00000000-0000-4000-8000-000000000000@198.51.100.10:443'
+const _link =
+    'vless://00000000-0000-4000-8000-000000000000@198.51.100.10:443'
     '?type=tcp&security=none#tun';
 
 Map<String, dynamic> _config({
@@ -21,12 +22,13 @@ Map<String, dynamic> _config({
 }) {
   Socks5Credentials().init('u', 'p');
   return jsonDecode(
-    ConfigGeneratorV2.generateConfig(
-      _link,
-      settings,
-      nativeTunInbound: nativeTun,
-    ),
-  ) as Map<String, dynamic>;
+        ConfigGeneratorV2.generateConfig(
+          _link,
+          settings,
+          nativeTunInbound: nativeTun,
+        ),
+      )
+      as Map<String, dynamic>;
 }
 
 List<Map<String, dynamic>> _inbounds(Map<String, dynamic> config) =>
@@ -76,18 +78,21 @@ void main() {
     });
 
     test('пароль на локальном порту никуда не девается', () {
-      final socks = _inbounds(_config())
-          .firstWhere((i) => i['tag'] == 'socks-in');
+      final socks = _inbounds(
+        _config(),
+      ).firstWhere((i) => i['tag'] == 'socks-in');
       expect((socks['settings'] as Map)['auth'], 'password');
     });
 
-    test('перехват DNS продолжает работать: правило не привязано к инбаунду',
-        () {
-      final rules =
-          ((_config()['routing'] as Map)['rules'] as List).cast<Map<Object?, Object?>>();
-      final dns = rules.firstWhere((r) => r['ruleTag'] == 'dns-out');
-      expect(dns.containsKey('inboundTag'), isFalse);
-    });
+    test(
+      'перехват DNS продолжает работать: правило не привязано к инбаунду',
+      () {
+        final rules = ((_config()['routing'] as Map)['rules'] as List)
+            .cast<Map<Object?, Object?>>();
+        final dns = rules.firstWhere((r) => r['ruleTag'] == 'dns-out');
+        expect(dns.containsKey('inboundTag'), isFalse);
+      },
+    );
   });
 
   group('инбаунд не появляется', () {
@@ -108,14 +113,16 @@ void main() {
 
     test('в конфиге замера его нет: пинг туннеля не поднимает', () {
       Socks5Credentials().init('u', 'p');
-      final ping = jsonDecode(
-        ConfigGeneratorV2.generatePingConfig(
-          _link,
-          const AppSettings(),
-          socksPort: 28150,
-          httpInbound: false,
-        ),
-      ) as Map<String, dynamic>;
+      final ping =
+          jsonDecode(
+                ConfigGeneratorV2.generatePingConfig(
+                  _link,
+                  const AppSettings(),
+                  socksPort: 28150,
+                  httpInbound: false,
+                ),
+              )
+              as Map<String, dynamic>;
       expect(_tun(ping), isNull);
     });
   });

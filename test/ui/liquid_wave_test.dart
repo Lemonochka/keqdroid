@@ -11,7 +11,13 @@ import 'package:keqdroid/shared/ui/smooth_fade.dart';
 
 const _frame = 1 / 60;
 
-const _panel = LiquidLevels(idle: 12, busy: 44, quiet: 36, loud: 44, inDp: true);
+const _panel = LiquidLevels(
+  idle: 12,
+  busy: 44,
+  quiet: 36,
+  loud: 44,
+  inDp: true,
+);
 
 void _run(LiquidWaveSim sim, double seconds, LiquidPhase phase, double load) {
   for (var t = 0.0; t < seconds; t += _frame) {
@@ -19,8 +25,9 @@ void _run(LiquidWaveSim sim, double seconds, LiquidPhase phase, double load) {
   }
 }
 
-List<double> _profile(LiquidWaveSim sim) =>
-    [for (var x = 0.0; x <= 400; x += 10) sim.displacement(x)];
+List<double> _profile(LiquidWaveSim sim) => [
+  for (var x = 0.0; x <= 400; x += 10) sim.displacement(x),
+];
 
 double _profileGap(List<double> a, List<double> b) {
   var gap = 0.0;
@@ -41,15 +48,17 @@ void main() {
       expect(busy.amplitude - calm.amplitude, inInclusiveRange(1.5, 3));
     });
 
-    test('фоновый трафик воду не трогает, видео поднимает примерно наполовину',
-        () {
-      expect(LiquidWaveSim.loadFor(0), 0);
-      expect(LiquidWaveSim.loadFor(2 * 1024), 0);
-      expect(LiquidWaveSim.loadFor(30 * 1024), 0);
-      expect(LiquidWaveSim.loadFor(600 * 1024), inInclusiveRange(0.4, 0.65));
-      expect(LiquidWaveSim.loadFor(8 * 1024 * 1024), 1);
-      expect(LiquidWaveSim.loadFor(50 * 1024 * 1024), 1);
-    });
+    test(
+      'фоновый трафик воду не трогает, видео поднимает примерно наполовину',
+      () {
+        expect(LiquidWaveSim.loadFor(0), 0);
+        expect(LiquidWaveSim.loadFor(2 * 1024), 0);
+        expect(LiquidWaveSim.loadFor(30 * 1024), 0);
+        expect(LiquidWaveSim.loadFor(600 * 1024), inInclusiveRange(0.4, 0.65));
+        expect(LiquidWaveSim.loadFor(8 * 1024 * 1024), 1);
+        expect(LiquidWaveSim.loadFor(50 * 1024 * 1024), 1);
+      },
+    );
 
     test('скачок трафика за один кадр почти не двигает воду', () {
       final sim = LiquidWaveSim()..snap(LiquidPhase.active, _panel, 0);
@@ -203,12 +212,12 @@ void main() {
     expect(ratio, inInclusiveRange(1.1, 1.6));
   });
 
-  test('фигурок в наборе нечётное число, и когда у воды их прячут метрики',
-      () {
+  test('фигурок в наборе нечётное число, и когда у воды их прячут метрики', () {
     for (final preset in [...panelLiquidShapes, legacyLiquidShapes]) {
       expect(preset.length.isOdd, isTrue);
-      final aboveMetrics =
-          preset.where((s) => s.anchor != LiquidShapeAnchor.low).length;
+      final aboveMetrics = preset
+          .where((s) => s.anchor != LiquidShapeAnchor.low)
+          .length;
       expect(aboveMetrics.isOdd, isTrue);
     }
   });
@@ -254,7 +263,9 @@ void main() {
           key.currentContext!.findRenderObject()! as RenderRepaintBoundary;
       final data = await tester.runAsync(() async {
         final image = await boundary.toImage();
-        final bytes = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+        final bytes = await image.toByteData(
+          format: ui.ImageByteFormat.rawRgba,
+        );
         image.dispose();
         return bytes!;
       });
@@ -336,27 +347,26 @@ void main() {
     expect(whole / samples, greaterThan(0.75));
   });
 
-  testWidgets(
-      'после отключения фигурки сбавляют ход до остановки часов, '
+  testWidgets('после отключения фигурки сбавляют ход до остановки часов, '
       'у воды тонут под метриками и всплывают', (tester) async {
     final clock = PacedClock();
     addTearDown(clock.dispose);
     Widget wave(LiquidPhase phase, {bool lowZoneFree = true}) => MaterialApp(
-          home: SizedBox(
-            width: 300,
-            height: 160,
-            child: LiquidWave(
-              clock: clock,
-              phase: phase,
-              levels: _panel,
-              load: 0,
-              color: Colors.pink,
-              liveShapes: legacyLiquidShapes,
-              shapeColor: Colors.pink,
-              lowZoneFree: lowZoneFree,
-            ),
-          ),
-        );
+      home: SizedBox(
+        width: 300,
+        height: 160,
+        child: LiquidWave(
+          clock: clock,
+          phase: phase,
+          levels: _panel,
+          load: 0,
+          color: Colors.pink,
+          liveShapes: legacyLiquidShapes,
+          shapeColor: Colors.pink,
+          lowZoneFree: lowZoneFree,
+        ),
+      ),
+    );
     Future<void> run(int ms) async {
       for (var i = 0; i < ms ~/ 100; i++) {
         await tester.pump(const Duration(milliseconds: 100));
@@ -386,12 +396,22 @@ void main() {
     addTearDown(clock.dispose);
     final presets = [
       [
-        LiquidShapeSpot(MaterialShapes.sunny,
-            anchor: LiquidShapeAnchor.top, x: 0.5, y: 10, size: 20),
+        LiquidShapeSpot(
+          MaterialShapes.sunny,
+          anchor: LiquidShapeAnchor.top,
+          x: 0.5,
+          y: 10,
+          size: 20,
+        ),
       ],
       [
-        LiquidShapeSpot(MaterialShapes.flower,
-            anchor: LiquidShapeAnchor.top, x: 0.5, y: 10, size: 20),
+        LiquidShapeSpot(
+          MaterialShapes.flower,
+          anchor: LiquidShapeAnchor.top,
+          x: 0.5,
+          y: 10,
+          size: 20,
+        ),
       ],
     ];
     await tester.pumpWidget(

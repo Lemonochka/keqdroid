@@ -22,7 +22,8 @@ const _plain = AppSettings(
 const _withUrls = AppSettings(
   directRules: 'vk.com, https://lists.example/direct.txt, geoip:ru',
   proxyRules: 'youtube.com\nhttps://lists.example/proxy.txt',
-  blockedRules: 'doubleclick.net, https://lists.example/ads.txt,'
+  blockedRules:
+      'doubleclick.net, https://lists.example/ads.txt,'
       ' 5.5.5.0/24\nhttp://plain.example/hosts',
 );
 
@@ -85,7 +86,14 @@ void main() {
         ruleLists: lists,
       );
       final providers = c['rule-providers'] as Map;
-      expect(providers.keys, unorderedEquals(['keq-list-direct', 'keq-list-proxy', 'keq-list-block']));
+      expect(
+        providers.keys,
+        unorderedEquals([
+          'keq-list-direct',
+          'keq-list-proxy',
+          'keq-list-block',
+        ]),
+      );
       expect(providers['keq-list-block'], {
         'type': 'inline',
         'behavior': 'domain',
@@ -94,12 +102,14 @@ void main() {
     });
 
     test('стоит рядом с доменами своего поля, в том же порядке полей', () {
-      final rules = _rules(MihomoConfigGen.build(
-        _server,
-        _plain,
-        socksPort: 2080,
-        ruleLists: lists,
-      ));
+      final rules = _rules(
+        MihomoConfigGen.build(
+          _server,
+          _plain,
+          socksPort: 2080,
+          ruleLists: lists,
+        ),
+      );
       int at(String rule) {
         final i = rules.indexOf(rule);
         expect(i, isNonNegative, reason: '$rule нет в $rules');
@@ -108,9 +118,13 @@ void main() {
 
       final blockDomain = at('DOMAIN-SUFFIX,doubleclick.net,REJECT');
       final blockSet = at('RULE-SET,keq-list-block,REJECT');
-      final blockIp = rules.indexWhere((r) => r.startsWith('IP-CIDR,5.5.5.0/24,REJECT'));
+      final blockIp = rules.indexWhere(
+        (r) => r.startsWith('IP-CIDR,5.5.5.0/24,REJECT'),
+      );
       final directSet = at('RULE-SET,keq-list-direct,DIRECT');
-      final proxySet = at('RULE-SET,keq-list-proxy,${MihomoConfigGen.proxyName}');
+      final proxySet = at(
+        'RULE-SET,keq-list-proxy,${MihomoConfigGen.proxyName}',
+      );
 
       expect(blockSet, blockDomain + 1);
       expect(blockSet, lessThan(blockIp));
@@ -144,8 +158,11 @@ void main() {
         MihomoConfigGen.generate(_server, _plain, socksPort: 2080),
       );
       expect(
-        MihomoConfigGen.build(_server, _plain, socksPort: 2080)
-            .containsKey('rule-providers'),
+        MihomoConfigGen.build(
+          _server,
+          _plain,
+          socksPort: 2080,
+        ).containsKey('rule-providers'),
         isFalse,
       );
     });
@@ -170,17 +187,21 @@ void main() {
     const lists = RuleListDomains(blocked: ['ads-list.example']);
 
     test('xray блокирует домен из списка вместе с поддоменами', () {
-      final config = jsonDecode(ConfigGeneratorV2.generateConfig(
-        _server,
-        lists.expand(_withUrls),
-      )) as Map<String, dynamic>;
+      final config =
+          jsonDecode(
+                ConfigGeneratorV2.generateConfig(
+                  _server,
+                  lists.expand(_withUrls),
+                ),
+              )
+              as Map<String, dynamic>;
       final rules = ((config['routing'] as Map)['rules'] as List)
           .cast<Map<String, dynamic>>();
       final block = rules.firstWhere((r) => r['ruleTag'] == 'block-domains');
-      expect(
-        block['domain'],
-        ['domain:doubleclick.net', 'domain:ads-list.example'],
-      );
+      expect(block['domain'], [
+        'domain:doubleclick.net',
+        'domain:ads-list.example',
+      ]);
     });
 
     test('без списков настройки те же самые', () {

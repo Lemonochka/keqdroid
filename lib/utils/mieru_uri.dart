@@ -54,8 +54,9 @@ class MieruLink {
       username: Uri.decodeComponent(
         split >= 0 ? userInfo.substring(0, split) : userInfo,
       ),
-      password:
-          split >= 0 ? Uri.decodeComponent(userInfo.substring(split + 1)) : '',
+      password: split >= 0
+          ? Uri.decodeComponent(userInfo.substring(split + 1))
+          : '',
       port: port.contains('-') ? null : int.tryParse(port),
       portRange: port.contains('-') ? port : '',
       transport: protocols.first.trim(),
@@ -79,7 +80,9 @@ class MieruLink {
     if (ports.length < 2 || ports.length != protocols.length) return [link];
 
     var baseName = uri.fragment.trim();
-    if (baseName.isEmpty) baseName = (uri.queryParameters['profile'] ?? '').trim();
+    if (baseName.isEmpty) {
+      baseName = (uri.queryParameters['profile'] ?? '').trim();
+    }
     if (baseName.isEmpty) baseName = uri.host;
 
     final rest = Map<String, String>.from(uri.queryParameters)

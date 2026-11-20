@@ -39,33 +39,35 @@ final _brokenTls = HttpException(
 );
 
 ResponseBody _releases() => ResponseBody.fromString(
-      jsonEncode([
-        {
-          'tag_name': 'v0.23.0',
-          'published_at': '2026-09-27T10:00:00Z',
-          'prerelease': false,
-          'draft': false,
-          'assets': <Object>[],
-        },
-      ]),
-      200,
-      headers: {
-        Headers.contentTypeHeader: [Headers.jsonContentType],
-      },
-    );
+  jsonEncode([
+    {
+      'tag_name': 'v0.23.0',
+      'published_at': '2026-09-27T10:00:00Z',
+      'prerelease': false,
+      'draft': false,
+      'assets': <Object>[],
+    },
+  ]),
+  200,
+  headers: {
+    Headers.contentTypeHeader: [Headers.jsonContentType],
+  },
+);
 
 void main() {
   group('загрузка списка релизов', () {
-    test('испорченное начало ответа — один повтор, и проверка проходит',
-        () async {
-      final adapter = _ScriptedAdapter([_brokenTls, _releases()]);
-      final dio = Dio()..httpClientAdapter = adapter;
+    test(
+      'испорченное начало ответа — один повтор, и проверка проходит',
+      () async {
+        final adapter = _ScriptedAdapter([_brokenTls, _releases()]);
+        final dio = Dio()..httpClientAdapter = adapter;
 
-      final releases = await UpdateService.fetchReleases(dio);
+        final releases = await UpdateService.fetchReleases(dio);
 
-      expect(adapter.calls, 2);
-      expect(releases.single['tag_name'], 'v0.23.0');
-    });
+        expect(adapter.calls, 2);
+        expect(releases.single['tag_name'], 'v0.23.0');
+      },
+    );
 
     test('сломалось и при повторе — ошибка доходит до экрана', () async {
       final adapter = _ScriptedAdapter([_brokenTls, _brokenTls]);
@@ -89,22 +91,24 @@ void main() {
       expect(adapter.calls, 1);
     });
 
-    test('таймаут не повторяем: ручная проверка ждала бы вдвое дольше',
-        () async {
-      final adapter = _ScriptedAdapter([
-        DioException(
-          requestOptions: RequestOptions(),
-          type: DioExceptionType.connectionTimeout,
-        ),
-      ]);
-      final dio = Dio()..httpClientAdapter = adapter;
+    test(
+      'таймаут не повторяем: ручная проверка ждала бы вдвое дольше',
+      () async {
+        final adapter = _ScriptedAdapter([
+          DioException(
+            requestOptions: RequestOptions(),
+            type: DioExceptionType.connectionTimeout,
+          ),
+        ]);
+        final dio = Dio()..httpClientAdapter = adapter;
 
-      await expectLater(
-        UpdateService.fetchReleases(dio),
-        throwsA(isA<DioException>()),
-      );
-      expect(adapter.calls, 1);
-    });
+        await expectLater(
+          UpdateService.fetchReleases(dio),
+          throwsA(isA<DioException>()),
+        );
+        expect(adapter.calls, 1);
+      },
+    );
   });
 
   group('фоновая проверка', () {
@@ -115,22 +119,20 @@ void main() {
       type: DioExceptionType.connectionError,
     );
     UpdateInfo info(String version) => UpdateInfo(
-          currentVersion: '0.26.0',
-          latestVersion: version,
-          downloadUrl: 'https://example.invalid/keqdroid.apk',
-          apkSize: 1,
-        );
+      currentVersion: '0.26.0',
+      latestVersion: version,
+      downloadUrl: 'https://example.invalid/keqdroid.apk',
+      apkSize: 1,
+    );
     late int calls;
 
     void answer(List<Object?> script) {
-      UpdateService.fetchUpdate = ({
-        required bool viaLocalProxy,
-        required int httpPort,
-      }) async {
-        final step = script[calls++];
-        if (step is Exception) throw step;
-        return step as UpdateInfo?;
-      };
+      UpdateService.fetchUpdate =
+          ({required bool viaLocalProxy, required int httpPort}) async {
+            final step = script[calls++];
+            if (step is Exception) throw step;
+            return step as UpdateInfo?;
+          };
     }
 
     setUp(() {
@@ -144,81 +146,93 @@ void main() {
       UpdateService.resetAutoCheck();
     });
 
-    test('GitHub не ответил и удачной проверки не было: ошибка, а не актуальная версия',
-        () async {
-      answer([offline, offline]);
+    test(
+      'GitHub не ответил и удачной проверки не было: ошибка, а не актуальная версия',
+      () async {
+        answer([offline, offline]);
 
-      await expectLater(UpdateService.checkForUpdate(), throwsA(offline));
-      // неудача паузу между проверками не включает
-      await expectLater(UpdateService.checkForUpdate(), throwsA(offline));
-      expect(calls, 2);
-    });
+        await expectLater(UpdateService.checkForUpdate(), throwsA(offline));
+        // неудача паузу между проверками не включает
+        await expectLater(UpdateService.checkForUpdate(), throwsA(offline));
+        expect(calls, 2);
+      },
+    );
 
-    test('после удачной проверки «обновлений нет» сбой не поднимает тревогу',
-        () async {
-      UpdateService.minAutoCheckGap = Duration.zero;
-      answer([null, offline]);
+    test(
+      'после удачной проверки «обновлений нет» сбой не поднимает тревогу',
+      () async {
+        UpdateService.minAutoCheckGap = Duration.zero;
+        answer([null, offline]);
 
-      expect(await UpdateService.checkForUpdate(), isNull);
-      expect(await UpdateService.checkForUpdate(), isNull);
-      expect(calls, 2);
-    });
+        expect(await UpdateService.checkForUpdate(), isNull);
+        expect(await UpdateService.checkForUpdate(), isNull);
+        expect(calls, 2);
+      },
+    );
 
-    test('после удачной проверки с обновлением сбой оставляет обновление',
-        () async {
-      UpdateService.minAutoCheckGap = Duration.zero;
-      answer([info('0.27.0'), offline]);
+    test(
+      'после удачной проверки с обновлением сбой оставляет обновление',
+      () async {
+        UpdateService.minAutoCheckGap = Duration.zero;
+        answer([info('0.27.0'), offline]);
 
-      await UpdateService.checkForUpdate();
-      final again = await UpdateService.checkForUpdate();
-      expect(again?.latestVersion, '0.27.0');
-      expect(calls, 2);
-    });
+        await UpdateService.checkForUpdate();
+        final again = await UpdateService.checkForUpdate();
+        expect(again?.latestVersion, '0.27.0');
+        expect(calls, 2);
+      },
+    );
 
-    test('пропущенная версия остаётся в ответе, окно гасит сам показ', () async {
-      SharedPreferences.setMockInitialValues({
-        'skip_update_version': '0.27.0',
-      });
-      answer([info('0.27.0')]);
+    test(
+      'пропущенная версия остаётся в ответе, окно гасит сам показ',
+      () async {
+        SharedPreferences.setMockInitialValues({
+          'skip_update_version': '0.27.0',
+        });
+        answer([info('0.27.0')]);
 
-      final found = await UpdateService.checkForUpdate();
-      expect(found?.latestVersion, '0.27.0');
-      expect(await UpdateService.isSkipped('0.27.0'), isTrue);
-      expect(await UpdateService.isSkipped('0.28.0'), isFalse);
-      // и из кэша между проверками тоже
-      expect((await UpdateService.checkForUpdate())?.latestVersion, '0.27.0');
-      expect(calls, 1);
-    });
+        final found = await UpdateService.checkForUpdate();
+        expect(found?.latestVersion, '0.27.0');
+        expect(await UpdateService.isSkipped('0.27.0'), isTrue);
+        expect(await UpdateService.isSkipped('0.28.0'), isFalse);
+        // и из кэша между проверками тоже
+        expect((await UpdateService.checkForUpdate())?.latestVersion, '0.27.0');
+        expect(calls, 1);
+      },
+    );
 
-    test('переключение VPN посреди первой проверки ждёт её, а не отвечает пустым',
-        () async {
-      final reply = Completer<UpdateInfo?>();
-      UpdateService.fetchUpdate = ({
-        required bool viaLocalProxy,
-        required int httpPort,
-      }) {
-        calls++;
-        return reply.future;
-      };
+    test(
+      'переключение VPN посреди первой проверки ждёт её, а не отвечает пустым',
+      () async {
+        final reply = Completer<UpdateInfo?>();
+        UpdateService.fetchUpdate =
+            ({required bool viaLocalProxy, required int httpPort}) {
+              calls++;
+              return reply.future;
+            };
 
-      final first = UpdateService.checkForUpdate();
-      final second = UpdateService.checkForUpdate(viaLocalProxy: true);
-      reply.complete(info('0.27.0'));
+        final first = UpdateService.checkForUpdate();
+        final second = UpdateService.checkForUpdate(viaLocalProxy: true);
+        reply.complete(info('0.27.0'));
 
-      expect((await first)?.latestVersion, '0.27.0');
-      expect((await second)?.latestVersion, '0.27.0');
-      expect(calls, 1);
-    });
+        expect((await first)?.latestVersion, '0.27.0');
+        expect((await second)?.latestVersion, '0.27.0');
+        expect(calls, 1);
+      },
+    );
 
-    test('ручная проверка ошибку показывает всегда, даже после удачной', () async {
-      answer([null, offline]);
+    test(
+      'ручная проверка ошибку показывает всегда, даже после удачной',
+      () async {
+        answer([null, offline]);
 
-      await UpdateService.checkForUpdate();
-      await expectLater(
-        UpdateService.checkForUpdate(force: true),
-        throwsA(offline),
-      );
-    });
+        await UpdateService.checkForUpdate();
+        await expectLater(
+          UpdateService.checkForUpdate(force: true),
+          throwsA(offline),
+        );
+      },
+    );
   });
 
   group('UpdateService.compareVersions', () {
@@ -302,25 +316,31 @@ void main() {
       );
     });
 
-    test('the installed copy takes the installer, the portable one the zip', () {
-      final withSetup = [
-        ...assets,
-        {'name': 'keqdroid-windows-x64-0.5.1-setup.exe'},
-      ];
-      expect(
-        UpdateService.findAssetNameForPlatform(withSetup, 'windows-installed'),
-        'keqdroid-windows-x64-0.5.1-setup.exe',
-      );
-      expect(
-        UpdateService.findAssetNameForPlatform(withSetup, 'windows'),
-        'keqdroid-windows-x64-0.5.1.zip',
-      );
-      // релиз без установщика: установленная копия всё равно обновится
-      expect(
-        UpdateService.findAssetNameForPlatform(assets, 'windows-installed'),
-        'keqdroid-windows-x64-0.5.1.zip',
-      );
-    });
+    test(
+      'the installed copy takes the installer, the portable one the zip',
+      () {
+        final withSetup = [
+          ...assets,
+          {'name': 'keqdroid-windows-x64-0.5.1-setup.exe'},
+        ];
+        expect(
+          UpdateService.findAssetNameForPlatform(
+            withSetup,
+            'windows-installed',
+          ),
+          'keqdroid-windows-x64-0.5.1-setup.exe',
+        );
+        expect(
+          UpdateService.findAssetNameForPlatform(withSetup, 'windows'),
+          'keqdroid-windows-x64-0.5.1.zip',
+        );
+        // релиз без установщика: установленная копия всё равно обновится
+        expect(
+          UpdateService.findAssetNameForPlatform(assets, 'windows-installed'),
+          'keqdroid-windows-x64-0.5.1.zip',
+        );
+      },
+    );
 
     test('selects the AppImage for a Linux AppImage install', () {
       expect(
@@ -387,19 +407,20 @@ void main() {
       'keqdroid_0.30.0_amd64.deb',
     ];
     List<Map<String, dynamic>> assetsOf(List<String> order) => [
-          for (final n in order)
-            {'name': n, 'browser_download_url': 'https://example.invalid/$n'},
-        ];
+      for (final n in order)
+        {'name': n, 'browser_download_url': 'https://example.invalid/$n'},
+    ];
 
     // GitHub отдаёт ассеты по имени без учёта регистра (так в каждом
     // опубликованном релизе), а не по времени загрузки.
-    List<String> githubOrder(List<String> names) => [...names]
-      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    List<String> githubOrder(List<String> names) =>
+        [...names]..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
 
     test('версии до 32-битного APK по-прежнему получают основной', () {
       // Все они берут первый .apk в списке.
-      final firstApk =
-          githubOrder(names).firstWhere((n) => n.toLowerCase().endsWith('.apk'));
+      final firstApk = githubOrder(
+        names,
+      ).firstWhere((n) => n.toLowerCase().endsWith('.apk'));
       expect(firstApk, main);
     });
 
@@ -516,7 +537,10 @@ void main() {
             'linux',
             linuxKind: kind,
           );
-      expect(pick(LinuxInstallKind.appImage), 'keqdroid-0.19.0-x86_64.AppImage');
+      expect(
+        pick(LinuxInstallKind.appImage),
+        'keqdroid-0.19.0-x86_64.AppImage',
+      );
       expect(pick(LinuxInstallKind.deb), 'keqdroid_0.19.0_amd64.deb');
       expect(pick(LinuxInstallKind.rpm), 'keqdroid-0.19.0-1.x86_64.rpm');
       for (final kind in [
@@ -552,11 +576,8 @@ void main() {
         ],
       },
     ];
-    UpdateInfo info(LinuxInstallKind kind) => UpdateService.buildUpdateInfo(
-          releases,
-          '0.24.0',
-          linuxKind: kind,
-        )!;
+    UpdateInfo info(LinuxInstallKind kind) =>
+        UpdateService.buildUpdateInfo(releases, '0.24.0', linuxKind: kind)!;
 
     test('deb, rpm, AppImage и архив качаются и ставятся из приложения', () {
       for (final kind in [

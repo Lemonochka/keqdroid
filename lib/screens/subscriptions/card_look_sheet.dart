@@ -89,79 +89,83 @@ class _CardLookSheet extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-              _CardThemePicker(
-                currentId: sub.cardThemeId,
-                subscriptionId: sub.id,
-                veil: sub.cardVeil,
-                onSelect: (id) => _apply(ref, cardThemeId: id),
-                inServers: sub.cardThemeInServers,
-                onInServersChanged: (v) => _apply(ref, cardThemeInServers: v),
-              ),
-              if (cardTheme.hasImage) ...[
-                const SizedBox(height: 16),
-                _SheetSectionTitle(l10n.subscriptionCardVeilTitle),
-                ExpressiveConnectedButtons<CardVeil>(
-                  segments: [
-                    for (final veil in CardVeil.values)
-                      ExpressiveSegment(
-                        value: veil,
-                        label: _veilLabel(l10n, veil),
-                      ),
-                  ],
-                  selected: sub.cardVeil,
-                  onChanged: (veil) => _apply(ref, veil: veil),
-                ),
-              ],
-              const SizedBox(height: 16),
-              _SheetSectionTitle(l10n.subscriptionCardContentTitle),
-              ExpressiveConnectedButtons<SubscriptionCardPreset>(
-                segments: [
-                  for (final preset in SubscriptionCardPreset.selectable)
-                    ExpressiveSegment(
-                      value: preset,
-                      label: _presetLabel(l10n, preset),
+                    _CardThemePicker(
+                      currentId: sub.cardThemeId,
+                      subscriptionId: sub.id,
+                      veil: sub.cardVeil,
+                      onSelect: (id) => _apply(ref, cardThemeId: id),
+                      inServers: sub.cardThemeInServers,
+                      onInServersChanged: (v) =>
+                          _apply(ref, cardThemeInServers: v),
                     ),
-                ],
-                selected: sub.cardPreset,
-                onChanged: (preset) => _apply(ref, hidden: preset.hidden),
-              ),
-              const SizedBox(height: 4),
-              for (final element in SubscriptionCardElement.values)
-                SwitchListTile(
-                  contentPadding: const EdgeInsets.only(left: 4, right: 0),
-                  dense: true,
-                  value: sub.showsCard(element),
-                  title: Text(
-                    _elementLabel(l10n, element),
-                    style: theme.textTheme.bodyMedium,
-                  ),
-                  onChanged: (shown) {
-                    final hidden = {...sub.hiddenCardElements};
-                    if (shown) {
-                      hidden.remove(element);
-                    } else {
-                      hidden.add(element);
-                    }
-                    _apply(ref, hidden: hidden);
-                  },
-                ),
-              const SizedBox(height: 4),
-              _SheetHint(l10n.subscriptionCardContentHint),
-              const SizedBox(height: 16),
-              SwitchListTile(
-                contentPadding: const EdgeInsets.only(left: 4, right: 0),
-                dense: true,
-                value: sub.autoSelectVisible,
-                title: Text(
-                  l10n.subscriptionCardAutoSelect,
-                  style: theme.textTheme.bodyMedium,
-                ),
-                subtitle: Text(
-                  l10n.subscriptionCardAutoSelectHint,
-                  style: theme.textTheme.bodySmall,
-                ),
-                onChanged: (v) => _apply(ref, autoSelectVisible: v),
-              ),
+                    if (cardTheme.hasImage) ...[
+                      const SizedBox(height: 16),
+                      _SheetSectionTitle(l10n.subscriptionCardVeilTitle),
+                      ExpressiveConnectedButtons<CardVeil>(
+                        segments: [
+                          for (final veil in CardVeil.values)
+                            ExpressiveSegment(
+                              value: veil,
+                              label: _veilLabel(l10n, veil),
+                            ),
+                        ],
+                        selected: sub.cardVeil,
+                        onChanged: (veil) => _apply(ref, veil: veil),
+                      ),
+                    ],
+                    const SizedBox(height: 16),
+                    _SheetSectionTitle(l10n.subscriptionCardContentTitle),
+                    ExpressiveConnectedButtons<SubscriptionCardPreset>(
+                      segments: [
+                        for (final preset in SubscriptionCardPreset.selectable)
+                          ExpressiveSegment(
+                            value: preset,
+                            label: _presetLabel(l10n, preset),
+                          ),
+                      ],
+                      selected: sub.cardPreset,
+                      onChanged: (preset) => _apply(ref, hidden: preset.hidden),
+                    ),
+                    const SizedBox(height: 4),
+                    for (final element in SubscriptionCardElement.values)
+                      SwitchListTile(
+                        contentPadding: const EdgeInsets.only(
+                          left: 4,
+                          right: 0,
+                        ),
+                        dense: true,
+                        value: sub.showsCard(element),
+                        title: Text(
+                          _elementLabel(l10n, element),
+                          style: theme.textTheme.bodyMedium,
+                        ),
+                        onChanged: (shown) {
+                          final hidden = {...sub.hiddenCardElements};
+                          if (shown) {
+                            hidden.remove(element);
+                          } else {
+                            hidden.add(element);
+                          }
+                          _apply(ref, hidden: hidden);
+                        },
+                      ),
+                    const SizedBox(height: 4),
+                    _SheetHint(l10n.subscriptionCardContentHint),
+                    const SizedBox(height: 16),
+                    SwitchListTile(
+                      contentPadding: const EdgeInsets.only(left: 4, right: 0),
+                      dense: true,
+                      value: sub.autoSelectVisible,
+                      title: Text(
+                        l10n.subscriptionCardAutoSelect,
+                        style: theme.textTheme.bodyMedium,
+                      ),
+                      subtitle: Text(
+                        l10n.subscriptionCardAutoSelectHint,
+                        style: theme.textTheme.bodySmall,
+                      ),
+                      onChanged: (v) => _apply(ref, autoSelectVisible: v),
+                    ),
                   ],
                 ),
               ),
@@ -228,9 +232,9 @@ class _SheetSectionTitle extends StatelessWidget {
       padding: const EdgeInsets.only(left: 4, bottom: 8),
       child: Text(
         text,
-        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              color: AppTheme.textLight(context),
-            ),
+        style: Theme.of(
+          context,
+        ).textTheme.labelLarge?.copyWith(color: AppTheme.textLight(context)),
       ),
     );
   }
@@ -247,20 +251,20 @@ class _SheetHint extends StatelessWidget {
       padding: const EdgeInsets.only(left: 4, right: 4),
       child: Text(
         text,
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: AppTheme.textLight(context),
-            ),
+        style: Theme.of(
+          context,
+        ).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
       ),
     );
   }
 }
 
 String _veilLabel(AppLocalizations l10n, CardVeil veil) => switch (veil) {
-      CardVeil.none => l10n.subscriptionCardVeilNone,
-      CardVeil.light => l10n.subscriptionCardVeilLight,
-      CardVeil.medium => l10n.subscriptionCardVeilMedium,
-      CardVeil.strong => l10n.subscriptionCardVeilStrong,
-    };
+  CardVeil.none => l10n.subscriptionCardVeilNone,
+  CardVeil.light => l10n.subscriptionCardVeilLight,
+  CardVeil.medium => l10n.subscriptionCardVeilMedium,
+  CardVeil.strong => l10n.subscriptionCardVeilStrong,
+};
 
 String _presetLabel(AppLocalizations l10n, SubscriptionCardPreset preset) =>
     switch (preset) {

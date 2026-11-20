@@ -15,7 +15,11 @@ import 'package:keqdroid/utils/error_messages.dart';
 /// Причин две, и советы у них разные: пакета нет вовсе — ставить polkit;
 /// пакет есть, а агент не запущен — запускать агент. Тест сторожит и то, что
 /// соседние сообщения с тем же словом «polkit» в эти ветки не проваливаются.
-Future<String> _renderFor(WidgetTester tester, String locale, Object error) async {
+Future<String> _renderFor(
+  WidgetTester tester,
+  String locale,
+  Object error,
+) async {
   late String rendered;
   await tester.pumpWidget(
     MaterialApp(
@@ -35,13 +39,16 @@ Future<String> _renderFor(WidgetTester tester, String locale, Object error) asyn
 
 void main() {
   // Ровно те строки, которые бросает LinuxTunnelBackend.
-  const missing = 'TUN mode needs root through pkexec, and polkit is not '
+  const missing =
+      'TUN mode needs root through pkexec, and polkit is not '
       'installed. Install polkit with an authentication agent, run the app as '
       'root (sudo), or use Proxy mode.';
-  const noAgent = 'Could not get root for TUN mode: no polkit agent answered '
+  const noAgent =
+      'Could not get root for TUN mode: no polkit agent answered '
       '(pkexec). Install/start a polkit authentication agent, or use Proxy '
       'mode.';
-  const timedOut = 'Polkit authorization timed out (2 min). Approve the '
+  const timedOut =
+      'Polkit authorization timed out (2 min). Approve the '
       'password prompt to start TUN mode, or use Proxy mode.';
 
   test('нет пакета и нет агента — разные коды', () {

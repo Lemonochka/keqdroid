@@ -119,7 +119,10 @@ class _CardVideoViewState extends State<CardVideoView> {
   void _keepChecking(bool on) {
     if (on && _plays && _recheck == null) {
       _rechecks++;
-      _recheck = Timer.periodic(const Duration(seconds: 1), (_) => _checkView());
+      _recheck = Timer.periodic(
+        const Duration(seconds: 1),
+        (_) => _checkView(),
+      );
       WidgetsBinding.instance.addPostFrameCallback((_) => _checkView());
     } else if (!on && _recheck != null) {
       _rechecks--;
@@ -130,28 +133,34 @@ class _CardVideoViewState extends State<CardVideoView> {
 
   void _open() {
     if (!_plays) return;
-    final controller = CardVideoView.debugCreateController?.call(widget.path) ??
+    final controller =
+        CardVideoView.debugCreateController?.call(widget.path) ??
         VideoPlayerController.file(
           File(widget.path),
           videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
         );
     _controller = controller;
     controller.addListener(_onValue);
-    controller.initialize().then((_) async {
-      if (!mounted || _controller != controller) return;
-      await controller.setLooping(true);
-      await controller.setVolume(0);
-      if (!mounted || _controller != controller) return;
-      _ready = true;
-      _sync();
-    }).catchError((_) {});
+    controller
+        .initialize()
+        .then((_) async {
+          if (!mounted || _controller != controller) return;
+          await controller.setLooping(true);
+          await controller.setVolume(0);
+          if (!mounted || _controller != controller) return;
+          _ready = true;
+          _sync();
+        })
+        .catchError((_) {});
   }
 
   // поверхность плеера чёрная до первого кадра: до тех пор виден постер, тот же первый кадр
   void _onValue() {
     final controller = _controller;
     if (_shown || controller == null) return;
-    if (controller.value.position > Duration.zero) setState(() => _shown = true);
+    if (controller.value.position > Duration.zero) {
+      setState(() => _shown = true);
+    }
   }
 
   void _close() {

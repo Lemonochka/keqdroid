@@ -160,7 +160,9 @@ mixin DesktopTrafficStats {
           .join()
           .timeout(connectionsBodyTimeout);
       chars = body.length;
-      final totals = xrayInboundTotals(jsonDecode(body) as Map<String, dynamic>);
+      final totals = xrayInboundTotals(
+        jsonDecode(body) as Map<String, dynamic>,
+      );
       ok = true;
       return totals;
     } catch (_) {
@@ -207,8 +209,12 @@ mixin DesktopTrafficStats {
       resetStatsHttp();
       return null;
     } finally {
-      ConnectionsPollStats.instance
-          .end(poll, ok: ok, bodyChars: chars, connections: connections);
+      ConnectionsPollStats.instance.end(
+        poll,
+        ok: ok,
+        bodyChars: chars,
+        connections: connections,
+      );
     }
   }
 
@@ -217,11 +223,13 @@ mixin DesktopTrafficStats {
     int? downloadSpeed,
     int? uploadSpeed,
   }) {
-    emit(buildConnectedState(
-      mode,
-      downloadSpeed: downloadSpeed,
-      uploadSpeed: uploadSpeed,
-    ));
+    emit(
+      buildConnectedState(
+        mode,
+        downloadSpeed: downloadSpeed,
+        uploadSpeed: uploadSpeed,
+      ),
+    );
   }
 
   VpnState buildConnectedState(
@@ -240,5 +248,4 @@ mixin DesktopTrafficStats {
       duration: started != null ? DateTime.now().difference(started) : null,
     );
   }
-
 }

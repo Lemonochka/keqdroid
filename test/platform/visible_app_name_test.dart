@@ -11,16 +11,23 @@ void main() {
   String read(String path) => File(path).readAsStringSync();
 
   test('Android labels, tile and VPN session use the new name', () {
-    final labels = RegExp(r'android:label="([^"]+)"')
-        .allMatches(read('$main/AndroidManifest.xml'))
-        .map((m) => m[1])
-        .toSet();
+    final labels = RegExp(
+      r'android:label="([^"]+)"',
+    ).allMatches(read('$main/AndroidManifest.xml')).map((m) => m[1]).toSet();
     expect(labels, {'keqdroid'});
 
-    expect(RegExp(r'tileObj\.label = "([^"]+)"')
-        .firstMatch(read('$kotlin/VpnQuickTileService.kt'))?[1], 'keqdroid');
-    expect(RegExp(r'\.setSession\("([^"]+)"\)')
-        .firstMatch(read('$kotlin/KeqdisVpnService.kt'))?[1], 'keqdroid');
+    expect(
+      RegExp(
+        r'tileObj\.label = "([^"]+)"',
+      ).firstMatch(read('$kotlin/VpnQuickTileService.kt'))?[1],
+      'keqdroid',
+    );
+    expect(
+      RegExp(
+        r'\.setSession\("([^"]+)"\)',
+      ).firstMatch(read('$kotlin/KeqdisVpnService.kt'))?[1],
+      'keqdroid',
+    );
   });
 
   test('native strings do not show the old name', () {
@@ -32,18 +39,29 @@ void main() {
 
   test('every language titles the app with the new name', () {
     for (final lang in ['en', 'ru', 'de', 'zh', 'fa']) {
-      expect(read('lib/l10n/app_$lang.arb'),
-          contains('"appTitle": "keqdroid"'), reason: lang);
+      expect(
+        read('lib/l10n/app_$lang.arb'),
+        contains('"appTitle": "keqdroid"'),
+        reason: lang,
+      );
     }
   });
 
   test('saved files carry the new name', () {
-    expect(read('lib/screens/settings/backup_restore.dart'),
-        contains(r"'keqdroid-backup-$stamp.${SettingsBackupService.fileExtension}'"));
-    expect(read('lib/services/settings_backup_service.dart'),
-        contains("fileExtension = 'keqdroid'"));
-    expect(read('lib/screens/subscriptions/share_sheet.dart'),
-        contains(r"'keqdroid_sub_${safe"));
+    expect(
+      read('lib/screens/settings/backup_restore.dart'),
+      contains(
+        r"'keqdroid-backup-$stamp.${SettingsBackupService.fileExtension}'",
+      ),
+    );
+    expect(
+      read('lib/services/settings_backup_service.dart'),
+      contains("fileExtension = 'keqdroid'"),
+    );
+    expect(
+      read('lib/screens/subscriptions/share_sheet.dart'),
+      contains(r"'keqdroid_sub_${safe"),
+    );
   });
 
   test('old backups still open', () {

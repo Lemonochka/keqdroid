@@ -24,8 +24,7 @@ void _showSubscriptionShareSheet(
         children: [
           Text(
             sub.name,
-            style: Theme.of(ctx)
-                .textTheme
+            style: Theme.of(ctx).textTheme
                 .emphasized(Theme.of(ctx).textTheme.titleMedium)
                 ?.copyWith(color: AppTheme.text(ctx)),
             maxLines: 1,
@@ -50,10 +49,9 @@ void _showSubscriptionShareSheet(
             sub.url,
             textAlign: TextAlign.center,
             maxLines: 3,
-            style: Theme.of(ctx)
-                .textTheme
-                .bodySmall
-                ?.copyWith(color: AppTheme.textLight(ctx)),
+            style: Theme.of(
+              ctx,
+            ).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(ctx)),
           ),
           const SizedBox(height: 16),
           SizedBox(
@@ -68,9 +66,7 @@ void _showSubscriptionShareSheet(
                 ),
               ),
               icon: Icon(
-                Platform.isLinux
-                    ? Icons.download_rounded
-                    : Icons.share_rounded,
+                Platform.isLinux ? Icons.download_rounded : Icons.share_rounded,
                 size: 18,
               ),
               label: Text(
@@ -134,8 +130,7 @@ Future<void> _saveSubscriptionQr(
   }
   if (ctx.mounted) Navigator.of(ctx).pop();
   if (!context.mounted) return;
-  AppSnack.of(context)
-      .showSnackBar(SnackBar(content: Text(message)));
+  AppSnack.of(context).showSnackBar(SnackBar(content: Text(message)));
 }
 
 Future<void> _shareSubscriptionQr(
@@ -159,9 +154,7 @@ Future<void> _shareSubscriptionQr(
     if (ctx.mounted) {
       AppSnack.of(ctx).showSnackBar(
         SnackBar(
-          content: Text(
-            l10n.subscriptionsShareFailed(friendlyError(e, ctx)),
-          ),
+          content: Text(l10n.subscriptionsShareFailed(friendlyError(e, ctx))),
         ),
       );
     }

@@ -45,11 +45,15 @@ ProviderRouting? parseProviderRouting(String raw) {
   if (value.isEmpty) return null;
   final link = _link.firstMatch(value);
   if (link != null) {
-    if (link.group(1)!.toLowerCase() == 'off') return const ProviderRoutingOff();
+    if (link.group(1)!.toLowerCase() == 'off') {
+      return const ProviderRoutingOff();
+    }
     final json = _decodeObject(link.group(2) ?? '');
     return json == null ? null : _fromObject(json);
   }
-  final json = value.startsWith('{') ? _jsonObject(value) : _decodeObject(value);
+  final json = value.startsWith('{')
+      ? _jsonObject(value)
+      : _decodeObject(value);
   return json == null ? null : _fromObject(json);
 }
 
@@ -90,9 +94,9 @@ ProviderRouting? _fromObject(Map<String, dynamic> json) {
   if (!json.keys.any(happKeys.contains)) return null;
 
   List<String> list(String key) => [
-        for (final e in (json[key] is List ? json[key] as List : const []))
-          if (e is String) e,
-      ];
+    for (final e in (json[key] is List ? json[key] as List : const []))
+      if (e is String) e,
+  ];
   TrafficRoute? route(String id, RouteTarget target, String sites, String ip) {
     final entries = [
       for (final e in [...list(sites), ...list(ip)]) ?_entry(e),
@@ -162,11 +166,13 @@ ProviderRouting _fromXrayRouting(Map<String, dynamic> json) {
       };
       break;
     }
-    routes.add(TrafficRoute(
-      id: 'provider-$i',
-      sites: entries.join('\n'),
-      target: target,
-    ));
+    routes.add(
+      TrafficRoute(
+        id: 'provider-$i',
+        sites: entries.join('\n'),
+        target: target,
+      ),
+    );
   }
   return ProviderRoutingRules(
     name: _name(json['name']),
@@ -262,22 +268,30 @@ final _ipEntry = RegExp(
   for (final route in routes) {
     if (!route.enabled) continue;
     // протокола в этом формате нет: блок QUIC у YouTube уехал бы блоком всего YouTube
-    final all = route.allApps &&
+    final all =
+        route.allApps &&
             route.target != RouteTarget.server &&
             !routeHasProtocol(route)
         ? routingEntries(routeEntriesText(route))
         : const <String>[];
-    final kept = [for (final e in all) if (_entry(e) != null) e];
+    final kept = [
+      for (final e in all)
+        if (_entry(e) != null) e,
+    ];
     if (kept.isEmpty || kept.length < all.length) skipped++;
     for (final e in kept) {
-      (_ipEntry.hasMatch(e) ? ips : sites).putIfAbsent(route.target, () => []).add(e);
+      (_ipEntry.hasMatch(e) ? ips : sites)
+          .putIfAbsent(route.target, () => [])
+          .add(e);
     }
   }
-  List<String> of(Map<RouteTarget, List<String>> m, RouteTarget t) => m[t] ?? const [];
+  List<String> of(Map<RouteTarget, List<String>> m, RouteTarget t) =>
+      m[t] ?? const [];
   final json = {
     'Name': name,
-    'GlobalProxy':
-        finalOutbound == AppSettings.finalOutboundDirect ? 'false' : 'true',
+    'GlobalProxy': finalOutbound == AppSettings.finalOutboundDirect
+        ? 'false'
+        : 'true',
     'BlockSites': of(sites, RouteTarget.block),
     'BlockIp': of(ips, RouteTarget.block),
     'DirectSites': of(sites, RouteTarget.direct),
@@ -286,7 +300,8 @@ final _ipEntry = RegExp(
     'ProxyIp': of(ips, RouteTarget.vpn),
   };
   return (
-    link: 'keqdroid://routing/add/${base64.encode(utf8.encode(jsonEncode(json)))}',
+    link:
+        'keqdroid://routing/add/${base64.encode(utf8.encode(jsonEncode(json)))}',
     skipped: skipped,
   );
 }

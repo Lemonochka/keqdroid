@@ -19,8 +19,8 @@ import '../helpers/test_storage.dart';
 class _FakeSubs extends SubscriptionsNotifier {
   @override
   Future<List<Subscription>> build() async => const [
-        Subscription(id: 'a', name: 'Gaming VPN', url: 'https://a.example'),
-      ];
+    Subscription(id: 'a', name: 'Gaming VPN', url: 'https://a.example'),
+  ];
 }
 
 class _FakeSettings extends SettingsNotifier {
@@ -40,12 +40,12 @@ class _FakeRuleLists extends RuleListsNotifier {
 }
 
 RoutingProfile _games({bool enabled = true}) => RoutingProfile(
-      id: 'games',
-      name: 'Игры',
-      enabled: enabled,
-      subscriptionIds: const ['a'],
-      routes: const [TrafficRoute(id: 'r', sites: 'twitch.tv')],
-    );
+  id: 'games',
+  name: 'Игры',
+  enabled: enabled,
+  subscriptionIds: const ['a'],
+  routes: const [TrafficRoute(id: 'r', sites: 'twitch.tv')],
+);
 
 Future<void> _pump(
   WidgetTester tester,
@@ -82,15 +82,18 @@ Future<void> _pump(
 }
 
 void main() {
-  testWidgets('на телевизоре карточка подписки сворачивается пультом', (tester) async {
+  testWidgets('на телевизоре карточка подписки сворачивается пультом', (
+    tester,
+  ) async {
     PlatformBootstrap.debugIsTelevisionOverride = true;
     addTearDown(() => PlatformBootstrap.debugIsTelevisionOverride = null);
     await _pump(tester, const []);
     final container = ProviderScope.containerOf(
       tester.element(find.byType(SubscriptionsTab)),
     );
-    Focus.of(tester.element(find.byIcon(Icons.expand_more_rounded).first))
-        .requestFocus();
+    Focus.of(
+      tester.element(find.byIcon(Icons.expand_more_rounded).first),
+    ).requestFocus();
     await tester.pump();
     await tester.sendKeyEvent(LogicalKeyboardKey.select);
     await tester.pumpAndSettle();
@@ -103,14 +106,16 @@ void main() {
     expect(find.byIcon(Icons.alt_route_rounded), findsNothing);
   });
 
-  testWidgets('выключенный профиль подписку не забирает, плашки нет',
-      (tester) async {
+  testWidgets('выключенный профиль подписку не забирает, плашки нет', (
+    tester,
+  ) async {
     await _pump(tester, [_games(enabled: false)]);
     expect(find.text('Игры'), findsNothing);
   });
 
-  testWidgets('плашка профиля ведёт в маршрутизацию, профиль раскрыт',
-      (tester) async {
+  testWidgets('плашка профиля ведёт в маршрутизацию, профиль раскрыт', (
+    tester,
+  ) async {
     await _pump(tester, [_games()]);
     expect(find.text('Игры'), findsOneWidget);
     await tester.tap(find.text('Игры'));
@@ -119,13 +124,18 @@ void main() {
     expect(find.text('twitch.tv'), findsOneWidget);
   });
 
-  testWidgets('под длинным «Основным» экран открывается на карточке профиля',
-      (tester) async {
+  testWidgets('под длинным «Основным» экран открывается на карточке профиля', (
+    tester,
+  ) async {
     // столько строк, что карточка профиля в первом кадре ещё не построена
-    await _pump(tester, [_games()], mainRoutes: [
-      for (var i = 0; i < 30; i++)
-        TrafficRoute(id: 'm$i', sites: 'site$i.example'),
-    ]);
+    await _pump(
+      tester,
+      [_games()],
+      mainRoutes: [
+        for (var i = 0; i < 30; i++)
+          TrafficRoute(id: 'm$i', sites: 'site$i.example'),
+      ],
+    );
     await tester.tap(find.text('Игры'));
     await tester.pumpAndSettle();
     expect(find.text('Игры').hitTestable(), findsOneWidget);
@@ -133,16 +143,18 @@ void main() {
     expect(find.text('Основной').hitTestable(), findsNothing);
   });
 
-  testWidgets('влезающую карточку экран поднимает только до кнопки внизу',
-      (tester) async {
+  testWidgets('влезающую карточку экран поднимает только до кнопки внизу', (
+    tester,
+  ) async {
     await _pump(tester, [
       _games(),
       const RoutingProfile(id: 'work', name: 'Работа'),
     ]);
     await tester.tap(find.text('Игры'));
     await tester.pumpAndSettle();
-    final card =
-        tester.getRect(find.byKey(const ValueKey('routing-profile-games')));
+    final card = tester.getRect(
+      find.byKey(const ValueKey('routing-profile-games')),
+    );
     final screen = tester.view.physicalSize / tester.view.devicePixelRatio;
     // 96 под кнопкой «Новый профиль»
     expect(card.bottom, lessThanOrEqualTo(screen.height - 96 + 0.5));

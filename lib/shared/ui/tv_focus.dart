@@ -13,16 +13,17 @@ abstract final class TvFocus {
   static const focusedScale = 1.05;
 
   static Widget fab(WidgetBuilder builder) => TvFocusHighlight(
-        radius: BorderRadius.circular(ExpressiveShape.largeIncreased),
-        child: Builder(builder: builder),
-      );
+    radius: BorderRadius.circular(ExpressiveShape.largeIncreased),
+    child: Builder(builder: builder),
+  );
 
   // по умолчанию Slider забирает себе и стрелки вверх-вниз, и пульт не мог уйти с ползунка
   static Widget slider(Widget slider) => enabled
       ? Builder(
           builder: (context) => MediaQuery(
-            data: MediaQuery.of(context)
-                .copyWith(navigationMode: NavigationMode.directional),
+            data: MediaQuery.of(
+              context,
+            ).copyWith(navigationMode: NavigationMode.directional),
             child: slider,
           ),
         )
@@ -31,8 +32,9 @@ abstract final class TvFocus {
   static ColorScheme invert(ColorScheme s) {
     final muted = Color.lerp(s.onInverseSurface, s.inverseSurface, 0.25)!;
     return s.copyWith(
-      brightness:
-          s.brightness == Brightness.light ? Brightness.dark : Brightness.light,
+      brightness: s.brightness == Brightness.light
+          ? Brightness.dark
+          : Brightness.light,
       surface: s.inverseSurface,
       onSurface: s.onInverseSurface,
       onSurfaceVariant: muted,
@@ -60,12 +62,11 @@ abstract final class TvFocus {
     WidgetStateProperty<Color?> layered(
       Color focused,
       WidgetStateProperty<Color?>? under,
-    ) =>
-        WidgetStateProperty.resolveWith(
-          (states) => states.contains(WidgetState.focused)
-              ? focused
-              : under?.resolve(states),
-        );
+    ) => WidgetStateProperty.resolveWith(
+      (states) => states.contains(WidgetState.focused)
+          ? focused
+          : under?.resolve(states),
+    );
     return (base ?? const ButtonStyle()).copyWith(
       backgroundColor: layered(s.inverseSurface, base?.backgroundColor),
       foregroundColor: layered(s.onInverseSurface, base?.foregroundColor),
@@ -177,11 +178,11 @@ class _TvLongPressState extends State<TvLongPress> {
 
   @override
   Widget build(BuildContext context) => Focus(
-        canRequestFocus: false,
-        skipTraversal: true,
-        onKeyEvent: _onKey,
-        child: widget.child,
-      );
+    canRequestFocus: false,
+    skipTraversal: true,
+    onKeyEvent: _onKey,
+    child: widget.child,
+  );
 }
 
 class TvFocusHighlight extends StatefulWidget {
@@ -199,9 +200,8 @@ class TvFocusHighlight extends StatefulWidget {
   // заливка по фигуре, а не по скруглённому прямоугольнику
   final ShapeBorder? shape;
 
-  static Color? containerOf(BuildContext context) => context
-      .dependOnInheritedWidgetOfExactType<_TvFocusScope>()
-      ?.container;
+  static Color? containerOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<_TvFocusScope>()?.container;
 
   @override
   State<TvFocusHighlight> createState() => _TvFocusHighlightState();

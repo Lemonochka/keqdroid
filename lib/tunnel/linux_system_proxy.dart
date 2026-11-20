@@ -6,10 +6,8 @@ import 'package:path_provider/path_provider.dart';
 
 import '../core/app_logger.dart';
 
-typedef SettingsTool = Future<ProcessResult?> Function(
-  String executable,
-  List<String> args,
-);
+typedef SettingsTool =
+    Future<ProcessResult?> Function(String executable, List<String> args);
 
 // настройки GNOME читают Firefox и GTK в любой среде, KDE только в своей сессии,
 // а в XFCE, Hyprland и подобных Chromium берёт прокси из окружения при запуске
@@ -80,8 +78,18 @@ class LinuxSystemProxy {
         await _gsettings(['set', schema, 'host', _host]);
         await _gsettings(['set', schema, 'port', '$port']);
       }
-      await _gsettings(['set', 'org.gnome.system.proxy', 'ignore-hosts', _ignoreHosts]);
-      applied = await _gsettings(['set', 'org.gnome.system.proxy', 'mode', 'manual']);
+      await _gsettings([
+        'set',
+        'org.gnome.system.proxy',
+        'ignore-hosts',
+        _ignoreHosts,
+      ]);
+      applied = await _gsettings([
+        'set',
+        'org.gnome.system.proxy',
+        'mode',
+        'manual',
+      ]);
     }
 
     if (_isKde) {
@@ -116,7 +124,8 @@ class LinuxSystemProxy {
     final kde = backup['kde'];
     if (kde is Map && _isKde && await _kdeStillOurs()) {
       await _writeKde({
-        for (final key in _kdeKeys) key: kde[key] is String ? kde[key] as String : '',
+        for (final key in _kdeKeys)
+          key: kde[key] is String ? kde[key] as String : '',
       });
     }
 
@@ -141,7 +150,10 @@ class LinuxSystemProxy {
   Future<void> _resetUnbackedLeftover() async {
     final mode = await _gsettingsGet('org.gnome.system.proxy', 'mode');
     final host = await _gsettingsGet('org.gnome.system.proxy.http', 'host');
-    final ignore = await _gsettingsGet('org.gnome.system.proxy', 'ignore-hosts');
+    final ignore = await _gsettingsGet(
+      'org.gnome.system.proxy',
+      'ignore-hosts',
+    );
     if (mode == "'manual'" && host == "'$_host'" && ignore == _ignoreHosts) {
       await _gsettings(['set', 'org.gnome.system.proxy', 'mode', 'none']);
     }

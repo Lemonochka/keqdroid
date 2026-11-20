@@ -127,8 +127,9 @@ class _XhttpExtraFieldsState extends State<XhttpExtraFields> {
       for (final e in _map.entries)
         if (!_known.contains(e.key)) e.key: e.value,
     };
-    _rest.text =
-        rest.isEmpty ? '' : const JsonEncoder.withIndent('  ').convert(rest);
+    _rest.text = rest.isEmpty
+        ? ''
+        : const JsonEncoder.withIndent('  ').convert(rest);
     _restInvalid = false;
   }
 
@@ -185,10 +186,9 @@ class _XhttpExtraFieldsState extends State<XhttpExtraFields> {
         activeTrackColor: AppTheme.accent(context).withValues(alpha: 0.32),
         title: Text(
           key,
-          style: Theme.of(context)
-              .textTheme
-              .bodyMedium
-              ?.copyWith(color: AppTheme.text(context)),
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: AppTheme.text(context)),
         ),
         onChanged: (v) {
           setState(() {
@@ -210,10 +210,9 @@ class _XhttpExtraFieldsState extends State<XhttpExtraFields> {
         controller: _ctrl(id, target[key]),
         textDirection: technicalInputDirection,
         keyboardType: TextInputType.text,
-        style: Theme.of(context)
-            .textTheme
-            .bodyMedium
-            ?.copyWith(color: AppTheme.text(context)),
+        style: Theme.of(
+          context,
+        ).textTheme.bodyMedium?.copyWith(color: AppTheme.text(context)),
         decoration: widget.decoration(
           label: key,
           hint: kind == _Kind.number ? '100-1000' : null,
@@ -237,29 +236,25 @@ class _XhttpExtraFieldsState extends State<XhttpExtraFields> {
   }
 
   Widget _group(String title, List<Widget> fields) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsetsDirectional.only(start: 4, top: 4, bottom: 8),
-            child: Text(
-              title,
-              style: Theme.of(context)
-                  .textTheme
-                  .labelLarge
-                  ?.copyWith(color: AppTheme.textLight(context)),
-            ),
-          ),
-          ...fields,
-        ],
-      );
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Padding(
+        padding: const EdgeInsetsDirectional.only(start: 4, top: 4, bottom: 8),
+        child: Text(
+          title,
+          style: Theme.of(
+            context,
+          ).textTheme.labelLarge?.copyWith(color: AppTheme.textLight(context)),
+        ),
+      ),
+      ...fields,
+    ],
+  );
 
   // пустые поля прячем: их три десятка, а у сервера заданы обычно два-три
   bool _all = false;
 
-  List<Widget> _fields(
-    List<(String, _Kind)> keys, {
-    bool inXmux = false,
-  }) {
+  List<Widget> _fields(List<(String, _Kind)> keys, {bool inXmux = false}) {
     final target = inXmux ? _xmuxMap() : _map;
     return [
       for (final (key, kind) in keys)
@@ -296,30 +291,36 @@ class _XhttpExtraFieldsState extends State<XhttpExtraFields> {
               size: 18,
             ),
             label: Text(
-              _all ? l10n.serverEditorXhttpHideEmpty : l10n.serverEditorXhttpShowAll,
+              _all
+                  ? l10n.serverEditorXhttpHideEmpty
+                  : l10n.serverEditorXhttpShowAll,
             ),
           ),
         ),
-        if (_all || _rest.text.isNotEmpty) _group(l10n.serverEditorXhttpRest, [
-          Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: TextField(
-              controller: _rest,
-              textDirection: technicalInputDirection,
-              minLines: 2,
-              maxLines: 12,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppTheme.text(context),
-                    fontFamily: 'monospace',
-                  ),
-              decoration: widget.decoration(hint: '"headers": { }').copyWith(
-                    errorText:
-                        _restInvalid ? l10n.serverEditorXhttpRestInvalid : null,
-                  ),
-              onChanged: _onRest,
+        if (_all || _rest.text.isNotEmpty)
+          _group(l10n.serverEditorXhttpRest, [
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: TextField(
+                controller: _rest,
+                textDirection: technicalInputDirection,
+                minLines: 2,
+                maxLines: 12,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppTheme.text(context),
+                  fontFamily: 'monospace',
+                ),
+                decoration: widget
+                    .decoration(hint: '"headers": { }')
+                    .copyWith(
+                      errorText: _restInvalid
+                          ? l10n.serverEditorXhttpRestInvalid
+                          : null,
+                    ),
+                onChanged: _onRest,
+              ),
             ),
-          ),
-        ]),
+          ]),
       ],
     );
   }

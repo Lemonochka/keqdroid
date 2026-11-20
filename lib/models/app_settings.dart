@@ -237,6 +237,7 @@ class AppSettings {
       final v = (json[key] as num?)?.toInt() ?? fallback;
       return _validPort(v) ? v : fallback;
     }
+
     return AppSettings(
       localPort: port('localPort', 2080),
       httpPort: port('httpPort', 2081),
@@ -273,8 +274,7 @@ class AppSettings {
       followSystemTheme: json['followSystemTheme'] as bool? ?? true,
       themePresetId: json['themePresetId'] as String? ?? 'ocean',
       customThemeSeed: json['customThemeSeed'] as String? ?? '',
-      customThemeVariant:
-          json['customThemeVariant'] as String? ?? 'tonalSpot',
+      customThemeVariant: json['customThemeVariant'] as String? ?? 'tonalSpot',
       iconShapeId: json['iconShapeId'] as String? ?? 'circle',
       fontId: json['fontId'] as String? ?? 'system',
       debugMode: json['debugMode'] as bool? ?? false,
@@ -320,7 +320,8 @@ class AppSettings {
       seasonalDecor: json['seasonalDecor'] as bool? ?? true,
       hapticFeedback: json['hapticFeedback'] as bool? ?? true,
       // у старых настроек бывают включены обе, тогда побеждает разбивка
-      showTrafficStats: (json['showTrafficStats'] as bool? ?? true) &&
+      showTrafficStats:
+          (json['showTrafficStats'] as bool? ?? true) &&
           !(json['showTrafficSplit'] as bool? ?? false),
       showConnectionTime: json['showConnectionTime'] as bool? ?? true,
       showTrafficSplit: json['showTrafficSplit'] as bool? ?? false,
@@ -495,158 +496,158 @@ class AppSettings {
     bool? showUptimeInNotification,
     bool? notifySubscriptionUpdates,
     double? uiScale,
-  }) =>
-      AppSettings(
-        localPort: localPort ?? this.localPort,
-        httpPort: httpPort ?? this.httpPort,
-        directRules: directRules ?? this.directRules,
-        proxyRules: proxyRules ?? this.proxyRules,
-        blockedRules: blockedRules ?? this.blockedRules,
-        finalOutbound: finalOutbound ?? this.finalOutbound,
-        ignoreProviderRules: ignoreProviderRules ?? this.ignoreProviderRules,
-        ignoreProviderDns: ignoreProviderDns ?? this.ignoreProviderDns,
-        autoConnectLastServer: autoConnectLastServer ?? this.autoConnectLastServer,
-        pingType: pingType ?? this.pingType,
-        pingTestTarget: pingTestTarget ?? this.pingTestTarget,
-        pingTestUrlCustom: pingTestUrlCustom ?? this.pingTestUrlCustom,
-        pingKeepAlive: pingKeepAlive ?? this.pingKeepAlive,
-        autoPing: autoPing ?? this.autoPing,
-        darkTheme: darkTheme ?? this.darkTheme,
-        followSystemTheme: followSystemTheme ?? this.followSystemTheme,
-        themePresetId: themePresetId ?? this.themePresetId,
-        customThemeSeed: customThemeSeed ?? this.customThemeSeed,
-        customThemeVariant: customThemeVariant ?? this.customThemeVariant,
-        iconShapeId: iconShapeId ?? this.iconShapeId,
-        fontId: fontId ?? this.fontId,
-        debugMode: debugMode ?? this.debugMode,
-        lanSharing: lanSharing ?? this.lanSharing,
-        lanSocksPort: lanSocksPort ?? this.lanSocksPort,
-        lanHttpPort: lanHttpPort ?? this.lanHttpPort,
-        lanUsername: lanUsername ?? this.lanUsername,
-        lanPassword: lanPassword ?? this.lanPassword,
-        shareDeviceHwid: shareDeviceHwid ?? this.shareDeviceHwid,
-        xrayCore: xrayCore ?? this.xrayCore,
-        tun: tun ?? this.tun,
-        connectionMode: connectionMode ?? this.connectionMode,
-        connectionModeChosen: connectionModeChosen ?? this.connectionModeChosen,
-        proxyModeAuth: proxyModeAuth ?? this.proxyModeAuth,
-        proxyModeUser: proxyModeUser ?? this.proxyModeUser,
-        proxyModePass: proxyModePass ?? this.proxyModePass,
-        systemProxyEnabled: systemProxyEnabled ?? this.systemProxyEnabled,
-        appLanguageCode: appLanguageCode ?? this.appLanguageCode,
-        minimizeToTray: minimizeToTray ?? this.minimizeToTray,
-        launchAtStartup: launchAtStartup ?? this.launchAtStartup,
-        launchAtStartupElevated:
-            launchAtStartupElevated ?? this.launchAtStartupElevated,
-        autostartInTray: autostartInTray ?? this.autostartInTray,
-        serverIconThemeColors:
-            serverIconThemeColors ?? this.serverIconThemeColors,
-        coreEngine: coreEngine ?? this.coreEngine,
-        vpnCore: vpnCore ?? this.vpnCore,
-        fakeIp: fakeIp ?? this.fakeIp,
-        hotkeys: hotkeys ?? this.hotkeys,
-        serversTwoColumns: serversTwoColumns ?? this.serversTwoColumns,
-        serversColumns:
-            normalizeServersColumns(serversColumns ?? this.serversColumns),
-        updatePromptDays: normalizeUpdatePromptDays(
-            updatePromptDays ?? this.updatePromptDays),
-        modernConnectPanel: modernConnectPanel ?? this.modernConnectPanel,
-        bottomBarStyle: bottomBarStyle ?? this.bottomBarStyle,
-        desktopRailExpanded: desktopRailExpanded ?? this.desktopRailExpanded,
-        amoledBlack: amoledBlack ?? this.amoledBlack,
-        seasonalDecor: seasonalDecor ?? this.seasonalDecor,
-        hapticFeedback: hapticFeedback ?? this.hapticFeedback,
-        showTrafficStats: showTrafficStats ?? this.showTrafficStats,
-        showConnectionTime: showConnectionTime ?? this.showConnectionTime,
-        showTrafficSplit: showTrafficSplit ?? this.showTrafficSplit,
-        waveLatencyColor: waveLatencyColor ?? this.waveLatencyColor,
-        showSpeedInNotification:
-            showSpeedInNotification ?? this.showSpeedInNotification,
-        showUptimeInNotification:
-            showUptimeInNotification ?? this.showUptimeInNotification,
-        notifySubscriptionUpdates:
-            notifySubscriptionUpdates ?? this.notifySubscriptionUpdates,
-        uiScale: clampUiScale(uiScale ?? this.uiScale),
-      );
+  }) => AppSettings(
+    localPort: localPort ?? this.localPort,
+    httpPort: httpPort ?? this.httpPort,
+    directRules: directRules ?? this.directRules,
+    proxyRules: proxyRules ?? this.proxyRules,
+    blockedRules: blockedRules ?? this.blockedRules,
+    finalOutbound: finalOutbound ?? this.finalOutbound,
+    ignoreProviderRules: ignoreProviderRules ?? this.ignoreProviderRules,
+    ignoreProviderDns: ignoreProviderDns ?? this.ignoreProviderDns,
+    autoConnectLastServer: autoConnectLastServer ?? this.autoConnectLastServer,
+    pingType: pingType ?? this.pingType,
+    pingTestTarget: pingTestTarget ?? this.pingTestTarget,
+    pingTestUrlCustom: pingTestUrlCustom ?? this.pingTestUrlCustom,
+    pingKeepAlive: pingKeepAlive ?? this.pingKeepAlive,
+    autoPing: autoPing ?? this.autoPing,
+    darkTheme: darkTheme ?? this.darkTheme,
+    followSystemTheme: followSystemTheme ?? this.followSystemTheme,
+    themePresetId: themePresetId ?? this.themePresetId,
+    customThemeSeed: customThemeSeed ?? this.customThemeSeed,
+    customThemeVariant: customThemeVariant ?? this.customThemeVariant,
+    iconShapeId: iconShapeId ?? this.iconShapeId,
+    fontId: fontId ?? this.fontId,
+    debugMode: debugMode ?? this.debugMode,
+    lanSharing: lanSharing ?? this.lanSharing,
+    lanSocksPort: lanSocksPort ?? this.lanSocksPort,
+    lanHttpPort: lanHttpPort ?? this.lanHttpPort,
+    lanUsername: lanUsername ?? this.lanUsername,
+    lanPassword: lanPassword ?? this.lanPassword,
+    shareDeviceHwid: shareDeviceHwid ?? this.shareDeviceHwid,
+    xrayCore: xrayCore ?? this.xrayCore,
+    tun: tun ?? this.tun,
+    connectionMode: connectionMode ?? this.connectionMode,
+    connectionModeChosen: connectionModeChosen ?? this.connectionModeChosen,
+    proxyModeAuth: proxyModeAuth ?? this.proxyModeAuth,
+    proxyModeUser: proxyModeUser ?? this.proxyModeUser,
+    proxyModePass: proxyModePass ?? this.proxyModePass,
+    systemProxyEnabled: systemProxyEnabled ?? this.systemProxyEnabled,
+    appLanguageCode: appLanguageCode ?? this.appLanguageCode,
+    minimizeToTray: minimizeToTray ?? this.minimizeToTray,
+    launchAtStartup: launchAtStartup ?? this.launchAtStartup,
+    launchAtStartupElevated:
+        launchAtStartupElevated ?? this.launchAtStartupElevated,
+    autostartInTray: autostartInTray ?? this.autostartInTray,
+    serverIconThemeColors: serverIconThemeColors ?? this.serverIconThemeColors,
+    coreEngine: coreEngine ?? this.coreEngine,
+    vpnCore: vpnCore ?? this.vpnCore,
+    fakeIp: fakeIp ?? this.fakeIp,
+    hotkeys: hotkeys ?? this.hotkeys,
+    serversTwoColumns: serversTwoColumns ?? this.serversTwoColumns,
+    serversColumns: normalizeServersColumns(
+      serversColumns ?? this.serversColumns,
+    ),
+    updatePromptDays: normalizeUpdatePromptDays(
+      updatePromptDays ?? this.updatePromptDays,
+    ),
+    modernConnectPanel: modernConnectPanel ?? this.modernConnectPanel,
+    bottomBarStyle: bottomBarStyle ?? this.bottomBarStyle,
+    desktopRailExpanded: desktopRailExpanded ?? this.desktopRailExpanded,
+    amoledBlack: amoledBlack ?? this.amoledBlack,
+    seasonalDecor: seasonalDecor ?? this.seasonalDecor,
+    hapticFeedback: hapticFeedback ?? this.hapticFeedback,
+    showTrafficStats: showTrafficStats ?? this.showTrafficStats,
+    showConnectionTime: showConnectionTime ?? this.showConnectionTime,
+    showTrafficSplit: showTrafficSplit ?? this.showTrafficSplit,
+    waveLatencyColor: waveLatencyColor ?? this.waveLatencyColor,
+    showSpeedInNotification:
+        showSpeedInNotification ?? this.showSpeedInNotification,
+    showUptimeInNotification:
+        showUptimeInNotification ?? this.showUptimeInNotification,
+    notifySubscriptionUpdates:
+        notifySubscriptionUpdates ?? this.notifySubscriptionUpdates,
+    uiScale: clampUiScale(uiScale ?? this.uiScale),
+  );
 
   AppSettings withTrafficStats(bool on) => copyWith(
-        showTrafficStats: on,
-        showTrafficSplit: on ? false : showTrafficSplit,
-      );
+    showTrafficStats: on,
+    showTrafficSplit: on ? false : showTrafficSplit,
+  );
 
   AppSettings withTrafficSplit(bool on) => copyWith(
-        showTrafficSplit: on,
-        showTrafficStats: on ? false : showTrafficStats,
-      );
+    showTrafficSplit: on,
+    showTrafficStats: on ? false : showTrafficStats,
+  );
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-          other is AppSettings &&
-              runtimeType == other.runtimeType &&
-              localPort == other.localPort &&
-              httpPort == other.httpPort &&
-              directRules == other.directRules &&
-              proxyRules == other.proxyRules &&
-              blockedRules == other.blockedRules &&
-              finalOutbound == other.finalOutbound &&
-              ignoreProviderRules == other.ignoreProviderRules &&
-              ignoreProviderDns == other.ignoreProviderDns &&
-              autoConnectLastServer == other.autoConnectLastServer &&
-              pingType == other.pingType &&
-              pingTestTarget == other.pingTestTarget &&
-              pingTestUrlCustom == other.pingTestUrlCustom &&
-              pingKeepAlive == other.pingKeepAlive &&
-              autoPing == other.autoPing &&
-              darkTheme == other.darkTheme &&
-              followSystemTheme == other.followSystemTheme &&
-              themePresetId == other.themePresetId &&
-              customThemeSeed == other.customThemeSeed &&
-              customThemeVariant == other.customThemeVariant &&
-              iconShapeId == other.iconShapeId &&
-              fontId == other.fontId &&
-              debugMode == other.debugMode &&
-              lanSharing == other.lanSharing &&
-              lanSocksPort == other.lanSocksPort &&
-              lanHttpPort == other.lanHttpPort &&
-              lanUsername == other.lanUsername &&
-              lanPassword == other.lanPassword &&
-              shareDeviceHwid == other.shareDeviceHwid &&
-              xrayCore == other.xrayCore &&
-              tun == other.tun &&
-              connectionMode == other.connectionMode &&
-              connectionModeChosen == other.connectionModeChosen &&
-              proxyModeAuth == other.proxyModeAuth &&
-              proxyModeUser == other.proxyModeUser &&
-              proxyModePass == other.proxyModePass &&
-              systemProxyEnabled == other.systemProxyEnabled &&
-              appLanguageCode == other.appLanguageCode &&
-              minimizeToTray == other.minimizeToTray &&
-              launchAtStartup == other.launchAtStartup &&
-              launchAtStartupElevated == other.launchAtStartupElevated &&
-              autostartInTray == other.autostartInTray &&
-              serverIconThemeColors == other.serverIconThemeColors &&
-              coreEngine == other.coreEngine &&
-              vpnCore == other.vpnCore &&
-              fakeIp == other.fakeIp &&
-              serversTwoColumns == other.serversTwoColumns &&
-              serversColumns == other.serversColumns &&
-              updatePromptDays == other.updatePromptDays &&
-              modernConnectPanel == other.modernConnectPanel &&
-              bottomBarStyle == other.bottomBarStyle &&
-              desktopRailExpanded == other.desktopRailExpanded &&
-              amoledBlack == other.amoledBlack &&
-              seasonalDecor == other.seasonalDecor &&
-              hapticFeedback == other.hapticFeedback &&
-              showTrafficStats == other.showTrafficStats &&
-              showConnectionTime == other.showConnectionTime &&
-              showTrafficSplit == other.showTrafficSplit &&
-              waveLatencyColor == other.waveLatencyColor &&
-              showSpeedInNotification == other.showSpeedInNotification &&
-              showUptimeInNotification == other.showUptimeInNotification &&
-              notifySubscriptionUpdates == other.notifySubscriptionUpdates &&
-              uiScale == other.uiScale &&
-              _hotkeysEqual(hotkeys, other.hotkeys);
+      other is AppSettings &&
+          runtimeType == other.runtimeType &&
+          localPort == other.localPort &&
+          httpPort == other.httpPort &&
+          directRules == other.directRules &&
+          proxyRules == other.proxyRules &&
+          blockedRules == other.blockedRules &&
+          finalOutbound == other.finalOutbound &&
+          ignoreProviderRules == other.ignoreProviderRules &&
+          ignoreProviderDns == other.ignoreProviderDns &&
+          autoConnectLastServer == other.autoConnectLastServer &&
+          pingType == other.pingType &&
+          pingTestTarget == other.pingTestTarget &&
+          pingTestUrlCustom == other.pingTestUrlCustom &&
+          pingKeepAlive == other.pingKeepAlive &&
+          autoPing == other.autoPing &&
+          darkTheme == other.darkTheme &&
+          followSystemTheme == other.followSystemTheme &&
+          themePresetId == other.themePresetId &&
+          customThemeSeed == other.customThemeSeed &&
+          customThemeVariant == other.customThemeVariant &&
+          iconShapeId == other.iconShapeId &&
+          fontId == other.fontId &&
+          debugMode == other.debugMode &&
+          lanSharing == other.lanSharing &&
+          lanSocksPort == other.lanSocksPort &&
+          lanHttpPort == other.lanHttpPort &&
+          lanUsername == other.lanUsername &&
+          lanPassword == other.lanPassword &&
+          shareDeviceHwid == other.shareDeviceHwid &&
+          xrayCore == other.xrayCore &&
+          tun == other.tun &&
+          connectionMode == other.connectionMode &&
+          connectionModeChosen == other.connectionModeChosen &&
+          proxyModeAuth == other.proxyModeAuth &&
+          proxyModeUser == other.proxyModeUser &&
+          proxyModePass == other.proxyModePass &&
+          systemProxyEnabled == other.systemProxyEnabled &&
+          appLanguageCode == other.appLanguageCode &&
+          minimizeToTray == other.minimizeToTray &&
+          launchAtStartup == other.launchAtStartup &&
+          launchAtStartupElevated == other.launchAtStartupElevated &&
+          autostartInTray == other.autostartInTray &&
+          serverIconThemeColors == other.serverIconThemeColors &&
+          coreEngine == other.coreEngine &&
+          vpnCore == other.vpnCore &&
+          fakeIp == other.fakeIp &&
+          serversTwoColumns == other.serversTwoColumns &&
+          serversColumns == other.serversColumns &&
+          updatePromptDays == other.updatePromptDays &&
+          modernConnectPanel == other.modernConnectPanel &&
+          bottomBarStyle == other.bottomBarStyle &&
+          desktopRailExpanded == other.desktopRailExpanded &&
+          amoledBlack == other.amoledBlack &&
+          seasonalDecor == other.seasonalDecor &&
+          hapticFeedback == other.hapticFeedback &&
+          showTrafficStats == other.showTrafficStats &&
+          showConnectionTime == other.showConnectionTime &&
+          showTrafficSplit == other.showTrafficSplit &&
+          waveLatencyColor == other.waveLatencyColor &&
+          showSpeedInNotification == other.showSpeedInNotification &&
+          showUptimeInNotification == other.showUptimeInNotification &&
+          notifySubscriptionUpdates == other.notifySubscriptionUpdates &&
+          uiScale == other.uiScale &&
+          _hotkeysEqual(hotkeys, other.hotkeys);
 
   static bool _hotkeysEqual(Map<String, String> a, Map<String, String> b) {
     if (identical(a, b)) return true;
@@ -722,9 +723,9 @@ class AppSettings {
     notifySubscriptionUpdates,
     uiScale,
     Object.hashAll(
-      (hotkeys.entries.toList()
-            ..sort((a, b) => a.key.compareTo(b.key)))
-          .map((e) => Object.hash(e.key, e.value)),
+      (hotkeys.entries.toList()..sort((a, b) => a.key.compareTo(b.key))).map(
+        (e) => Object.hash(e.key, e.value),
+      ),
     ),
   ]);
 

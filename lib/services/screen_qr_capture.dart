@@ -46,7 +46,9 @@ class ScreenQrCapture {
   static Future<ScreenQrScan> scan() async {
     final GrayImage? frame;
     try {
-      frame = Platform.isWindows ? await _captureWindows() : await _captureLinux();
+      frame = Platform.isWindows
+          ? await _captureWindows()
+          : await _captureLinux();
     } on PlatformException catch (e) {
       AppLogger.instance.warn('Screen capture for QR failed', error: e);
       return const ScreenQrScan(ScreenQrResult.failed);
@@ -60,8 +62,9 @@ class ScreenQrCapture {
 
   // окно прячет и возвращает сам раннер, без анимации DWM
   static Future<GrayImage?> _captureWindows() async {
-    final map = await VpnNativeBridge.channel
-        .invokeMapMethod<String, Object?>('captureScreenForQr');
+    final map = await VpnNativeBridge.channel.invokeMapMethod<String, Object?>(
+      'captureScreenForQr',
+    );
     return frameFromMap(map);
   }
 
@@ -73,8 +76,9 @@ class ScreenQrCapture {
       await Future<void>.delayed(const Duration(milliseconds: 200));
     }
     try {
-      final map =
-          await linuxChannel.invokeMapMethod<String, Object?>('capture');
+      final map = await linuxChannel.invokeMapMethod<String, Object?>(
+        'capture',
+      );
       final path = map?['path'];
       if (path is String) return _readPortalShot(path);
       return frameFromMap(map);
@@ -88,7 +92,8 @@ class ScreenQrCapture {
 
   static Future<bool> _windowVisible() async {
     try {
-      return await windowManager.isVisible() && !await windowManager.isMinimized();
+      return await windowManager.isVisible() &&
+          !await windowManager.isMinimized();
     } catch (_) {
       return false;
     }
@@ -103,7 +108,10 @@ class ScreenQrCapture {
       try {
         await file.delete();
       } on FileSystemException catch (e) {
-        AppLogger.instance.warn('Could not remove the screenshot $path', error: e);
+        AppLogger.instance.warn(
+          'Could not remove the screenshot $path',
+          error: e,
+        );
       }
     }
   }

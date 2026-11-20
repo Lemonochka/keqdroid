@@ -22,9 +22,7 @@ import 'windows_desktop_service.dart';
 class AppInternalsService {
   AppInternalsService._();
 
-  static const _engineModules = <String, String>{
-    'xtls/xray-core': 'xray-core',
-  };
+  static const _engineModules = <String, String>{'xtls/xray-core': 'xray-core'};
 
   static Future<AppInternals> collect({
     required AppSettings settings,
@@ -66,28 +64,49 @@ class AppInternalsService {
       if (dir == null || dir.isEmpty) return const [];
       return [
         await _core(p.join(dir, 'libxray.so'), 'libxray.so', CoreRole.proxy),
-        await _core(p.join(dir, 'libmihomo.so'), 'libmihomo.so', CoreRole.proxy),
+        await _core(
+          p.join(dir, 'libmihomo.so'),
+          'libmihomo.so',
+          CoreRole.proxy,
+        ),
       ];
     }
     if (Platform.isWindows) {
       return [
-        await _core(await WindowsCorePaths.xrayExecutable(), 'xray.exe',
-            CoreRole.core),
-        await _core(await WindowsCorePaths.mihomoExecutable(), 'mihomo.exe',
-            CoreRole.core),
+        await _core(
+          await WindowsCorePaths.xrayExecutable(),
+          'xray.exe',
+          CoreRole.core,
+        ),
+        await _core(
+          await WindowsCorePaths.mihomoExecutable(),
+          'mihomo.exe',
+          CoreRole.core,
+        ),
       ];
     }
     if (Platform.isLinux) {
       return [
-        await _core(await LinuxCorePaths.xrayExecutable(), 'xray', CoreRole.core),
         await _core(
-            await LinuxCorePaths.mihomoExecutable(), 'mihomo', CoreRole.core),
+          await LinuxCorePaths.xrayExecutable(),
+          'xray',
+          CoreRole.core,
+        ),
+        await _core(
+          await LinuxCorePaths.mihomoExecutable(),
+          'mihomo',
+          CoreRole.core,
+        ),
       ];
     }
     return const [];
   }
 
-  static Future<CoreInfo> _core(String? path, String name, CoreRole role) async {
+  static Future<CoreInfo> _core(
+    String? path,
+    String name,
+    CoreRole role,
+  ) async {
     if (path == null) return CoreInfo.missing(name: name, role: role);
     final file = File(path);
     if (!file.existsSync()) return CoreInfo.missing(name: name, role: role);
@@ -132,8 +151,9 @@ class AppInternalsService {
     return '${pseudo.group(1)} · ${pseudo.group(3)}';
   }
 
-  static final _pseudoVersion =
-      RegExp(r'^(.*?)-(?:[\w.]+\.)?(\d{14})-([0-9a-f]{12})$');
+  static final _pseudoVersion = RegExp(
+    r'^(.*?)-(?:[\w.]+\.)?(\d{14})-([0-9a-f]{12})$',
+  );
 
   static Future<List<GeoBaseInfo>> _geoBases() async {
     final dir = await GeoAssetService.geoDir();
@@ -189,10 +209,10 @@ class AppInternalsService {
       clashApiPort: Platform.isWindows
           ? WindowsTunnelBackend.activeInstance?.clashApiPort
           : Platform.isAndroid
-              ? MihomoApiSession().port
-              : Platform.isLinux
-                  ? LinuxTunnelBackend.activeInstance?.clashApiPort
-                  : null,
+          ? MihomoApiSession().port
+          : Platform.isLinux
+          ? LinuxTunnelBackend.activeInstance?.clashApiPort
+          : null,
     );
   }
 
@@ -212,9 +232,7 @@ class AppInternalsService {
   static Map<String, int> _corePids(Map<String, Object?> android) {
     if (Platform.isAndroid) {
       final core = android['xrayPid'] as int? ?? -1;
-      return {
-        if (core > 0) _androidCoreBinary(android): core,
-      };
+      return {if (core > 0) _androidCoreBinary(android): core};
     }
     if (Platform.isWindows) {
       return WindowsTunnelBackend.activeInstance?.activeCorePids ?? const {};
@@ -253,12 +271,16 @@ class AppInternalsService {
     if (Platform.isAndroid) {
       final release = (android['release'] as String? ?? '').trim();
       final sdk = android['sdkInt'] as int?;
-      if (release.isEmpty && sdk == null) return Platform.operatingSystemVersion;
+      if (release.isEmpty && sdk == null) {
+        return Platform.operatingSystemVersion;
+      }
       final manufacturer = (android['manufacturer'] as String? ?? '').trim();
       final device = manufacturer.isEmpty ? '' : ' · $manufacturer';
       return 'Android $release (API $sdk)$device';
     }
-    if (Platform.isWindows) return prettyWindowsVersion(Platform.operatingSystemVersion);
+    if (Platform.isWindows) {
+      return prettyWindowsVersion(Platform.operatingSystemVersion);
+    }
     return Platform.operatingSystemVersion;
   }
 
@@ -268,9 +290,10 @@ class AppInternalsService {
     if (quoted == null) return raw;
     var name = quoted.group(1)!.trim();
     final build = int.tryParse(
-      RegExp(r'\(Build\s+(\d+)', caseSensitive: false)
-              .firstMatch(raw)
-              ?.group(1) ??
+      RegExp(
+            r'\(Build\s+(\d+)',
+            caseSensitive: false,
+          ).firstMatch(raw)?.group(1) ??
           '',
     );
     if (build != null &&
@@ -324,9 +347,11 @@ class AppInternalsService {
       ..writeln()
       ..writeln('## geo');
     for (final base in data.geoBases) {
-      out.writeln(base.missing
-          ? '${base.name}: missing'
-          : '${base.name}: ${base.codeCount} codes, ${base.sizeBytes} bytes');
+      out.writeln(
+        base.missing
+            ? '${base.name}: missing'
+            : '${base.name}: ${base.codeCount} codes, ${base.sizeBytes} bytes',
+      );
     }
 
     final session = data.session;
@@ -358,8 +383,10 @@ class AppInternalsService {
   static String exitLines(List<ProcessExit> exits) {
     final out = StringBuffer();
     for (final exit in exits) {
-      out.write('${_reportTime(exit.time)} ${exit.reasonName}'
-          ' status=${exit.status} importance=${exit.importance}');
+      out.write(
+        '${_reportTime(exit.time)} ${exit.reasonName}'
+        ' status=${exit.status} importance=${exit.importance}',
+      );
       if (exit.vpnStatus != null) out.write(' vpn=${exit.vpnStatus}');
       if (exit.description != null) out.write(' "${exit.description}"');
       out.writeln();

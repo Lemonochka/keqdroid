@@ -205,7 +205,9 @@ class CustomXrayConfig {
       copy['tag'] = i == 0 ? tag : tags[picked[i]['tag'].toString()];
       final sockopt = (copy['streamSettings'] as Map?)?['sockopt'];
       final dialer = _dialerProxyOf(copy);
-      if (sockopt is Map && dialer != null) sockopt['dialerProxy'] = tags[dialer];
+      if (sockopt is Map && dialer != null) {
+        sockopt['dialerProxy'] = tags[dialer];
+      }
       out.add(copy);
     }
     final wrapped = <String, dynamic>{'outbounds': out};
@@ -374,10 +376,7 @@ class CustomXrayConfig {
       },
       'inbounds': inbounds,
       'outbounds': outbounds,
-      'routing': {
-        'domainStrategy': 'AsIs',
-        'rules': rules,
-      },
+      'routing': {'domainStrategy': 'AsIs', 'rules': rules},
     };
     stripRemovedTlsFields(out);
     migrateDeprecatedXrayFields(out);
@@ -394,8 +393,10 @@ class CustomXrayConfig {
     if (rules == null) return this;
     final local = <String>{
       for (final outbound in _outboundsOf(json))
-        if (const {'freedom', 'blackhole'}
-            .contains(outbound['protocol']?.toString().toLowerCase()))
+        if (const {
+          'freedom',
+          'blackhole',
+        }.contains(outbound['protocol']?.toString().toLowerCase()))
           outbound['tag']?.toString() ?? '',
     }..remove('');
     return CustomXrayConfig._({
@@ -414,18 +415,23 @@ class CustomXrayConfig {
   Map<String, String>? get providerExit {
     final routing = json['routing'];
     if (routing is! Map) return null;
-    final catchAll = _rulesOf(_asStringMap(routing))?.where(_isCatchAll).firstOrNull;
+    final catchAll = _rulesOf(
+      _asStringMap(routing),
+    )?.where(_isCatchAll).firstOrNull;
     if (catchAll == null) return null;
     final balancer = catchAll['balancerTag']?.toString().trim() ?? '';
     if (balancer.isNotEmpty) return {'balancerTag': balancer};
     final outbound = catchAll['outboundTag']?.toString().trim() ?? '';
     final local = {
       for (final o in _outboundsOf(json))
-        if (_localOutboundProtocols
-            .contains(o['protocol']?.toString().toLowerCase()))
+        if (_localOutboundProtocols.contains(
+          o['protocol']?.toString().toLowerCase(),
+        ))
           o['tag']?.toString().trim(),
     };
-    if (outbound.isEmpty || outbound == primaryOutboundTag || local.contains(outbound)) {
+    if (outbound.isEmpty ||
+        outbound == primaryOutboundTag ||
+        local.contains(outbound)) {
       return null;
     }
     return {'outboundTag': outbound};
@@ -437,14 +443,18 @@ class CustomXrayConfig {
     final routing = json['routing'];
     if (routing is! Map) return false;
     final before = _rulesOf(_asStringMap(routing))?.length ?? 0;
-    final after = _rulesOf(
+    final after =
+        _rulesOf(
           _asStringMap(withoutProviderRules().json['routing'] as Map),
         )?.length ??
         0;
     return after < before;
   }
 
-  static bool _isProviderSiteRule(Map<String, dynamic> rule, Set<String> local) =>
+  static bool _isProviderSiteRule(
+    Map<String, dynamic> rule,
+    Set<String> local,
+  ) =>
       local.contains(rule['outboundTag']?.toString()) &&
       (rule['domain'] != null || rule['ip'] != null);
 
@@ -459,12 +469,15 @@ class CustomXrayConfig {
   // порт 0-65535 тоже catch-all: так его пишут провайдеры, у которых в конце всё напрямую;
   // ip 0.0.0.0/0 тоже, им кончался шаблон панели (16.11.2026) и перебивал маршрут пользователя напрямую
   static bool _isCatchAll(Map<String, dynamic> rule) {
-    final conditions = rule.keys.where((k) => !_notConditions.contains(k)).toSet();
+    final conditions = rule.keys
+        .where((k) => !_notConditions.contains(k))
+        .toSet();
     if (conditions.isEmpty) return true;
     if (conditions.length != 1) return false;
     if (conditions.single == 'ip') {
       final ip = rule['ip'];
-      return ip is List && ip.any((e) => _anyAddress.contains(e.toString().trim()));
+      return ip is List &&
+          ip.any((e) => _anyAddress.contains(e.toString().trim()));
     }
     if (conditions.single != 'port') return false;
     final port = rule['port']?.toString().replaceAll(' ', '');
@@ -699,7 +712,8 @@ List<String> stripUnknownGeoFromConfig(
 
 // ruleTag и domainMatcher служат метками, а не условиями; список по RawFieldRule в infra/conf/router.go,
 // без process правило по программе из готового конфига выбрасывалось как пустое
-bool _ruleHasCondition(Map<dynamic, dynamic> rule) => const [
+bool _ruleHasCondition(Map<dynamic, dynamic> rule) =>
+    const [
       'domain',
       'domains',
       'ip',

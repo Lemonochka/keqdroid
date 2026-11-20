@@ -52,15 +52,17 @@ class GeoDatReader {
     return out;
   }
 
-  static Future<Set<String>> codes(File file) async =>
-      {for (final r in await records(file)) r.code};
+  static Future<Set<String>> codes(File file) async => {
+    for (final r in await records(file)) r.code,
+  };
 
   static Future<Uint8List?> entryBody(File file, String code) async {
     final wanted = code.trim().toLowerCase();
     if (wanted.isEmpty) return null;
-    final record = (await records(file))
-        .cast<GeoDatRecord?>()
-        .firstWhere((r) => r!.code == wanted, orElse: () => null);
+    final record = (await records(file)).cast<GeoDatRecord?>().firstWhere(
+      (r) => r!.code == wanted,
+      orElse: () => null,
+    );
     if (record == null) return null;
     return bodyAt(file, record);
   }
@@ -188,7 +190,9 @@ class GeoDatReader {
   static String? _readCountryCode(Uint8List header, int offset) {
     if (offset >= header.length || header[offset] != _entryTag) return null;
     final len = readVarint(header, offset + 1);
-    if (len == null || len.value <= 0 || len.value > _maxCodeLength) return null;
+    if (len == null || len.value <= 0 || len.value > _maxCodeLength) {
+      return null;
+    }
     final start = offset + 1 + len.size;
     final end = start + len.value;
     if (end > header.length) return null;
@@ -231,11 +235,11 @@ enum GeoDomainType {
   full;
 
   static GeoDomainType fromWire(int wire) => switch (wire) {
-        1 => GeoDomainType.regex,
-        2 => GeoDomainType.domain,
-        3 => GeoDomainType.full,
-        _ => GeoDomainType.plain,
-      };
+    1 => GeoDomainType.regex,
+    2 => GeoDomainType.domain,
+    3 => GeoDomainType.full,
+    _ => GeoDomainType.plain,
+  };
 }
 
 class GeoDomain {

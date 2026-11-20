@@ -15,9 +15,9 @@ String _fixture(String name) =>
     File('test/fixtures/subscription_payloads/$name').readAsStringSync();
 
 Map<String, dynamic> _group(Map<String, dynamic> config, String name) =>
-    (config['proxy-groups'] as List)
-        .cast<Map<String, dynamic>>()
-        .firstWhere((g) => g['name'] == name);
+    (config['proxy-groups'] as List).cast<Map<String, dynamic>>().firstWhere(
+      (g) => g['name'] == name,
+    );
 
 void main() {
   final body = _fixture('clash-template-groups.txt');
@@ -29,7 +29,8 @@ void main() {
       expect(
         [for (final g in template.groups) g.name],
         ['Недоступные сайты', 'YouTube'],
-        reason: 'fallback выбирает ядро, hidden автор спрятал, главная уходит в список серверов',
+        reason:
+            'fallback выбирает ядро, hidden автор спрятал, главная уходит в список серверов',
       );
     });
 
@@ -38,16 +39,19 @@ void main() {
       final youtube = template.groups.firstWhere((g) => g.name == 'YouTube');
       expect(youtube.members, ['🇩🇪 Germany', '🇫🇮 Finland']);
       expect(youtube.fromProviders, isTrue);
-      final blocked =
-          template.groups.firstWhere((g) => g.name == 'Недоступные сайты');
+      final blocked = template.groups.firstWhere(
+        (g) => g.name == 'Недоступные сайты',
+      );
       expect(blocked.members.first, 'Любой доступный');
       expect(template.kindOf('Любой доступный'), ClashMemberKind.group);
       expect(template.kindOf('DIRECT'), ClashMemberKind.direct);
       expect(template.kindOf('🇫🇮 Finland'), ClashMemberKind.node);
     });
 
-    test('шаблон Remnawave по умолчанию, одна группа на все узлы, не хранится', () {
-      const remnawave = '''
+    test(
+      'шаблон Remnawave по умолчанию, одна группа на все узлы, не хранится',
+      () {
+        const remnawave = '''
 proxies:
   - {name: a, type: ss, server: a.example.com, port: 443, cipher: aes-128-gcm, password: p}
   - {name: b, type: ss, server: b.example.com, port: 443, cipher: aes-128-gcm, password: p}
@@ -58,41 +62,68 @@ proxy-groups:
 rules:
   - MATCH,→ Remnawave
 ''';
-      expect(ClashTemplate.fromBody(remnawave), isNull);
-    });
+        expect(ClashTemplate.fromBody(remnawave), isNull);
+      },
+    );
 
-    test('с relay это не шаблон: ядро отказало бы всему конфигу, а узлами подписка работает', () {
-      final relay = '$body\n'.replaceFirst(
-        'proxy-groups:\n',
-        'proxy-groups:\n  - {name: Цепочка, type: relay, proxies: [🇩🇪 Germany, 🇫🇮 Finland]}\n',
-      );
-      expect(relay, contains('type: relay'));
-      expect(ClashTemplate.fromBody(relay), isNull);
-    });
+    test(
+      'с relay это не шаблон: ядро отказало бы всему конфигу, а узлами подписка работает',
+      () {
+        final relay = '$body\n'.replaceFirst(
+          'proxy-groups:\n',
+          'proxy-groups:\n  - {name: Цепочка, type: relay, proxies: [🇩🇪 Germany, 🇫🇮 Finland]}\n',
+        );
+        expect(relay, contains('type: relay'));
+        expect(ClashTemplate.fromBody(relay), isNull);
+      },
+    );
 
-    test('без своих узлов это не шаблон: профиль на proxy-providers идёт как раньше', () {
-      expect(ClashTemplate.fromBody(_fixture('clash-providers-direct.txt')), isNull);
-      expect(ClashTemplate.fromBody('vless://x@a.example.com:443#a'), isNull);
-    });
+    test(
+      'без своих узлов это не шаблон: профиль на proxy-providers идёт как раньше',
+      () {
+        expect(
+          ClashTemplate.fromBody(_fixture('clash-providers-direct.txt')),
+          isNull,
+        );
+        expect(ClashTemplate.fromBody('vless://x@a.example.com:443#a'), isNull);
+      },
+    );
 
     // Moondrop 05.11.2026: Trial и Public лежали в главной, а выбрать их было негде
-    test('главная с группами внутри встаёт первой строкой, с одними серверами нет', () {
-      final template =
-          ClashTemplate.fromBody(_fixture('clash-template-main-groups.txt'))!;
-      expect(template.mainGroup, '🌙 Main');
-      expect([for (final g in template.groups) g.name], ['🌙 Main', '🌏 Public']);
-      expect(template.groups.first.members,
-          ['💎 Trial', '🌏 Public', '🇩🇪 Germany #1', '🇳🇱 Netherlands #1']);
-      expect(ClashTemplate.fromBody(body)!.groups.map((g) => g.name),
-          isNot(contains('Основной')));
-    });
+    test(
+      'главная с группами внутри встаёт первой строкой, с одними серверами нет',
+      () {
+        final template = ClashTemplate.fromBody(
+          _fixture('clash-template-main-groups.txt'),
+        )!;
+        expect(template.mainGroup, '🌙 Main');
+        expect(
+          [for (final g in template.groups) g.name],
+          ['🌙 Main', '🌏 Public'],
+        );
+        expect(template.groups.first.members, [
+          '💎 Trial',
+          '🌏 Public',
+          '🇩🇪 Germany #1',
+          '🇳🇱 Netherlands #1',
+        ]);
+        expect(
+          ClashTemplate.fromBody(body)!.groups.map((g) => g.name),
+          isNot(contains('Основной')),
+        );
+      },
+    );
 
     test('куда ведут правила и где группу выбирают', () {
-      final template =
-          ClashTemplate.fromBody(_fixture('clash-template-main-groups.txt'))!;
+      final template = ClashTemplate.fromBody(
+        _fixture('clash-template-main-groups.txt'),
+      )!;
       expect(template.isRuleTarget('🌙 Main'), isTrue);
-      expect(template.isRuleTarget('REJECT'), isTrue,
-          reason: 'запятые внутри скобок AND цель не сдвигают');
+      expect(
+        template.isRuleTarget('REJECT'),
+        isTrue,
+        reason: 'запятые внутри скобок AND цель не сдвигают',
+      );
       expect(template.isRuleTarget('🌏 Public'), isFalse);
       expect(template.parentOf('🌏 Public'), '🌙 Main');
       expect(template.parentOf('🇩🇪 Germany | 🇳🇱 Netherlands'), '🌏 Public');
@@ -100,16 +131,22 @@ rules:
       expect(template.pinnable('💎 Trial'), isTrue);
       expect(template.pinnable('🌏 Public'), isFalse);
       expect(template.mainChoice({'🌙 Main': '🌏 Public'}), '🌏 Public');
-      expect(template.currentOf(template.groups.first, const {}), isNull,
-          reason: 'без выбора в главной стоит нажатый сервер, а не первый пункт автора');
+      expect(
+        template.currentOf(template.groups.first, const {}),
+        isNull,
+        reason:
+            'без выбора в главной стоит нажатый сервер, а не первый пункт автора',
+      );
     });
 
     test('сохранённый шаблон читается обратно тем же', () {
       final template = ClashTemplate.fromBody(body)!;
       final again = ClashTemplate.fromBody(template.encode())!;
       expect(again.mainGroup, template.mainGroup);
-      expect([for (final g in again.groups) g.name],
-          [for (final g in template.groups) g.name]);
+      expect(
+        [for (final g in again.groups) g.name],
+        [for (final g in template.groups) g.name],
+      );
     });
   });
 
@@ -169,40 +206,54 @@ rules:
         template: template,
         settings: mihomo,
       );
-      expect(CustomClashConfig.tryParse(config!)!.proxies.first['name'], '🇱🇻 Latvia');
+      expect(
+        CustomClashConfig.tryParse(config!)!.proxies.first['name'],
+        '🇱🇻 Latvia',
+      );
     });
 
-    test('без шаблона, с «Не учитывать правила провайдера» и чужой сервер идут как раньше', () {
-      expect(
-        templatedSessionConfig(server: servers[0], template: null, settings: mihomo),
-        isNull,
-      );
-      expect(
-        templatedSessionConfig(
-          server: servers[0],
-          template: template,
-          settings: mihomo.copyWith(ignoreProviderRules: true),
-        ),
-        isNull,
-      );
-      expect(
-        templatedSessionConfig(
-          server: ServerItem.fromRaw(
-            'trojan://p@203.0.113.9:443?security=tls#Other',
-            subscriptionId: 's1',
+    test(
+      'без шаблона, с «Не учитывать правила провайдера» и чужой сервер идут как раньше',
+      () {
+        expect(
+          templatedSessionConfig(
+            server: servers[0],
+            template: null,
+            settings: mihomo,
           ),
-          template: template,
-          settings: mihomo,
-        ),
-        isNull,
-      );
-    });
+          isNull,
+        );
+        expect(
+          templatedSessionConfig(
+            server: servers[0],
+            template: template,
+            settings: mihomo.copyWith(ignoreProviderRules: true),
+          ),
+          isNull,
+        );
+        expect(
+          templatedSessionConfig(
+            server: ServerItem.fromRaw(
+              'trojan://p@203.0.113.9:443?security=tls#Other',
+              subscriptionId: 's1',
+            ),
+            template: template,
+            settings: mihomo,
+          ),
+          isNull,
+        );
+      },
+    );
 
     // шаблон написан для mihomo: показывать группы и не исполнять их было бы мёртвой настройкой
     test('на xray шаблон тоже включается, его исполняет mihomo', () {
       const xray = AppSettings(vpnCore: AppSettings.vpnCoreXray);
       expect(
-        templatedSessionConfig(server: servers[0], template: template, settings: xray),
+        templatedSessionConfig(
+          server: servers[0],
+          template: template,
+          settings: xray,
+        ),
         isNotNull,
       );
       final choice = serverBackendChoice(
@@ -211,10 +262,17 @@ rules:
         viaTemplate: true,
       );
       expect(choice.backend, VpnBackend.mihomo);
-      expect(choice.skip, VpnCoreSkip.clashTemplate,
-          reason: 'в настройках объясняем, почему ядро не то, что выбрано');
       expect(
-        serverBackendChoice(servers[0], preference: mihomo.vpnCore, viaTemplate: true).skip,
+        choice.skip,
+        VpnCoreSkip.clashTemplate,
+        reason: 'в настройках объясняем, почему ядро не то, что выбрано',
+      );
+      expect(
+        serverBackendChoice(
+          servers[0],
+          preference: mihomo.vpnCore,
+          viaTemplate: true,
+        ).skip,
         isNull,
       );
     });
@@ -239,101 +297,191 @@ rules:
         reason: '«Не учитывать правила провайдера» возвращает ядро из настроек',
       );
       expect(
-        serverBackendChoice(servers[0], preference: 'xray', viaTemplate: false).backend,
+        serverBackendChoice(
+          servers[0],
+          preference: 'xray',
+          viaTemplate: false,
+        ).backend,
         VpnBackend.xray,
       );
     });
   });
 
   group('конфиг сессии', () {
-    test('выбранный сервер первым в главной группе и в узлах, выбор человека первым в своей', () {
-      final template = ClashTemplate.fromBody(body)!;
-      final session = (jsonDecode(template.sessionConfig(
-        node: '🇫🇮 Finland',
-        choices: {'Недоступные сайты': 'DIRECT', 'YouTube': '🇩🇪 Germany'},
-      )) as Map).cast<String, dynamic>();
+    test(
+      'выбранный сервер первым в главной группе и в узлах, выбор человека первым в своей',
+      () {
+        final template = ClashTemplate.fromBody(body)!;
+        final session =
+            (jsonDecode(
+                      template.sessionConfig(
+                        node: '🇫🇮 Finland',
+                        choices: {
+                          'Недоступные сайты': 'DIRECT',
+                          'YouTube': '🇩🇪 Germany',
+                        },
+                      ),
+                    )
+                    as Map)
+                .cast<String, dynamic>();
 
-      expect((session['proxies'] as List).first['name'], '🇫🇮 Finland');
-      expect((session['proxy-groups'] as List).first['name'], 'Основной',
-          reason: 'наши маршруты через VPN ведут в первую группу');
-      expect(_group(session, 'Основной')['proxies'],
-          ['🇫🇮 Finland', '🇩🇪 Germany', '🇱🇻 Latvia']);
-      expect(_group(session, 'Недоступные сайты')['proxies'].first, 'DIRECT');
-      expect(_group(session, 'YouTube')['proxies'], ['🇩🇪 Germany']);
-      expect(session['profile'], {'store-selected': false});
-      expect(session['rules'], (CustomClashConfig.tryParse(body)!.map['rules']));
-    });
+        expect((session['proxies'] as List).first['name'], '🇫🇮 Finland');
+        expect(
+          (session['proxy-groups'] as List).first['name'],
+          'Основной',
+          reason: 'наши маршруты через VPN ведут в первую группу',
+        );
+        expect(_group(session, 'Основной')['proxies'], [
+          '🇫🇮 Finland',
+          '🇩🇪 Germany',
+          '🇱🇻 Latvia',
+        ]);
+        expect(_group(session, 'Недоступные сайты')['proxies'].first, 'DIRECT');
+        expect(_group(session, 'YouTube')['proxies'], ['🇩🇪 Germany']);
+        expect(session['profile'], {'store-selected': false});
+        expect(
+          session['rules'],
+          (CustomClashConfig.tryParse(body)!.map['rules']),
+        );
+      },
+    );
 
-    test('выбор узла из proxy-providers в список не попадает: ядро отказало бы всему конфигу', () {
-      final template = ClashTemplate.fromBody(body)!;
-      final session = (jsonDecode(template.sessionConfig(
-        node: '🇩🇪 Germany',
-        choices: {'Недоступные сайты': 'provider-node-1'},
-      )) as Map).cast<String, dynamic>();
-      expect(_group(session, 'Недоступные сайты')['proxies'].first,
-          'Любой доступный');
-    });
+    test(
+      'выбор узла из proxy-providers в список не попадает: ядро отказало бы всему конфигу',
+      () {
+        final template = ClashTemplate.fromBody(body)!;
+        final session =
+            (jsonDecode(
+                      template.sessionConfig(
+                        node: '🇩🇪 Germany',
+                        choices: {'Недоступные сайты': 'provider-node-1'},
+                      ),
+                    )
+                    as Map)
+                .cast<String, dynamic>();
+        expect(
+          _group(session, 'Недоступные сайты')['proxies'].first,
+          'Любой доступный',
+        );
+      },
+    );
 
-    test('главная с автовыбором становится select: всё остальное идёт через выбранный сервер', () {
-      final auto = body.replaceFirst(
-        '  - name: Основной\n    type: select',
-        '  - name: Основной\n    type: url-test',
-      );
-      final template = ClashTemplate.fromBody(auto)!;
-      final session = (jsonDecode(template.sessionConfig(node: '🇱🇻 Latvia'))
-              as Map)
-          .cast<String, dynamic>();
-      expect(_group(session, 'Основной')['type'], 'select');
-      expect(_group(session, 'Основной')['proxies'].first, '🇱🇻 Latvia');
-    });
+    test(
+      'главная с автовыбором становится select: всё остальное идёт через выбранный сервер',
+      () {
+        final auto = body.replaceFirst(
+          '  - name: Основной\n    type: select',
+          '  - name: Основной\n    type: url-test',
+        );
+        final template = ClashTemplate.fromBody(auto)!;
+        final session =
+            (jsonDecode(template.sessionConfig(node: '🇱🇻 Latvia')) as Map)
+                .cast<String, dynamic>();
+        expect(_group(session, 'Основной')['type'], 'select');
+        expect(_group(session, 'Основной')['proxies'].first, '🇱🇻 Latvia');
+      },
+    );
 
-    test('группа, выбранная в главной, встаёт первой вместо сервера, узел сервера остаётся первым', () {
-      final template = ClashTemplate.fromBody(_fixture('clash-template-main-groups.txt'))!;
-      final session = (jsonDecode(template.sessionConfig(
-        node: '🇳🇱 Netherlands #1',
-        choices: {'🌙 Main': '🌏 Public', '🌏 Public': '🇩🇪 Germany | 🇳🇱 Netherlands'},
-      )) as Map).cast<String, dynamic>();
-      expect((session['proxies'] as List).first['name'], '🇳🇱 Netherlands #1');
-      expect(_group(session, '🌙 Main')['proxies'].first, '🌏 Public');
-      expect(_group(session, '🌏 Public')['proxies'].first,
-          '🇩🇪 Germany | 🇳🇱 Netherlands');
-    });
+    test(
+      'группа, выбранная в главной, встаёт первой вместо сервера, узел сервера остаётся первым',
+      () {
+        final template = ClashTemplate.fromBody(
+          _fixture('clash-template-main-groups.txt'),
+        )!;
+        final session =
+            (jsonDecode(
+                      template.sessionConfig(
+                        node: '🇳🇱 Netherlands #1',
+                        choices: {
+                          '🌙 Main': '🌏 Public',
+                          '🌏 Public': '🇩🇪 Germany | 🇳🇱 Netherlands',
+                        },
+                      ),
+                    )
+                    as Map)
+                .cast<String, dynamic>();
+        expect(
+          (session['proxies'] as List).first['name'],
+          '🇳🇱 Netherlands #1',
+        );
+        expect(_group(session, '🌙 Main')['proxies'].first, '🌏 Public');
+        expect(
+          _group(session, '🌏 Public')['proxies'].first,
+          '🇩🇪 Germany | 🇳🇱 Netherlands',
+        );
+      },
+    );
 
-    test('закрепление в url-test в конфиг не пишется: у ядра нет такого поля, его шлём через API', () {
-      final template = ClashTemplate.fromBody(_fixture('clash-template-main-groups.txt'))!;
-      final session = (jsonDecode(template.sessionConfig(
-        node: '🇩🇪 Germany #1',
-        choices: {'🇩🇪 Germany | 🇳🇱 Netherlands': '🇩🇪 DE • Scan #1754AD'},
-      )) as Map).cast<String, dynamic>();
-      final group = _group(session, '🇩🇪 Germany | 🇳🇱 Netherlands');
-      expect(group['type'], 'url-test');
-      expect(group['proxies'], isNull);
-      expect(_group(session, '🌙 Main')['proxies'].first, '🇩🇪 Germany #1');
-    });
+    test(
+      'закрепление в url-test в конфиг не пишется: у ядра нет такого поля, его шлём через API',
+      () {
+        final template = ClashTemplate.fromBody(
+          _fixture('clash-template-main-groups.txt'),
+        )!;
+        final session =
+            (jsonDecode(
+                      template.sessionConfig(
+                        node: '🇩🇪 Germany #1',
+                        choices: {
+                          '🇩🇪 Germany | 🇳🇱 Netherlands':
+                              '🇩🇪 DE • Scan #1754AD',
+                        },
+                      ),
+                    )
+                    as Map)
+                .cast<String, dynamic>();
+        final group = _group(session, '🇩🇪 Germany | 🇳🇱 Netherlands');
+        expect(group['type'], 'url-test');
+        expect(group['proxies'], isNull);
+        expect(_group(session, '🌙 Main')['proxies'].first, '🇩🇪 Germany #1');
+      },
+    );
 
-    test('сервер в главной как выбор не считается: главную ведёт нажатый сервер', () {
-      final template = ClashTemplate.fromBody(_fixture('clash-template-main-groups.txt'))!;
-      expect(template.mainChoice({'🌙 Main': '🇩🇪 Germany #1'}), isNull);
-      expect(template.mainChoice({'🌙 Main': 'чужая группа'}), isNull);
-      final session = (jsonDecode(template.sessionConfig(
-        node: '🇳🇱 Netherlands #1',
-        choices: {'🌙 Main': '🇩🇪 Germany #1'},
-      )) as Map).cast<String, dynamic>();
-      expect(_group(session, '🌙 Main')['proxies'].first, '🇳🇱 Netherlands #1');
-    });
+    test(
+      'сервер в главной как выбор не считается: главную ведёт нажатый сервер',
+      () {
+        final template = ClashTemplate.fromBody(
+          _fixture('clash-template-main-groups.txt'),
+        )!;
+        expect(template.mainChoice({'🌙 Main': '🇩🇪 Germany #1'}), isNull);
+        expect(template.mainChoice({'🌙 Main': 'чужая группа'}), isNull);
+        final session =
+            (jsonDecode(
+                      template.sessionConfig(
+                        node: '🇳🇱 Netherlands #1',
+                        choices: {'🌙 Main': '🇩🇪 Germany #1'},
+                      ),
+                    )
+                    as Map)
+                .cast<String, dynamic>();
+        expect(
+          _group(session, '🌙 Main')['proxies'].first,
+          '🇳🇱 Netherlands #1',
+        );
+      },
+    );
 
-    test('mihomo получает шаблон целиком с нашими входами и без его портов', () {
-      final template = ClashTemplate.fromBody(body)!;
-      final config = (jsonDecode(MihomoConfigGen.generate(
-        template.sessionConfig(node: '🇫🇮 Finland'),
-        const AppSettings(),
-        socksPort: 10808,
-      )) as Map).cast<String, dynamic>();
-      expect(config['mixed-port'], isNull);
-      expect(config['socks-port'], 10808);
-      expect([for (final g in config['proxy-groups'] as List) g['name']],
-          containsAll(['Основной', 'YouTube', 'Недоступные сайты']));
-      expect((config['rules'] as List).last, 'MATCH,Основной');
-    });
+    test(
+      'mihomo получает шаблон целиком с нашими входами и без его портов',
+      () {
+        final template = ClashTemplate.fromBody(body)!;
+        final config =
+            (jsonDecode(
+                      MihomoConfigGen.generate(
+                        template.sessionConfig(node: '🇫🇮 Finland'),
+                        const AppSettings(),
+                        socksPort: 10808,
+                      ),
+                    )
+                    as Map)
+                .cast<String, dynamic>();
+        expect(config['mixed-port'], isNull);
+        expect(config['socks-port'], 10808);
+        expect([
+          for (final g in config['proxy-groups'] as List) g['name'],
+        ], containsAll(['Основной', 'YouTube', 'Недоступные сайты']));
+        expect((config['rules'] as List).last, 'MATCH,Основной');
+      },
+    );
   });
 }

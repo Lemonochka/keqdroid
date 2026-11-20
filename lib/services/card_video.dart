@@ -33,8 +33,9 @@ class CardVideo {
       var frame = await codec.getNextFrame();
       final source = frame.image.width;
       final png = await frame.image.toByteData(format: ui.ImageByteFormat.png);
-      await File(SubscriptionCardTheme.posterFor(outPath))
-          .writeAsBytes(png!.buffer.asUint8List(), flush: true);
+      await File(
+        SubscriptionCardTheme.posterFor(outPath),
+      ).writeAsBytes(png!.buffer.asUint8List(), flush: true);
       final fps = (1e6 / _frameMicros(frame.duration)).round().clamp(5, 60);
       final id = await _channel.invokeMethod<int>('start', {
         'path': outPath,
@@ -73,15 +74,16 @@ class CardVideo {
       duration.inMilliseconds < 20 ? 100000 : duration.inMicroseconds;
 
   static Future<({int width, int height, Duration duration, bool hasVideo})>
-      probe(String path) async {
-    final info = await _channel.invokeMapMethod<String, Object?>(
-      'probe',
-      {'path': path},
-    );
+  probe(String path) async {
+    final info = await _channel.invokeMapMethod<String, Object?>('probe', {
+      'path': path,
+    });
     return (
       width: info?['width'] as int? ?? 0,
       height: info?['height'] as int? ?? 0,
-      duration: Duration(milliseconds: (info?['durationMs'] as num? ?? 0).toInt()),
+      duration: Duration(
+        milliseconds: (info?['durationMs'] as num? ?? 0).toInt(),
+      ),
       hasVideo: info?['hasVideo'] == true,
     );
   }

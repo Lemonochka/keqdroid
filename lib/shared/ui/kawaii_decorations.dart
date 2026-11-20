@@ -71,8 +71,10 @@ class KawaiiOverlay extends StatefulWidget {
 class _KawaiiOverlayState extends State<KawaiiOverlay>
     with SingleTickerProviderStateMixin {
   static const _cycle = Duration(seconds: 60);
-  late final AnimationController _t =
-      AnimationController(vsync: this, duration: _cycle)..repeat();
+  late final AnimationController _t = AnimationController(
+    vsync: this,
+    duration: _cycle,
+  )..repeat();
 
   late final List<_Particle> _particles = _spawnParticles();
   late final List<_Sticker> _stickers = _spawnStickers();
@@ -213,11 +215,11 @@ class _Sticker {
 }
 
 class _StickerColors {
-  final Color outline;  // белая обводка
+  final Color outline; // белая обводка
   final Color ink; // глазки/ротик
   final Color blush;
   final Color bodyWhite; // котик/зайка/онигири
-  final Color accent;  // лепестки цветка
+  final Color accent; // лепестки цветка
   final Color accentSoft; // внутренние ушки, серединки
   final Color berry;
   final Color leaf;
@@ -242,19 +244,19 @@ class _StickerColors {
   });
 
   factory _StickerColors.of(KawaiiFlavor f, bool dark) => _StickerColors._(
-        outline: dark ? const Color(0xFFFFF3F8) : Colors.white,
-        ink: const Color(0xFF69454F),
-        blush: dark ? const Color(0xFFFF9FBE) : const Color(0xFFF78FB2),
-        bodyWhite: dark ? const Color(0xFFF7EDF1) : const Color(0xFFFFFEFC),
-        accent: dark ? f.accentDark : f.accentLight,
-        accentSoft: dark ? f.accentSoftDark : f.accentSoftLight,
-        berry: dark ? const Color(0xFFFF7F9C) : const Color(0xFFFF6B8A),
-        leaf: dark ? const Color(0xFF9AD69A) : const Color(0xFF7FC383),
-        nori: dark ? const Color(0xFF4A574A) : const Color(0xFF41503F),
-        star: dark ? const Color(0xFFFFD97A) : const Color(0xFFFFC95C),
-        core: dark ? const Color(0xFFFFE7B0) : const Color(0xFFFFE3A1),
-        shadowAlpha: dark ? 0.30 : 0.12,
-      );
+    outline: dark ? const Color(0xFFFFF3F8) : Colors.white,
+    ink: const Color(0xFF69454F),
+    blush: dark ? const Color(0xFFFF9FBE) : const Color(0xFFF78FB2),
+    bodyWhite: dark ? const Color(0xFFF7EDF1) : const Color(0xFFFFFEFC),
+    accent: dark ? f.accentDark : f.accentLight,
+    accentSoft: dark ? f.accentSoftDark : f.accentSoftLight,
+    berry: dark ? const Color(0xFFFF7F9C) : const Color(0xFFFF6B8A),
+    leaf: dark ? const Color(0xFF9AD69A) : const Color(0xFF7FC383),
+    nori: dark ? const Color(0xFF4A574A) : const Color(0xFF41503F),
+    star: dark ? const Color(0xFFFFD97A) : const Color(0xFFFFC95C),
+    core: dark ? const Color(0xFFFFE7B0) : const Color(0xFFFFE3A1),
+    shadowAlpha: dark ? 0.30 : 0.12,
+  );
 }
 
 class _KawaiiPainter extends CustomPainter {
@@ -301,8 +303,7 @@ class _KawaiiPainter extends CustomPainter {
           paint.color = petalColor.withValues(alpha: baseAlpha);
           _drawPetal(canvas, paint, p.size);
         case _Kind.sparkle:
-          final twinkle =
-              0.5 + 0.5 * math.sin(t * 40 * 2 * math.pi + p.phase);
+          final twinkle = 0.5 + 0.5 * math.sin(t * 40 * 2 * math.pi + p.phase);
           paint.color = sparkleColor.withValues(
             alpha: baseAlpha * (0.35 + 0.65 * twinkle),
           );
@@ -352,7 +353,8 @@ class _KawaiiPainter extends CustomPainter {
     for (final st in stickers) {
       final yFrac = (st.yOffset + t * st.fallSpeed) % 1.2 - 0.1;
       final xFrac =
-          st.x + math.sin(t * st.swayFreq * 2 * math.pi + st.phase) * st.swayAmp;
+          st.x +
+          math.sin(t * st.swayFreq * 2 * math.pi + st.phase) * st.swayAmp;
       final wobble =
           math.sin(t * st.wobbleFreq * 2 * math.pi + st.phase) * st.wobbleAmp;
 
@@ -579,7 +581,11 @@ class _StickerArt {
   static final Path onigiriNori = Path()
     ..addRRect(
       RRect.fromRectAndRadius(
-        Rect.fromCenter(center: const Offset(0, 0.44), width: 0.70, height: 0.42),
+        Rect.fromCenter(
+          center: const Offset(0, 0.44),
+          width: 0.70,
+          height: 0.42,
+        ),
         const Radius.circular(0.10),
       ),
     );
@@ -608,8 +614,11 @@ class _StickerArt {
         ..addOval(
           Rect.fromCenter(center: Offset.zero, width: 0.34, height: 0.62),
         );
-      final m = Matrix4.translationValues(dx, -0.70, 0)
-          .multiplied(Matrix4.rotationZ(rot));
+      final m = Matrix4.translationValues(
+        dx,
+        -0.70,
+        0,
+      ).multiplied(Matrix4.rotationZ(rot));
       p.addPath(one, Offset.zero, matrix4: m.storage);
     }
 

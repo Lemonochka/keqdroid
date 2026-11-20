@@ -3,11 +3,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/shared/ui/stat_strip.dart';
 
 StatMetric _rate(String value) => StatMetric(
-      icon: Icons.arrow_downward_rounded,
-      label: 'Скорость приёма',
-      value: value,
-      template: '999.9 MB/s',
-    );
+  icon: Icons.arrow_downward_rounded,
+  label: 'Скорость приёма',
+  value: value,
+  template: '999.9 MB/s',
+);
 
 final _four = <StatMetric>[
   _rate('37.7 KB/s'),
@@ -33,55 +33,55 @@ final _four = <StatMetric>[
 
 /// Две ячейки-канала: слева всё про туннель, справа всё про обход.
 List<StatMetric> _channelsOf(String vpnDown, String directDown) => [
-      StatMetric.channel(
-        tag: 'VPN',
-        label: 'Через VPN',
-        lines: [
-          StatLine(
-            icon: Icons.arrow_downward_rounded,
-            label: 'Приём',
-            value: vpnDown,
-            template: '999.9 MB/s',
-          ),
-          const StatLine(
-            icon: Icons.arrow_upward_rounded,
-            label: 'Отдача',
-            value: '22.0 KB/s',
-            template: '999.9 MB/s',
-          ),
-          const StatLine(
-            icon: Icons.data_usage_rounded,
-            label: 'Принято',
-            value: '239.5 KB',
-            template: '999.99 GB',
-          ),
-        ],
+  StatMetric.channel(
+    tag: 'VPN',
+    label: 'Через VPN',
+    lines: [
+      StatLine(
+        icon: Icons.arrow_downward_rounded,
+        label: 'Приём',
+        value: vpnDown,
+        template: '999.9 MB/s',
       ),
-      StatMetric.channel(
-        tag: 'обход',
-        label: 'Мимо VPN',
-        lines: [
-          StatLine(
-            icon: Icons.arrow_downward_rounded,
-            label: 'Приём',
-            value: directDown,
-            template: '999.9 MB/s',
-          ),
-          const StatLine(
-            icon: Icons.arrow_upward_rounded,
-            label: 'Отдача',
-            value: '3.0 KB/s',
-            template: '999.9 MB/s',
-          ),
-          const StatLine(
-            icon: Icons.data_usage_rounded,
-            label: 'Принято',
-            value: '12.0 KB',
-            template: '999.99 GB',
-          ),
-        ],
+      const StatLine(
+        icon: Icons.arrow_upward_rounded,
+        label: 'Отдача',
+        value: '22.0 KB/s',
+        template: '999.9 MB/s',
       ),
-    ];
+      const StatLine(
+        icon: Icons.data_usage_rounded,
+        label: 'Принято',
+        value: '239.5 KB',
+        template: '999.99 GB',
+      ),
+    ],
+  ),
+  StatMetric.channel(
+    tag: 'обход',
+    label: 'Мимо VPN',
+    lines: [
+      StatLine(
+        icon: Icons.arrow_downward_rounded,
+        label: 'Приём',
+        value: directDown,
+        template: '999.9 MB/s',
+      ),
+      const StatLine(
+        icon: Icons.arrow_upward_rounded,
+        label: 'Отдача',
+        value: '3.0 KB/s',
+        template: '999.9 MB/s',
+      ),
+      const StatLine(
+        icon: Icons.data_usage_rounded,
+        label: 'Принято',
+        value: '12.0 KB',
+        template: '999.99 GB',
+      ),
+    ],
+  ),
+];
 
 final _channels = _channelsOf('1.1 MB/s', '0.1 MB/s');
 
@@ -106,6 +106,7 @@ Future<Size> _pumpStrip(
   );
   return tester.getSize(find.byType(StatStrip));
 }
+
 void main() {
   testWidgets('значения не меняют ширину полосы', (tester) async {
     // Показатели обновляются раз в секунду: полоса, дышащая на каждом
@@ -170,7 +171,9 @@ void main() {
     handle.dispose();
   });
 
-  testWidgets('канал занимает одну ячейку, а не колонку из них', (tester) async {
+  testWidgets('канал занимает одну ячейку, а не колонку из них', (
+    tester,
+  ) async {
     // Все числа туннеля стоят вместе, все числа обхода — вместе: иначе ответ
     // на «а сюда что-нибудь идёт» приходится собирать из соседних ячеек.
     await _pumpStrip(tester, _channels);

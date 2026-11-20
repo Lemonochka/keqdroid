@@ -68,12 +68,7 @@ class ConnectionEntry {
     required String rule,
     required String outbound,
     required bool decidedByCore,
-  }) =>
-      copyWith(
-        rule: rule,
-        outbound: outbound,
-        decidedByCore: decidedByCore,
-      );
+  }) => copyWith(rule: rule, outbound: outbound, decidedByCore: decidedByCore);
 
   ConnectionEntry withProcess(String process) => copyWith(process: process);
 
@@ -94,29 +89,29 @@ class ConnectionEntry {
     bool? closed,
     int? count,
     List<ConnectionEntry>? members,
-  }) =>
-      ConnectionEntry(
-        id: id ?? this.id,
-        network: network,
-        host: host ?? this.host,
-        destPort: destPort,
-        destIp: destIp ?? this.destIp,
-        source: source ?? this.source,
-        process: process ?? this.process,
-        inbound: inbound ?? this.inbound,
-        outbound: outbound ?? this.outbound,
-        rule: rule ?? this.rule,
-        startedAt: startedAt ?? this.startedAt,
-        upload: upload ?? this.upload,
-        download: download ?? this.download,
-        rejected: rejected ?? this.rejected,
-        decidedByCore: decidedByCore ?? this.decidedByCore,
-        closed: closed ?? this.closed,
-        count: count ?? this.count,
-        members: members ?? this.members,
-      );
+  }) => ConnectionEntry(
+    id: id ?? this.id,
+    network: network,
+    host: host ?? this.host,
+    destPort: destPort,
+    destIp: destIp ?? this.destIp,
+    source: source ?? this.source,
+    process: process ?? this.process,
+    inbound: inbound ?? this.inbound,
+    outbound: outbound ?? this.outbound,
+    rule: rule ?? this.rule,
+    startedAt: startedAt ?? this.startedAt,
+    upload: upload ?? this.upload,
+    download: download ?? this.download,
+    rejected: rejected ?? this.rejected,
+    decidedByCore: decidedByCore ?? this.decidedByCore,
+    closed: closed ?? this.closed,
+    count: count ?? this.count,
+    members: members ?? this.members,
+  );
 
-  String get groupKey => '$network|${host.toLowerCase()}|$destPort'
+  String get groupKey =>
+      '$network|${host.toLowerCase()}|$destPort'
       '|${destIp.toLowerCase()}|${process.toLowerCase()}|${verdict.name}';
 
   String get target => '$host:$destPort';
@@ -125,22 +120,9 @@ class ConnectionEntry {
       '$host $destIp $process $rule $outbound $inbound $source'.toLowerCase();
 }
 
-enum ConnectionVerdict {
-  proxied,
-  direct,
-  blocked,
+enum ConnectionVerdict { proxied, direct, blocked, viaCore, unknown }
 
-  viaCore,
-  unknown,
-}
-
-enum ConnectionsSource {
-  coreApi,
-
-  coreLog,
-
-  unavailable,
-}
+enum ConnectionsSource { coreApi, coreLog, unavailable }
 
 class ConnectionsSnapshot {
   const ConnectionsSnapshot({

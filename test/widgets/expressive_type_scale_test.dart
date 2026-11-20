@@ -29,8 +29,10 @@ void main() {
 
   group('emphasized поднимает на шаг', () {
     test('Regular → Medium', () {
-      expect(scale.emphasized(scale.headlineMedium)!.fontWeight,
-          FontWeight.w500);
+      expect(
+        scale.emphasized(scale.headlineMedium)!.fontWeight,
+        FontWeight.w500,
+      );
       expect(scale.emphasized(scale.titleLarge)!.fontWeight, FontWeight.w500);
       expect(scale.emphasized(scale.bodyLarge)!.fontWeight, FontWeight.w500);
     });

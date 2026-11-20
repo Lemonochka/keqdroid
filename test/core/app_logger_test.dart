@@ -71,7 +71,10 @@ void main() {
   test('строка уходит на диск не в вызове, а следом, по порядку', () async {
     AppLogger.instance.info('first');
     AppLogger.instance.info('second');
-    expect(log().existsSync() ? log().readAsStringSync() : '', isNot(contains('first')));
+    expect(
+      log().existsSync() ? log().readAsStringSync() : '',
+      isNot(contains('first')),
+    );
 
     await AppLogger.instance.flush();
     final text = log().readAsStringSync();

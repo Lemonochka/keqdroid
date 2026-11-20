@@ -40,7 +40,8 @@ class _CustomColorSheetState extends State<_CustomColorSheet> {
   @override
   void initState() {
     super.initState();
-    final seed = parseThemeSeed(widget.current.customThemeSeed) ??
+    final seed =
+        parseThemeSeed(widget.current.customThemeSeed) ??
         kCustomThemeDefaultSeed;
     _color = _inRange(HSVColor.fromColor(seed));
     _variant = parseThemeVariant(widget.current.customThemeVariant);
@@ -58,7 +59,10 @@ class _CustomColorSheetState extends State<_CustomColorSheet> {
   // в поле всегда шесть знаков, и ограничитель длины глотал любой набранный символ
   void _selectHexOnFocus() {
     if (_hexFocus.hasFocus) {
-      _hex.selection = TextSelection(baseOffset: 0, extentOffset: _hex.text.length);
+      _hex.selection = TextSelection(
+        baseOffset: 0,
+        extentOffset: _hex.text.length,
+      );
     }
   }
 
@@ -81,12 +85,14 @@ class _CustomColorSheetState extends State<_CustomColorSheet> {
   }
 
   Future<void> _apply() async {
-    await widget.onSave(widget.current.copyWith(
-      themePresetId: kCustomThemePresetId,
-      customThemeSeed: formatThemeSeed(_color.toColor()),
-      customThemeVariant: _variant.name,
-      followSystemTheme: false,
-    ));
+    await widget.onSave(
+      widget.current.copyWith(
+        themePresetId: kCustomThemePresetId,
+        customThemeSeed: formatThemeSeed(_color.toColor()),
+        customThemeVariant: _variant.name,
+        followSystemTheme: false,
+      ),
+    );
     if (mounted) Navigator.of(context).pop();
   }
 
@@ -98,8 +104,7 @@ class _CustomColorSheetState extends State<_CustomColorSheet> {
     final seed = _color.toColor();
     final preview = ColorScheme.fromSeed(
       seedColor: seed,
-      brightness:
-          widget.current.darkTheme ? Brightness.dark : Brightness.light,
+      brightness: widget.current.darkTheme ? Brightness.dark : Brightness.light,
       dynamicSchemeVariant: _variant,
     );
 

@@ -9,7 +9,9 @@ void main() {
     final text = LinuxAutostart.contentFor('/home/u/Apps/keqdroid.AppImage');
     expect(
       text,
-      contains('Exec="/home/u/Apps/keqdroid.AppImage" ${LinuxAutostart.flag}\n'),
+      contains(
+        'Exec="/home/u/Apps/keqdroid.AppImage" ${LinuxAutostart.flag}\n',
+      ),
     );
     expect(text, contains('X-GNOME-Autostart-enabled=true\n'));
     expect(text, startsWith('[Desktop Entry]\n'));
@@ -24,10 +26,15 @@ void main() {
 
   test('caelestia gets a Lua start hook, quotes and backslashes escaped', () {
     expect(
-      LinuxAutostart.startLines('hyprland', 'hypr-user.lua',
-          '/home/u/Загрузки/keqdroid.AppImage'),
-      endsWith('\nhl.on("hyprland.start", function() '
-          'hl.exec_cmd("\'/home/u/Загрузки/keqdroid.AppImage\' --autostart") end)\n'),
+      LinuxAutostart.startLines(
+        'hyprland',
+        'hypr-user.lua',
+        '/home/u/Загрузки/keqdroid.AppImage',
+      ),
+      endsWith(
+        '\nhl.on("hyprland.start", function() '
+        'hl.exec_cmd("\'/home/u/Загрузки/keqdroid.AppImage\' --autostart") end)\n',
+      ),
     );
     expect(
       LinuxAutostart.startLines('hyprland', 'hypr-user.lua', r'/a "b"\c'),
@@ -38,8 +45,13 @@ void main() {
   test('plain Hyprland gets exec-once, the path kept through hyprlang', () {
     expect(
       LinuxAutostart.startLines(
-          'hyprland', 'hyprland.conf', r"/home/u/#apps/it's $mod\x"),
-      endsWith('''\nexec-once = '/home/u/##apps/it'"'"'s \$''mod\\\\x' --autostart\n'''),
+        'hyprland',
+        'hyprland.conf',
+        r"/home/u/#apps/it's $mod\x",
+      ),
+      endsWith(
+        '''\nexec-once = '/home/u/##apps/it'"'"'s \$''mod\\\\x' --autostart\n''',
+      ),
     );
   });
 
@@ -55,21 +67,26 @@ void main() {
   });
 
   // sway до sh -c сам снимает обратную косую и подставляет $имя: '\'' превращался в незакрытую кавычку
-  test('sway gets an apostrophe, a backslash and a dollar in the path intact', () {
-    expect(
-      LinuxAutostart.startLines('sway', 'config', r"/home/u/it's $mod\x"),
-      endsWith('''\nexec '/home/u/it'"'"'s \$\$mod\\\\x' --autostart\n'''),
-    );
-    expect(
-      LinuxAutostart.startLines('river', 'init', "/home/u/it's"),
-      endsWith('''\n'/home/u/it'"'"'s' --autostart &\n'''),
-    );
-  });
+  test(
+    'sway gets an apostrophe, a backslash and a dollar in the path intact',
+    () {
+      expect(
+        LinuxAutostart.startLines('sway', 'config', r"/home/u/it's $mod\x"),
+        endsWith('''\nexec '/home/u/it'"'"'s \$\$mod\\\\x' --autostart\n'''),
+      );
+      expect(
+        LinuxAutostart.startLines('river', 'init', "/home/u/it's"),
+        endsWith('''\n'/home/u/it'"'"'s' --autostart &\n'''),
+      );
+    },
+  );
 
   test('niri gets spawn-at-startup with the path as its own KDL string', () {
     expect(
       LinuxAutostart.startLines('niri', 'config.kdl', r'/home/u/"x"\keqdroid'),
-      endsWith('\nspawn-at-startup "/home/u/\\"x\\"\\\\keqdroid" "--autostart"\n'),
+      endsWith(
+        '\nspawn-at-startup "/home/u/\\"x\\"\\\\keqdroid" "--autostart"\n',
+      ),
     );
   });
 
@@ -82,8 +99,15 @@ void main() {
     final realDesktop = LinuxAutostart.desktopRunsAutostart;
 
     File entry() => File(p.join(config.path, 'autostart', 'keqdroid.desktop'));
-    File hyprlandDropIn() => File(p.join(config.path, 'systemd', 'user',
-        'hyprland-session.target.d', 'keqdroid.conf'));
+    File hyprlandDropIn() => File(
+      p.join(
+        config.path,
+        'systemd',
+        'user',
+        'hyprland-session.target.d',
+        'keqdroid.conf',
+      ),
+    );
     // так systemd-xdg-autostart-generator называет службу из ярлыка
     String generatedUnit() =>
         'app-${p.basenameWithoutExtension(entry().path)}@autostart.service';
@@ -101,7 +125,10 @@ void main() {
     // ожидание считается тем же кодом, что пишет строку: пустое прошло бы молча
     String ours(String wm, File file) {
       final lines = LinuxAutostart.startLines(
-          wm, file.path, Platform.resolvedExecutable);
+        wm,
+        file.path,
+        Platform.resolvedExecutable,
+      );
       expect(lines, contains(LinuxAutostart.flag));
       return lines;
     }
@@ -127,14 +154,17 @@ void main() {
     });
 
     // жалоба 30.10.2026: caelestia на EndeavourOS, вход через sddm, без uwsm и без hyprland-session.target
-    test('caelestia without uwsm gets the start line in its user file', () async {
-      wm = 'hyprland';
-      put(caelestia(), '');
+    test(
+      'caelestia without uwsm gets the start line in its user file',
+      () async {
+        wm = 'hyprland';
+        put(caelestia(), '');
 
-      expect(await LinuxAutostart.setEnabled(true), isTrue);
+        expect(await LinuxAutostart.setEnabled(true), isTrue);
 
-      expect(caelestia().readAsStringSync(), ours('hyprland', caelestia()));
-    });
+        expect(caelestia().readAsStringSync(), ours('hyprland', caelestia()));
+      },
+    );
 
     test('plain Hyprland gets exec-once at the end of hyprland.conf', () async {
       wm = 'hyprland';
@@ -149,28 +179,36 @@ void main() {
     test('a moved AppImage replaces the line instead of adding one', () async {
       wm = 'hyprland';
       enabledEarlier();
-      put(caelestia(),
-          '-- mine\n${LinuxAutostart.startLines('hyprland', caelestia().path, '/old/keqdroid.AppImage')}');
+      put(
+        caelestia(),
+        '-- mine\n${LinuxAutostart.startLines('hyprland', caelestia().path, '/old/keqdroid.AppImage')}',
+      );
 
       await LinuxAutostart.refresh();
 
-      expect(caelestia().readAsStringSync(), '-- mine\n${ours('hyprland', caelestia())}');
+      expect(
+        caelestia().readAsStringSync(),
+        '-- mine\n${ours('hyprland', caelestia())}',
+      );
     });
 
-    test('turning autostart off leaves the rest of the config byte for byte',
-        () async {
-      wm = 'hyprland';
-      const own = '-- mine\nhl.config({ general = { gaps_in = 4 } })\n';
-      put(caelestia(), own);
-      await LinuxAutostart.setEnabled(true);
+    test(
+      'turning autostart off leaves the rest of the config byte for byte',
+      () async {
+        wm = 'hyprland';
+        const own = '-- mine\nhl.config({ general = { gaps_in = 4 } })\n';
+        put(caelestia(), own);
+        await LinuxAutostart.setEnabled(true);
 
-      await LinuxAutostart.setEnabled(false);
+        await LinuxAutostart.setEnabled(false);
 
-      expect(caelestia().readAsStringSync(), own);
-    });
+        expect(caelestia().readAsStringSync(), own);
+      },
+    );
 
     test('a line the user put under our mark by hand survives', () async {
-      const own = '-- keqdroid autostart, added and removed by the app\n'
+      const own =
+          '-- keqdroid autostart, added and removed by the app\n'
           'hl.exec_cmd("waybar")\n';
       put(caelestia(), own);
 
@@ -179,69 +217,82 @@ void main() {
       expect(caelestia().readAsStringSync(), 'hl.exec_cmd("waybar")\n');
     });
 
-    test('where XDG autostart runs there is no line, and an old one goes',
-        () async {
-      wm = 'hyprland';
-      desktopRunsIt = true;
-      const own = '-- mine\n';
-      enabledEarlier();
-      put(caelestia(), own + ours('hyprland', caelestia()));
+    test(
+      'where XDG autostart runs there is no line, and an old one goes',
+      () async {
+        wm = 'hyprland';
+        desktopRunsIt = true;
+        const own = '-- mine\n';
+        enabledEarlier();
+        put(caelestia(), own + ours('hyprland', caelestia()));
 
-      await LinuxAutostart.refresh();
-      expect(caelestia().readAsStringSync(), own);
+        await LinuxAutostart.refresh();
+        expect(caelestia().readAsStringSync(), own);
 
-      await LinuxAutostart.setEnabled(true);
-      expect(caelestia().readAsStringSync(), own);
-    });
+        await LinuxAutostart.setEnabled(true);
+        expect(caelestia().readAsStringSync(), own);
+      },
+    );
 
-    test('outside Hyprland the line stays for the next Hyprland login',
-        () async {
-      enabledEarlier();
-      final text = '-- mine\n${ours('hyprland', caelestia())}';
-      put(caelestia(), text);
+    test(
+      'outside Hyprland the line stays for the next Hyprland login',
+      () async {
+        enabledEarlier();
+        final text = '-- mine\n${ours('hyprland', caelestia())}';
+        put(caelestia(), text);
 
-      await LinuxAutostart.refresh();
+        await LinuxAutostart.refresh();
 
-      expect(caelestia().readAsStringSync(), text);
-    });
+        expect(caelestia().readAsStringSync(), text);
+      },
+    );
 
-    test('sway without its own session starts it with exec from its config',
-        () async {
-      wm = 'sway';
-      const own = 'set \$mod Mod4\n';
-      put(swayConf(), own);
+    test(
+      'sway without its own session starts it with exec from its config',
+      () async {
+        wm = 'sway';
+        const own = 'set \$mod Mod4\n';
+        put(swayConf(), own);
 
-      await LinuxAutostart.setEnabled(true);
+        await LinuxAutostart.setEnabled(true);
 
-      expect(swayConf().readAsStringSync(), own + ours('sway', swayConf()));
-    });
+        expect(swayConf().readAsStringSync(), own + ours('sway', swayConf()));
+      },
+    );
 
-    test('sway gets the line in ~/.sway/config when it exists, as sway reads it first',
-        () async {
-      wm = 'sway';
-      put(swayHomeConf(), '');
-      put(swayConf(), '');
+    test(
+      'sway gets the line in ~/.sway/config when it exists, as sway reads it first',
+      () async {
+        wm = 'sway';
+        put(swayHomeConf(), '');
+        put(swayConf(), '');
 
-      await LinuxAutostart.setEnabled(true);
+        await LinuxAutostart.setEnabled(true);
 
-      expect(swayHomeConf().readAsStringSync(), ours('sway', swayHomeConf()));
-      expect(swayConf().readAsStringSync(), '');
-    });
+        expect(swayHomeConf().readAsStringSync(), ours('sway', swayHomeConf()));
+        expect(swayConf().readAsStringSync(), '');
+      },
+    );
 
-    test('river gets the line right after the shebang, before an exec at the end',
-        () async {
-      wm = 'river';
-      const body = 'riverctl map normal Super Return spawn foot\n'
-          'exec rivertile -view-padding 6\n';
-      put(riverInit(), '#!/bin/sh\n$body');
+    test(
+      'river gets the line right after the shebang, before an exec at the end',
+      () async {
+        wm = 'river';
+        const body =
+            'riverctl map normal Super Return spawn foot\n'
+            'exec rivertile -view-padding 6\n';
+        put(riverInit(), '#!/bin/sh\n$body');
 
-      await LinuxAutostart.setEnabled(true);
-      expect(riverInit().readAsStringSync(),
-          '#!/bin/sh\n${ours('river', riverInit())}$body');
+        await LinuxAutostart.setEnabled(true);
+        expect(
+          riverInit().readAsStringSync(),
+          '#!/bin/sh\n${ours('river', riverInit())}$body',
+        );
 
-      await LinuxAutostart.setEnabled(false);
-      expect(riverInit().readAsStringSync(), '#!/bin/sh\n$body');
-    });
+        await LinuxAutostart.setEnabled(false);
+        expect(riverInit().readAsStringSync(), '#!/bin/sh\n$body');
+      },
+    );
 
     test('a river init in another language is left alone', () async {
       wm = 'river';
@@ -276,20 +327,22 @@ void main() {
       expect(swayConf().readAsStringSync(), ours('sway', swayConf()));
     });
 
-    test('turning autostart off takes the line out of every compositor',
-        () async {
-      put(caelestia(), '-- mine\n${ours('hyprland', caelestia())}');
-      put(swayConf(), '# mine\n${ours('sway', swayConf())}');
-      put(riverInit(), '#!/bin/sh\n${ours('river', riverInit())}# mine\n');
-      put(niriConf(), '// mine\n${ours('niri', niriConf())}');
+    test(
+      'turning autostart off takes the line out of every compositor',
+      () async {
+        put(caelestia(), '-- mine\n${ours('hyprland', caelestia())}');
+        put(swayConf(), '# mine\n${ours('sway', swayConf())}');
+        put(riverInit(), '#!/bin/sh\n${ours('river', riverInit())}# mine\n');
+        put(niriConf(), '// mine\n${ours('niri', niriConf())}');
 
-      await LinuxAutostart.setEnabled(false);
+        await LinuxAutostart.setEnabled(false);
 
-      expect(caelestia().readAsStringSync(), '-- mine\n');
-      expect(swayConf().readAsStringSync(), '# mine\n');
-      expect(riverInit().readAsStringSync(), '#!/bin/sh\n# mine\n');
-      expect(niriConf().readAsStringSync(), '// mine\n');
-    });
+        expect(caelestia().readAsStringSync(), '-- mine\n');
+        expect(swayConf().readAsStringSync(), '# mine\n');
+        expect(riverInit().readAsStringSync(), '#!/bin/sh\n# mine\n');
+        expect(niriConf().readAsStringSync(), '// mine\n');
+      },
+    );
 
     test('Hyprland without uwsm also starts the app at login', () async {
       expect(await LinuxAutostart.setEnabled(true), isTrue);
@@ -358,9 +411,9 @@ void main() {
     var args = <String>[];
 
     // раннер ищет файл в g_get_user_data_dir() под своим APPLICATION_ID
-    String appId() => RegExp(r'set\(APPLICATION_ID "([^"]+)"\)')
-        .firstMatch(File('linux/CMakeLists.txt').readAsStringSync())!
-        .group(1)!;
+    String appId() => RegExp(
+      r'set\(APPLICATION_ID "([^"]+)"\)',
+    ).firstMatch(File('linux/CMakeLists.txt').readAsStringSync())!.group(1)!;
     File inTray() => File(p.join(data.path, appId(), 'autostart-in-tray'));
 
     setUp(() {
@@ -376,31 +429,40 @@ void main() {
       data.deleteSync(recursive: true);
     });
 
-    test('the switch puts the file where the runner looks and takes it away',
-        () async {
-      await LinuxAutostart.setStartInTray(true);
-      await LinuxAutostart.setStartInTray(true);
-      expect(inTray().existsSync(), isTrue);
+    test(
+      'the switch puts the file where the runner looks and takes it away',
+      () async {
+        await LinuxAutostart.setStartInTray(true);
+        await LinuxAutostart.setStartInTray(true);
+        expect(inTray().existsSync(), isTrue);
 
-      await LinuxAutostart.setStartInTray(false);
-      await LinuxAutostart.setStartInTray(false);
-      expect(inTray().existsSync(), isFalse);
-    });
+        await LinuxAutostart.setStartInTray(false);
+        await LinuxAutostart.setStartInTray(false);
+        expect(inTray().existsSync(), isFalse);
+      },
+    );
 
     test('the runner checks the same flag and file', () {
-      final runner =
-          File('linux/runner/my_application.cc').readAsStringSync();
+      final runner = File('linux/runner/my_application.cc').readAsStringSync();
       expect(runner, contains('"${LinuxAutostart.flag}"'));
-      expect(runner, contains('g_get_user_data_dir(), APPLICATION_ID, '
-          '"${p.basename(inTray().path)}"'));
+      expect(
+        runner,
+        contains(
+          'g_get_user_data_dir(), APPLICATION_ID, '
+          '"${p.basename(inTray().path)}"',
+        ),
+      );
     });
 
     test('only a launch at login starts hidden', () async {
       expect(LinuxAutostart.startedInTray(), isFalse);
 
       await LinuxAutostart.setStartInTray(true);
-      expect(LinuxAutostart.startedInTray(), isFalse,
-          reason: 'opened by hand, the window shows');
+      expect(
+        LinuxAutostart.startedInTray(),
+        isFalse,
+        reason: 'opened by hand, the window shows',
+      );
 
       args = [...args, LinuxAutostart.flag];
       expect(LinuxAutostart.startedInTray(), isTrue);

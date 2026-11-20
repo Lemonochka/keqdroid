@@ -130,7 +130,9 @@ void main() {
 
   // на Android подписку обновляет фоновый изолят, пока интерфейса нет, а туннель работает
   group('интерфейс открыли после фонового обновления, VPN включён', () {
-    Future<(ProviderContainer, _Backend)> reopen({required bool replaced}) async {
+    Future<(ProviderContainer, _Backend)> reopen({
+      required bool replaced,
+    }) async {
       final picked = ServerItem.fromRaw(
         _vless('198.51.100.11', 'New'),
         subscriptionId: 'a',
@@ -206,12 +208,11 @@ class _Body implements HttpClientAdapter {
     RequestOptions options,
     Stream<List<int>>? requestStream,
     Future<void>? cancelFuture,
-  ) async =>
-      ResponseBody.fromString(
-        body,
-        200,
-        headers: {
-          'content-type': ['text/plain; charset=utf-8'],
-        },
-      );
+  ) async => ResponseBody.fromString(
+    body,
+    200,
+    headers: {
+      'content-type': ['text/plain; charset=utf-8'],
+    },
+  );
 }

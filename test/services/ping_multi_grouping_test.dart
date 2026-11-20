@@ -27,12 +27,12 @@ class _OneBadServerBackend extends FakeTunnelBackend {
   final multiSizes = <int>[];
 
   static _Probe _answer(String id, {required bool alive}) => (
-        id: id,
-        success: alive,
-        latencyMs: alive ? 120 : null,
-        error: alive ? '' : 'dead',
-        httpStatus: alive ? 204 : null,
-      );
+    id: id,
+    success: alive,
+    latencyMs: alive ? 120 : null,
+    error: alive ? '' : 'dead',
+    httpStatus: alive ? 204 : null,
+  );
 
   @override
   Future<List<_Probe>?> xrayUrlTestMulti({
@@ -58,11 +58,9 @@ class _OneBadServerBackend extends FakeTunnelBackend {
     String testUrl = 'https://connectivitycheck.gstatic.com/generate_204',
     int timeoutMs = 15000,
     bool keepAlive = true,
-  }) async =>
-      [
-        for (final item in items)
-          _answer(item.$1, alive: !_isBad(item.$2)),
-      ];
+  }) async => [
+    for (final item in items) _answer(item.$1, alive: !_isBad(item.$2)),
+  ];
 }
 
 /// Кого можно измерить общим конфигом, а кого нельзя.
@@ -149,41 +147,50 @@ proxies:
     );
   });
 
-  test('ядро не поднялось — пачку делим, живые соседи плохого сервера живы', () async {
-    // Раньше натив отдавал на такой случай список отказов той же длины,
-    // и все десять серверов пачки уходили в красные из-за одного.
-    final backend = _OneBadServerBackend();
-    PingService.debugMultiPingSupported = true;
-    PingService.debugEngine = VpnEngine.withBackend(backend);
-    addTearDown(() {
-      PingService.debugMultiPingSupported = null;
-      PingService.debugEngine = null;
-    });
-    ServerItem server(String id) => ServerItem(
-          id: id,
-          config: vless.replaceFirst('a.example.com', '$id.example.com'),
-          type: ServerItemType.subscription,
-          subscriptionId: 's1',
-        );
-    final servers = [for (final id in ['a', 'b', 'bad', 'c']) server(id)];
+  test(
+    'ядро не поднялось — пачку делим, живые соседи плохого сервера живы',
+    () async {
+      // Раньше натив отдавал на такой случай список отказов той же длины,
+      // и все десять серверов пачки уходили в красные из-за одного.
+      final backend = _OneBadServerBackend();
+      PingService.debugMultiPingSupported = true;
+      PingService.debugEngine = VpnEngine.withBackend(backend);
+      addTearDown(() {
+        PingService.debugMultiPingSupported = null;
+        PingService.debugEngine = null;
+      });
+      ServerItem server(String id) => ServerItem(
+        id: id,
+        config: vless.replaceFirst('a.example.com', '$id.example.com'),
+        type: ServerItemType.subscription,
+        subscriptionId: 's1',
+      );
+      final servers = [
+        for (final id in ['a', 'b', 'bad', 'c']) server(id),
+      ];
 
-    final results = await PingService.pingUrlBatch(
-      servers,
-      const AppSettings(),
-      resolvedIps: {
-        'a': '192.0.2.1',
-        'b': '192.0.2.2',
-        'bad': _badIp,
-        'c': '192.0.2.3',
-      },
-    );
+      final results = await PingService.pingUrlBatch(
+        servers,
+        const AppSettings(),
+        resolvedIps: {
+          'a': '192.0.2.1',
+          'b': '192.0.2.2',
+          'bad': _badIp,
+          'c': '192.0.2.3',
+        },
+      );
 
-    expect(
-      {for (final r in results) r.serverId: r.success},
-      {'a': true, 'b': true, 'bad': false, 'c': true},
-    );
-    expect(backend.multiSizes.first, 4, reason: 'сначала пачкой, а не поштучно');
-  });
+      expect(
+        {for (final r in results) r.serverId: r.success},
+        {'a': true, 'b': true, 'bad': false, 'c': true},
+      );
+      expect(
+        backend.multiSizes.first,
+        4,
+        reason: 'сначала пачкой, а не поштучно',
+      );
+    },
+  );
 
   test('размер чанка не «все разом»', () {
     // Батч падает целиком из-за одного негодного сервера: чем он больше, тем

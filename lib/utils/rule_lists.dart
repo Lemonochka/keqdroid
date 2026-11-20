@@ -16,8 +16,10 @@ bool isRuleListUrl(String entry) {
   return lower.startsWith('https://') || lower.startsWith('http://');
 }
 
-List<String> ruleListUrls(String field) =>
-    {for (final e in routingEntries(field)) if (isRuleListUrl(e)) e}.toList();
+List<String> ruleListUrls(String field) => {
+  for (final e in routingEntries(field))
+    if (isRuleListUrl(e)) e,
+}.toList();
 
 // без ссылок поле возвращается байт в байт, и конфиг у тех, кто ими не пользуется, не меняется
 String withoutRuleListUrls(String field) {

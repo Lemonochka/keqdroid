@@ -3,7 +3,9 @@ import 'dart:io';
 
 import '../utils/local_vpn_proxy.dart';
 
-final _probeUrl = Uri.parse('http://connectivitycheck.gstatic.com/generate_204');
+final _probeUrl = Uri.parse(
+  'http://connectivitycheck.gstatic.com/generate_204',
+);
 
 // в TUN у локального входа пароль сессии: без него ядро отвечало 407, и предупреждение
 // «ничего не загрузится» было ложным при каждом подключении

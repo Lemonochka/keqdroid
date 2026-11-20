@@ -10,8 +10,9 @@ import 'package:keqdroid/l10n/app_localizations.dart';
 /// чужим термином или английской пунктуацией ловится здесь, а не на экране.
 void main() {
   Map<String, String> strings(String locale) {
-    final raw = jsonDecode(File('lib/l10n/app_$locale.arb').readAsStringSync())
-        as Map<String, dynamic>;
+    final raw =
+        jsonDecode(File('lib/l10n/app_$locale.arb').readAsStringSync())
+            as Map<String, dynamic>;
     return {
       for (final e in raw.entries)
         if (!e.key.startsWith('@')) e.key: e.value as String,
@@ -22,16 +23,19 @@ void main() {
   const urlExample = 'subscriptionUrlHint';
 
   List<String> offending(Map<String, String> s, RegExp pattern) => [
-        for (final e in s.entries)
-          if (e.key != urlExample && pattern.hasMatch(e.value)) e.key,
-      ];
+    for (final e in s.entries)
+      if (e.key != urlExample && pattern.hasMatch(e.value)) e.key,
+  ];
 
   test('every language has every string', () {
     final en = strings('en');
     for (final locale in AppLocalizations.supportedLocales) {
       final tr = strings(locale.languageCode);
-      expect(en.keys.where((k) => !tr.containsKey(k)), isEmpty,
-          reason: '${locale.languageCode}: без перевода покажется английский');
+      expect(
+        en.keys.where((k) => !tr.containsKey(k)),
+        isEmpty,
+        reason: '${locale.languageCode}: без перевода покажется английский',
+      );
     }
   });
 
@@ -44,8 +48,10 @@ void main() {
 
     test('keeps one word per thing', () {
       // «Abo», «Core», «Provider» стояли вперемешку с полными словами.
-      expect(offending(de, RegExp(r'\bAbos?\b|\bAbo-|\bCore\b|\bProvider\b')),
-          isEmpty);
+      expect(
+        offending(de, RegExp(r'\bAbos?\b|\bAbo-|\bCore\b|\bProvider\b')),
+        isEmpty,
+      );
     });
 
     test('uses German typography', () {
@@ -67,11 +73,13 @@ void main() {
       expect(offending(zh, RegExp(r'「|」|\.\.\.')), isEmpty);
       final asciiParens = [
         for (final e in zh.entries)
-          if (cjk.hasMatch(e.value) && RegExp(r'[()]').hasMatch(e.value))
-            e.key,
+          if (cjk.hasMatch(e.value) && RegExp(r'[()]').hasMatch(e.value)) e.key,
       ];
-      expect(asciiParens, isEmpty,
-          reason: 'в китайской фразе скобки полноширинные: （）');
+      expect(
+        asciiParens,
+        isEmpty,
+        reason: 'в китайской фразе скобки полноширинные: （）',
+      );
     });
   });
 }

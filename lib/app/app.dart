@@ -63,12 +63,13 @@ ColorScheme _sakuraScheme(Brightness brightness) {
   final light = brightness == Brightness.light;
   return pink.copyWith(
     surface: light ? const Color(0xFFFFF4F8) : const Color(0xFF251721),
-    surfaceContainerLowest:
-        light ? const Color(0xFFFBE7EF) : const Color(0xFF1B1017),
-    surfaceContainerHigh:
-        light ? const Color(0xFFFFFFFF) : const Color(0xFF382431),
-    surfaceContainer:
-        light ? const Color(0xFFFFF8FB) : const Color(0xFF2E1D28),
+    surfaceContainerLowest: light
+        ? const Color(0xFFFBE7EF)
+        : const Color(0xFF1B1017),
+    surfaceContainerHigh: light
+        ? const Color(0xFFFFFFFF)
+        : const Color(0xFF382431),
+    surfaceContainer: light ? const Color(0xFFFFF8FB) : const Color(0xFF2E1D28),
   );
 }
 
@@ -81,12 +82,13 @@ ColorScheme _lavenderMilkScheme(Brightness brightness) {
   final light = brightness == Brightness.light;
   return lavender.copyWith(
     surface: light ? const Color(0xFFF7F3FE) : const Color(0xFF1F1930),
-    surfaceContainerLowest:
-        light ? const Color(0xFFEFE7FB) : const Color(0xFF161126),
-    surfaceContainerHigh:
-        light ? const Color(0xFFFFFFFF) : const Color(0xFF2F2749),
-    surfaceContainer:
-        light ? const Color(0xFFFAF7FF) : const Color(0xFF272040),
+    surfaceContainerLowest: light
+        ? const Color(0xFFEFE7FB)
+        : const Color(0xFF161126),
+    surfaceContainerHigh: light
+        ? const Color(0xFFFFFFFF)
+        : const Color(0xFF2F2749),
+    surfaceContainer: light ? const Color(0xFFFAF7FF) : const Color(0xFF272040),
   );
 }
 
@@ -130,7 +132,9 @@ ColorScheme _pumpkinNightScheme(Brightness brightness) {
     surfaceContainerLow: c(mcu.MaterialDynamicColors.surfaceContainerLow),
     surfaceContainer: c(mcu.MaterialDynamicColors.surfaceContainer),
     surfaceContainerHigh: c(mcu.MaterialDynamicColors.surfaceContainerHigh),
-    surfaceContainerHighest: c(mcu.MaterialDynamicColors.surfaceContainerHighest),
+    surfaceContainerHighest: c(
+      mcu.MaterialDynamicColors.surfaceContainerHighest,
+    ),
     outline: c(mcu.MaterialDynamicColors.outline),
     outlineVariant: c(mcu.MaterialDynamicColors.outlineVariant),
     inverseSurface: c(mcu.MaterialDynamicColors.inverseSurface),
@@ -212,20 +216,21 @@ Color? parseThemeSeed(String raw) {
   return Color(hex.length == 6 ? 0xFF000000 | value : value | 0xFF000000);
 }
 
-String formatThemeSeed(Color color) =>
-    (color.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0').toUpperCase();
+String formatThemeSeed(Color color) => (color.toARGB32() & 0xFFFFFF)
+    .toRadixString(16)
+    .padLeft(6, '0')
+    .toUpperCase();
 
 // по id кешируются схемы, поэтому цвет и вариант зашиты в него
 ThemePreset customThemePreset(
   Color seed, {
   DynamicSchemeVariant variant = DynamicSchemeVariant.tonalSpot,
-}) =>
-    ThemePreset(
-      id: '$kCustomThemePresetId:${formatThemeSeed(seed)}:${variant.name}',
-      name: '#${formatThemeSeed(seed)}',
-      seed: seed,
-      variant: variant,
-    );
+}) => ThemePreset(
+  id: '$kCustomThemePresetId:${formatThemeSeed(seed)}:${variant.name}',
+  name: '#${formatThemeSeed(seed)}',
+  seed: seed,
+  variant: variant,
+);
 
 ThemePreset themePresetFor(AppSettings settings) {
   if (settings.themePresetId == kCustomThemePresetId) {
@@ -258,10 +263,7 @@ ColorScheme buildPresetScheme(ThemePreset preset, Brightness brightness) {
 
 ColorScheme applyAmoledBlack(ColorScheme scheme) {
   if (scheme.brightness != Brightness.dark) return scheme;
-  return scheme.copyWith(
-    surface: Colors.black,
-    surfaceDim: Colors.black,
-  );
+  return scheme.copyWith(surface: Colors.black, surfaceDim: Colors.black);
 }
 
 typedef _AppThemeKey = ({
@@ -291,8 +293,13 @@ ThemeData buildAppTheme(
   );
   final cached = _appThemeCache[key];
   if (cached != null) return cached;
-  final built =
-      _buildAppTheme(scheme, flair, fontFamily, iconShape, iconPalette);
+  final built = _buildAppTheme(
+    scheme,
+    flair,
+    fontFamily,
+    iconShape,
+    iconPalette,
+  );
   if (_appThemeCache.length >= _appThemeCacheLimit) _appThemeCache.clear();
   return _appThemeCache[key] = built;
 }
@@ -317,21 +324,24 @@ ThemeData _buildAppTheme(
   return ThemeData(
     colorScheme: scheme,
     useMaterial3: true,
-    iconButtonTheme:
-        tv ? IconButtonThemeData(style: TvFocus.buttonStyle(scheme)) : null,
+    iconButtonTheme: tv
+        ? IconButtonThemeData(style: TvFocus.buttonStyle(scheme))
+        : null,
     extensions: [
       ExpressiveIconShapeTheme(shape: iconShape),
       ServerIconPaletteTheme(palette: iconPalette),
     ],
     textTheme: textTheme,
     chipTheme: components.chip,
-    filledButtonTheme:
-        FilledButtonThemeData(style: tvButtons(components.filledButton.style)),
+    filledButtonTheme: FilledButtonThemeData(
+      style: tvButtons(components.filledButton.style),
+    ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: tvButtons(components.outlinedButton.style),
     ),
-    textButtonTheme:
-        TextButtonThemeData(style: tvButtons(components.textButton.style)),
+    textButtonTheme: TextButtonThemeData(
+      style: tvButtons(components.textButton.style),
+    ),
     floatingActionButtonTheme: components.fab.copyWith(
       extendedTextStyle: textTheme.titleMedium,
     ),
@@ -375,19 +385,21 @@ class KeqdroidApp extends ConsumerWidget {
 
     return DynamicColorBuilder(
       builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
-        final lightScheme = (lightDynamic ??
-                ColorScheme.fromSeed(
-                  seedColor: fallbackSeed,
-                  brightness: Brightness.light,
-                ))
-            .harmonized();
+        final lightScheme =
+            (lightDynamic ??
+                    ColorScheme.fromSeed(
+                      seedColor: fallbackSeed,
+                      brightness: Brightness.light,
+                    ))
+                .harmonized();
 
-        final darkScheme = (darkDynamic ??
-                ColorScheme.fromSeed(
-                  seedColor: fallbackSeed,
-                  brightness: Brightness.dark,
-                ))
-            .harmonized();
+        final darkScheme =
+            (darkDynamic ??
+                    ColorScheme.fromSeed(
+                      seedColor: fallbackSeed,
+                      brightness: Brightness.dark,
+                    ))
+                .harmonized();
 
         return _ThemedApp(
           lightScheme: lightScheme,
@@ -465,16 +477,20 @@ class _ThemedApp extends ConsumerWidget {
       themeMode: settings.darkTheme ? ThemeMode.dark : ThemeMode.light,
       // анимация темы пересобирает всё дерево на каждом кадре, на Pixel 6a по 55 мс
       themeAnimationDuration: Duration.zero,
-      theme: buildAppTheme(useSystem ? lightScheme : customLight,
-          flair: flair,
-          fontFamily: fontFamily,
-          iconShape: iconShape,
-          iconPalette: iconPalette),
-      darkTheme: buildAppTheme(dark(useSystem ? darkScheme : customDark),
-          flair: flair,
-          fontFamily: fontFamily,
-          iconShape: iconShape,
-          iconPalette: iconPalette),
+      theme: buildAppTheme(
+        useSystem ? lightScheme : customLight,
+        flair: flair,
+        fontFamily: fontFamily,
+        iconShape: iconShape,
+        iconPalette: iconPalette,
+      ),
+      darkTheme: buildAppTheme(
+        dark(useSystem ? darkScheme : customDark),
+        flair: flair,
+        fontFamily: fontFamily,
+        iconShape: iconShape,
+        iconPalette: iconPalette,
+      ),
       builder: (context, child) {
         final content = (!flair || child == null)
             ? (child ?? const SizedBox.shrink())
@@ -483,8 +499,9 @@ class _ThemedApp extends ConsumerWidget {
                 child: child,
               );
         final theme = Theme.of(context);
-        final icons =
-            theme.brightness == Brightness.dark ? Brightness.light : Brightness.dark;
+        final icons = theme.brightness == Brightness.dark
+            ? Brightness.light
+            : Brightness.dark;
         // Панель навигации по теме приложения: без этого её красит прошивка по теме системы, и на HyperOS после
         // обновления под кнопками оставалась белая полоса до перезагрузки. Строку состояния тоже: стоит задать одну
         // панель, и Pixel 6a в тёмной теме перекрасил значки сверху в тёмные (apr=LIGHT_STATUS_BARS)
@@ -497,7 +514,9 @@ class _ThemedApp extends ConsumerWidget {
           ),
           child: _UiZoom(
             scale: settings.uiScale * _baseUiScale,
-            child: _VisibilityTickerGate(child: LiquidToastHost(child: content)),
+            child: _VisibilityTickerGate(
+              child: LiquidToastHost(child: content),
+            ),
           ),
         );
       },
@@ -574,7 +593,8 @@ class _VisibilityTickerGate extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // репетиции подключения нужны тикеры и в трее, иначе её анимации стоят и шейдеры не собираются
     final visible =
-        ref.watch(desktopUiVisibleProvider) || ref.watch(connectRehearsalProvider);
+        ref.watch(desktopUiVisibleProvider) ||
+        ref.watch(connectRehearsalProvider);
     return TickerMode(enabled: visible, child: child);
   }
 }

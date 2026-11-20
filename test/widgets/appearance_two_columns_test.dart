@@ -27,15 +27,19 @@ Future<void> _pump(
     serversTwoColumns: twoColumns,
     serversColumns: columns,
   );
-  final storage = await tester.runAsync(() => buildStorageService(
-        initialValues: {'keqdis_settings': settings.toJsonString()},
-      ));
-  await tester.pumpWidget(ProviderScope(
-    overrides: [storageProvider.overrideWithValue(storage!)],
-    child: KeqdroidApp(
-      home: Scaffold(body: appearanceGeneralTabForTest(settings)),
+  final storage = await tester.runAsync(
+    () => buildStorageService(
+      initialValues: {'keqdis_settings': settings.toJsonString()},
     ),
-  ));
+  );
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [storageProvider.overrideWithValue(storage!)],
+      child: KeqdroidApp(
+        home: Scaffold(body: appearanceGeneralTabForTest(settings)),
+      ),
+    ),
+  );
   await tester.pumpAndSettle();
 }
 
@@ -43,8 +47,9 @@ void main() {
   setUp(() => PlatformBootstrap.debugIsDesktopOverride = false);
   tearDown(() => PlatformBootstrap.debugIsDesktopOverride = null);
 
-  testWidgets('при 140% на телефоне две колонки объясняют, что не помещаются',
-      (tester) async {
+  testWidgets('при 140% на телефоне две колонки объясняют, что не помещаются', (
+    tester,
+  ) async {
     await _pump(tester, uiScale: 1.4, twoColumns: true);
     expect(find.text(_noRoom, skipOffstage: false), findsOneWidget);
   });
@@ -59,12 +64,15 @@ void main() {
     expect(find.text(_noRoom, skipOffstage: false), findsNothing);
   });
 
-  testWidgets('из трёх колонок при 100% помещаются две, и это сказано',
-      (tester) async {
+  testWidgets('из трёх колонок при 100% помещаются две, и это сказано', (
+    tester,
+  ) async {
     await _pump(tester, uiScale: 1.0, twoColumns: true, columns: 3);
     expect(
-      find.text(AppLocalizationsEn().serversColumnsOnlyFit(2),
-          skipOffstage: false),
+      find.text(
+        AppLocalizationsEn().serversColumnsOnlyFit(2),
+        skipOffstage: false,
+      ),
       findsOneWidget,
     );
   });

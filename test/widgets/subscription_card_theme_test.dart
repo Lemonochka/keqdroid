@@ -127,9 +127,12 @@ void main() {
 
     test('старые заготовки переезжают на новые рисунки, а не пропадают', () {
       for (final old in ['sunset', 'aurora', 'dusk', 'mint', 'ember']) {
-        final sub = Subscription.fromJson(
-          {'id': 'a', 'name': 'n', 'url': 'u', 'cardThemeId': old},
-        );
+        final sub = Subscription.fromJson({
+          'id': 'a',
+          'name': 'n',
+          'url': 'u',
+          'cardThemeId': old,
+        });
         final theme = resolveCardTheme(sub.cardThemeId);
         expect(theme.art, isNotNull, reason: old);
         // иначе в окошках выбора не горит ни одно
@@ -225,8 +228,11 @@ void main() {
           ]) {
             for (final rtl in [false, true]) {
               final recorder = ui.PictureRecorder();
-              CardArtPainter(art, scheme, rtl: rtl)
-                  .paint(Canvas(recorder), size);
+              CardArtPainter(
+                art,
+                scheme,
+                rtl: rtl,
+              ).paint(Canvas(recorder), size);
               recorder.endRecording().dispose();
             }
           }
@@ -377,7 +383,9 @@ void main() {
   });
 
   // текст карточки с начала строки, рисунок с другой стороны: в фарси текст справа
-  testWidgets('рисунок с края без текста, в RTL с другой стороны', (tester) async {
+  testWidgets('рисунок с края без текста, в RTL с другой стороны', (
+    tester,
+  ) async {
     Future<(double, double)> ink(TextDirection direction) async {
       final key = GlobalKey();
       await tester.pumpWidget(
@@ -399,8 +407,9 @@ void main() {
                   child: ColoredBox(
                     color: Colors.black,
                     child: Builder(
-                      builder: (context) => resolveCardTheme('cookieLayers')
-                          .background(context, veil: CardVeil.medium),
+                      builder: (context) => resolveCardTheme(
+                        'cookieLayers',
+                      ).background(context, veil: CardVeil.medium),
                     ),
                   ),
                 ),
@@ -486,14 +495,9 @@ void main() {
     });
 
     test('пресет вычисляется из состава, а не хранится рядом', () {
+      expect(SubscriptionCardPreset.of(const {}), SubscriptionCardPreset.full);
       expect(
-        SubscriptionCardPreset.of(const {}),
-        SubscriptionCardPreset.full,
-      );
-      expect(
-        SubscriptionCardPreset.of(
-          SubscriptionCardPreset.compact.hidden!,
-        ),
+        SubscriptionCardPreset.of(SubscriptionCardPreset.compact.hidden!),
         SubscriptionCardPreset.compact,
       );
       expect(
@@ -575,7 +579,10 @@ void main() {
       final texts = tester.widgetList<Text>(find.text(long)).toList();
       expect(texts, hasLength(2), reason: 'карточка в списке и образец');
       final inSheet = tester.widget<Text>(
-        find.descendant(of: find.byType(BottomSheet), matching: find.text(long)),
+        find.descendant(
+          of: find.byType(BottomSheet),
+          matching: find.text(long),
+        ),
       );
       expect(inSheet.maxLines, 2);
       final inList = texts.firstWhere((t) => !identical(t, inSheet));
@@ -621,10 +628,8 @@ void main() {
       tester,
     ) async {
       // от свёрнутой части остаётся полоска в 10 dp
-      int expandedCards() => _details
-          .evaluate()
-          .where((e) => e.size!.height > 10.5)
-          .length;
+      int expandedCards() =>
+          _details.evaluate().where((e) => e.size!.height > 10.5).length;
 
       await _pumpTab(tester, _sub());
       await tester.tap(find.byIcon(Icons.expand_more_rounded));
@@ -642,42 +647,56 @@ void main() {
     });
 
     // картинка и затемнение сглаживались по краю каждое само, и край светился полоской
-    testWidgets('подложка карточки шире неё на 1 dp и на ПК скругляется одним слоем', (
-      tester,
-    ) async {
-      PlatformBootstrap.debugIsDesktopOverride = true;
-      addTearDown(() => PlatformBootstrap.debugIsDesktopOverride = null);
-      await _pumpTab(tester, _sub(cardThemeId: 'depth'));
-      final art = find.byWidgetPredicate(
-        (w) => w is CustomPaint && w.painter is CardArtPainter,
-      );
-      final clip = find.ancestor(of: art, matching: find.byType(ClipRRect)).first;
-      expect(tester.widget<ClipRRect>(clip).clipBehavior, Clip.antiAliasWithSaveLayer);
-      expect(tester.getRect(art), rectMoreOrLessEquals(tester.getRect(clip).inflate(1)));
-    });
+    testWidgets(
+      'подложка карточки шире неё на 1 dp и на ПК скругляется одним слоем',
+      (tester) async {
+        PlatformBootstrap.debugIsDesktopOverride = true;
+        addTearDown(() => PlatformBootstrap.debugIsDesktopOverride = null);
+        await _pumpTab(tester, _sub(cardThemeId: 'depth'));
+        final art = find.byWidgetPredicate(
+          (w) => w is CustomPaint && w.painter is CardArtPainter,
+        );
+        final clip = find
+            .ancestor(of: art, matching: find.byType(ClipRRect))
+            .first;
+        expect(
+          tester.widget<ClipRRect>(clip).clipBehavior,
+          Clip.antiAliasWithSaveLayer,
+        );
+        expect(
+          tester.getRect(art),
+          rectMoreOrLessEquals(tester.getRect(clip).inflate(1)),
+        );
+      },
+    );
 
     testWidgets(
-        'карточка сворачивается пружиной, как группа серверов: край пружинит, '
-        'а свёрнутое обратно не выглядывает', (tester) async {
-      await _pumpTab(tester, _sub());
-      final open = tester.getSize(_details).height;
-      await tester.tap(find.byIcon(Icons.expand_more_rounded));
-      await tester.pump();
-      final heights = <double>[];
-      for (var i = 0; i < 60; i++) {
-        await tester.pump(const Duration(milliseconds: 16));
-        heights.add(tester.getSize(_details).height);
-      }
-      expect(heights.first, inExclusiveRange(10, open), reason: 'не разом');
-      expect(heights.reduce(math.min), lessThan(9), reason: 'край пружинит');
-      final shut = heights.indexWhere((h) => h <= 10);
-      expect(heights.skip(shut).every((h) => h <= 10.01), isTrue);
-      expect(heights.last, 10);
+      'карточка сворачивается пружиной, как группа серверов: край пружинит, '
+      'а свёрнутое обратно не выглядывает',
+      (tester) async {
+        await _pumpTab(tester, _sub());
+        final open = tester.getSize(_details).height;
+        await tester.tap(find.byIcon(Icons.expand_more_rounded));
+        await tester.pump();
+        final heights = <double>[];
+        for (var i = 0; i < 60; i++) {
+          await tester.pump(const Duration(milliseconds: 16));
+          heights.add(tester.getSize(_details).height);
+        }
+        expect(heights.first, inExclusiveRange(10, open), reason: 'не разом');
+        expect(heights.reduce(math.min), lessThan(9), reason: 'край пружинит');
+        final shut = heights.indexWhere((h) => h <= 10);
+        expect(heights.skip(shut).every((h) => h <= 10.01), isTrue);
+        expect(heights.last, 10);
 
-      await tester.tap(find.byIcon(Icons.expand_more_rounded));
-      await tester.pumpAndSettle();
-      expect(tester.getSize(_details).height, moreOrLessEquals(open, epsilon: 0.01));
-    });
+        await tester.tap(find.byIcon(Icons.expand_more_rounded));
+        await tester.pumpAndSettle();
+        expect(
+          tester.getSize(_details).height,
+          moreOrLessEquals(open, epsilon: 0.01),
+        );
+      },
+    );
 
     testWidgets('редактор показывает состав и текущий пресет', (tester) async {
       await _openCardLookSheet(
@@ -708,8 +727,8 @@ void main() {
       // роль фильтра (выбранных может быть несколько), а пресет — набор целиком.
       final presets = tester
           .widget<ExpressiveConnectedButtons<SubscriptionCardPreset>>(
-        find.byType(ExpressiveConnectedButtons<SubscriptionCardPreset>),
-      );
+            find.byType(ExpressiveConnectedButtons<SubscriptionCardPreset>),
+          );
       expect(presets.selected, SubscriptionCardPreset.compact);
     });
   });

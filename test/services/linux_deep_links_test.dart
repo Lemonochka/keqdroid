@@ -63,10 +63,15 @@ void main() {
   });
 
   test('a launch link waits for the servers tab and is taken once', () {
-    LinuxDeepLinks.commandLine =
-        () => ['/usr/bin/keqdroid', 'keqdroid://add?url=https://s.example/1'];
+    LinuxDeepLinks.commandLine = () => [
+      '/usr/bin/keqdroid',
+      'keqdroid://add?url=https://s.example/1',
+    ];
     LinuxDeepLinks.captureLaunchLink();
-    expect(LinuxDeepLinks.takePending(), 'keqdroid://add?url=https://s.example/1');
+    expect(
+      LinuxDeepLinks.takePending(),
+      'keqdroid://add?url=https://s.example/1',
+    );
     expect(LinuxDeepLinks.takePending(), isNull);
   });
 
@@ -89,7 +94,10 @@ void main() {
 
       expect(windowCalls, containsAllInOrder(['show', 'focus']));
       expect(notified, 1);
-      expect(LinuxDeepLinks.takePending(), 'keqdroid://add?url=https://s.example/3');
+      expect(
+        LinuxDeepLinks.takePending(),
+        'keqdroid://add?url=https://s.example/3',
+      );
     });
 
     test('the servers tab is told through the bridge', () async {

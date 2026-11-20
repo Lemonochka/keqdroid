@@ -18,8 +18,8 @@ class StallingClashApi {
   int get port => _server.port;
 
   static Future<StallingClashApi> start() async => StallingClashApi._(
-        await ServerSocket.bind(InternetAddress.loopbackIPv4, 0, backlog: 1024),
-      );
+    await ServerSocket.bind(InternetAddress.loopbackIPv4, 0, backlog: 1024),
+  );
 
   void _handle(Socket socket) {
     _sockets.add(socket);
@@ -31,10 +31,12 @@ class StallingClashApi {
         request.addAll(data);
         if (!latin1.decode(request).contains('\r\n\r\n')) return;
         answered = true;
-        socket.add(latin1.encode(
-          'HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n'
-          'Content-Length: 100000\r\n\r\n{"downloadTotal":1,"connections":[',
-        ));
+        socket.add(
+          latin1.encode(
+            'HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n'
+            'Content-Length: 100000\r\n\r\n{"downloadTotal":1,"connections":[',
+          ),
+        );
       },
       onDone: () => _sockets.remove(socket..destroy()),
       onError: (_) => _sockets.remove(socket..destroy()),

@@ -61,8 +61,12 @@ abstract final class AwgUri {
     if (privateKey == null || privateKey.isEmpty) {
       throw ArgumentError('wg:// link: private_key is required');
     }
-    final publicKey =
-        _first(q, const ['publickey', 'peerpublickey', 'pk', 'serverpublickey']);
+    final publicKey = _first(q, const [
+      'publickey',
+      'peerpublickey',
+      'pk',
+      'serverpublickey',
+    ]);
     if (publicKey == null || publicKey.isEmpty) {
       throw ArgumentError('wg:// link: public_key is required');
     }
@@ -74,8 +78,9 @@ abstract final class AwgUri {
     if (!uri.hasPort) {
       throw ArgumentError('wg:// link: endpoint port is required');
     }
-    final endpoint =
-        host.contains(':') ? '[$host]:${uri.port}' : '$host:${uri.port}';
+    final endpoint = host.contains(':')
+        ? '[$host]:${uri.port}'
+        : '$host:${uri.port}';
 
     final addresses = _list(
       _first(q, const ['localaddress', 'address', 'addresses', 'ip']),
@@ -129,9 +134,18 @@ abstract final class AwgUri {
   }
 
   static bool _amneziaEnabled(Map<String, String> q) {
-    final raw = _first(q, const ['enableamnezia', 'enableamneziawg', 'amnezia']);
+    final raw = _first(q, const [
+      'enableamnezia',
+      'enableamneziawg',
+      'amnezia',
+    ]);
     if (raw == null) return true;
-    return !const ['false', '0', 'no', 'off'].contains(raw.trim().toLowerCase());
+    return !const [
+      'false',
+      '0',
+      'no',
+      'off',
+    ].contains(raw.trim().toLowerCase());
   }
 
   // base64 с / и = в авторити не живёт: Uri обрывает хост по первому слэшу и ключа не видит
@@ -157,9 +171,9 @@ abstract final class AwgUri {
       if (pair.isEmpty) continue;
       final eq = pair.indexOf('=');
       if (eq <= 0) continue;
-      final key = _decodeMaybe(pair.substring(0, eq))
-          ?.toLowerCase()
-          .replaceAll(RegExp(r'[_\-]'), '');
+      final key = _decodeMaybe(
+        pair.substring(0, eq),
+      )?.toLowerCase().replaceAll(RegExp(r'[_\-]'), '');
       final value = _decodeMaybe(pair.substring(eq + 1));
       if (key == null || key.isEmpty || value == null) continue;
       out[key] = value.trim();

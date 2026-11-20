@@ -86,22 +86,24 @@ List<RouteAppRules> routeProtocolRules({
     final allTraffic = route.content == RouteContent.allTraffic;
     // весь трафик без протокола показан строкой Всё остальное, маршрутом он ничего не задаёт
     if (allTraffic && !routeHasProtocol(route)) continue;
-    out.add(RouteAppRules(
-      tag: routeHasProtocol(route)
-          ? 'keq-proto-${out.length}'
-          : 'keq-route-${out.length}',
-      apps: const [],
-      target: route.target,
-      serverTag: route.target == RouteTarget.server
-          ? tagOf[route.serverId] ?? ''
-          : '',
-      allTraffic: allTraffic,
-      entries: routeEntriesText(route).trim(),
-      network: route.network,
-      ports: ports,
-      ownOrder: placed,
-      routeId: route.id,
-    ));
+    out.add(
+      RouteAppRules(
+        tag: routeHasProtocol(route)
+            ? 'keq-proto-${out.length}'
+            : 'keq-route-${out.length}',
+        apps: const [],
+        target: route.target,
+        serverTag: route.target == RouteTarget.server
+            ? tagOf[route.serverId] ?? ''
+            : '',
+        allTraffic: allTraffic,
+        entries: routeEntriesText(route).trim(),
+        network: route.network,
+        ports: ports,
+        ownOrder: placed,
+        routeId: route.id,
+      ),
+    );
   }
   return out;
 }
@@ -127,19 +129,21 @@ List<RouteAppRules> routeAppRules({
           normalizeProcessName(app, windows: windows),
     ].where((e) => e.isNotEmpty && seen.add(e.toLowerCase())).toList();
     if (apps.isEmpty) continue;
-    out.add(RouteAppRules(
-      tag: 'keq-app-${out.length}',
-      apps: apps,
-      target: route.target,
-      serverTag: route.target == RouteTarget.server
-          ? tagOf[route.serverId] ?? ''
-          : '',
-      allTraffic: route.content == RouteContent.allTraffic,
-      entries: routeEntriesText(route).trim(),
-      network: route.network,
-      ports: ports,
-      routeId: route.id,
-    ));
+    out.add(
+      RouteAppRules(
+        tag: 'keq-app-${out.length}',
+        apps: apps,
+        target: route.target,
+        serverTag: route.target == RouteTarget.server
+            ? tagOf[route.serverId] ?? ''
+            : '',
+        allTraffic: route.content == RouteContent.allTraffic,
+        entries: routeEntriesText(route).trim(),
+        network: route.network,
+        ports: ports,
+        routeId: route.id,
+      ),
+    );
   }
   return out;
 }

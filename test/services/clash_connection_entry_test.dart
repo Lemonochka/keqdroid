@@ -8,25 +8,24 @@ void main() {
     required String rule,
     String rulePayload = '',
     String host = 'example.com',
-  }) =>
-      {
-        'id': 'abc',
-        'rule': rule,
-        if (rulePayload.isNotEmpty) 'rulePayload': rulePayload,
-        'chains': ['proxy'],
-        'start': '2026-08-22T10:00:00Z',
-        'upload': 10,
-        'download': 20,
-        'metadata': {
-          'network': 'tcp',
-          'host': host,
-          'destinationIP': '203.0.113.5',
-          'destinationPort': '443',
-          'sourceIP': '10.0.0.2',
-          'sourcePort': '51000',
-          'type': 'Socks5',
-        },
-      };
+  }) => {
+    'id': 'abc',
+    'rule': rule,
+    if (rulePayload.isNotEmpty) 'rulePayload': rulePayload,
+    'chains': ['proxy'],
+    'start': '2026-08-22T10:00:00Z',
+    'upload': 10,
+    'download': 20,
+    'metadata': {
+      'network': 'tcp',
+      'host': host,
+      'destinationIP': '203.0.113.5',
+      'destinationPort': '443',
+      'sourceIP': '10.0.0.2',
+      'sourcePort': '51000',
+      'type': 'Socks5',
+    },
+  };
 
   test('mihomo: тип правила склеивается со значением', () {
     final entry = ConnectionsService.entryFromClashJson(

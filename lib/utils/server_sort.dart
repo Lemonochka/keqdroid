@@ -17,18 +17,18 @@ enum ServerSortMode {
   }
 
   String label(AppLocalizations l10n) => switch (this) {
-        ServerSortMode.defaultOrder => l10n.serversSortDefault,
-        ServerSortMode.ping => l10n.serversSortPing,
-        ServerSortMode.speed => l10n.serversSortSpeed,
-        ServerSortMode.name => l10n.serversSortName,
-      };
+    ServerSortMode.defaultOrder => l10n.serversSortDefault,
+    ServerSortMode.ping => l10n.serversSortPing,
+    ServerSortMode.speed => l10n.serversSortSpeed,
+    ServerSortMode.name => l10n.serversSortName,
+  };
 
   IconData get icon => switch (this) {
-        ServerSortMode.defaultOrder => Icons.format_list_bulleted_rounded,
-        ServerSortMode.ping => Icons.network_check_rounded,
-        ServerSortMode.speed => Icons.speed_rounded,
-        ServerSortMode.name => Icons.sort_by_alpha_rounded,
-      };
+    ServerSortMode.defaultOrder => Icons.format_list_bulleted_rounded,
+    ServerSortMode.ping => Icons.network_check_rounded,
+    ServerSortMode.speed => Icons.speed_rounded,
+    ServerSortMode.name => Icons.sort_by_alpha_rounded,
+  };
 }
 
 List<ServerItem> sortServersBy(List<ServerItem> servers, ServerSortMode mode) {
@@ -44,8 +44,10 @@ List<ServerItem> sortServersBy(List<ServerItem> servers, ServerSortMode mode) {
 
   switch (mode) {
     case ServerSortMode.name:
-      rest.sort((a, b) =>
-          a.displayName.toLowerCase().compareTo(b.displayName.toLowerCase()));
+      rest.sort(
+        (a, b) =>
+            a.displayName.toLowerCase().compareTo(b.displayName.toLowerCase()),
+      );
     case ServerSortMode.ping:
       rest.sort((a, b) => _pingSortKey(a).compareTo(_pingSortKey(b)));
     case ServerSortMode.speed:

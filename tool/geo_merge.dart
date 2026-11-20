@@ -99,10 +99,14 @@ Future<int> main(List<String> args) async {
   }
 
   final baseSize = base.lengthSync();
-  stdout.writeln('base:   ${opts.base} (${_kib(baseSize)}, '
-      '${existing.length - added.length} codes)');
-  stdout.writeln('source: ${source.path} (${_kib(source.lengthSync())}, '
-      '${sourceCodes.length} codes)');
+  stdout.writeln(
+    'base:   ${opts.base} (${_kib(baseSize)}, '
+    '${existing.length - added.length} codes)',
+  );
+  stdout.writeln(
+    'source: ${source.path} (${_kib(source.lengthSync())}, '
+    '${sourceCodes.length} codes)',
+  );
   for (final e in added.entries) {
     stdout.writeln(
       '  + ${e.key.padRight(20)} ${_kib(e.value.bytes).padLeft(10)}  '
@@ -121,9 +125,11 @@ Future<int> main(List<String> args) async {
     return missing.isEmpty ? 0 : 1;
   }
 
-  stdout.writeln('total added: ${_kib(appended.length)} '
-      '(${added.values.fold(0, (a, e) => a + e.items)} entries) '
-      '-> ${_kib(baseSize + appended.length)}');
+  stdout.writeln(
+    'total added: ${_kib(appended.length)} '
+    '(${added.values.fold(0, (a, e) => a + e.items)} entries) '
+    '-> ${_kib(baseSize + appended.length)}',
+  );
 
   if (opts.dryRun) {
     stdout.writeln('(dry run, base not modified)');
@@ -183,7 +189,8 @@ List<String>? _listDomains(List<String> lines) {
 
 // GeoSite { code = 1; repeated Domain domain = 2 }, Domain { type = 1; value = 2 }, тип 2 это домен с поддоменами.
 // код заглавными: xray ищет запись побайтно по коду в верхнем регистре
-Uint8List _geositeBody(String code, List<String> domains) => Uint8List.fromList([
+Uint8List _geositeBody(String code, List<String> domains) =>
+    Uint8List.fromList([
       ..._lengthField(1, utf8.encode(code.toUpperCase())),
       for (final d in domains)
         ..._lengthField(2, [0x08, 2, ..._lengthField(2, utf8.encode(d))]),
@@ -194,7 +201,7 @@ String _kib(int bytes) => bytes >= 1024 * 1024
     : '${(bytes / 1024).toStringAsFixed(1)} KiB';
 
 ({String base, String? source, String? list, List<String> codes, bool dryRun})?
-    _parseArgs(List<String> args) {
+_parseArgs(List<String> args) {
   String? base;
   String? source;
   String? list;
@@ -222,11 +229,5 @@ String _kib(int bytes) => bytes >= 1024 * 1024
     return null;
   }
   if (list != null && codes.length != 1) return null;
-  return (
-    base: base,
-    source: source,
-    list: list,
-    codes: codes,
-    dryRun: dryRun,
-  );
+  return (base: base, source: source, list: list, codes: codes, dryRun: dryRun);
 }

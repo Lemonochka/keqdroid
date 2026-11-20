@@ -49,11 +49,13 @@ class ProxyChainConfig {
       final config = item['config']?.toString().trim() ?? '';
       if (config.isEmpty) continue;
       final id = item['id']?.toString().trim() ?? '';
-      hops.add(ProxyChainHop(
-        serverId: id.isEmpty ? null : id,
-        name: item['name']?.toString().trim() ?? '',
-        config: config,
-      ));
+      hops.add(
+        ProxyChainHop(
+          serverId: id.isEmpty ? null : id,
+          name: item['name']?.toString().trim() ?? '',
+          config: config,
+        ),
+      );
     }
     if (hops.isEmpty) return null;
 
@@ -80,8 +82,10 @@ class ProxyChainConfig {
     final trimmed = raw.trim();
     final body = trimmed.substring(_prefix.length);
     final hash = body.indexOf('#');
-    return (hash >= 0 ? body.substring(0, hash) : body)
-        .replaceAll(RegExp(r'\s+'), '');
+    return (hash >= 0 ? body.substring(0, hash) : body).replaceAll(
+      RegExp(r'\s+'),
+      '',
+    );
   }
 
   String encode() {
@@ -107,9 +111,7 @@ class ProxyChainConfig {
 
   ProxyChainHop get exit => hops.last;
 
-  ProxyChainConfig refreshed(
-    Map<String, ({String config, String name})> live,
-  ) {
+  ProxyChainConfig refreshed(Map<String, ({String config, String name})> live) {
     var changed = false;
     final updated = <ProxyChainHop>[];
     for (final hop in hops) {
@@ -137,17 +139,13 @@ class ProxyChainHop {
 
   final String config;
 
-  const ProxyChainHop({
-    required this.config,
-    this.serverId,
-    this.name = '',
-  });
+  const ProxyChainHop({required this.config, this.serverId, this.name = ''});
 
   ProxyChainHop copyWith({String? config, String? name}) => ProxyChainHop(
-        serverId: serverId,
-        name: name ?? this.name,
-        config: config ?? this.config,
-      );
+    serverId: serverId,
+    name: name ?? this.name,
+    config: config ?? this.config,
+  );
 
   @override
   String toString() => 'ProxyChainHop($name)';

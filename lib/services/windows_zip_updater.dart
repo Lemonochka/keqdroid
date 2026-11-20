@@ -49,7 +49,10 @@ class WindowsZipUpdater {
     final appDir = p.dirname(Platform.resolvedExecutable);
     final exePath = Platform.resolvedExecutable;
     final stagingRoot = Directory(
-      p.join(p.dirname(zipPath), 'staging_${DateTime.now().millisecondsSinceEpoch}'),
+      p.join(
+        p.dirname(zipPath),
+        'staging_${DateTime.now().millisecondsSinceEpoch}',
+      ),
     );
     final extractDir = Directory(p.join(stagingRoot.path, 'extracted'));
 
@@ -66,10 +69,9 @@ class WindowsZipUpdater {
 
       final scriptPath = p.join(stagingRoot.path, 'apply_update.ps1');
       // BOM обязателен: Windows PowerShell 5.1 иначе читает .ps1 в ANSI и ломает не-ASCII
-      await File(scriptPath).writeAsString(
-        '\u{FEFF}${_updaterScript()}',
-        flush: true,
-      );
+      await File(
+        scriptPath,
+      ).writeAsString('\u{FEFF}${_updaterScript()}', flush: true);
 
       await _launchDetachedUpdater([
         '-NoProfile',
@@ -104,17 +106,14 @@ class WindowsZipUpdater {
   }
 
   static Future<void> _extractZip(String zipPath, String destination) async {
-    final result = await Process.run(
-      'powershell.exe',
-      [
-        '-NoProfile',
-        '-ExecutionPolicy',
-        'Bypass',
-        '-Command',
-        "Expand-Archive -LiteralPath '${_escapePsSingleQuoted(zipPath)}' "
-        "-DestinationPath '${_escapePsSingleQuoted(destination)}' -Force",
-      ],
-    );
+    final result = await Process.run('powershell.exe', [
+      '-NoProfile',
+      '-ExecutionPolicy',
+      'Bypass',
+      '-Command',
+      "Expand-Archive -LiteralPath '${_escapePsSingleQuoted(zipPath)}' "
+          "-DestinationPath '${_escapePsSingleQuoted(destination)}' -Force",
+    ]);
 
     if (result.exitCode != 0) {
       final message = (result.stderr as String).trim();
@@ -129,11 +128,14 @@ class WindowsZipUpdater {
 
   // вне нашего дерева процессов, чтобы пережил exit
   static Future<void> _launchDetachedUpdater(List<String> psArgs) {
-    return Process.start(
-      'cmd.exe',
-      ['/c', 'start', '""', '/min', 'powershell.exe', ...psArgs],
-      mode: ProcessStartMode.detached,
-    );
+    return Process.start('cmd.exe', [
+      '/c',
+      'start',
+      '""',
+      '/min',
+      'powershell.exe',
+      ...psArgs,
+    ], mode: ProcessStartMode.detached);
   }
 
   static String _updaterScript() => r'''

@@ -115,30 +115,32 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('на невысоком экране шторка и список прокручиваются, а не рвутся',
-      (tester) async {
-    // 360×640 — нижняя граница живых телефонов. Пять строк выбора плюс кнопки
-    // туда не влезают по построению: список обязан прокручиваться, а не
-    // уходить в overflow, который в релизе виден только пропавшим виджетом.
-    tester.view.physicalSize = const Size(360, 640);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
+  testWidgets(
+    'на невысоком экране шторка и список прокручиваются, а не рвутся',
+    (tester) async {
+      // 360×640 — нижняя граница живых телефонов. Пять строк выбора плюс кнопки
+      // туда не влезают по построению: список обязан прокручиваться, а не
+      // уходить в overflow, который в релизе виден только пропавшим виджетом.
+      tester.view.physicalSize = const Size(360, 640);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
 
-    await _pumpTab(tester);
-    await _openIdentitySheet(tester);
-    await tester.tap(find.byType(Switch));
-    await tester.pumpAndSettle();
-    expect(tester.takeException(), isNull);
+      await _pumpTab(tester);
+      await _openIdentitySheet(tester);
+      await tester.tap(find.byType(Switch));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
 
-    // Список вариантов длиннее экрана — проверяем и его.
-    await tester.tap(find.text('User-Agent'));
-    await tester.pumpAndSettle();
-    await tester.drag(find.byType(ListView).last, const Offset(0, -300));
-    await tester.pumpAndSettle();
+      // Список вариантов длиннее экрана — проверяем и его.
+      await tester.tap(find.text('User-Agent'));
+      await tester.pumpAndSettle();
+      await tester.drag(find.byType(ListView).last, const Offset(0, -300));
+      await tester.pumpAndSettle();
 
-    expect(tester.takeException(), isNull);
-  });
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('UA, которого нет в каталоге, вписывается руками', (
     tester,

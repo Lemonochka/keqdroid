@@ -55,7 +55,8 @@ class MihomoTunOptions {
   // режим из TunSettings. null: семейство решает глобальный ipv6 ядра, как было до выбора
   final String? ipv6;
 
-  bool get takesIpv6 => ipv6 == TunSettings.ipv6Close || ipv6 == TunSettings.ipv6Vpn;
+  bool get takesIpv6 =>
+      ipv6 == TunSettings.ipv6Close || ipv6 == TunSettings.ipv6Vpn;
 
   bool get closesIpv6 => ipv6 == TunSettings.ipv6Close;
 
@@ -66,7 +67,6 @@ class MihomoTunOptions {
 // JSON вместо YAML: YAML 1.2 его надмножество, файл всё равно .yaml
 class MihomoConfigGen {
   static const proxyName = 'proxy';
-
 
   static const lanSocksListener = 'keq-lan-socks';
   static const lanHttpListener = 'keq-lan-http';
@@ -91,29 +91,28 @@ class MihomoConfigGen {
     List<RouteAppRules> appRoutes = const [],
     OwnerGuard ownerGuard = OwnerGuard.off,
     GeoAssetIndex? geoIndex,
-  }) =>
-      const JsonEncoder.withIndent('  ').convert(
-        build(
-          input,
-          settings,
-          socksPort: socksPort,
-          httpPort: httpPort,
-          resolvedServerIp: resolvedServerIp,
-          localInboundsNoAuth: localInboundsNoAuth,
-          apiPort: apiPort,
-          apiSecret: apiSecret,
-          tun: tun,
-          routingMode: routingMode,
-          managedProcessNames: managedProcessNames,
-          appProcessName: appProcessName,
-          windows: windows,
-          ruleLists: ruleLists,
-          routeServers: routeServers,
-          appRoutes: appRoutes,
-          ownerGuard: ownerGuard,
-          geoIndex: geoIndex,
-        ),
-      );
+  }) => const JsonEncoder.withIndent('  ').convert(
+    build(
+      input,
+      settings,
+      socksPort: socksPort,
+      httpPort: httpPort,
+      resolvedServerIp: resolvedServerIp,
+      localInboundsNoAuth: localInboundsNoAuth,
+      apiPort: apiPort,
+      apiSecret: apiSecret,
+      tun: tun,
+      routingMode: routingMode,
+      managedProcessNames: managedProcessNames,
+      appProcessName: appProcessName,
+      windows: windows,
+      ruleLists: ruleLists,
+      routeServers: routeServers,
+      appRoutes: appRoutes,
+      ownerGuard: ownerGuard,
+      geoIndex: geoIndex,
+    ),
+  );
 
   // httpPort нужен и на Android: Dart HttpClient не умеет SOCKS, а прямой запрос уходит мимо туннеля
   static Map<String, dynamic> build(
@@ -141,10 +140,15 @@ class MihomoConfigGen {
     // на Android владельца ядро спрашивает у приложения (mihomo-android-uid-owner.patch)
     final appRules = tun != null
         ? appRoutes
-        : [for (final r in appRoutes) if (r.forAllApps) r];
-    final guard =
-        tun != null && tun.fromFileDescriptor ? ownerGuard : OwnerGuard.off;
-    final findProcess = processRules ||
+        : [
+            for (final r in appRoutes)
+              if (r.forAllApps) r,
+          ];
+    final guard = tun != null && tun.fromFileDescriptor
+        ? ownerGuard
+        : OwnerGuard.off;
+    final findProcess =
+        processRules ||
         appRules.any((r) => !r.forAllApps) ||
         guard != OwnerGuard.off;
 
@@ -158,8 +162,9 @@ class MihomoConfigGen {
     final fakeIp = settings.fakeIp && tun != null;
 
     final authored = CustomClashConfig.tryParse(input);
-    final parsedClash =
-        geoIndex == null ? authored : authored?.withKnownGeo(geoIndex).config;
+    final parsedClash = geoIndex == null
+        ? authored
+        : authored?.withKnownGeo(geoIndex).config;
     final clash = settings.ignoreProviderRules
         ? parsedClash?.withoutProviderRules()
         : parsedClash;
@@ -230,9 +235,7 @@ class MihomoConfigGen {
       'proxies': [...proxies, ...buildRouteServerProxies(routeServers)],
       if (buildRouteServerGroups(routeServers).isNotEmpty)
         'proxy-groups': buildRouteServerGroups(routeServers),
-      if (!ruleLists.isEmpty ||
-          routeServers.isNotEmpty ||
-          appRules.isNotEmpty)
+      if (!ruleLists.isEmpty || routeServers.isNotEmpty || appRules.isNotEmpty)
         'rule-providers': {
           ...buildRuleListProviders(ruleLists),
           ...buildRouteServerProviders(routeServers),
@@ -260,21 +263,22 @@ class MihomoConfigGen {
   // адрес интерфейса не задать, mihomo считает его из dns.fake-ip-range даже без fake-ip;
   // поэтому готовность туннеля проверяем по имени, а не по адресу
 
-  static Map<String, dynamic> buildTun(MihomoTunOptions tun) =>
-      <String, dynamic>{
-        'enable': true,
-        if (tun.device != null && tun.device!.isNotEmpty) 'device': tun.device,
-        'stack': tun.stack,
-        if (tun.mtu > 0) 'mtu': tun.mtu,
-        'auto-route': tun.autoRoute,
-        'auto-detect-interface': tun.autoDetectInterface,
-        if (tun.strictRoute) 'strict-route': true,
-        // пустой список сильнее умолчания ядра, адрес по нему же ставит VpnService на Android
-        if (tun.ipv6 == TunSettings.ipv6Bypass) 'inet6-address': const <String>[],
-        if (tun.ipv6 == TunSettings.ipv6Vpn)
-          'inet6-address': const [kTunInterfaceIpv6Prefix],
-        'dns-hijack': const ['any:53'],
-      };
+  static Map<String, dynamic> buildTun(
+    MihomoTunOptions tun,
+  ) => <String, dynamic>{
+    'enable': true,
+    if (tun.device != null && tun.device!.isNotEmpty) 'device': tun.device,
+    'stack': tun.stack,
+    if (tun.mtu > 0) 'mtu': tun.mtu,
+    'auto-route': tun.autoRoute,
+    'auto-detect-interface': tun.autoDetectInterface,
+    if (tun.strictRoute) 'strict-route': true,
+    // пустой список сильнее умолчания ядра, адрес по нему же ставит VpnService на Android
+    if (tun.ipv6 == TunSettings.ipv6Bypass) 'inet6-address': const <String>[],
+    if (tun.ipv6 == TunSettings.ipv6Vpn)
+      'inet6-address': const [kTunInterfaceIpv6Prefix],
+    'dns-hijack': const ['any:53'],
+  };
 
   static Map<String, dynamic> _buildCustom(
     CustomClashConfig clash,
@@ -449,30 +453,31 @@ class MihomoConfigGen {
     return {
       for (final entry in parsed.entries)
         (entry.key.startsWith('*.')
-                ? '+.${entry.key.substring(2)}'
-                : entry.key):
-            entry.value.length == 1 ? entry.value.single : entry.value,
+            ? '+.${entry.key.substring(2)}'
+            : entry.key): entry.value.length == 1
+            ? entry.value.single
+            : entry.value,
     };
   }
 
   // parse-pure-ip обязателен: без него ядро нюхает только соединения с именем хоста, а у нас его нет;
   // порты только строками, число роняет конфиг (cannot unmarshal !!int into string)
   static Map<String, dynamic> buildSniffer(XrayCoreSettings core) => {
-        'enable': core.sniffingEnabled,
-        'parse-pure-ip': true,
-        'override-destination': !core.sniffingRouteOnly,
-        'sniff': {
-          'HTTP': {
-            'ports': ['80', '8080-8880'],
-          },
-          'TLS': {
-            'ports': ['443', '8443'],
-          },
-          'QUIC': {
-            'ports': ['443', '8443'],
-          },
-        },
-      };
+    'enable': core.sniffingEnabled,
+    'parse-pure-ip': true,
+    'override-destination': !core.sniffingRouteOnly,
+    'sniff': {
+      'HTTP': {
+        'ports': ['80', '8080-8880'],
+      },
+      'TLS': {
+        'ports': ['443', '8443'],
+      },
+      'QUIC': {
+        'ports': ['443', '8443'],
+      },
+    },
+  };
 
   // пустой users выключает пароль, а без ключа ядро подставит глобальный authentication с нашим логином и паролем
 
@@ -518,9 +523,9 @@ class MihomoConfigGen {
 
   // в конце MATCH,REJECT: без него несовпавшее уходит в DIRECT, и раздача становится открытым прокси
   static List<String> buildLanRules({String target = proxyName}) => [
-        for (final range in _lanSourceRanges) 'SRC-IP-CIDR,$range,$target',
-        'MATCH,REJECT',
-      ];
+    for (final range in _lanSourceRanges) 'SRC-IP-CIDR,$range,$target',
+    'MATCH,REJECT',
+  ];
 
   // не боевой конфиг: geo-базы ядро разбирает полсекунды, и они уехали бы в измеренную задержку
 
@@ -541,9 +546,9 @@ class MihomoConfigGen {
       throw ArgumentError(
         clash.usesProviders
             ? 'mihomo: this Clash config takes its servers from proxy-providers, '
-                'they are known only after connecting'
+                  'they are known only after connecting'
             : 'mihomo: groups of this Clash config are filled by the core '
-                'or point outside the config',
+                  'or point outside the config',
       );
     }
     final proxies = nodes?.proxies ?? buildProxies(input.trim());
@@ -560,23 +565,24 @@ class MihomoConfigGen {
       'interface-name': ?outboundInterface,
       'dns': _pingDns(),
       'proxies': proxies,
-      if (nodes != null && nodes.groups.isNotEmpty) 'proxy-groups': nodes.groups,
+      if (nodes != null && nodes.groups.isNotEmpty)
+        'proxy-groups': nodes.groups,
       'rules': ['MATCH,$proxyName'],
     });
   }
 
   // фиксированный, как у xray, потому что UDP-53 у части провайдеров подменяют; #DIRECT ведёт мимо правил
   static Map<String, dynamic> _pingDns() => <String, dynamic>{
-        'enable': true,
-        'ipv6': false,
-        'enhanced-mode': 'normal',
-        'default-nameserver': const ['https://1.1.1.1/dns-query'],
-        'nameserver': const [
-          'https://1.1.1.1/dns-query#DIRECT',
-          'https://8.8.8.8/dns-query#DIRECT',
-          'system',
-        ],
-      };
+    'enable': true,
+    'ipv6': false,
+    'enhanced-mode': 'normal',
+    'default-nameserver': const ['https://1.1.1.1/dns-query'],
+    'nameserver': const [
+      'https://1.1.1.1/dns-query#DIRECT',
+      'https://8.8.8.8/dns-query#DIRECT',
+      'system',
+    ],
+  };
 
   // без enable mihomo резолвит средствами Go, а на Android нет /etc/resolv.conf, и домен сервера не резолвится
 
@@ -591,9 +597,14 @@ class MihomoConfigGen {
         settings.finalOutbound == AppSettings.finalOutboundProxy;
     // через туннель CDN отдаёт узлы рядом с сервером, прямым соединениям нужен ближний к дому,
     // этот список ядро читает без respect-rules
-    final viaTunnel = globalProxy &&
-        servers.any((s) =>
-            !s.endsWith('#DIRECT') && s != 'system' && !s.startsWith('dhcp://'));
+    final viaTunnel =
+        globalProxy &&
+        servers.any(
+          (s) =>
+              !s.endsWith('#DIRECT') &&
+              s != 'system' &&
+              !s.startsWith('dhcp://'),
+        );
 
     return <String, dynamic>{
       'enable': true,
@@ -634,9 +645,9 @@ class MihomoConfigGen {
   }
 
   static List<String> droppedDnsServers(String raw) => [
-        for (final entry in _parseList(raw))
-          if (_dnsAddress(entry) == null) entry,
-      ];
+    for (final entry in _parseList(raw))
+      if (_dnsAddress(entry) == null) entry,
+  ];
 
   // по нему ядро ходит напрямую, и провайдер видит содержимое: берём свои серверы с IP вместе со схемой,
   // голый 9.9.9.9 отдал бы запрос открытым
@@ -653,12 +664,14 @@ class MihomoConfigGen {
   // DoH к публичным резолверам провайдер может резать, и прямое соединение висело на резолве (issue #9);
   // список опрашивается параллельно, живой DoH запасной не тормозит, а system не годится, на Android он 114.114.114.114
   static List<String> directPlainFallback(List<String> servers) {
-    final hasPlain = servers.any((s) =>
-        s == 'system' ||
-        !s.contains('://') ||
-        s.startsWith('udp://') ||
-        s.startsWith('tcp://') ||
-        s.startsWith('dhcp://'));
+    final hasPlain = servers.any(
+      (s) =>
+          s == 'system' ||
+          !s.contains('://') ||
+          s.startsWith('udp://') ||
+          s.startsWith('tcp://') ||
+          s.startsWith('dhcp://'),
+    );
     if (hasPlain) return const [];
     final out = <String>[];
     for (final server in servers) {
@@ -725,7 +738,11 @@ class MihomoConfigGen {
     String name = proxyName,
   }) {
     final chain = ProxyChainConfig.tryParse(input);
-    if (chain == null) return [{...buildProxy(input), 'name': name}];
+    if (chain == null) {
+      return [
+        {...buildProxy(input), 'name': name},
+      ];
+    }
     if (chain.hops.isEmpty) throw ArgumentError('Proxy chain has no nodes');
     String hop(int i) =>
         name == proxyName ? '$chainHopPrefix$i' : '$chainHopPrefix$name-$i';
@@ -742,10 +759,10 @@ class MihomoConfigGen {
 
   // мимо туннеля все узлы, как у xray: обращение к промежуточному закольцевалось бы через цепочку
   static List<String> _serverAddresses(List<Map<String, dynamic>> proxies) => [
-        for (final proxy in proxies)
-          if (CustomClashConfig.serverOf(proxy).address.isNotEmpty)
-            CustomClashConfig.serverOf(proxy).address,
-      ];
+    for (final proxy in proxies)
+      if (CustomClashConfig.serverOf(proxy).address.isNotEmpty)
+        CustomClashConfig.serverOf(proxy).address,
+  ];
 
   static Map<String, dynamic> buildProxy(String link) {
     if (AwgProfile.isAwgConfig(link)) return _amneziaWg(link);
@@ -770,7 +787,9 @@ class MihomoConfigGen {
       }
       return _hysteria2(link);
     }
-    final scheme = RegExp(r'^([a-zA-Z][a-zA-Z0-9+.-]*):').firstMatch(link)?.group(1);
+    final scheme = RegExp(
+      r'^([a-zA-Z][a-zA-Z0-9+.-]*):',
+    ).firstMatch(link)?.group(1);
     throw ArgumentError(
       'mihomo: unsupported protocol${scheme != null ? ' ($scheme)' : ''}',
     );
@@ -828,7 +847,11 @@ class MihomoConfigGen {
   }
 
   static List<String>? _alpn(String raw) {
-    final list = raw.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+    final list = raw
+        .split(',')
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
     return list.isEmpty ? null : list;
   }
 
@@ -856,7 +879,9 @@ class MihomoConfigGen {
           out['http-opts'] = {
             if (method.isNotEmpty) 'method': method,
             'path': [path],
-            'headers': {if (host.isNotEmpty) 'Host': [_param(uri, 'host', host)]},
+            'headers': {
+              if (host.isNotEmpty) 'Host': [_param(uri, 'host', host)],
+            },
           };
         } else {
           out['network'] = 'tcp';
@@ -875,9 +900,7 @@ class MihomoConfigGen {
         };
       case 'grpc':
         out['network'] = 'grpc';
-        out['grpc-opts'] = {
-          'grpc-service-name': _param(uri, 'serviceName'),
-        };
+        out['grpc-opts'] = {'grpc-service-name': _param(uri, 'serviceName')};
       case 'http' || 'h2':
         // host, а не sni: у h2 он задаёт имя в заголовке, и сервер за общим фронтом различает по нему узлы
         final h2Host = _param(uri, 'host', host);
@@ -919,13 +942,15 @@ class MihomoConfigGen {
 
   // NewVless включает xudp сам, если packet-addr не задан, пустая карта ничего не выключает.
   // NewVmess сам не включает, а xray шлёт UDP vmess через XUDP по умолчанию (cone в proxy/vmess/outbound)
-  static Map<String, dynamic> _packetEncoding(String raw, {bool vmess = false}) =>
-      switch (raw.trim().toLowerCase()) {
-        '' => vmess ? const {'xudp': true} : const {},
-        'none' => const {},
-        'packet' => const {'packet-addr': true},
-        _ => const {'xudp': true},
-      };
+  static Map<String, dynamic> _packetEncoding(
+    String raw, {
+    bool vmess = false,
+  }) => switch (raw.trim().toLowerCase()) {
+    '' => vmess ? const {'xudp': true} : const {},
+    'none' => const {},
+    'packet' => const {'packet-addr': true},
+    _ => const {'xudp': true},
+  };
 
   // ed из пути вынимаем: ядро читает только поле, а путь с хвостом сервер не ждёт
   static ({String path, int? size, String? header}) _earlyData(
@@ -949,11 +974,7 @@ class MihomoConfigGen {
             : Uri(path: parsed.path, queryParameters: params).toString();
       }
     }
-    return (
-      path: path,
-      size: size,
-      header: header.isEmpty ? null : header,
-    );
+    return (path: path, size: size, header: header.isEmpty ? null : header);
   }
 
   static Map<String, dynamic> _xhttpOpts(Uri uri) {
@@ -1110,15 +1131,13 @@ class MihomoConfigGen {
       'path': path.isEmpty ? '/' : path,
       // пустой ключ единственный способ сказать mihomo без REALITY
       'reality-opts': reality
-          ? _realityOpts(
-              publicKey: publicKey,
-              shortId: str(tls, 'shortId'),
-            )
+          ? _realityOpts(publicKey: publicKey, shortId: str(tls, 'shortId'))
           : {'public-key': ''},
       // пин и имя проверки свои: сертификат тут другой
       'fingerprint': reality ? '' : single(str(tls, 'pinnedPeerCertSha256')),
-      'name-cert-verify':
-          reality ? '' : single(str(tls, 'verifyPeerCertByName')),
+      'name-cert-verify': reality
+          ? ''
+          : single(str(tls, 'verifyPeerCertByName')),
     };
     if (isTls) {
       final serverName = str(tls, 'serverName');
@@ -1207,8 +1226,13 @@ class MihomoConfigGen {
       );
     }
 
-    _applyTransport(out, uri,
-        protocol: type, network: _param(uri, 'type', 'tcp'), host: sni);
+    _applyTransport(
+      out,
+      uri,
+      protocol: type,
+      network: _param(uri, 'type', 'tcp'),
+      host: sni,
+    );
     return out;
   }
 
@@ -1348,19 +1372,20 @@ class MihomoConfigGen {
   // одиночный h2 не трогаем
   static List<String> _alpnForTrojan(String network, List<String> alpn) =>
       network == 'ws' &&
-              alpn.length == 2 &&
-              alpn[0] == 'h2' &&
-              alpn[1] == 'http/1.1'
-          ? const ['http/1.1']
-          : alpn;
+          alpn.length == 2 &&
+          alpn[0] == 'h2' &&
+          alpn[1] == 'http/1.1'
+      ? const ['http/1.1']
+      : alpn;
 
   static Map<String, dynamic> _shadowsocks(String link) {
     // sip002 и старая форма: ss://base64(method:pass)@host:port и
     // ss://base64(method:pass@host:port).
     final withoutScheme = link.substring('ss://'.length).trim();
     final hashIdx = withoutScheme.indexOf('#');
-    final beforeHash =
-        hashIdx >= 0 ? withoutScheme.substring(0, hashIdx) : withoutScheme;
+    final beforeHash = hashIdx >= 0
+        ? withoutScheme.substring(0, hashIdx)
+        : withoutScheme;
     final queryIdx = beforeHash.indexOf('?');
     final core = queryIdx >= 0 ? beforeHash.substring(0, queryIdx) : beforeHash;
 
@@ -1443,10 +1468,7 @@ class MihomoConfigGen {
     if (name.contains('obfs') && !name.contains('v2ray-plugin')) {
       return {
         'plugin': 'obfs',
-        'plugin-opts': {
-          'mode': pick('obfs'),
-          'host': pick('obfs-host'),
-        },
+        'plugin-opts': {'mode': pick('obfs'), 'host': pick('obfs-host')},
       };
     }
     if (name.contains('v2ray-plugin')) {
@@ -1468,7 +1490,9 @@ class MihomoConfigGen {
     final params = HysteriaLinkParams.fromConfig(link);
     final uri = _parse(HysteriaLinkParams.splitPorts(link).$1);
     var password = _decodedUserInfo(uri);
-    if (password.isEmpty) password = _param(uri, 'password', _param(uri, 'auth'));
+    if (password.isEmpty) {
+      password = _param(uri, 'password', _param(uri, 'auth'));
+    }
     if (password.isEmpty) throw ArgumentError('Hysteria2 requires password');
 
     final sni = _param(uri, 'sni', uri.host);
@@ -1693,8 +1717,13 @@ class MihomoConfigGen {
         'jc' || 'jmin' || 'jmax' || 's1' || 's2' || 's3' || 's4' =>
           int.tryParse(v) ??
               (throw ArgumentError('AmneziaWG config: $key must be a number')),
-        'randomtrailers' || 'disablecookies' =>
-          const {'true', 't', '1', 'yes', 'on'}.contains(v.toLowerCase()),
+        'randomtrailers' || 'disablecookies' => const {
+          'true',
+          't',
+          '1',
+          'yes',
+          'on',
+        }.contains(v.toLowerCase()),
         'headerprotectionkey' => _awgKey(v, 'HeaderProtectionKey'),
         _ => v,
       };
@@ -1763,32 +1792,32 @@ class MihomoConfigGen {
   // какие серверы попадают сюда, решает routeServerSupported до генерации
   static List<Map<String, dynamic>> buildRouteServerProxies(
     List<RouteServerOutbound> servers,
-  ) =>
-      [
-        for (final server in servers)
-          ...switch (_routeClashNodes(server)) {
-            final nodes? => nodes.proxies,
-            null => buildProxies(server.config.trim(), name: server.tag),
-          },
-      ];
+  ) => [
+    for (final server in servers)
+      ...switch (_routeClashNodes(server)) {
+        final nodes? => nodes.proxies,
+        null => buildProxies(server.config.trim(), name: server.tag),
+      },
+  ];
 
   static List<Map<String, dynamic>> buildRouteServerGroups(
     List<RouteServerOutbound> servers,
-  ) =>
-      [
-        for (final server in servers)
-          ...?_routeClashNodes(server)?.groups,
-      ];
+  ) => [for (final server in servers) ...?_routeClashNodes(server)?.groups];
 
-  static ({List<Map<String, dynamic>> proxies, List<Map<String, dynamic>> groups})?
-      _routeClashNodes(RouteServerOutbound server) {
+  static ({
+    List<Map<String, dynamic>> proxies,
+    List<Map<String, dynamic>> groups,
+  })?
+  _routeClashNodes(RouteServerOutbound server) {
     if (!CustomClashConfig.looksLikeClash(server.config)) return null;
     final clash = CustomClashConfig.tryParse(server.config.trim());
     if (clash == null) return null;
     final nodes = clash.routeNodes(server.tag);
     if (nodes == null) {
-      throw ArgumentError('Route server ${server.tag}: its groups are filled '
-          'by the core or point outside the config');
+      throw ArgumentError(
+        'Route server ${server.tag}: its groups are filled '
+        'by the core or point outside the config',
+      );
     }
     // узел, до которого доходят только через dialer-proxy, зовём звеном цепочки: иначе его Inner-соединение посчиталось бы второй раз
     final used = <String>{
@@ -1826,21 +1855,21 @@ class MihomoConfigGen {
   // address у цепочки указывает на её входной узел, у готового конфига на первый из его узлов
   static List<String> routeServerDirectRules(
     List<RouteServerOutbound> servers,
-  ) =>
-      [
-        for (final server in servers) ...[
-          ...buildServerDirectRules(serverAddress: server.address),
-          if (ProxyChainConfig.looksLikeChain(server.config))
-            for (final address in _serverAddresses(
-              buildProxies(server.config.trim(), name: server.tag),
-            ).skip(1))
-              ...buildServerDirectRules(serverAddress: address),
-          if (_routeClashNodes(server) case final nodes?)
-            for (final address in {..._serverAddresses(nodes.proxies)}
-              ..remove(server.address))
-              ...buildServerDirectRules(serverAddress: address),
-        ],
-      ];
+  ) => [
+    for (final server in servers) ...[
+      ...buildServerDirectRules(serverAddress: server.address),
+      if (ProxyChainConfig.looksLikeChain(server.config))
+        for (final address in _serverAddresses(
+          buildProxies(server.config.trim(), name: server.tag),
+        ).skip(1))
+          ...buildServerDirectRules(serverAddress: address),
+      if (_routeClashNodes(server) case final nodes?)
+        for (final address in {
+          ..._serverAddresses(nodes.proxies),
+        }..remove(server.address))
+          ...buildServerDirectRules(serverAddress: address),
+    ],
+  ];
 
   static String _routeServerListSet(RouteServerOutbound server) =>
       'keq-list-${server.tag}';
@@ -1848,16 +1877,15 @@ class MihomoConfigGen {
   // у каждого сервера свой набор, по той же причине, что у полей (buildRuleListProviders)
   static Map<String, dynamic> buildRouteServerProviders(
     List<RouteServerOutbound> servers,
-  ) =>
-      {
-        for (final server in servers)
-          if (server.listDomains.isNotEmpty)
-            _routeServerListSet(server): {
-              'type': 'inline',
-              'behavior': 'domain',
-              'payload': [for (final d in server.listDomains) '+.$d'],
-            },
-      };
+  ) => {
+    for (final server in servers)
+      if (server.listDomains.isNotEmpty)
+        _routeServerListSet(server): {
+          'type': 'inline',
+          'behavior': 'domain',
+          'payload': [for (final d in server.listDomains) '+.$d'],
+        },
+  };
 
   static const blockListSet = 'keq-list-block';
   static const directListSet = 'keq-list-direct';
@@ -1867,10 +1895,10 @@ class MihomoConfigGen {
   // встроенным, а не файлом, потому что у Linux-туннеля под root дом свой на каждую сессию
   static Map<String, dynamic> buildRuleListProviders(RuleListDomains lists) {
     Map<String, dynamic> set(List<String> domains) => {
-          'type': 'inline',
-          'behavior': 'domain',
-          'payload': [for (final d in domains) '+.$d'],
-        };
+      'type': 'inline',
+      'behavior': 'domain',
+      'payload': [for (final d in domains) '+.$d'],
+    };
     return {
       if (lists.blocked.isNotEmpty) blockListSet: set(lists.blocked),
       if (lists.direct.isNotEmpty) directListSet: set(lists.direct),
@@ -1879,9 +1907,16 @@ class MihomoConfigGen {
   }
 
   static const _privateRanges = [
-    '0.0.0.0/8', '10.0.0.0/8', '100.64.0.0/10', '127.0.0.0/8',
-    '169.254.0.0/16', '172.16.0.0/12', '192.168.0.0/16',
-    '192.0.0.0/24', '198.51.100.0/24', '203.0.113.0/24',
+    '0.0.0.0/8',
+    '10.0.0.0/8',
+    '100.64.0.0/10',
+    '127.0.0.0/8',
+    '169.254.0.0/16',
+    '172.16.0.0/12',
+    '192.168.0.0/16',
+    '192.0.0.0/24',
+    '198.51.100.0/24',
+    '203.0.113.0/24',
   ];
 
   // порядок как в xray-генераторе: блок, сам сервер, обход, приватные сети, прокси, финал
@@ -1941,7 +1976,8 @@ class MihomoConfigGen {
 
     // сплит решает, чьи соединения идут в туннель, а финал решает, что делать с остальным;
     // исключение: только выбранные без единого имени, там прежний DIRECT
-    final unnamedSelection = routingMode == AppRoutingMode.onlySelected &&
+    final unnamedSelection =
+        routingMode == AppRoutingMode.onlySelected &&
         managedProcessNames.every((name) => name.trim().isEmpty);
     final finalTarget = unnamedSelection
         ? 'DIRECT'
@@ -1969,10 +2005,10 @@ class MihomoConfigGen {
 
   // первым правилом, раньше авторских
   static String? outsideVpnRule(OwnerGuard guard) => switch (guard) {
-        OwnerGuard.off => null,
-        OwnerGuard.all =>
-          'AND,((IN-TYPE,TUN),(PROCESS-NAME,$kOutsideVpnOwner)),REJECT',
-      };
+    OwnerGuard.off => null,
+    OwnerGuard.all =>
+      'AND,((IN-TYPE,TUN),(PROCESS-NAME,$kOutsideVpnOwner)),REJECT',
+  };
 
   static const tunInterfaceRange = '198.18.0.0/30';
 
@@ -2087,10 +2123,7 @@ class MihomoConfigGen {
   static String _portCondition(List<(int, int)> ports) {
     final chunks = [
       for (var i = 0; i < ports.length; i += _maxPortRanges)
-        'DST-PORT,${[
-          for (final (from, to) in ports.skip(i).take(_maxPortRanges))
-            from == to ? '$from' : '$from-$to',
-        ].join('/')}',
+        'DST-PORT,${[for (final (from, to) in ports.skip(i).take(_maxPortRanges)) from == to ? '$from' : '$from-$to'].join('/')}',
     ];
     if (chunks.length == 1) return chunks.single;
     return 'OR,(${chunks.map((c) => '($c)').join(',')})';
@@ -2119,14 +2152,13 @@ class MihomoConfigGen {
     RouteAppRules route,
     String target,
     String ipSuffix,
-  ) =>
-      [
-        for (final d in splitDomainsAndIps(_parseRuleList(route.entries)).domains)
-          '${_domainRule(d)},$target',
-        if (route.listDomains.isNotEmpty)
-          'RULE-SET,${_appRouteListSet(route)},$target',
-        ..._ipRules(route.entries, target, ipSuffix),
-      ];
+  ) => [
+    for (final d in splitDomainsAndIps(_parseRuleList(route.entries)).domains)
+      '${_domainRule(d)},$target',
+    if (route.listDomains.isNotEmpty)
+      'RULE-SET,${_appRouteListSet(route)},$target',
+    ..._ipRules(route.entries, target, ipSuffix),
+  ];
 
   // ничего в наборе не совпало, и проверка идёт дальше по общему списку (matchSubRules):
   // сайты маршрута не отнимают у приложения остальных правил
@@ -2134,18 +2166,17 @@ class MihomoConfigGen {
     List<RouteAppRules> routes,
     String proxyTarget,
     String suffix,
-  ) =>
-      [
-        for (final route in routes)
-          if (route.allTraffic)
-            '${_appRouteCondition(route)},${_appRouteTarget(route, proxyTarget)}'
-          else if (_appRouteBody(
-            route,
-            _appRouteTarget(route, proxyTarget),
-            suffix,
-          ).isNotEmpty)
-            'SUB-RULE,(${_appRouteCondition(route)}),${route.tag}',
-      ];
+  ) => [
+    for (final route in routes)
+      if (route.allTraffic)
+        '${_appRouteCondition(route)},${_appRouteTarget(route, proxyTarget)}'
+      else if (_appRouteBody(
+        route,
+        _appRouteTarget(route, proxyTarget),
+        suffix,
+      ).isNotEmpty)
+        'SUB-RULE,(${_appRouteCondition(route)}),${route.tag}',
+  ];
 
   // все маршруты сразу: от них зависит стратегия резолва, она обязана совпасть с buildUserRules
   static Map<String, List<String>> buildAppRouteSubRules(
@@ -2172,16 +2203,15 @@ class MihomoConfigGen {
 
   static Map<String, dynamic> buildAppRouteProviders(
     List<RouteAppRules> routes,
-  ) =>
-      {
-        for (final route in routes)
-          if (!route.allTraffic && route.listDomains.isNotEmpty)
-            _appRouteListSet(route): {
-              'type': 'inline',
-              'behavior': 'domain',
-              'payload': [for (final d in route.listDomains) '+.$d'],
-            },
-      };
+  ) => {
+    for (final route in routes)
+      if (!route.allTraffic && route.listDomains.isNotEmpty)
+        _appRouteListSet(route): {
+          'type': 'inline',
+          'behavior': 'domain',
+          'payload': [for (final d in route.listDomains) '+.$d'],
+        },
+  };
 
   // no-resolve всегда: резолв ради правила против круга сам замкнул бы тот же круг на шаг раньше
   static List<String> buildServerDirectRules({
@@ -2224,9 +2254,9 @@ class MihomoConfigGen {
     ];
     // маршрут с протоколом стоит на ступени своей цели, как такой же без протокола (routesIn)
     List<RouteAppRules> protocol(RouteTarget target) => [
-          for (final r in appRoutes)
-            if (r.forAllApps && !r.ownOrder && r.target == target) r,
-        ];
+      for (final r in appRoutes)
+        if (r.forAllApps && !r.ownOrder && r.target == target) r,
+    ];
     final protoBlock = protocol(RouteTarget.block);
     final protoDirect = protocol(RouteTarget.direct);
     final protoServer = protocol(RouteTarget.server);
@@ -2239,7 +2269,12 @@ class MihomoConfigGen {
     List<String> appRules(List<RouteAppRules> routes) =>
         _appRouteRules(routes, proxyTarget, inPlace);
 
-    void addGroup(String raw, String target, String listSet, List<String> listed) {
+    void addGroup(
+      String raw,
+      String target,
+      String listSet,
+      List<String> listed,
+    ) {
       for (final d in splitDomainsAndIps(_parseRuleList(raw)).domains) {
         rules.add('${_domainRule(d)},$target');
       }
@@ -2249,7 +2284,12 @@ class MihomoConfigGen {
 
     // блокировка действует во всех приложениях, и в тех, у кого свой маршрут
     if (!skipBlocked) {
-      addGroup(settings.blockedRules, 'REJECT', blockListSet, ruleLists.blocked);
+      addGroup(
+        settings.blockedRules,
+        'REJECT',
+        blockListSet,
+        ruleLists.blocked,
+      );
       rules
         ..addAll(appRules(appBlock))
         ..addAll(appRules(protoBlock));
@@ -2334,12 +2374,16 @@ class MihomoConfigGen {
     List<String> ips(String raw) =>
         splitGeoipTokens(splitDomainsAndIps(_parseRuleList(raw)).ips).plainIps;
     // приватные сети в обходе своими не считаем: их туда клал прежний пресет
-    final hasUserIps = ips(settings.blockedRules).isNotEmpty ||
+    final hasUserIps =
+        ips(settings.blockedRules).isNotEmpty ||
         ips(settings.proxyRules).isNotEmpty ||
         routeServers.any((s) => ips(s.entries).isNotEmpty) ||
-        appRoutes.any((r) => ips(r.entries).any((ip) => !_presetPrivate(r, ip))) ||
-        ips(settings.directRules)
-            .any((ip) => !kBasePrivateRanges.contains(ip.trim()));
+        appRoutes.any(
+          (r) => ips(r.entries).any((ip) => !_presetPrivate(r, ip)),
+        ) ||
+        ips(
+          settings.directRules,
+        ).any((ip) => !kBasePrivateRanges.contains(ip.trim()));
     return hasUserIps ? 'IPIfNonMatch' : 'AsIs';
   }
 
@@ -2375,9 +2419,9 @@ class MihomoConfigGen {
     List<String> managedProcessNames,
   ) =>
       routingMode == AppRoutingMode.onlySelected &&
-              managedProcessNames.every((name) => name.trim().isEmpty)
-          ? 'DIRECT'
-          : _finalTarget(settings.finalOutbound, clash.primaryTarget);
+          managedProcessNames.every((name) => name.trim().isEmpty)
+      ? 'DIRECT'
+      : _finalTarget(settings.finalOutbound, clash.primaryTarget);
 
   // голое слово задаёт зону: DOMAIN-KEYWORD ловил буквы где угодно, и su уводил напрямую AI Studio
   static String _domainRule(String raw) {
@@ -2386,7 +2430,9 @@ class MihomoConfigGen {
     if (lower.startsWith('geosite:')) {
       return 'GEOSITE,${v.substring('geosite:'.length)}';
     }
-    if (lower.startsWith('full:')) return 'DOMAIN,${v.substring('full:'.length)}';
+    if (lower.startsWith('full:')) {
+      return 'DOMAIN,${v.substring('full:'.length)}';
+    }
     if (lower.startsWith('domain:')) {
       return 'DOMAIN-SUFFIX,${v.substring('domain:'.length)}';
     }

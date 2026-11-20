@@ -20,10 +20,10 @@ class TvPairing {
   static const _linkHost = 'tv-send';
 
   String toLink() => Uri(
-        scheme: 'keqdroid',
-        host: _linkHost,
-        queryParameters: {'h': host, 'p': '$port', 't': token},
-      ).toString();
+    scheme: 'keqdroid',
+    host: _linkHost,
+    queryParameters: {'h': host, 'p': '$port', 't': token},
+  ).toString();
 
   // только частный IPv4: подложенный QR иначе увёл бы подписку на любой сервер
   static TvPairing? parse(String raw) {
@@ -60,9 +60,25 @@ bool isPrivateIpv4(String host) {
 // у туннеля тоже частный адрес, но телефону до него не достучаться; на ПК так же с адаптерами WSL, Hyper-V, Docker и виртуалок
 String? pickLanAddress(Iterable<({String name, String address})> candidates) {
   const tunnels = [
-    'tun', 'ppp', 'wg', 'ipsec', 'rmnet', 'dummy', 'meta', 'wintun',
-    'vethernet', 'virtualbox', 'vmware', 'docker', 'br-', 'veth', 'virbr',
-    'tailscale', 'zt', 'hyper-v', 'loopback',
+    'tun',
+    'ppp',
+    'wg',
+    'ipsec',
+    'rmnet',
+    'dummy',
+    'meta',
+    'wintun',
+    'vethernet',
+    'virtualbox',
+    'vmware',
+    'docker',
+    'br-',
+    'veth',
+    'virbr',
+    'tailscale',
+    'zt',
+    'hyper-v',
+    'loopback',
   ];
   final usable = [
     for (final c in candidates)
@@ -105,10 +121,10 @@ class TvSubscriptionOffer {
   final bool nameIsAuto;
 
   Map<String, Object?> toJson() => {
-        'url': url,
-        if (name != null) 'name': name,
-        'auto': nameIsAuto,
-      };
+    'url': url,
+    if (name != null) 'name': name,
+    'auto': nameIsAuto,
+  };
 
   static TvSubscriptionOffer? fromJson(Map<Object?, Object?> json) {
     final url = (json['url'] as String?)?.trim() ?? '';
@@ -227,18 +243,14 @@ class TvReceiveServer {
   ]) async {
     response.statusCode = status;
     response.headers.contentType = ContentType.json;
-    response.write(jsonEncode({'ok': status == HttpStatus.ok, 'error': ?error}));
+    response.write(
+      jsonEncode({'ok': status == HttpStatus.ok, 'error': ?error}),
+    );
     await response.close();
   }
 }
 
-enum TvSendFailure {
-  unreachable,
-
-  expired,
-
-  rejected,
-}
+enum TvSendFailure { unreachable, expired, rejected }
 
 class TvSendException implements Exception {
   const TvSendException(this.failure, [this.message]);

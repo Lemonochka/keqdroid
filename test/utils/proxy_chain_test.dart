@@ -2,18 +2,19 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/models/server_item.dart';
 import 'package:keqdroid/utils/proxy_chain.dart';
 
-const _de = 'vless://uuid-de@de.example.com:443?security=tls&type=tcp#%F0%9F%87%A9%F0%9F%87%AA%20DE-1';
+const _de =
+    'vless://uuid-de@de.example.com:443?security=tls&type=tcp#%F0%9F%87%A9%F0%9F%87%AA%20DE-1';
 const _nl = 'trojan://pass@nl.example.com:8443?sni=nl.example.com#NL-2';
 const _jp = 'ss://YWVzLTI1Ni1nY206cGFzcw@jp.example.com:8388#JP-3';
 
 ProxyChainConfig _chain({String name = 'DE → JP'}) => ProxyChainConfig(
-      name: name,
-      hops: const [
-        ProxyChainHop(serverId: 'id-de', name: 'DE-1', config: _de),
-        ProxyChainHop(serverId: 'id-nl', name: 'NL-2', config: _nl),
-        ProxyChainHop(serverId: 'id-jp', name: 'JP-3', config: _jp),
-      ],
-    );
+  name: name,
+  hops: const [
+    ProxyChainHop(serverId: 'id-de', name: 'DE-1', config: _de),
+    ProxyChainHop(serverId: 'id-nl', name: 'NL-2', config: _nl),
+    ProxyChainHop(serverId: 'id-jp', name: 'JP-3', config: _jp),
+  ],
+);
 
 void main() {
   group('ProxyChainConfig', () {
@@ -76,21 +77,22 @@ void main() {
 
     test('refreshed returns the same object when nothing moved', () {
       final chain = _chain();
-      final same = chain.refreshed({
-        'id-de': (config: _de, name: 'DE-1'),
-      });
+      final same = chain.refreshed({'id-de': (config: _de, name: 'DE-1')});
 
-      expect(identical(same, chain), isTrue,
-          reason: 'иначе загрузка списка писала бы в хранилище на пустом месте');
+      expect(
+        identical(same, chain),
+        isTrue,
+        reason: 'иначе загрузка списка писала бы в хранилище на пустом месте',
+      );
     });
   });
 
   group('ServerItem as a chain', () {
     ServerItem itemOf(ProxyChainConfig chain) => ServerItem(
-          id: 'chain-1',
-          config: chain.encode(),
-          type: ServerItemType.manual,
-        );
+      id: 'chain-1',
+      config: chain.encode(),
+      type: ServerItemType.manual,
+    );
 
     test('protocol, name and endpoint come from the chain', () {
       final item = itemOf(_chain());

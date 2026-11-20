@@ -23,18 +23,19 @@ import '../helpers/test_storage.dart';
 class _FakeServers extends ServersNotifier {
   @override
   ServersState build() => ServersState(
-        servers: [
-          ServerItem(
-            id: 'pl',
-            config: 'vless://00000000-0000-0000-0000-000000000000@pl.example'
-                '.com:443#Poland',
-            type: ServerItemType.manual,
-            pingMs: 44,
-            lastTestedAt: DateTime(2026),
-          ),
-        ],
-        activeServerId: 'pl',
-      );
+    servers: [
+      ServerItem(
+        id: 'pl',
+        config:
+            'vless://00000000-0000-0000-0000-000000000000@pl.example'
+            '.com:443#Poland',
+        type: ServerItemType.manual,
+        pingMs: 44,
+        lastTestedAt: DateTime(2026),
+      ),
+    ],
+    activeServerId: 'pl',
+  );
 }
 
 class _FakeSettings extends SettingsNotifier {
@@ -77,12 +78,16 @@ Future<ProviderContainer> _pump(
         storageProvider.overrideWithValue(storage!),
         serversProvider.overrideWith(_FakeServers.new),
         settingsNotifierProvider.overrideWith(
-          () => _FakeSettings(const AppSettings().copyWith(modernConnectPanel: modern)),
+          () => _FakeSettings(
+            const AppSettings().copyWith(modernConnectPanel: modern),
+          ),
         ),
         vpnStateProvider.overrideWith(_RealVpn.new),
         halloweenActiveProvider.overrideWith(_NoHalloween.new),
         exitIpProvider.overrideWith((ref) async => null),
-        vpnEngineProvider.overrideWithValue(VpnEngine.withBackend(FakeTunnelBackend())),
+        vpnEngineProvider.overrideWithValue(
+          VpnEngine.withBackend(FakeTunnelBackend()),
+        ),
       ],
       child: MaterialApp(
         locale: const Locale('en'),
@@ -92,21 +97,30 @@ Future<ProviderContainer> _pump(
           body: ConnectRehearsalHost(
             enabled: enabled,
             startAfter: const Duration(seconds: 1),
-            child: const ColoredBox(color: Colors.white, child: Center(child: Text('tabs'))),
+            child: const ColoredBox(
+              color: Colors.white,
+              child: Center(child: Text('tabs')),
+            ),
           ),
         ),
       ),
     ),
   );
   await tester.pump();
-  return ProviderScope.containerOf(tester.element(find.byType(ConnectRehearsalHost)));
+  return ProviderScope.containerOf(
+    tester.element(find.byType(ConnectRehearsalHost)),
+  );
 }
 
 Finder get _rehearsal => find.byType(ConnectRehearsal, skipOffstage: false);
 
 VpnStatus? _shownStatus(WidgetTester tester) {
-  final inside = find.descendant(of: _rehearsal, matching: find.byType(Material)).first;
-  return ProviderScope.containerOf(tester.element(inside)).read(vpnStateProvider).value?.status;
+  final inside = find
+      .descendant(of: _rehearsal, matching: find.byType(Material))
+      .first;
+  return ProviderScope.containerOf(
+    tester.element(inside),
+  ).read(vpnStateProvider).value?.status;
 }
 
 Future<void> _advance(WidgetTester tester, int ms) async {
@@ -116,43 +130,72 @@ Future<void> _advance(WidgetTester tester, int ms) async {
 }
 
 void main() {
-  testWidgets('проигрывает подключение в своей копии, настоящий VPN не трогается', (tester) async {
-    final cursors = <Object?>[];
-    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.mouseCursor, (call) async {
-      cursors.add(call.arguments);
-      return null;
-    });
-    addTearDown(() => tester.binding.defaultBinaryMessenger
-        .setMockMethodCallHandler(SystemChannels.mouseCursor, null));
-    final root = await _pump(tester);
-    expect(_rehearsal, findsNothing);
+  testWidgets(
+    'проигрывает подключение в своей копии, настоящий VPN не трогается',
+    (tester) async {
+      final cursors = <Object?>[];
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.mouseCursor,
+        (call) async {
+          cursors.add(call.arguments);
+          return null;
+        },
+      );
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.mouseCursor,
+          null,
+        ),
+      );
+      final root = await _pump(tester);
+      expect(_rehearsal, findsNothing);
 
-    await _advance(tester, 1100);
-    expect(_rehearsal, findsOneWidget);
-    expect(root.read(connectRehearsalProvider), isTrue);
-    // копия лежит под содержимым и закрыта фоном
-    final stack = tester.widget<Stack>(
-      find.descendant(of: find.byType(ConnectRehearsalHost), matching: find.byType(Stack)).first,
-    );
-    expect(stack.children.last, isA<KeyedSubtree>());
-    expect(find.text('tabs').hitTestable(), findsOneWidget);
+      await _advance(tester, 1100);
+      expect(_rehearsal, findsOneWidget);
+      expect(root.read(connectRehearsalProvider), isTrue);
+      // копия лежит под содержимым и закрыта фоном
+      final stack = tester.widget<Stack>(
+        find
+            .descendant(
+              of: find.byType(ConnectRehearsalHost),
+              matching: find.byType(Stack),
+            )
+            .first,
+      );
+      expect(stack.children.last, isA<KeyedSubtree>());
+      expect(find.text('tabs').hitTestable(), findsOneWidget);
 
-    final seen = <VpnStatus?>{};
-    for (var t = 0; t < 8400; t += 50) {
-      await tester.pump(const Duration(milliseconds: 50));
-      if (_rehearsal.evaluate().isNotEmpty) seen.add(_shownStatus(tester));
-      expect(root.read(vpnStateProvider).value?.status, VpnStatus.disconnected);
-      // мышь в MouseTracker после кадра наводилась бы на настоящее окно в той же точке
-      expect(RendererBinding.instance.mouseTracker.mouseIsConnected, isFalse);
-    }
-    expect(seen, containsAll([VpnStatus.connecting, VpnStatus.connected, VpnStatus.disconnected]));
-    await _advance(tester, 500);
-    expect(_rehearsal, findsNothing);
-    expect(root.read(connectRehearsalProvider), isFalse);
-    expect(_RealVpn.connects, 0, reason: 'нажатие в копии ушло в настоящий VPN');
-    // курсор окна копия не трогала ни разу: на Windows он один на всё окно
-    expect(cursors, isEmpty);
-  });
+      final seen = <VpnStatus?>{};
+      for (var t = 0; t < 8400; t += 50) {
+        await tester.pump(const Duration(milliseconds: 50));
+        if (_rehearsal.evaluate().isNotEmpty) seen.add(_shownStatus(tester));
+        expect(
+          root.read(vpnStateProvider).value?.status,
+          VpnStatus.disconnected,
+        );
+        // мышь в MouseTracker после кадра наводилась бы на настоящее окно в той же точке
+        expect(RendererBinding.instance.mouseTracker.mouseIsConnected, isFalse);
+      }
+      expect(
+        seen,
+        containsAll([
+          VpnStatus.connecting,
+          VpnStatus.connected,
+          VpnStatus.disconnected,
+        ]),
+      );
+      await _advance(tester, 500);
+      expect(_rehearsal, findsNothing);
+      expect(root.read(connectRehearsalProvider), isFalse);
+      expect(
+        _RealVpn.connects,
+        0,
+        reason: 'нажатие в копии ушло в настоящий VPN',
+      );
+      // курсор окна копия не трогала ни разу: на Windows он один на всё окно
+      expect(cursors, isEmpty);
+    },
+  );
 
   testWidgets('пока водят мышью, ждёт; потом начинает', (tester) async {
     await _pump(tester);
@@ -173,8 +216,9 @@ void main() {
     final root = await _pump(tester);
     await _advance(tester, 1500);
     expect(_rehearsal, findsOneWidget);
-    (root.read(vpnStateProvider.notifier) as _RealVpn)
-        .put(const VpnState(status: VpnStatus.connecting));
+    (root.read(vpnStateProvider.notifier) as _RealVpn).put(
+      const VpnState(status: VpnStatus.connecting),
+    );
     await tester.pump();
     expect(_rehearsal, findsNothing);
     expect(root.read(connectRehearsalProvider), isFalse);

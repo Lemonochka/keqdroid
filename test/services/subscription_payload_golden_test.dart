@@ -113,7 +113,9 @@ void _goldenError(String name) {
     String message;
     try {
       final result = SubscriptionService.parseBodyForTest(input);
-      fail('ожидался FormatException, а разбор вернул ${result.length} конфигов');
+      fail(
+        'ожидался FormatException, а разбор вернул ${result.length} конфигов',
+      );
     } on FormatException catch (e) {
       message = e.message;
     }
@@ -135,7 +137,6 @@ void _compare(String path, String actual) {
     isTrue,
     reason: 'нет фикстуры $path — сними её: UPDATE_GOLDEN=1 flutter test',
   );
-  final expected =
-      file.readAsStringSync().replaceAll('\r\n', '\n').trimRight();
+  final expected = file.readAsStringSync().replaceAll('\r\n', '\n').trimRight();
   expect(actual.replaceAll('\r\n', '\n').trimRight(), expected);
 }

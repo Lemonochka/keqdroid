@@ -10,37 +10,35 @@ TunnelSessionRequest _session(
   Map<String, dynamic> config, {
   ConnectionMode mode = ConnectionMode.tun,
   List<String> exclude = const [],
-}) =>
-    TunnelSessionRequest(
-      mode: mode,
-      vpnBackend: VpnBackend.mihomo,
-      xrayConfig: '',
-      mihomoConfig: jsonEncode(config),
-      excludePackages: exclude,
-    );
+}) => TunnelSessionRequest(
+  mode: mode,
+  vpnBackend: VpnBackend.mihomo,
+  xrayConfig: '',
+  mihomoConfig: jsonEncode(config),
+  excludePackages: exclude,
+);
 
 Map<String, dynamic> _config({
   String server = 'a.example.com',
   int mtu = 9000,
   String nameserver = '1.1.1.1',
   String dnsListen = '127.0.0.1:1053',
-}) =>
-    {
-      'mixed-port': 7890,
-      'external-controller': '127.0.0.1:9090',
-      'secret': 's',
-      'tun': {'enable': true, 'stack': 'mixed', 'mtu': mtu},
-      'dns': {
-        'enable': true,
-        'listen': dnsListen,
-        'nameserver': [nameserver],
-        'nameserver-policy': {server: nameserver},
-      },
-      'proxies': [
-        {'name': 'proxy', 'server': server, 'port': 443},
-      ],
-      'rules': ['DOMAIN,$server,DIRECT', 'MATCH,proxy'],
-    };
+}) => {
+  'mixed-port': 7890,
+  'external-controller': '127.0.0.1:9090',
+  'secret': 's',
+  'tun': {'enable': true, 'stack': 'mixed', 'mtu': mtu},
+  'dns': {
+    'enable': true,
+    'listen': dnsListen,
+    'nameserver': [nameserver],
+    'nameserver-policy': {server: nameserver},
+  },
+  'proxies': [
+    {'name': 'proxy', 'server': server, 'port': 443},
+  ],
+  'rules': ['DOMAIN,$server,DIRECT', 'MATCH,proxy'],
+};
 
 void main() {
   test('другой сервер и его правила оболочку не меняют', () {
@@ -54,7 +52,10 @@ void main() {
   });
 
   test('другой TUN или слушатель DNS требуют переподключения', () {
-    expect(sameTunnelShell(_session(_config()), _session(_config(mtu: 1500))), isFalse);
+    expect(
+      sameTunnelShell(_session(_config()), _session(_config(mtu: 1500))),
+      isFalse,
+    );
     expect(
       sameTunnelShell(
         _session(_config()),

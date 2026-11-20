@@ -75,7 +75,10 @@ void main() {
       // Латинское имя сервера в персидском интерфейсе — строка слева
       // направо, иначе многоточие встаёт не с того края.
       expect(
-        contentDirection('Germany | DE | Hysteria2', fallback: TextDirection.rtl),
+        contentDirection(
+          'Germany | DE | Hysteria2',
+          fallback: TextDirection.rtl,
+        ),
         TextDirection.ltr,
       );
       expect(
@@ -96,8 +99,9 @@ void main() {
       final en = arb('en');
       final fa = arb('fa');
 
-      final missing =
-          en.keys.where((k) => !k.startsWith('@') && !fa.containsKey(k));
+      final missing = en.keys.where(
+        (k) => !k.startsWith('@') && !fa.containsKey(k),
+      );
       expect(missing, isEmpty, reason: 'без перевода покажется английский');
       // Схему URL разворачивали руками, чтобы справа налево она «смотрелась»:
       // на экране выходила каша. Направление ставят метки, а не перестановка.

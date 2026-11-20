@@ -46,7 +46,9 @@ class _LiquidSideNavState extends State<LiquidSideNav>
 
   final ui.FragmentShader? _shader = FloatingBar.newBarShader();
 
-  late final AnimationController _grab = AnimationController.unbounded(vsync: this);
+  late final AnimationController _grab = AnimationController.unbounded(
+    vsync: this,
+  );
   final _finger = ValueNotifier<double>(0);
   int? _hover;
   var _grabbing = false;
@@ -144,7 +146,11 @@ class _LiquidSideNavState extends State<LiquidSideNav>
     if (hover != null && hover != widget.index) widget.onTap(hover);
     _waveY = _finger.value;
     _wave.forward(from: 0);
-    ExpressiveMotion.springTo(_grab, 0, spring: _LiquidBottomNavState._sinkSpring);
+    ExpressiveMotion.springTo(
+      _grab,
+      0,
+      spring: _LiquidBottomNavState._sinkSpring,
+    );
   }
 
   @override
@@ -168,9 +174,14 @@ class _LiquidSideNavState extends State<LiquidSideNav>
       width: edge + LiquidSideNav.width,
       child: LayoutBuilder(
         builder: (context, box) => AnimatedBuilder(
-          animation: Listenable.merge(
-            [..._ctrls, _jumpIn, _grab, _wave, _finger, ?pages],
-          ),
+          animation: Listenable.merge([
+            ..._ctrls,
+            _jumpIn,
+            _grab,
+            _wave,
+            _finger,
+            ?pages,
+          ]),
           builder: (context, _) {
             final width = box.maxWidth;
             final ts = [for (final c in _ctrls) c.value.clamp(0.0, 1.0)];
@@ -179,19 +190,25 @@ class _LiquidSideNavState extends State<LiquidSideNav>
             final jumpT = _jumpIn.value.clamp(0.0, 1.0);
 
             final lengths = [
-              for (final c in _ctrls) _railTab + c.value.clamp(-0.25, 1.25) * _railGrow,
+              for (final c in _ctrls)
+                _railTab + c.value.clamp(-0.25, 1.25) * _railGrow,
             ];
             final stripLength =
                 lengths.fold(0.0, (a, b) => a + b) + _seam * (_count - 1);
             final x = edge + FloatingBar.margin;
             const centerX = thick / 2;
-            final above = (jumpLength + look.sideGap) *
+            final above =
+                (jumpLength + look.sideGap) *
                 (1 - (page - _jumpTab).abs().clamp(0.0, 1.0));
             final below = (plusLength + look.sideGap) * (1 - absorbed);
             final topLimit = padding.top + FloatingBar.margin;
-            final bottomLimit = box.maxHeight - padding.bottom - FloatingBar.margin;
+            final bottomLimit =
+                box.maxHeight - padding.bottom - FloatingBar.margin;
             final top = math.min(
-              math.max((topLimit + bottomLimit - stripLength) / 2, topLimit + above),
+              math.max(
+                (topLimit + bottomLimit - stripLength) / 2,
+                topLimit + above,
+              ),
               bottomLimit - below - stripLength,
             );
             Rect place(double l, double t, double w, double h) =>
@@ -204,7 +221,9 @@ class _LiquidSideNavState extends State<LiquidSideNav>
               tabs.add(place(x, y, thick, lengths[i]));
               var a = _inner;
               var b = _inner;
-              if (i == 0) a = look.strip ? _lerp(_outer, _inner, jumpT) : _outer;
+              if (i == 0) {
+                a = look.strip ? _lerp(_outer, _inner, jumpT) : _outer;
+              }
               if (i == _count - 1) {
                 b = look.strip ? _lerp(_inner, _outer, absorbed) : _outer;
               }
@@ -216,13 +235,19 @@ class _LiquidSideNavState extends State<LiquidSideNav>
             final strip = tabs.reduce((a, b) => a.expandToInclude(b));
 
             final grab = _grab.value.clamp(0.0, 1.0);
-            final finger = _finger.value.clamp(strip.top + 24, strip.bottom - 24);
+            final finger = _finger.value.clamp(
+              strip.top + 24,
+              strip.bottom - 24,
+            );
             final hovers = [
               for (final r in tabs)
                 grab *
                     math.exp(
                       -math.pow(
-                            math.max(0, math.max(r.top - finger, finger - r.bottom)),
+                            math.max(
+                              0,
+                              math.max(r.top - finger, finger - r.bottom),
+                            ),
                             2,
                           ) /
                           (2 * 18 * 18),
@@ -242,7 +267,9 @@ class _LiquidSideNavState extends State<LiquidSideNav>
               }
               if (_wave.isAnimating) {
                 final tau = _wave.value * 1.1 - (c - _waveY).abs() / 700;
-                if (tau > 0) dx += away * 7 * math.exp(-tau * 6) * math.sin(tau * 18);
+                if (tau > 0) {
+                  dx += away * 7 * math.exp(-tau * 6) * math.sin(tau * 18);
+                }
               }
               tabs[i] = tabs[i].translate(dx, dy);
             }
@@ -253,21 +280,39 @@ class _LiquidSideNavState extends State<LiquidSideNav>
               finger + 32 * grab,
             );
             final bump = grab > 0.01
-                ? place(bumpLtr.left, bumpLtr.top, bumpLtr.width, bumpLtr.height)
+                ? place(
+                    bumpLtr.left,
+                    bumpLtr.top,
+                    bumpLtr.width,
+                    bumpLtr.height,
+                  )
                 : Rect.zero;
 
-            final budOut = Rect.fromLTWH(x, stripBottom + look.sideGap, thick, plusLength);
+            final budOut = Rect.fromLTWH(
+              x,
+              stripBottom + look.sideGap,
+              thick,
+              plusLength,
+            );
             final budInside = Rect.fromCenter(
               center: Offset(x + centerX, stripBottom - 20),
               width: 0,
               height: 0,
             );
             final budLtr = Rect.lerp(budOut, budInside, absorbed)!;
-            final bud = place(budLtr.left, budLtr.top, budLtr.width, budLtr.height);
+            final bud = place(
+              budLtr.left,
+              budLtr.top,
+              budLtr.width,
+              budLtr.height,
+            );
             final budScale = budLtr.width / thick;
             final budRadii = look.strip
                 ? (_inner * budScale, _outer * budScale)
-                : (_Look.islandRadius * budScale, _Look.islandRadius * budScale);
+                : (
+                    _Look.islandRadius * budScale,
+                    _Look.islandRadius * budScale,
+                  );
 
             final jumpOut = Rect.fromLTWH(
               x,
@@ -281,11 +326,19 @@ class _LiquidSideNavState extends State<LiquidSideNav>
               height: 0,
             );
             final jumpLtr = Rect.lerp(jumpInside, jumpOut, jumpT)!;
-            final jump = place(jumpLtr.left, jumpLtr.top, jumpLtr.width, jumpLtr.height);
+            final jump = place(
+              jumpLtr.left,
+              jumpLtr.top,
+              jumpLtr.width,
+              jumpLtr.height,
+            );
             final jumpScale = jumpLtr.width / thick;
             final jumpRadii = look.strip
                 ? (_outer * jumpScale, _inner * jumpScale)
-                : (_Look.islandRadius * jumpScale, _Look.islandRadius * jumpScale);
+                : (
+                    _Look.islandRadius * jumpScale,
+                    _Look.islandRadius * jumpScale,
+                  );
 
             return Stack(
               clipBehavior: Clip.none,
@@ -356,19 +409,20 @@ class _LiquidSideNavState extends State<LiquidSideNav>
                     gestures: {
                       LongPressGestureRecognizer:
                           GestureRecognizerFactoryWithHandlers<
-                              LongPressGestureRecognizer>(
-                        () => LongPressGestureRecognizer(
-                          duration: const Duration(milliseconds: 300),
-                          debugOwner: this,
-                        ),
-                        (r) {
-                          r
-                            ..onLongPressStart = _grabStart
-                            ..onLongPressMoveUpdate = _grabMove
-                            ..onLongPressEnd = ((_) => _grabEnd())
-                            ..onLongPressCancel = _grabEnd;
-                        },
-                      ),
+                            LongPressGestureRecognizer
+                          >(
+                            () => LongPressGestureRecognizer(
+                              duration: const Duration(milliseconds: 300),
+                              debugOwner: this,
+                            ),
+                            (r) {
+                              r
+                                ..onLongPressStart = _grabStart
+                                ..onLongPressMoveUpdate = _grabMove
+                                ..onLongPressEnd = ((_) => _grabEnd())
+                                ..onLongPressCancel = _grabEnd;
+                            },
+                          ),
                     },
                     child: const SizedBox.expand(),
                   ),
@@ -461,8 +515,9 @@ class _RailTab extends StatelessWidget {
                               fit: BoxFit.scaleDown,
                               child: Text(
                                 label,
-                                style: theme.textTheme.labelMedium
-                                    ?.copyWith(color: cs.onPrimary),
+                                style: theme.textTheme.labelMedium?.copyWith(
+                                  color: cs.onPrimary,
+                                ),
                                 maxLines: 1,
                                 softWrap: false,
                               ),

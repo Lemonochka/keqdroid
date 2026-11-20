@@ -105,7 +105,8 @@ class ServerRow extends StatelessWidget {
     double line(TextStyle? style) =>
         scaler.scale(style!.fontSize!) * style.height!;
 
-    final text = line(textTheme.bodyLarge) * 2 +
+    final text =
+        line(textTheme.bodyLarge) * 2 +
         ExpressiveSpacing.hairline +
         max(line(textTheme.labelLarge), ExpressiveIconSize.inline);
     return (cardGap + _cardVerticalPadding * 2 + max(_avatarSize, text))
@@ -117,8 +118,8 @@ class ServerRow extends StatelessWidget {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
     final textColor = foreground ?? AppTheme.text(context);
-    final mutedColor = foreground?.withValues(alpha: 0.7) ??
-        AppTheme.textLight(context);
+    final mutedColor =
+        foreground?.withValues(alpha: 0.7) ?? AppTheme.textLight(context);
 
     final isChain = server.protocol == 'chain';
     final protocolColor = serverProtocolColor(context, server.protocol);
@@ -148,13 +149,16 @@ class ServerRow extends StatelessWidget {
     final name = ServerNameUtils.formatForDisplay(
       ServerNameUtils.cleanDisplayName(server.displayName),
     );
-    final nameDirection =
-        contentDirection(name, fallback: Directionality.of(context));
+    final nameDirection = contentDirection(
+      name,
+      fallback: Directionality.of(context),
+    );
     final nameAlign = uiStartAlign(context);
-    final nameStyle = (emphasizeTitle
-            ? textTheme.emphasized(textTheme.bodyLarge)
-            : textTheme.bodyLarge)
-        ?.copyWith(color: textColor);
+    final nameStyle =
+        (emphasizeTitle
+                ? textTheme.emphasized(textTheme.bodyLarge)
+                : textTheme.bodyLarge)
+            ?.copyWith(color: textColor);
     final pin = server.isPinned
         ? Padding(
             padding: const EdgeInsetsDirectional.only(
@@ -297,9 +301,7 @@ class ServerRow extends StatelessWidget {
     );
 
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: ExpressiveSpacing.large,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: ExpressiveSpacing.large),
       child: Row(
         children: [
           avatar,
@@ -354,8 +356,9 @@ class ChainRouteStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final shown =
-        hops.length > visibleHops ? hops.sublist(0, visibleHops) : hops;
+    final shown = hops.length > visibleHops
+        ? hops.sublist(0, visibleHops)
+        : hops;
     final hidden = hops.length - shown.length;
 
     return Row(
@@ -363,17 +366,20 @@ class ChainRouteStrip extends StatelessWidget {
       children: [
         for (var i = 0; i < shown.length; i++) ...[
           if (i > 0)
-            Icon(Icons.chevron_right_rounded, size: dotSize * 0.8, color: arrowColor),
+            Icon(
+              Icons.chevron_right_rounded,
+              size: dotSize * 0.8,
+              color: arrowColor,
+            ),
           _node(context, shown[i]),
         ],
         if (hidden > 0) ...[
           const SizedBox(width: 3),
           Text(
             '+$hidden',
-            style: Theme.of(context)
-                .textTheme
-                .labelSmall
-                ?.copyWith(color: arrowColor),
+            style: Theme.of(
+              context,
+            ).textTheme.labelSmall?.copyWith(color: arrowColor),
           ),
         ],
       ],
@@ -409,11 +415,10 @@ class _MuteFade extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => TweenAnimationBuilder<double>(
-        tween: Tween(end: muted ? opacity : 1.0),
-        duration: ExpressiveMotion.durationDefault,
-        curve: Curves.easeOutCubic,
-        builder: (context, value, child) =>
-            Opacity(opacity: value, child: child),
-        child: child,
-      );
+    tween: Tween(end: muted ? opacity : 1.0),
+    duration: ExpressiveMotion.durationDefault,
+    curve: Curves.easeOutCubic,
+    builder: (context, value, child) => Opacity(opacity: value, child: child),
+    child: child,
+  );
 }

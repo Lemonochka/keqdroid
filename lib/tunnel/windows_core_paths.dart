@@ -120,15 +120,20 @@ class WindowsCorePaths {
       }.entries) {
         try {
           final data = await rootBundle.load(entry.key);
-          final bytes = data.buffer
-              .asUint8List(data.offsetInBytes, data.lengthInBytes);
+          final bytes = data.buffer.asUint8List(
+            data.offsetInBytes,
+            data.lengthInBytes,
+          );
           final outFile = File(p.join(outDir.path, entry.value));
           if (!outFile.existsSync() || outFile.lengthSync() != bytes.length) {
             await outFile.writeAsBytes(bytes, flush: true);
           }
           extracted = true;
         } catch (e) {
-          AppLogger.instance.warn('Geo file not extracted: ${entry.value}', error: e);
+          AppLogger.instance.warn(
+            'Geo file not extracted: ${entry.value}',
+            error: e,
+          );
         }
       }
       return extracted ? outDir.path : null;
@@ -137,7 +142,10 @@ class WindowsCorePaths {
     }
   }
 
-  static Future<String?> _resolveExecutable(String assetKey, String fileName) async {
+  static Future<String?> _resolveExecutable(
+    String assetKey,
+    String fileName,
+  ) async {
     final fromFlutterBundle = _pathBesideFlutterAssets(fileName);
     if (fromFlutterBundle != null) return fromFlutterBundle;
 
@@ -169,8 +177,10 @@ class WindowsCorePaths {
   ) async {
     try {
       final data = await rootBundle.load(assetKey.replaceAll('\\', '/'));
-      final bytes =
-          data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+      final bytes = data.buffer.asUint8List(
+        data.offsetInBytes,
+        data.lengthInBytes,
+      );
       final outDir = Directory(p.join(_stableExtractRoot(), 'cores'));
       if (!outDir.existsSync()) outDir.createSync(recursive: true);
       final outFile = File(p.join(outDir.path, fileName));

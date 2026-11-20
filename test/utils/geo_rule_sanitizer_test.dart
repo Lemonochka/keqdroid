@@ -13,12 +13,11 @@ void main() {
     String direct = '',
     String proxy = '',
     String blocked = '',
-  }) =>
-      AppSettings(
-        directRules: direct,
-        proxyRules: proxy,
-        blockedRules: blocked,
-      );
+  }) => AppSettings(
+    directRules: direct,
+    proxyRules: proxy,
+    blockedRules: blocked,
+  );
 
   // Маршрут на другой сервер несёт свой список, не в полях настроек, и
   // неизвестный код в нём уронил бы xray так же, как в полях.
@@ -50,10 +49,9 @@ void main() {
     });
 
     test('duplicates collapse case-insensitively', () {
-      expect(
-        unknownGeoTokens('geoip:telegram, GeoIP:Telegram', index),
-        ['geoip:telegram'],
-      );
+      expect(unknownGeoTokens('geoip:telegram, GeoIP:Telegram', index), [
+        'geoip:telegram',
+      ]);
     });
 
     test('everything is fine when all codes exist', () {
@@ -61,10 +59,7 @@ void main() {
     });
 
     test('no databases means no warnings (nothing to validate against)', () {
-      expect(
-        unknownGeoTokens('geoip:telegram', GeoAssetIndex.empty),
-        isEmpty,
-      );
+      expect(unknownGeoTokens('geoip:telegram', GeoAssetIndex.empty), isEmpty);
     });
   });
 
@@ -123,10 +118,11 @@ void main() {
         result.settings.blockedRules,
         'geosite:category-ads-all, doubleclick.net',
       );
-      expect(
-        result.dropped,
-        ['geosite:sberbank', 'geoip:telegram', 'geosite:claude'],
-      );
+      expect(result.dropped, [
+        'geosite:sberbank',
+        'geoip:telegram',
+        'geosite:claude',
+      ]);
     });
 
     test('returns the very same settings when nothing is dropped', () {

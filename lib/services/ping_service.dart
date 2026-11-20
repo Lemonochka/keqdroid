@@ -147,17 +147,18 @@ class PingService {
       final ProcessResult result;
       if (Platform.isWindows && safeHost) {
         // chcp 65001: иначе на русской Windows вывод в OEM-кодировке, и мс не парсится
-        result = await Process.run(
-          'cmd',
-          ['/c', 'chcp 65001>nul & ping -n 1 -w $timeoutMs $host'],
-          stdoutEncoding: utf8,
-        ).timeout(Duration(seconds: timeoutSeconds + 3));
+        result = await Process.run('cmd', [
+          '/c',
+          'chcp 65001>nul & ping -n 1 -w $timeoutMs $host',
+        ], stdoutEncoding: utf8).timeout(Duration(seconds: timeoutSeconds + 3));
       } else {
         final args = Platform.isWindows
             ? ['-n', '1', '-w', '$timeoutMs', host]
             : ['-c', '1', '-W', '$timeoutSeconds', host];
-        result = await Process.run('ping', args)
-            .timeout(Duration(seconds: timeoutSeconds + 3));
+        result = await Process.run(
+          'ping',
+          args,
+        ).timeout(Duration(seconds: timeoutSeconds + 3));
       }
       sw.stop();
       final out = '${result.stdout}\n${result.stderr}';
@@ -167,7 +168,10 @@ class PingService {
         r'[=<]\s*([\d]+(?:[.,]\d+)?)\s*(?:ms|мс)',
         caseSensitive: false,
       ).firstMatch(out);
-      final hasTtl = RegExp(r'ttl[=:]\s*\d+', caseSensitive: false).hasMatch(out);
+      final hasTtl = RegExp(
+        r'ttl[=:]\s*\d+',
+        caseSensitive: false,
+      ).hasMatch(out);
 
       if (timeMatch != null || hasTtl) {
         final int ms;
@@ -218,7 +222,10 @@ class PingService {
     final udp = await _pingUdp(server, timeoutSeconds: timeoutSeconds);
     if (udp.success) return udp;
 
-    final tcp = await _pingTcpReachability(server, timeoutSeconds: timeoutSeconds);
+    final tcp = await _pingTcpReachability(
+      server,
+      timeoutSeconds: timeoutSeconds,
+    );
     if (tcp.success) {
       return PingResult(
         serverId: server.id,
@@ -311,8 +318,9 @@ class PingService {
 
     RawDatagramSocket? socket;
     try {
-      final targets = await InternetAddress.lookup(address)
-          .timeout(Duration(seconds: timeoutSeconds));
+      final targets = await InternetAddress.lookup(
+        address,
+      ).timeout(Duration(seconds: timeoutSeconds));
       if (targets.isEmpty) {
         return PingResult(
           serverId: server.id,
@@ -629,23 +637,29 @@ class PingService {
     if (probes.isEmpty) return failed;
 
     final byId = {for (final server in measured) server.id: server};
-    PingResult toResult(ServerItem server, bool success, int? latencyMs, String error) =>
-        PingResult(
-          serverId: server.id,
-          serverName: server.displayName,
-          latencyMs: latencyMs,
-          success: success,
-          error: error,
-          pingType: PingType.url,
-        );
+    PingResult toResult(
+      ServerItem server,
+      bool success,
+      int? latencyMs,
+      String error,
+    ) => PingResult(
+      serverId: server.id,
+      serverName: server.displayName,
+      latencyMs: latencyMs,
+      success: success,
+      error: error,
+      pingType: PingType.url,
+    );
     final reported = <String>{};
 
-    List<ServerUrlTestResult>?
-        raw;
+    List<ServerUrlTestResult>? raw;
     try {
       raw = await _engine.xrayUrlTestMulti(
         config: core == VpnBackend.mihomo
-            ? MultiPingConfig.mergeMihomo(probes, httpListeners: !Platform.isAndroid)
+            ? MultiPingConfig.mergeMihomo(
+                probes,
+                httpListeners: !Platform.isAndroid,
+              )
             : MultiPingConfig.mergeXray(probes),
         probes: [for (final probe in probes) (probe.id, probe.port)],
         core: core,
@@ -657,7 +671,9 @@ class PingService {
             : (item) {
                 final server = byId[item.id];
                 if (server == null || !reported.add(item.id)) return;
-                onResult(toResult(server, item.success, item.latencyMs, item.error));
+                onResult(
+                  toResult(server, item.success, item.latencyMs, item.error),
+                );
               },
       );
     } catch (_) {
@@ -728,30 +744,31 @@ class PingService {
     required int socksPort,
     String? resolvedServerIp,
     required String? outboundInterface,
-  }) =>
-      core == VpnBackend.mihomo
-          ? MihomoConfigGen.generatePingConfig(
-              serverConfig,
-              settings,
-              socksPort: socksPort,
-              httpInbound: !Platform.isAndroid,
-              outboundInterface: outboundInterface,
-            )
-          : ConfigGeneratorV2.generatePingConfig(
-              serverConfig,
-              settings,
-              socksPort: socksPort,
-              resolvedServerIp: resolvedServerIp,
-              httpInbound: !Platform.isAndroid,
-              outboundInterface: outboundInterface,
-            );
+  }) => core == VpnBackend.mihomo
+      ? MihomoConfigGen.generatePingConfig(
+          serverConfig,
+          settings,
+          socksPort: socksPort,
+          httpInbound: !Platform.isAndroid,
+          outboundInterface: outboundInterface,
+        )
+      : ConfigGeneratorV2.generatePingConfig(
+          serverConfig,
+          settings,
+          socksPort: socksPort,
+          resolvedServerIp: resolvedServerIp,
+          httpInbound: !Platform.isAndroid,
+          outboundInterface: outboundInterface,
+        );
 
   // в TUN туннель нюхает SNI раньше правила своих процессов и подменяет адрес REALITY на маску, и замер сервера
   // с маской store.teamfortress.com уходил к Valve; выходим той сетью, что ядро туннеля
   static Future<String?> _tunBypassInterface(AppSettings settings) async {
     if (!Platform.isWindows || !settings.tun.autoRoute) return null;
     final backend = WindowsTunnelBackend.activeInstance;
-    if (backend == null || backend.activeMode != ConnectionMode.tun) return null;
+    if (backend == null || backend.activeMode != ConnectionMode.tun) {
+      return null;
+    }
     final cores = backend.activeCorePids;
     if (cores.isEmpty) return null;
     int? tunIndex;
@@ -764,7 +781,10 @@ class PingService {
         }
       }
     } catch (e) {
-      AppLogger.instance.debug('Network interfaces not listed for TUN ping', error: e);
+      AppLogger.instance.debug(
+        'Network interfaces not listed for TUN ping',
+        error: e,
+      );
     }
     if (tunIndex == null) return null;
     return WindowsDesktopService.tunBypassInterface(
@@ -787,7 +807,11 @@ class PingService {
     final socksPort = await _freePort(avoid: takenPorts);
     // внутри try: исключение генератора иначе роняло бы всю пачку
     try {
-      final core = pingCoreFor(server.config, settings, viaTemplate: viaTemplate);
+      final core = pingCoreFor(
+        server.config,
+        settings,
+        viaTemplate: viaTemplate,
+      );
       final config = _pingConfigFor(
         core,
         server.config,
@@ -946,8 +970,9 @@ class PingService {
     await Future.wait(
       servers.map((s) async {
         try {
-          final addresses = await InternetAddress.lookup(s.address)
-              .timeout(const Duration(seconds: 3));
+          final addresses = await InternetAddress.lookup(
+            s.address,
+          ).timeout(const Duration(seconds: 3));
           if (addresses.isNotEmpty) out[s.id] = addresses.first.address;
         } catch (_) {}
       }),
@@ -1055,7 +1080,10 @@ class PingService {
 
   // без этой строки N/A у всей подписки в журнале не видно вовсе, #18
   static String? failureSummary(PingType type, List<PingResult> results) {
-    final failed = [for (final r in results) if (!r.success) r];
+    final failed = [
+      for (final r in results)
+        if (!r.success) r,
+    ];
     if (failed.isEmpty) return null;
     final counts = <String, int>{};
     for (final r in failed) {

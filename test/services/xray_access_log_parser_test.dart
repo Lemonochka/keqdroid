@@ -26,28 +26,31 @@ ConnectionEntry _byHost(ConnectionsSnapshot s, String host) =>
 
 void main() {
   group('XrayAccessLogParser', () {
-    test('pairs access lines with the routing rule of the same destination', () {
-      final snapshot = XrayAccessLogParser.parse(_log);
+    test(
+      'pairs access lines with the routing rule of the same destination',
+      () {
+        final snapshot = XrayAccessLogParser.parse(_log);
 
-      expect(snapshot.source, ConnectionsSource.coreLog);
-      expect(snapshot.ruleInfoAvailable, isTrue);
-      expect(snapshot.entries.length, 4);
+        expect(snapshot.source, ConnectionsSource.coreLog);
+        expect(snapshot.ruleInfoAvailable, isTrue);
+        expect(snapshot.entries.length, 4);
 
-      final youtube = _byHost(snapshot, 'www.youtube.com');
-      expect(youtube.network, 'tcp');
-      expect(youtube.destPort, 443);
-      expect(youtube.source, '127.0.0.1:53182');
-      expect(youtube.inbound, 'socks-in');
-      expect(youtube.outbound, 'proxy');
-      expect(youtube.rule, 'proxy-geosite');
-      expect(youtube.verdict, ConnectionVerdict.proxied);
-      expect(youtube.startedAt?.hour, 12);
-      expect(youtube.startedAt?.minute, 34);
+        final youtube = _byHost(snapshot, 'www.youtube.com');
+        expect(youtube.network, 'tcp');
+        expect(youtube.destPort, 443);
+        expect(youtube.source, '127.0.0.1:53182');
+        expect(youtube.inbound, 'socks-in');
+        expect(youtube.outbound, 'proxy');
+        expect(youtube.rule, 'proxy-geosite');
+        expect(youtube.verdict, ConnectionVerdict.proxied);
+        expect(youtube.startedAt?.hour, 12);
+        expect(youtube.startedAt?.minute, 34);
 
-      final vk = _byHost(snapshot, 'vk.com');
-      expect(vk.rule, 'direct-domains');
-      expect(vk.verdict, ConnectionVerdict.direct);
-    });
+        final vk = _byHost(snapshot, 'vk.com');
+        expect(vk.rule, 'direct-domains');
+        expect(vk.verdict, ConnectionVerdict.direct);
+      },
+    );
 
     test('marks catch-all routing separately from a named rule', () {
       final dns = _byHost(XrayAccessLogParser.parse(_log), '1.1.1.1');
@@ -105,8 +108,10 @@ void main() {
       expect(google.inbound, 'http-in');
       expect(google.outbound, 'proxy');
       expect(google.rule, 'proxy-geosite');
-      expect(google.process,
-          'C:/Program Files/Google/Chrome/Application/chrome.exe');
+      expect(
+        google.process,
+        'C:/Program Files/Google/Chrome/Application/chrome.exe',
+      );
 
       final plain = _byHost(snapshot, 'example.com');
       expect(plain.destPort, 80);

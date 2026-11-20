@@ -10,11 +10,14 @@ void main() {
     Map<String, dynamic> config, {
     bool processLog = false,
   }) =>
-      jsonDecode(withXrayDesktopSession(
-        jsonEncode(config),
-        metricsPort: 41234,
-        processLog: processLog,
-      )) as Map<String, dynamic>;
+      jsonDecode(
+            withXrayDesktopSession(
+              jsonEncode(config),
+              metricsPort: 41234,
+              processLog: processLog,
+            ),
+          )
+          as Map<String, dynamic>;
 
   test('metrics только на loopback, счётчики входов включены', () {
     final config = prepared({
@@ -39,15 +42,13 @@ void main() {
       },
       'outbounds': const <Object?>[],
     });
-    expect(
-      ((config['policy'] as Map)['levels'] as Map)['1'],
-      {'connIdle': 60},
-    );
+    expect(((config['policy'] as Map)['levels'] as Map)['1'], {'connIdle': 60});
   });
 
   test('метка поиска программы только в отладке и один раз', () {
-    bool marked(Map<String, dynamic> c) => (c['outbounds'] as List)
-        .any((o) => (o as Map)['tag'] == kXrayProcessLogTag);
+    bool marked(Map<String, dynamic> c) => (c['outbounds'] as List).any(
+      (o) => (o as Map)['tag'] == kXrayProcessLogTag,
+    );
     final base = {
       'outbounds': [
         {'protocol': 'freedom', 'tag': 'proxy'},
@@ -56,11 +57,10 @@ void main() {
     expect(marked(prepared(base)), isFalse);
     final debug = prepared(base, processLog: true);
     expect(marked(debug), isTrue);
-    expect(
-      (debug['outbounds'] as List).first,
-      {'protocol': 'freedom', 'tag': 'proxy'},
-      reason: 'первый выход у xray основной',
-    );
+    expect((debug['outbounds'] as List).first, {
+      'protocol': 'freedom',
+      'tag': 'proxy',
+    }, reason: 'первый выход у xray основной');
     final twice = prepared(debug, processLog: true);
     expect(
       (twice['outbounds'] as List)
@@ -85,18 +85,23 @@ void main() {
         },
       ],
     };
-    final inbounds = jsonDecode(withXrayDesktopSession(
-      jsonEncode(source),
-      metricsPort: 41234,
-      tunName: 'tun-keqdis2',
-    ))['inbounds'] as List;
+    final inbounds =
+        jsonDecode(
+              withXrayDesktopSession(
+                jsonEncode(source),
+                metricsPort: 41234,
+                tunName: 'tun-keqdis2',
+              ),
+            )['inbounds']
+            as List;
     expect(inbounds[0]['settings'], {'name': 'tun-keqdis2', 'mtu': 1500});
     expect(inbounds[1]['settings'], {'auth': 'noauth'});
 
-    final untouched = jsonDecode(withXrayDesktopSession(
-      jsonEncode(source),
-      metricsPort: 41234,
-    ))['inbounds'] as List;
+    final untouched =
+        jsonDecode(
+              withXrayDesktopSession(jsonEncode(source), metricsPort: 41234),
+            )['inbounds']
+            as List;
     expect(untouched[0]['settings']['name'], 'tun-keqdis');
   });
 

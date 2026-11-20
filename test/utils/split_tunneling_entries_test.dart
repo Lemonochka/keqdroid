@@ -58,20 +58,23 @@ void main() {
     // Прежняя версия приписывала `.exe` к вписанному руками на любой системе.
     // На Linux такая запись — та же программа, и в правила ядра она уходит
     // без суффикса: иначе не совпала бы ни с одним процессом.
-    test('на Linux сохранённое с .exe отмечает свою строку и едет без .exe', () {
-      expect(
-        splitEntryMatches('firefox.exe', _app('firefox'), windows: false),
-        isTrue,
-      );
-      expect(
-        processNamesForSplit(
-          includePackages: {'firefox.exe'},
-          excludePackages: const {},
-          windows: false,
-        ),
-        ['firefox'],
-      );
-    });
+    test(
+      'на Linux сохранённое с .exe отмечает свою строку и едет без .exe',
+      () {
+        expect(
+          splitEntryMatches('firefox.exe', _app('firefox'), windows: false),
+          isTrue,
+        );
+        expect(
+          processNamesForSplit(
+            includePackages: {'firefox.exe'},
+            excludePackages: const {},
+            windows: false,
+          ),
+          ['firefox'],
+        );
+      },
+    );
 
     test('путь у строки без пути не совпадает', () {
       expect(

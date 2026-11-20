@@ -24,13 +24,18 @@ void main() {
     );
   }
 
-  test('AppImage узнаётся по переменной рантайма, менеджеры не спрашиваются',
-      () async {
-    expect(
-      await classify(appImage: '/home/u/keqdroid.AppImage', owner: 'dpkg-query'),
-      LinuxInstallKind.appImage,
-    );
-  });
+  test(
+    'AppImage узнаётся по переменной рантайма, менеджеры не спрашиваются',
+    () async {
+      expect(
+        await classify(
+          appImage: '/home/u/keqdroid.AppImage',
+          owner: 'dpkg-query',
+        ),
+        LinuxInstallKind.appImage,
+      );
+    },
+  );
 
   test('пакет узнаётся по тому, какой менеджер владеет файлом', () async {
     expect(await classify(owner: 'dpkg-query'), LinuxInstallKind.deb);
@@ -38,15 +43,16 @@ void main() {
     expect(await classify(owner: 'pacman'), LinuxInstallKind.pacman);
   });
 
-  test('ничей файл — распакованный архив; без записи — только для чтения',
-      () async {
-    expect(await classify(), LinuxInstallKind.portable);
-    expect(await classify(writable: false), LinuxInstallKind.readOnly);
-  });
+  test(
+    'ничей файл — распакованный архив; без записи — только для чтения',
+    () async {
+      expect(await classify(), LinuxInstallKind.portable);
+      expect(await classify(writable: false), LinuxInstallKind.readOnly);
+    },
+  );
 
   group('пакет на системе из образа', () {
-    tearDown(() => LinuxInstall.imageBasedSystem =
-        () => false);
+    tearDown(() => LinuxInstall.imageBasedSystem = () => false);
 
     test('rpm на Silverblue и подобных не ставим через rpm -U', () {
       LinuxInstall.imageBasedSystem = () => true;

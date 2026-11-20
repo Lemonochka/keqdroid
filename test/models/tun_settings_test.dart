@@ -39,14 +39,17 @@ void main() {
     expect(TunSettings.fromJson(tun.toJson()), tun);
   });
 
-  test('ключ убранного переключателя EIN в сохранённых настройках не мешает', () {
-    final tun = TunSettings.fromJson({
-      ...const TunSettings().toJson(),
-      'endpointIndependentNat': true,
-    });
-    expect(tun, const TunSettings());
-    expect(tun.toJson().containsKey('endpointIndependentNat'), isFalse);
-  });
+  test(
+    'ключ убранного переключателя EIN в сохранённых настройках не мешает',
+    () {
+      final tun = TunSettings.fromJson({
+        ...const TunSettings().toJson(),
+        'endpointIndependentNat': true,
+      });
+      expect(tun, const TunSettings());
+      expect(tun.toJson().containsKey('endpointIndependentNat'), isFalse);
+    },
+  );
 
   test('fromJson sanitizes garbage back to safe values', () {
     final tun = TunSettings.fromJson({
@@ -76,9 +79,9 @@ void main() {
 
     // …но только один раз: после записи маркер версии есть, и выбор
     // пользователя (пусть даже совпавший со старым дефолтом) остаётся его.
-    final kept = TunSettings.fromJson(migrated
-        .copyWith(stack: 'system', mtu: 1400)
-        .toJson());
+    final kept = TunSettings.fromJson(
+      migrated.copyWith(stack: 'system', mtu: 1400).toJson(),
+    );
     expect(kept.stack, 'system');
     expect(kept.mtu, 1400);
   });
@@ -97,9 +100,7 @@ void main() {
   });
 
   test('AppSettings json roundtrip keeps tun settings', () {
-    const settings = AppSettings(
-      tun: TunSettings(stack: 'mixed', mtu: 1500),
-    );
+    const settings = AppSettings(tun: TunSettings(stack: 'mixed', mtu: 1500));
     final restored = AppSettings.fromJsonString(settings.toJsonString());
     expect(restored.tun.stack, 'mixed');
     expect(restored.tun.mtu, 1500);
@@ -109,7 +110,10 @@ void main() {
   test('mips остаётся в настройках: это выбор для mihomo, а не мусор', () {
     expect(TunSettings.normalizeStack('mips'), TunSettings.stackMips);
     expect(TunSettings.normalizeStack('MIPS'), TunSettings.stackMips);
-    expect(TunSettings.fromJson({'stack': 'mips'}).stack, TunSettings.stackMips);
+    expect(
+      TunSettings.fromJson({'stack': 'mips'}).stack,
+      TunSettings.stackMips,
+    );
     // Умолчание не сдвинулось: mips выбирают руками.
     expect(const TunSettings().stack, TunSettings.stackGvisor);
   });
@@ -145,7 +149,9 @@ void main() {
     // копия настроек уезжает в прежнюю версию на другом устройстве
     test('прежние версии читают переключатель так же, как он работал', () {
       expect(
-        const TunSettings(ipv6: TunSettings.ipv6Bypass).toJson()['blockIpv6Leak'],
+        const TunSettings(
+          ipv6: TunSettings.ipv6Bypass,
+        ).toJson()['blockIpv6Leak'],
         isFalse,
       );
       expect(

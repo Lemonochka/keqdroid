@@ -143,7 +143,9 @@ class HotkeyService {
     }
     // снятие набора закрывает сессию портала, и новая снова спросит пользователя;
     // на время записи сочетания держим прежний
-    if (backend == LinuxHotkeyBackend.portal && captureMode && bindings.isEmpty) {
+    if (backend == LinuxHotkeyBackend.portal &&
+        captureMode &&
+        bindings.isEmpty) {
       return const [];
     }
 
@@ -156,7 +158,8 @@ class HotkeyService {
 
     var failed = const <String>[];
     try {
-      failed = await linuxChannel.invokeListMethod<String>(
+      failed =
+          await linuxChannel.invokeListMethod<String>(
             'setGlobalHotkeys',
             payload,
           ) ??
@@ -189,25 +192,23 @@ class HotkeyService {
   static List<String> _reportable(
     LinuxHotkeyBackend backend,
     List<String> failed,
-  ) =>
-      backend == LinuxHotkeyBackend.portal ? const [] : failed;
+  ) => backend == LinuxHotkeyBackend.portal ? const [] : failed;
 
   @visibleForTesting
   static List<Map<String, Object>> linuxPayload(
     Map<HotkeyAction, HotkeyBinding> bindings,
     Map<HotkeyAction, String> descriptions,
-  ) =>
-      [
-        for (final MapEntry(key: action, value: binding) in bindings.entries)
-          {
-            'action': action.id,
-            'evdevCode': binding.linuxEvdevCode ?? 0,
-            'modifiers': binding.windowsModifiers,
-            'portalId': binding.portalId(action),
-            'trigger': binding.portalTrigger ?? '',
-            'description': descriptions[action] ?? action.id,
-          },
-      ];
+  ) => [
+    for (final MapEntry(key: action, value: binding) in bindings.entries)
+      {
+        'action': action.id,
+        'evdevCode': binding.linuxEvdevCode ?? 0,
+        'modifiers': binding.windowsModifiers,
+        'portalId': binding.portalId(action),
+        'trigger': binding.portalTrigger ?? '',
+        'description': descriptions[action] ?? action.id,
+      },
+  ];
 
   static bool _samePayload(
     List<Map<String, Object>> a,

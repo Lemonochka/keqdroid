@@ -53,8 +53,11 @@ void main() {
     final writer = ZipWriter();
     final e = FixtureEntry('a', textBytes(100, 3));
     final data = deflateRaw(e.content);
-    writer.add(fixtureTemplate(e, compressedSize: data.length),
-        method: 8, data: data);
+    writer.add(
+      fixtureTemplate(e, compressedSize: data.length),
+      method: 8,
+      data: data,
+    );
     final zip = writer.finish(comment: Uint8List.fromList(ascii.encode('hi')));
 
     final end = ZipLayout.findEnd(zip)!;
@@ -64,7 +67,9 @@ void main() {
 
   test('zip64 не читается, вместо того чтобы читаться криво', () {
     final zip = buildZip([FixtureEntry('a', textBytes(100, 4))]);
-    ByteData.sublistView(zip).setUint16(zip.length - 22 + 10, 0xFFFF, Endian.little);
+    ByteData.sublistView(
+      zip,
+    ).setUint16(zip.length - 22 + 10, 0xFFFF, Endian.little);
     expect(ZipLayout.findEnd(zip), isNull);
   });
 }

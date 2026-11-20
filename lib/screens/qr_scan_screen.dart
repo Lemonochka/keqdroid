@@ -9,9 +9,9 @@ class QrScanScreen extends StatefulWidget {
   const QrScanScreen({super.key});
 
   static Future<String?> scan(BuildContext context) {
-    return Navigator.of(context).push<String>(
-      MaterialPageRoute(builder: (_) => const QrScanScreen()),
-    );
+    return Navigator.of(
+      context,
+    ).push<String>(MaterialPageRoute(builder: (_) => const QrScanScreen()));
   }
 
   @override
@@ -91,7 +91,9 @@ class _QrScanScreenState extends State<QrScanScreen> {
                     Text(
                       error.errorCode.name,
                       textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white54),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: Colors.white54),
                     ),
                   ],
                 ),
@@ -110,13 +112,17 @@ class _QrScanScreenState extends State<QrScanScreen> {
                       color: AppTheme.accent(context).withValues(alpha: 0.9),
                       width: 3,
                     ),
-                    borderRadius: BorderRadius.circular(ExpressiveShape.extraLarge),
+                    borderRadius: BorderRadius.circular(
+                      ExpressiveShape.extraLarge,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 24),
                 Text(
                   l10n.qrScanHint,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white70),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(color: Colors.white70),
                 ),
               ],
             ),

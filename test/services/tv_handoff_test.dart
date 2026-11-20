@@ -123,8 +123,10 @@ void main() {
     });
 
     test('без имени имя автоматическое', () {
-      final offer =
-          TvSubscriptionOffer.fromJson({'url': ' https://sub.example/x ', 'name': ' '})!;
+      final offer = TvSubscriptionOffer.fromJson({
+        'url': ' https://sub.example/x ',
+        'name': ' ',
+      })!;
       expect(offer.url, 'https://sub.example/x');
       expect(offer.name, isNull);
       expect(offer.nameIsAuto, isTrue);
@@ -184,8 +186,11 @@ void main() {
       await expectLater(
         sendToTv(stale, const TvSubscriptionOffer(url: 'https://a.example/')),
         throwsA(
-          isA<TvSendException>()
-              .having((e) => e.failure, 'failure', TvSendFailure.expired),
+          isA<TvSendException>().having(
+            (e) => e.failure,
+            'failure',
+            TvSendFailure.expired,
+          ),
         ),
       );
       expect(received, isEmpty);
@@ -212,8 +217,11 @@ void main() {
       await expectLater(
         sendToTv(pairing, const TvSubscriptionOffer(url: 'https://a.example/')),
         throwsA(
-          isA<TvSendException>()
-              .having((e) => e.failure, 'failure', TvSendFailure.unreachable),
+          isA<TvSendException>().having(
+            (e) => e.failure,
+            'failure',
+            TvSendFailure.unreachable,
+          ),
         ),
       );
     });
@@ -227,8 +235,7 @@ void main() {
       expect(get.statusCode, HttpStatus.methodNotAllowed);
       await get.drain<void>();
 
-      final other =
-          await (await client.post('127.0.0.1', port, '/')).close();
+      final other = await (await client.post('127.0.0.1', port, '/')).close();
       expect(other.statusCode, HttpStatus.notFound);
       await other.drain<void>();
 
@@ -237,10 +244,12 @@ void main() {
       int? hugeStatus;
       try {
         final huge = await client.post('127.0.0.1', port, '/add');
-        huge.write(jsonEncode({
-          't': server.pairing.token,
-          'url': 'https://a.example/${'a' * TvReceiveServer.maxBodyBytes}',
-        }));
+        huge.write(
+          jsonEncode({
+            't': server.pairing.token,
+            'url': 'https://a.example/${'a' * TvReceiveServer.maxBodyBytes}',
+          }),
+        );
         final hugeResponse = await huge.close();
         hugeStatus = hugeResponse.statusCode;
         await hugeResponse.drain<void>();

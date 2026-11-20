@@ -40,22 +40,21 @@ class TunnelSessionRequest {
   Map<String, dynamic> toMethodChannelArgs({
     required String socksUsername,
     required String socksPassword,
-  }) =>
-      {
-        'connectionMode': mode.storageValue,
-        'vpnBackend': vpnBackend.wireValue,
-        'xrayConfig': xrayConfig,
-        if (mihomoConfig != null && mihomoConfig!.isNotEmpty)
-          'mihomoConfig': mihomoConfig,
-        'socksPort': socksPort,
-        'socksUsername': socksUsername,
-        'socksPassword': socksPassword,
-        'excludePackages': excludePackages,
-        'includePackages': includePackages,
-        'excludeProcesses': excludeProcesses,
-        'includeProcesses': includeProcesses,
-        'systemProxy': systemProxy,
-        'coreEngine': coreEngine,
-        if (serverName != null && serverName!.isNotEmpty) 'serverName': serverName,
-      };
+  }) => {
+    'connectionMode': mode.storageValue,
+    'vpnBackend': vpnBackend.wireValue,
+    'xrayConfig': xrayConfig,
+    if (mihomoConfig != null && mihomoConfig!.isNotEmpty)
+      'mihomoConfig': mihomoConfig,
+    'socksPort': socksPort,
+    'socksUsername': socksUsername,
+    'socksPassword': socksPassword,
+    'excludePackages': excludePackages,
+    'includePackages': includePackages,
+    'excludeProcesses': excludeProcesses,
+    'includeProcesses': includeProcesses,
+    'systemProxy': systemProxy,
+    'coreEngine': coreEngine,
+    if (serverName != null && serverName!.isNotEmpty) 'serverName': serverName,
+  };
 }

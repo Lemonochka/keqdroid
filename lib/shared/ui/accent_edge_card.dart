@@ -33,9 +33,7 @@ class AccentEdgeCard extends StatelessWidget {
       child: Stack(
         children: [
           Padding(
-            padding: padding.add(
-              EdgeInsetsDirectional.only(start: edgeWidth),
-            ),
+            padding: padding.add(EdgeInsetsDirectional.only(start: edgeWidth)),
             child: child,
           ),
           PositionedDirectional(

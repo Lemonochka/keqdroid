@@ -19,8 +19,8 @@ class ServersState {
     this.isLoading = false,
     this.error,
     int? shape,
-  })  : byId = {for (final s in servers) s.id: s},
-        shape = shape ?? ++_shapes;
+  }) : byId = {for (final s in servers) s.id: s},
+       shape = shape ?? ++_shapes;
 
   ServerItem? get activeServer => byId[activeServerId];
 
@@ -32,16 +32,15 @@ class ServersState {
     bool? isLoading,
     String? error,
     bool keepShape = false,
-  }) =>
-      ServersState(
-        servers: servers ?? this.servers,
-        activeServerId: activeServerId == _sentinel
-            ? this.activeServerId
-            : activeServerId as String?,
-        isLoading: isLoading ?? this.isLoading,
-        error: error,
-        shape: keepShape ? shape : null,
-      );
+  }) => ServersState(
+    servers: servers ?? this.servers,
+    activeServerId: activeServerId == _sentinel
+        ? this.activeServerId
+        : activeServerId as String?,
+    isLoading: isLoading ?? this.isLoading,
+    error: error,
+    shape: keepShape ? shape : null,
+  );
 }
 
 class ServersNotifier extends Notifier<ServersState> {
@@ -66,7 +65,8 @@ class ServersNotifier extends Notifier<ServersState> {
     }
     if (!(await ref.read(storageProvider).getSettings()).autoPing) return;
     await _initialLoad;
-    if (state.servers.isEmpty || ref.read(pingingServerIdsProvider).isNotEmpty) {
+    if (state.servers.isEmpty ||
+        ref.read(pingingServerIdsProvider).isNotEmpty) {
       return;
     }
     _lastAutoPing = DateTime.now();
@@ -119,9 +119,7 @@ class ServersNotifier extends Notifier<ServersState> {
         );
         continue;
       }
-      result = [
-        for (final s in result) s.id == updated.id ? updated : s,
-      ];
+      result = [for (final s in result) s.id == updated.id ? updated : s];
     }
     return result;
   }
@@ -274,7 +272,8 @@ class ServersNotifier extends Notifier<ServersState> {
       id,
       (s) => s.copyWith(
         config: config,
-        configOverridden: s.type == ServerItemType.subscription &&
+        configOverridden:
+            s.type == ServerItemType.subscription &&
             (s.configOverridden || config != s.config),
       ),
     );
@@ -285,9 +284,9 @@ class ServersNotifier extends Notifier<ServersState> {
     await _updateServer(server.id, (s) => s.copyWith(configOverridden: false));
     final subs = ref.read(subscriptionsProvider).value ?? [];
     final sub = subs.cast<Subscription?>().firstWhere(
-          (s) => s?.id == server.subscriptionId,
-          orElse: () => null,
-        );
+      (s) => s?.id == server.subscriptionId,
+      orElse: () => null,
+    );
     if (sub != null) {
       await ref.read(subscriptionsProvider.notifier).refreshTracked(sub);
     }
@@ -375,7 +374,7 @@ class ServersNotifier extends Notifier<ServersState> {
     if (lower.startsWith('ssr://')) {
       return SsrLink.tryParse(rawConfig) == null
           ? 'Invalid SSR link: expected ssr:// with base64 of '
-              'host:port:protocol:method:obfs:password'
+                'host:port:protocol:method:obfs:password'
           : null;
     }
     if (lower.startsWith('mierus://')) {
@@ -397,7 +396,9 @@ class ServersNotifier extends Notifier<ServersState> {
         if (json is! Map<String, dynamic>) return 'Invalid vmess config';
         final host = (json['add'] ?? '').toString().trim();
         final port = int.tryParse((json['port'] ?? '').toString()) ?? 0;
-        if (host.isEmpty || port <= 0) return 'Invalid vmess config: host or port missing';
+        if (host.isEmpty || port <= 0) {
+          return 'Invalid vmess config: host or port missing';
+        }
       } catch (_) {
         return 'Invalid vmess config';
       }
@@ -484,6 +485,7 @@ class ServersNotifier extends Notifier<ServersState> {
       pingingIds.removeAll(done);
       stopPinging(done);
     }
+
     final settings = await ref.read(storageProvider).getSettings();
     final vpnState = await _vpnStateForPing();
     final vpnConnected = vpnState?.status == VpnStatus.connected;
@@ -576,8 +578,11 @@ class ServersNotifier extends Notifier<ServersState> {
       final probed = await PingService.probeIpv6Exits(
         due,
         settings,
-        templateServers:
-            templateServerIds(due, settings, storage.getClashTemplate),
+        templateServers: templateServerIds(
+          due,
+          settings,
+          storage.getClashTemplate,
+        ),
       );
       if (probed.isEmpty) return;
       final merged = await storage.applyIpv6Probe(probed, DateTime.now());
@@ -613,11 +618,11 @@ class ServersNotifier extends Notifier<ServersState> {
   Future<void> pingSubscription(String? subscriptionId) {
     final servers = subscriptionId == null
         ? state.servers
-            .where((s) => s.subscriptionId == null && s.protocol != 'chain')
-            .toList()
+              .where((s) => s.subscriptionId == null && s.protocol != 'chain')
+              .toList()
         : state.servers
-            .where((s) => s.subscriptionId == subscriptionId)
-            .toList();
+              .where((s) => s.subscriptionId == subscriptionId)
+              .toList();
     return _pingScoped(subscriptionId ?? manualGroupKey, servers);
   }
 
@@ -626,33 +631,40 @@ class ServersNotifier extends Notifier<ServersState> {
   static const String manualGroupKey = kManualServerGroupKey;
 
   Future<void> pingChains() => _pingScoped(
-        chainsGroupKey,
-        state.servers.where((s) => s.protocol == 'chain').toList(),
-      );
+    chainsGroupKey,
+    state.servers.where((s) => s.protocol == 'chain').toList(),
+  );
 
   Future<void> _pingScoped(String scopeKey, List<ServerItem> servers) async {
-    ref.read(pingingScopesProvider.notifier).update((set) => {...set, scopeKey});
+    ref
+        .read(pingingScopesProvider.notifier)
+        .update((set) => {...set, scopeKey});
     try {
       final results = await _pingServersWithBatchedUpdates(servers);
       if (results.isNotEmpty && results.every((r) => !r.success)) {
-        final firstErr =
-            results.first.error.isEmpty ? 'All pings failed' : results.first.error;
+        final firstErr = results.first.error.isEmpty
+            ? 'All pings failed'
+            : results.first.error;
         throw Exception(firstErr);
       }
     } finally {
-      ref.read(pingingScopesProvider.notifier)
+      ref
+          .read(pingingScopesProvider.notifier)
           .update((set) => {...set}..remove(scopeKey));
     }
   }
 
   Future<void> pingSingle(String serverId) async {
-    ref.read(pingingServerIdsProvider.notifier).update((set) => {...set, serverId});
+    ref
+        .read(pingingServerIdsProvider.notifier)
+        .update((set) => {...set, serverId});
     final server = state.servers.cast<ServerItem?>().firstWhere(
-          (s) => s?.id == serverId,
+      (s) => s?.id == serverId,
       orElse: () => null,
     );
     if (server == null) {
-      ref.read(pingingServerIdsProvider.notifier)
+      ref
+          .read(pingingServerIdsProvider.notifier)
           .update((set) => {...set}..remove(serverId));
       return;
     }
@@ -699,7 +711,8 @@ class ServersNotifier extends Notifier<ServersState> {
         throw Exception(result.error.isEmpty ? 'Ping failed' : result.error);
       }
     } finally {
-      ref.read(pingingServerIdsProvider.notifier)
+      ref
+          .read(pingingServerIdsProvider.notifier)
           .update((set) => {...set}..remove(serverId));
     }
   }

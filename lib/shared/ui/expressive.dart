@@ -35,21 +35,21 @@ abstract final class ExpressiveShape {
       ShapeBorder.lerp(border(corner), border(pressedCorner(corner)), t)!;
 
   static double pressedCorner(double corner) => switch (corner) {
-        full => full,
-        // пилюля приходит радиусом 999, морфить её нельзя: почти вся анимация круглая, в конце рывок
-        >= _renderedFull => corner,
-        >= extraLarge => largeIncreased,
-        >= large => medium,
-        >= small => extraSmall,
-        _ => corner,
-      };
+    full => full,
+    // пилюля приходит радиусом 999, морфить её нельзя: почти вся анимация круглая, в конце рывок
+    >= _renderedFull => corner,
+    >= extraLarge => largeIncreased,
+    >= large => medium,
+    >= small => extraSmall,
+    _ => corner,
+  };
 
   static BorderRadius pressedRadius(BorderRadius base) => BorderRadius.only(
-        topLeft: Radius.circular(pressedCorner(base.topLeft.x)),
-        topRight: Radius.circular(pressedCorner(base.topRight.x)),
-        bottomLeft: Radius.circular(pressedCorner(base.bottomLeft.x)),
-        bottomRight: Radius.circular(pressedCorner(base.bottomRight.x)),
-      );
+    topLeft: Radius.circular(pressedCorner(base.topLeft.x)),
+    topRight: Radius.circular(pressedCorner(base.topRight.x)),
+    bottomLeft: Radius.circular(pressedCorner(base.bottomLeft.x)),
+    bottomRight: Radius.circular(pressedCorner(base.bottomRight.x)),
+  );
 }
 
 abstract final class ExpressiveSpacing {
@@ -84,20 +84,19 @@ enum ExpressiveAccent {
   secondary,
   tertiary;
 
-  static ExpressiveAccent cycle(int index) =>
-      values[index % values.length];
+  static ExpressiveAccent cycle(int index) => values[index % values.length];
 
   Color container(ColorScheme scheme) => switch (this) {
-        ExpressiveAccent.primary => scheme.primaryContainer,
-        ExpressiveAccent.secondary => scheme.secondaryContainer,
-        ExpressiveAccent.tertiary => scheme.tertiaryContainer,
-      };
+    ExpressiveAccent.primary => scheme.primaryContainer,
+    ExpressiveAccent.secondary => scheme.secondaryContainer,
+    ExpressiveAccent.tertiary => scheme.tertiaryContainer,
+  };
 
   Color onContainer(ColorScheme scheme) => switch (this) {
-        ExpressiveAccent.primary => scheme.onPrimaryContainer,
-        ExpressiveAccent.secondary => scheme.onSecondaryContainer,
-        ExpressiveAccent.tertiary => scheme.onTertiaryContainer,
-      };
+    ExpressiveAccent.primary => scheme.onPrimaryContainer,
+    ExpressiveAccent.secondary => scheme.onSecondaryContainer,
+    ExpressiveAccent.tertiary => scheme.onTertiaryContainer,
+  };
 }
 
 abstract final class ExpressiveMotion {
@@ -151,16 +150,9 @@ abstract final class ExpressiveMotion {
     double target, {
     SpringDescription spring = spatialDefault,
     bool snapToEnd = false,
-  }) =>
-      controller.animateWith(
-        SpringSimulation(
-          spring,
-          controller.value,
-          target,
-          0,
-          snapToEnd: snapToEnd,
-        ),
-      );
+  }) => controller.animateWith(
+    SpringSimulation(spring, controller.value, target, 0, snapToEnd: snapToEnd),
+  );
 }
 
 // пружина как кривая для неявных анимаций вроде AnimatedSize, которым нужны длительность и кривая;
@@ -178,17 +170,17 @@ class SpringCurve extends Curve {
 
 extension ExpressiveText on TextTheme {
   TextStyle? emphasized(TextStyle? style) => style?.copyWith(
-        fontWeight: switch (style.fontWeight) {
-          FontWeight.w400 || null => FontWeight.w500,
-          _ => FontWeight.w700,
-        },
-        letterSpacing: switch ((style.fontSize, style.fontWeight)) {
-          (57, _) => 0,
-          (16, _) => 0.15,
-          (14, FontWeight.w400 || null) => 0.25,
-          _ => style.letterSpacing,
-        },
-      );
+    fontWeight: switch (style.fontWeight) {
+      FontWeight.w400 || null => FontWeight.w500,
+      _ => FontWeight.w700,
+    },
+    letterSpacing: switch ((style.fontSize, style.fontWeight)) {
+      (57, _) => 0,
+      (16, _) => 0.15,
+      (14, FontWeight.w400 || null) => 0.25,
+      _ => style.letterSpacing,
+    },
+  );
 }
 
 TextTheme buildExpressiveTextTheme(Brightness brightness) {
@@ -196,21 +188,96 @@ TextTheme buildExpressiveTextTheme(Brightness brightness) {
   const medium = FontWeight.w500;
 
   return const TextTheme(
-    displayLarge: TextStyle(fontSize: 57, height: 64 / 57, letterSpacing: -0.2, fontWeight: regular),
-    displayMedium: TextStyle(fontSize: 45, height: 52 / 45, letterSpacing: 0, fontWeight: regular),
-    displaySmall: TextStyle(fontSize: 36, height: 44 / 36, letterSpacing: 0, fontWeight: regular),
-    headlineLarge: TextStyle(fontSize: 32, height: 40 / 32, letterSpacing: 0, fontWeight: regular),
-    headlineMedium: TextStyle(fontSize: 28, height: 36 / 28, letterSpacing: 0, fontWeight: regular),
-    headlineSmall: TextStyle(fontSize: 24, height: 32 / 24, letterSpacing: 0, fontWeight: regular),
-    titleLarge: TextStyle(fontSize: 22, height: 28 / 22, letterSpacing: 0, fontWeight: regular),
-    titleMedium: TextStyle(fontSize: 16, height: 24 / 16, letterSpacing: 0.2, fontWeight: medium),
-    titleSmall: TextStyle(fontSize: 14, height: 20 / 14, letterSpacing: 0.1, fontWeight: medium),
-    bodyLarge: TextStyle(fontSize: 16, height: 24 / 16, letterSpacing: 0.5, fontWeight: regular),
-    bodyMedium: TextStyle(fontSize: 14, height: 20 / 14, letterSpacing: 0.2, fontWeight: regular),
-    bodySmall: TextStyle(fontSize: 12, height: 16 / 12, letterSpacing: 0.4, fontWeight: regular),
-    labelLarge: TextStyle(fontSize: 14, height: 20 / 14, letterSpacing: 0.1, fontWeight: medium),
-    labelMedium: TextStyle(fontSize: 12, height: 16 / 12, letterSpacing: 0.5, fontWeight: medium),
-    labelSmall: TextStyle(fontSize: 11, height: 16 / 11, letterSpacing: 0.5, fontWeight: medium),
+    displayLarge: TextStyle(
+      fontSize: 57,
+      height: 64 / 57,
+      letterSpacing: -0.2,
+      fontWeight: regular,
+    ),
+    displayMedium: TextStyle(
+      fontSize: 45,
+      height: 52 / 45,
+      letterSpacing: 0,
+      fontWeight: regular,
+    ),
+    displaySmall: TextStyle(
+      fontSize: 36,
+      height: 44 / 36,
+      letterSpacing: 0,
+      fontWeight: regular,
+    ),
+    headlineLarge: TextStyle(
+      fontSize: 32,
+      height: 40 / 32,
+      letterSpacing: 0,
+      fontWeight: regular,
+    ),
+    headlineMedium: TextStyle(
+      fontSize: 28,
+      height: 36 / 28,
+      letterSpacing: 0,
+      fontWeight: regular,
+    ),
+    headlineSmall: TextStyle(
+      fontSize: 24,
+      height: 32 / 24,
+      letterSpacing: 0,
+      fontWeight: regular,
+    ),
+    titleLarge: TextStyle(
+      fontSize: 22,
+      height: 28 / 22,
+      letterSpacing: 0,
+      fontWeight: regular,
+    ),
+    titleMedium: TextStyle(
+      fontSize: 16,
+      height: 24 / 16,
+      letterSpacing: 0.2,
+      fontWeight: medium,
+    ),
+    titleSmall: TextStyle(
+      fontSize: 14,
+      height: 20 / 14,
+      letterSpacing: 0.1,
+      fontWeight: medium,
+    ),
+    bodyLarge: TextStyle(
+      fontSize: 16,
+      height: 24 / 16,
+      letterSpacing: 0.5,
+      fontWeight: regular,
+    ),
+    bodyMedium: TextStyle(
+      fontSize: 14,
+      height: 20 / 14,
+      letterSpacing: 0.2,
+      fontWeight: regular,
+    ),
+    bodySmall: TextStyle(
+      fontSize: 12,
+      height: 16 / 12,
+      letterSpacing: 0.4,
+      fontWeight: regular,
+    ),
+    labelLarge: TextStyle(
+      fontSize: 14,
+      height: 20 / 14,
+      letterSpacing: 0.1,
+      fontWeight: medium,
+    ),
+    labelMedium: TextStyle(
+      fontSize: 12,
+      height: 16 / 12,
+      letterSpacing: 0.5,
+      fontWeight: medium,
+    ),
+    labelSmall: TextStyle(
+      fontSize: 11,
+      height: 16 / 11,
+      letterSpacing: 0.5,
+      fontWeight: medium,
+    ),
   );
 }
 
@@ -232,9 +299,13 @@ TextTheme buildExpressiveTextTheme(Brightness brightness) {
   SegmentedButtonThemeData segmentedButton,
   ProgressIndicatorThemeData progressIndicator,
   SliderThemeData slider,
-}) buildExpressiveComponentThemes(ColorScheme scheme) {
+})
+buildExpressiveComponentThemes(ColorScheme scheme) {
   final buttonShape = ExpressiveShape.border(ExpressiveShape.full);
-  final buttonPadding = const EdgeInsets.symmetric(horizontal: 24, vertical: 16);
+  final buttonPadding = const EdgeInsets.symmetric(
+    horizontal: 24,
+    vertical: 16,
+  );
 
   return (
     appBar: AppBarThemeData(

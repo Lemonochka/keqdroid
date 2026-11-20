@@ -6,7 +6,8 @@ import '../helpers/test_storage.dart';
 
 final _now = DateTime(2026, 11, 1, 12);
 
-Subscription _sub(String id, {Duration? left, bool remind = true}) => Subscription(
+Subscription _sub(String id, {Duration? left, bool remind = true}) =>
+    Subscription(
       id: id,
       name: 'Подписка $id',
       url: 'https://$id.example/s',
@@ -37,11 +38,19 @@ void main() {
     test('раз в день', () {
       final soon = _sub('soon', left: const Duration(days: 2));
       expect(
-        expiryRemindersDue([soon], now: _now, reminded: const {'soon': '2026-11-1'}),
+        expiryRemindersDue(
+          [soon],
+          now: _now,
+          reminded: const {'soon': '2026-11-1'},
+        ),
         isEmpty,
       );
       expect(
-        expiryRemindersDue([soon], now: _now, reminded: const {'soon': '2026-10-31'}),
+        expiryRemindersDue(
+          [soon],
+          now: _now,
+          reminded: const {'soon': '2026-10-31'},
+        ),
         hasLength(1),
       );
     });
@@ -55,9 +64,10 @@ void main() {
     Future<void> show(Subscription s, String title, String body) async =>
         shown.add((s.id, title, body));
     final subs = [
-      _sub('a', left: const Duration(days: 2)).copyWith(
-        expiresAt: DateTime(2026, 11, 3, 18),
-      ),
+      _sub(
+        'a',
+        left: const Duration(days: 2),
+      ).copyWith(expiresAt: DateTime(2026, 11, 3, 18)),
     ];
 
     await remindExpiringSubscriptions(storage, subs, now: _now, show: show);

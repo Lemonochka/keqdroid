@@ -11,7 +11,7 @@ import 'package:shared_preferences_platform_interface/types.dart';
 // не по таймеру: закрытие окна без трея гасит процесс мимо Dart
 class WindowsPrefsStore extends SharedPreferencesStorePlatform {
   WindowsPrefsStore({Future<Directory> Function()? directory})
-      : _directory = directory ?? getApplicationSupportDirectory;
+    : _directory = directory ?? getApplicationSupportDirectory;
 
   static const fileName = 'shared_preferences.json';
   static const _prefix = 'flutter.';
@@ -111,23 +111,23 @@ class WindowsPrefsStore extends SharedPreferencesStorePlatform {
 
   @override
   Future<bool> clear() => clearWithParameters(
-        ClearParameters(filter: PreferencesFilter(prefix: _prefix)),
-      );
+    ClearParameters(filter: PreferencesFilter(prefix: _prefix)),
+  );
 
   @override
   Future<bool> clearWithPrefix(String prefix) => clearWithParameters(
-        ClearParameters(filter: PreferencesFilter(prefix: prefix)),
-      );
+    ClearParameters(filter: PreferencesFilter(prefix: prefix)),
+  );
 
   @override
-  Future<bool> clearWithParameters(ClearParameters parameters) =>
-      _mutate((prefs) =>
-          prefs.removeWhere((key, _) => _matches(key, parameters.filter)));
+  Future<bool> clearWithParameters(ClearParameters parameters) => _mutate(
+    (prefs) => prefs.removeWhere((key, _) => _matches(key, parameters.filter)),
+  );
 
   @override
   Future<Map<String, Object>> getAll() => getAllWithParameters(
-        GetAllParameters(filter: PreferencesFilter(prefix: _prefix)),
-      );
+    GetAllParameters(filter: PreferencesFilter(prefix: _prefix)),
+  );
 
   @override
   Future<Map<String, Object>> getAllWithPrefix(String prefix) =>

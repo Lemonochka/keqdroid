@@ -15,14 +15,19 @@ import 'package:keqdroid/utils/socks5_credentials.dart';
 ///
 /// Поводом написать стало то, что туннель собираются отдать самому ядру:
 /// инбаунд у пакетов будет другой, и правило обязано его накрыть само.
-const _link = 'vless://00000000-0000-4000-8000-000000000000@198.51.100.10:443'
+const _link =
+    'vless://00000000-0000-4000-8000-000000000000@198.51.100.10:443'
     '?type=tcp&security=none#dns';
 
 Map<String, dynamic> _config(String input, [AppSettings? settings]) {
   Socks5Credentials().init('u', 'p');
   return jsonDecode(
-    ConfigGeneratorV2.generateConfig(input, settings ?? const AppSettings()),
-  ) as Map<String, dynamic>;
+        ConfigGeneratorV2.generateConfig(
+          input,
+          settings ?? const AppSettings(),
+        ),
+      )
+      as Map<String, dynamic>;
 }
 
 List<Map<String, dynamic>> _rules(Map<String, dynamic> config) =>
@@ -33,9 +38,9 @@ Map<String, dynamic> _rule(Map<String, dynamic> config, String tag) =>
     _rules(config).firstWhere((r) => r['ruleTag'] == tag);
 
 List<String> _inboundTags(Map<String, dynamic> config) => [
-      for (final inbound in (config['inbounds'] as List))
-        (inbound as Map<String, dynamic>)['tag'] as String,
-    ];
+  for (final inbound in (config['inbounds'] as List))
+    (inbound as Map<String, dynamic>)['tag'] as String,
+];
 
 void main() {
   group('обычный конфиг из ссылки', () {
@@ -50,33 +55,39 @@ void main() {
       expect(
         dns.containsKey('inboundTag'),
         isFalse,
-        reason: 'привязка к списку инбаундов означала бы, что новый инбаунд '
+        reason:
+            'привязка к списку инбаундов означала бы, что новый инбаунд '
             'выпадает из перехвата молча',
       );
     });
 
-    test('перехват стоит ПОСЛЕ запрета LAN — иначе открытый резолвер наружу',
-        () {
-      final config = _config(
-        _link,
-        const AppSettings(
-          lanSharing: true,
-          lanUsername: 'lanuser',
-          lanPassword: 'lanpass',
-        ),
-      );
-      final tags = [for (final r in _rules(config)) r['ruleTag'] as String?];
-      final lan = tags.lastIndexWhere((t) => t != null && t.startsWith('lan-'));
-      final dns = tags.indexOf('dns-out');
+    test(
+      'перехват стоит ПОСЛЕ запрета LAN — иначе открытый резолвер наружу',
+      () {
+        final config = _config(
+          _link,
+          const AppSettings(
+            lanSharing: true,
+            lanUsername: 'lanuser',
+            lanPassword: 'lanpass',
+          ),
+        );
+        final tags = [for (final r in _rules(config)) r['ruleTag'] as String?];
+        final lan = tags.lastIndexWhere(
+          (t) => t != null && t.startsWith('lan-'),
+        );
+        final dns = tags.indexOf('dns-out');
 
-      expect(lan, isNonNegative, reason: 'правил LAN нет вовсе');
-      expect(
-        lan,
-        lessThan(dns),
-        reason: 'инбаунд LAN слушает 0.0.0.0: перехвати DNS раньше запрета — '
-            'и наружу смотрит открытый резолвер. Порядок: $tags',
-      );
-    });
+        expect(lan, isNonNegative, reason: 'правил LAN нет вовсе');
+        expect(
+          lan,
+          lessThan(dns),
+          reason:
+              'инбаунд LAN слушает 0.0.0.0: перехвати DNS раньше запрета — '
+              'и наружу смотрит открытый резолвер. Порядок: $tags',
+        );
+      },
+    );
   });
 
   group('готовый конфиг автора', () {
@@ -85,7 +96,11 @@ void main() {
     // самих инбаундов, а не быть выписанным руками.
     final custom = jsonEncode({
       'outbounds': [
-        {'tag': 'proxy', 'protocol': 'freedom', 'settings': <String, dynamic>{}},
+        {
+          'tag': 'proxy',
+          'protocol': 'freedom',
+          'settings': <String, dynamic>{},
+        },
       ],
     });
 
@@ -105,7 +120,8 @@ void main() {
           expect(
             (_rule(config, rule)['inboundTag'] as List).cast<String>(),
             tags,
-            reason: 'правило $rule обязано накрывать ровно те инбаунды, что '
+            reason:
+                'правило $rule обязано накрывать ровно те инбаунды, что '
                 'есть в конфиге: инбаунды $tags',
           );
         }

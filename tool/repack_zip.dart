@@ -13,9 +13,8 @@ import 'dart:typed_data';
 
 import 'package:keqdroid/utils/zip_layout.dart';
 
-typedef Deflater = Future<Map<int, Uint8List>> Function(
-  Map<int, Uint8List> plain,
-);
+typedef Deflater =
+    Future<Map<int, Uint8List>> Function(Map<int, Uint8List> plain);
 
 class RepackResult {
   RepackResult(this.bytes, {required this.recompressed, required this.total});
@@ -46,7 +45,9 @@ Future<void> main(List<String> args) async {
     }
   }
   if (input == null || output == null) {
-    stderr.writeln('usage: repack_zip.dart --in <zip> --out <zip> [--apk] [--7z <exe>]');
+    stderr.writeln(
+      'usage: repack_zip.dart --in <zip> --out <zip> [--apk] [--7z <exe>]',
+    );
     exit(2);
   }
 
@@ -205,11 +206,15 @@ Future<Map<int, Uint8List>> sevenZipDeflate(
       File('${files.path}/$key').writeAsBytesSync(value);
     }
     final archive = '${dir.path}/out.zip';
-    final run = await Process.run(
-      sevenZip,
-      ['a', '-tzip', '-mx=9', '-mm=Deflate', '-bd', archive, '*'],
-      workingDirectory: files.path,
-    );
+    final run = await Process.run(sevenZip, [
+      'a',
+      '-tzip',
+      '-mx=9',
+      '-mm=Deflate',
+      '-bd',
+      archive,
+      '*',
+    ], workingDirectory: files.path);
     if (run.exitCode != 0) {
       throw StateError('$sevenZip failed (${run.exitCode}): ${run.stderr}');
     }

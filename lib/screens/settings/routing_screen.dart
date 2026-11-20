@@ -11,46 +11,46 @@ Color _targetColor(BuildContext context, RouteTarget target) =>
     };
 
 IconData _targetIcon(RouteTarget target) => switch (target) {
-      RouteTarget.direct => Icons.call_made_rounded,
-      RouteTarget.block => Icons.block_rounded,
-      RouteTarget.vpn => Icons.vpn_lock_rounded,
-      RouteTarget.server => Icons.dns_rounded,
-    };
+  RouteTarget.direct => Icons.call_made_rounded,
+  RouteTarget.block => Icons.block_rounded,
+  RouteTarget.vpn => Icons.vpn_lock_rounded,
+  RouteTarget.server => Icons.dns_rounded,
+};
 
 RouteTarget _finalTarget(String finalOutbound) => switch (finalOutbound) {
-      AppSettings.finalOutboundDirect => RouteTarget.direct,
-      AppSettings.finalOutboundBlock => RouteTarget.block,
-      _ => RouteTarget.vpn,
-    };
+  AppSettings.finalOutboundDirect => RouteTarget.direct,
+  AppSettings.finalOutboundBlock => RouteTarget.block,
+  _ => RouteTarget.vpn,
+};
 
 String _finalOutboundOf(RouteTarget target) => switch (target) {
-      RouteTarget.direct => AppSettings.finalOutboundDirect,
-      RouteTarget.block => AppSettings.finalOutboundBlock,
-      _ => AppSettings.finalOutboundProxy,
-    };
+  RouteTarget.direct => AppSettings.finalOutboundDirect,
+  RouteTarget.block => AppSettings.finalOutboundBlock,
+  _ => AppSettings.finalOutboundProxy,
+};
 
 String _presetName(AppLocalizations l10n, String id) => switch (id) {
-      'ru' => l10n.settingsRoutingPresetRuTitle,
-      'ir' => l10n.settingsRoutingPresetIrTitle,
-      'ads' => l10n.settingsRoutingPresetAdsTitle,
-      'refilter' => l10n.settingsRoutingPresetRefilterTitle,
-      'whitelist' => l10n.settingsRoutingPresetWhitelistTitle,
-      _ => id,
-    };
+  'ru' => l10n.settingsRoutingPresetRuTitle,
+  'ir' => l10n.settingsRoutingPresetIrTitle,
+  'ads' => l10n.settingsRoutingPresetAdsTitle,
+  'refilter' => l10n.settingsRoutingPresetRefilterTitle,
+  'whitelist' => l10n.settingsRoutingPresetWhitelistTitle,
+  _ => id,
+};
 
 IconData _presetIcon(String id) => switch (id) {
-      'ru' || 'ir' => Icons.flag_rounded,
-      'ads' => Icons.block_rounded,
-      'refilter' => Icons.shield_rounded,
-      'whitelist' => Icons.signal_cellular_alt_rounded,
-      _ =>Icons.playlist_add_check_rounded,
-    };
+  'ru' || 'ir' => Icons.flag_rounded,
+  'ads' => Icons.block_rounded,
+  'refilter' => Icons.shield_rounded,
+  'whitelist' => Icons.signal_cellular_alt_rounded,
+  _ => Icons.playlist_add_check_rounded,
+};
 
 IconData _contentIcon(TrafficRoute route) => switch (route.content) {
-      RouteContent.allTraffic => Icons.all_inclusive_rounded,
-      RouteContent.sites => Icons.language_rounded,
-      RouteContent.preset => _presetIcon(route.presetId),
-    };
+  RouteContent.allTraffic => Icons.all_inclusive_rounded,
+  RouteContent.sites => Icons.language_rounded,
+  RouteContent.preset => _presetIcon(route.presetId),
+};
 
 String _appLabel(String entry, [List<AppInfo> installed = const []]) {
   final app = _installedApp(entry, installed);
@@ -76,13 +76,12 @@ Widget _appsBadge(
   List<String> apps,
   AppIconCache cache, [
   List<AppInfo> installed = const [],
-]) =>
-    AppIconView(
-      iconBase64: _installedApp(apps.first, installed)?.iconBase64,
-      appName: _appLabel(apps.first, installed),
-      iconPath: isProcessPathEntry(apps.first) ? apps.first : null,
-      cache: cache,
-    );
+]) => AppIconView(
+  iconBase64: _installedApp(apps.first, installed)?.iconBase64,
+  appName: _appLabel(apps.first, installed),
+  iconPath: isProcessPathEntry(apps.first) ? apps.first : null,
+  cache: cache,
+);
 
 String? _routeIssue(
   AppLocalizations l10n,
@@ -125,10 +124,10 @@ String? _routeIssue(
 }
 
 String? _networkName(RouteNetwork network) => switch (network) {
-      RouteNetwork.any => null,
-      RouteNetwork.tcp => 'TCP',
-      RouteNetwork.udp => 'UDP',
-    };
+  RouteNetwork.any => null,
+  RouteNetwork.tcp => 'TCP',
+  RouteNetwork.udp => 'UDP',
+};
 
 // неверные порты показываем как набраны: ошибку рядом называет _routeIssue
 String? _portsText(TrafficRoute route) {
@@ -136,14 +135,17 @@ String? _portsText(TrafficRoute route) {
   if (raw.isEmpty) return null;
   final ranges = routePortRanges(raw);
   if (ranges == null) return raw;
-  return [for (final (from, to) in ranges) from == to ? '$from' : '$from-$to']
-      .join(', ');
+  return [
+    for (final (from, to) in ranges) from == to ? '$from' : '$from-$to',
+  ].join(', ');
 }
 
 // не plural: gen-l10n сводит =1 и русское one в один вариант, и диапазон из 21 порта стал бы «порт»
 String _portsLabel(AppLocalizations l10n, TrafficRoute route, String ports) {
-  final count = (routePortRanges(route.ports) ?? const [])
-      .fold(0, (sum, r) => sum + r.$2 - r.$1 + 1);
+  final count = (routePortRanges(route.ports) ?? const []).fold(
+    0,
+    (sum, r) => sum + r.$2 - r.$1 + 1,
+  );
   return count == 1
       ? l10n.routePortValue(ltrIsolate(ports))
       : l10n.routePortsValue(ltrIsolate(ports));
@@ -151,7 +153,8 @@ String _portsLabel(AppLocalizations l10n, TrafficRoute route, String ports) {
 
 String _protocolValue(AppLocalizations l10n, TrafficRoute route) {
   final ports = _portsText(route);
-  final network = _networkName(route.network) ??
+  final network =
+      _networkName(route.network) ??
       (ports == null ? null : l10n.routeProtocolAnySubtitle);
   if (network == null) return l10n.routeProtocolAny;
   return '$network · ${ports == null ? l10n.routePortsAll : _portsLabel(l10n, route, ports)}';
@@ -167,24 +170,23 @@ String? _protocolShort(AppLocalizations l10n, TrafficRoute route) {
 
 ServerItem? _routeServer(TrafficRoute route, List<ServerItem> servers) =>
     route.target == RouteTarget.server
-        ? servers.where((s) => s.id == route.serverId).firstOrNull
-        : null;
+    ? servers.where((s) => s.id == route.serverId).firstOrNull
+    : null;
 
 String _targetLabel(
   AppLocalizations l10n,
   TrafficRoute route,
   List<ServerItem> servers,
-) =>
-    switch (route.target) {
-      RouteTarget.vpn => l10n.routeToVpn,
-      RouteTarget.direct => l10n.routeToDirect,
-      RouteTarget.block => l10n.routeToBlock,
-      // флаг рисуется значком рядом, а в имени он часто стоит эмодзи
-      RouteTarget.server => switch (_routeServer(route, servers)) {
-          final server? => ServerNameUtils.cleanDisplayName(server.displayName),
-          null => l10n.routeToVpn,
-        },
-    };
+) => switch (route.target) {
+  RouteTarget.vpn => l10n.routeToVpn,
+  RouteTarget.direct => l10n.routeToDirect,
+  RouteTarget.block => l10n.routeToBlock,
+  // флаг рисуется значком рядом, а в имени он часто стоит эмодзи
+  RouteTarget.server => switch (_routeServer(route, servers)) {
+    final server? => ServerNameUtils.cleanDisplayName(server.displayName),
+    null => l10n.routeToVpn,
+  },
+};
 
 // ссылку показываем именем хоста: полный адрес съел бы строку
 String _contentLabel(AppLocalizations l10n, TrafficRoute route) {
@@ -234,10 +236,12 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
     final position = Scrollable.of(mainContext).position;
     for (var i = 0; i < 20 && _focusKey.currentContext == null; i++) {
       if (position.pixels >= position.maxScrollExtent) return;
-      position.jumpTo(math.min(
-        position.pixels + position.viewportDimension,
-        position.maxScrollExtent,
-      ));
+      position.jumpTo(
+        math.min(
+          position.pixels + position.viewportDimension,
+          position.maxScrollExtent,
+        ),
+      );
       await WidgetsBinding.instance.endOfFrame;
       if (!mounted) return;
     }
@@ -261,8 +265,8 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
     final vpnStatus = ref.watch(
       vpnStateProvider.select((a) => a.value?.status),
     );
-    final tunnelActive = vpnStatus == VpnStatus.connected ||
-        vpnStatus == VpnStatus.connecting;
+    final tunnelActive =
+        vpnStatus == VpnStatus.connected || vpnStatus == VpnStatus.connecting;
     final routesAsync = ref.watch(routesProvider);
     final profilesAsync = ref.watch(routingProfilesProvider);
     // до загрузки карточек нет: «Основной» вырастал из пустого анимацией, и прокрутка к профилю промахивалась
@@ -284,36 +288,46 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
     final servers = ref.watch(serversProvider.select((s) => s.servers));
     final split = ref.watch(splitTunnelingProvider);
     final iconCache = ref.read(appIconCacheProvider);
-    final installed = _installedForLabels(
-      ref,
-      [...routes, for (final p in profiles) ...p.routes],
-    );
+    final installed = _installedForLabels(ref, [
+      ...routes,
+      for (final p in profiles) ...p.routes,
+    ]);
     final mainFinal = ref.watch(
       settingsNotifierProvider.select(
         (a) => a.value?.finalOutbound ?? AppSettings.finalOutboundProxy,
       ),
     );
     final ignoreProviderRules = ref.watch(
-      settingsNotifierProvider.select((a) => a.value?.ignoreProviderRules ?? false),
+      settingsNotifierProvider.select(
+        (a) => a.value?.ignoreProviderRules ?? false,
+      ),
     );
     final ignoreProviderDns = ref.watch(
-      settingsNotifierProvider.select((a) => a.value?.ignoreProviderDns ?? false),
+      settingsNotifierProvider.select(
+        (a) => a.value?.ignoreProviderDns ?? false,
+      ),
     );
     final templates = [
       for (final s in subs) ?ref.watch(subscriptionTemplateProvider(s.id)),
     ];
     // выключать нечего, пока ни один сервер не принёс своего; включённую кнопку не прячем
-    final showProviderRules = ignoreProviderRules ||
+    final showProviderRules =
+        ignoreProviderRules ||
         templates.isNotEmpty ||
         profiles.any((p) => p.providerSubscriptionId != null) ||
-        servers.any((s) =>
-            (s.customConfig?.hasProviderRules ?? false) ||
-            (s.clashConfig?.hasProviderRules ?? false));
-    final showProviderDns = ignoreProviderDns ||
+        servers.any(
+          (s) =>
+              (s.customConfig?.hasProviderRules ?? false) ||
+              (s.clashConfig?.hasProviderRules ?? false),
+        );
+    final showProviderDns =
+        ignoreProviderDns ||
         templates.any((t) => t.config.hasProviderDns) ||
-        servers.any((s) =>
-            (s.customConfig?.hasProviderDns ?? false) ||
-            (s.clashConfig?.hasProviderDns ?? false));
+        servers.any(
+          (s) =>
+              (s.customConfig?.hasProviderDns ?? false) ||
+              (s.clashConfig?.hasProviderDns ?? false),
+        );
     // профиль провайдера только смотрят, пока его правила слушают
     bool locked(RoutingProfile p) =>
         p.providerSubscriptionId != null && !ignoreProviderRules;
@@ -326,16 +340,16 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
       bool locked = false,
     }) {
       Widget tile(TrafficRoute route) => _RouteTile(
-            route: route,
-            servers: servers,
-            iconCache: iconCache,
-            installed: installed,
-            background: rowColor,
-            issue: _routeIssue(l10n, route, caps, servers, split, installed),
-            onTap: locked
-                ? () => _showRouteEntries(context, route)
-                : () => _openRouteEditor(context, route, profileId),
-          );
+        route: route,
+        servers: servers,
+        iconCache: iconCache,
+        installed: installed,
+        background: rowColor,
+        issue: _routeIssue(l10n, route, caps, servers, split, installed),
+        onTap: locked
+            ? () => _showRouteEntries(context, route)
+            : () => _openRouteEditor(context, route, profileId),
+      );
       final block = routesIn(RouteSection.block, list);
       final apps = routesIn(RouteSection.apps, list);
       final allApps = routesIn(RouteSection.allApps, list);
@@ -376,7 +390,9 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
         _ProfileSectionLabel(l10n.routesSectionAllApps),
         // переставлять одну строку некуда, а профиль провайдера под замком только смотрят
         if (locked || allApps.length < 2)
-          ExpressiveGroup(children: [for (final r in allApps) tile(r), ...fixed])
+          ExpressiveGroup(
+            children: [for (final r in allApps) tile(r), ...fixed],
+          )
         else
           _ReorderableRouteGroup(
             routes: allApps,
@@ -386,8 +402,8 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
               profileId == null
                   ? ref.read(routesProvider.notifier).moveInAllApps(from, to)
                   : ref
-                      .read(routingProfilesProvider.notifier)
-                      .moveRouteInAllApps(profileId, from, to),
+                        .read(routingProfilesProvider.notifier)
+                        .moveRouteInAllApps(profileId, from, to),
             ),
           ),
       ];
@@ -395,9 +411,10 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
 
     final subNames = {for (final s in subs) s.id: s.name};
     final mainExpanded = _profileExpanded(expanded, _mainProfileKey);
-    final mainScope = profiles.any(
-      (p) => p.enabled && p.subscriptionIds.any(subNames.containsKey),
-    )
+    final mainScope =
+        profiles.any(
+          (p) => p.enabled && p.subscriptionIds.any(subNames.containsKey),
+        )
         ? l10n.routingProfileScopeRest
         : l10n.routingProfileScopeAll;
 
@@ -406,9 +423,9 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
       final summary = !p.enabled
           ? l10n.routingProfileOff
           : !p.subscriptionIds.any(subNames.containsKey)
-              ? l10n.routingProfileNoSubscriptions
-              : '${l10n.routingProfileRouteCount(p.routes.length)} · '
-                  '${l10n.routingProfileFinal(_finalLabel(l10n, p.finalOutbound))}';
+          ? l10n.routingProfileNoSubscriptions
+          : '${l10n.routingProfileRouteCount(p.routes.length)} · '
+                '${l10n.routingProfileFinal(_finalLabel(l10n, p.finalOutbound))}';
       return _ProfileCard(
         key: ValueKey('routing-profile-${p.id}'),
         title: p.name,
@@ -448,8 +465,9 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
                     backgroundColor: AppTheme.accent(context),
                     behavior: SnackBarBehavior.floating,
                     shape: RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.circular(ExpressiveShape.medium),
+                      borderRadius: BorderRadius.circular(
+                        ExpressiveShape.medium,
+                      ),
                     ),
                   ),
                 ),
@@ -513,14 +531,17 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
           const SizedBox(height: ExpressiveSpacing.large),
         if (loaded) ...[
           if (showProviderRules || showProviderDns) ...[
-            ExpressiveGroup(children: [
-              _ProviderOverridesTile(
-                rules: showProviderRules ? ignoreProviderRules : null,
-                dns: showProviderDns ? ignoreProviderDns : null,
-                onRules: (v) => unawaited(_saveProviderOverrides(ref, rules: v)),
-                onDns: (v) => unawaited(_saveProviderOverrides(ref, dns: v)),
-              ),
-            ]),
+            ExpressiveGroup(
+              children: [
+                _ProviderOverridesTile(
+                  rules: showProviderRules ? ignoreProviderRules : null,
+                  dns: showProviderDns ? ignoreProviderDns : null,
+                  onRules: (v) =>
+                      unawaited(_saveProviderOverrides(ref, rules: v)),
+                  onDns: (v) => unawaited(_saveProviderOverrides(ref, dns: v)),
+                ),
+              ],
+            ),
             const SizedBox(height: ExpressiveSpacing.large),
           ],
           KeyedSubtree(
@@ -568,7 +589,8 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
     bool? dns,
   }) async {
     final notifier = ref.read(settingsNotifierProvider.notifier);
-    final settings = ref.read(settingsNotifierProvider).value ?? const AppSettings();
+    final settings =
+        ref.read(settingsNotifierProvider).value ?? const AppSettings();
     await notifier.save(
       settings.copyWith(ignoreProviderRules: rules, ignoreProviderDns: dns),
     );
@@ -578,7 +600,10 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
     try {
       await ref.read(vpnStateProvider.notifier).reconnectToActiveServer();
     } catch (e) {
-      AppLogger.instance.warn('Reconnect after routing change failed', error: e);
+      AppLogger.instance.warn(
+        'Reconnect after routing change failed',
+        error: e,
+      );
     }
   }
 
@@ -590,38 +615,42 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
     Navigator.push(
       context,
       MaterialPageRoute<void>(
-        builder: (_) => _RouteEditorScreen(initial: route, profileId: profileId),
+        builder: (_) =>
+            _RouteEditorScreen(initial: route, profileId: profileId),
       ),
     );
   }
 
   static void _showRouteEntries(BuildContext context, TrafficRoute route) {
     final l10n = AppLocalizations.of(context)!;
-    unawaited(_showChoiceSheet<void>(
-      context,
-      title: switch (route.target) {
-        RouteTarget.direct => l10n.routeToDirect,
-        RouteTarget.block => l10n.routeToBlock,
-        _ => l10n.routeToVpn,
-      },
-      children: (ctx) => [
-        ExpressiveGroup(children: [
-          for (final e in routingEntries(route.sites))
-            ExpressiveGroupTile(
-              child: SizedBox(
-                width: double.infinity,
-                child: Text(
-                  ltrIsolate(e),
-                  style: Theme.of(ctx)
-                      .textTheme
-                      .bodyLarge
-                      ?.copyWith(color: AppTheme.text(ctx)),
+    unawaited(
+      _showChoiceSheet<void>(
+        context,
+        title: switch (route.target) {
+          RouteTarget.direct => l10n.routeToDirect,
+          RouteTarget.block => l10n.routeToBlock,
+          _ => l10n.routeToVpn,
+        },
+        children: (ctx) => [
+          ExpressiveGroup(
+            children: [
+              for (final e in routingEntries(route.sites))
+                ExpressiveGroupTile(
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: Text(
+                      ltrIsolate(e),
+                      style: Theme.of(ctx).textTheme.bodyLarge?.copyWith(
+                        color: AppTheme.text(ctx),
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-            ),
-        ]),
-      ],
-    ));
+            ],
+          ),
+        ],
+      ),
+    );
   }
 
   static Future<void> _pickFinalTarget(
@@ -674,15 +703,17 @@ class _RouteRowContent extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               DefaultTextStyle.merge(
-                style: textTheme.titleMedium
-                    ?.copyWith(color: AppTheme.text(context)),
+                style: textTheme.titleMedium?.copyWith(
+                  color: AppTheme.text(context),
+                ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 child: title,
               ),
               DefaultTextStyle.merge(
-                style: textTheme.bodyMedium
-                    ?.copyWith(color: AppTheme.textLight(context)),
+                style: textTheme.bodyMedium?.copyWith(
+                  color: AppTheme.textLight(context),
+                ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 child: subtitle,
@@ -922,19 +953,21 @@ class _ReorderableRouteGroupState extends State<_ReorderableRouteGroup>
 
   // края у разрыва скругляются ровно настолько, насколько он раскрылся
   BorderRadius _radiusOf(Object key, int index) {
-    final rest =
-        ExpressiveGroup.segmentRadius(index: _restIndex(index), count: _count);
+    final rest = ExpressiveGroup.segmentRadius(
+      index: _restIndex(index),
+      count: _count,
+    );
     final t = _lift;
     final mine = _rects[key];
     if (_draggedId == null || t == 0 || mine == null) return rest;
     final order = _rects.values.toList()
       ..sort((a, b) => a.top.compareTo(b.top));
     final k = order.indexOf(mine);
-    double open(double gap) =>
-        ((gap - _spacing) / _rowHeight).clamp(0.0, 1.0);
+    double open(double gap) => ((gap - _spacing) / _rowHeight).clamp(0.0, 1.0);
     final top = k <= 0 ? 1.0 : open(mine.top - order[k - 1].bottom);
-    final bottom =
-        k == order.length - 1 ? 1.0 : open(order[k + 1].top - mine.bottom);
+    final bottom = k == order.length - 1
+        ? 1.0
+        : open(order[k + 1].top - mine.bottom);
     Radius blend(Radius r, double target) =>
         Radius.lerp(r, Radius.lerp(_inner, _outer, target), t)!;
     return BorderRadius.only(
@@ -967,7 +1000,8 @@ class _ReorderableRouteGroupState extends State<_ReorderableRouteGroup>
             const BorderRadius.all(_outer),
             shape,
           )!;
-          final scale = 1 +
+          final scale =
+              1 +
               0.035 *
                   (landing != null
                       ? Curves.easeInCubic.transform(v)
@@ -1040,22 +1074,23 @@ class _ReorderableRouteGroupState extends State<_ReorderableRouteGroup>
                 onReorderItem: widget.onMove,
                 proxyDecorator: (child, index, animation) =>
                     _proxyDecorator(index, animation, fix),
-                itemBuilder: (context, i) => ReorderableDelayedDragStartListener(
-                  key: ValueKey('route-row-${routes[i].id}'),
-                  index: i,
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: _spacing),
-                    child: KeyedSubtree(
-                      key: _rowKey(routes[i].id),
-                      child: ExpressiveGroupSegment(
-                        index: i,
-                        count: _count,
-                        radius: _radiusOf(routes[i].id, i),
-                        child: widget.tile(routes[i]),
+                itemBuilder: (context, i) =>
+                    ReorderableDelayedDragStartListener(
+                      key: ValueKey('route-row-${routes[i].id}'),
+                      index: i,
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: _spacing),
+                        child: KeyedSubtree(
+                          key: _rowKey(routes[i].id),
+                          child: ExpressiveGroupSegment(
+                            index: i,
+                            count: _count,
+                            radius: _radiusOf(routes[i].id, i),
+                            child: widget.tile(routes[i]),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                ),
               ),
             ],
           ),
@@ -1178,12 +1213,21 @@ Future<RouteTarget?> _showTargetSheet(
       ExpressiveGroup(
         children: [
           for (final (target, name, subtitle) in [
-            (RouteTarget.vpn, l10n.settingsRoutingProxyTitle,
-                l10n.routeWhereVpnSubtitle),
-            (RouteTarget.direct, l10n.settingsRoutingDirectTitle,
-                l10n.routeWhereDirectSubtitle),
-            (RouteTarget.block, l10n.settingsRoutingBlockTitle,
-                l10n.routeWhereBlockSubtitle),
+            (
+              RouteTarget.vpn,
+              l10n.settingsRoutingProxyTitle,
+              l10n.routeWhereVpnSubtitle,
+            ),
+            (
+              RouteTarget.direct,
+              l10n.settingsRoutingDirectTitle,
+              l10n.routeWhereDirectSubtitle,
+            ),
+            (
+              RouteTarget.block,
+              l10n.settingsRoutingBlockTitle,
+              l10n.routeWhereBlockSubtitle,
+            ),
           ])
             ExpressiveActionTile(
               icon: _targetIcon(target),
@@ -1208,8 +1252,9 @@ void _showRoutingCheatSheet(BuildContext context, AppLocalizations l10n) {
     isScrollControlled: true,
     showDragHandle: true,
     builder: (ctx) => ConstrainedBox(
-      constraints:
-          BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.85),
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(ctx).size.height * 0.85,
+      ),
       child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
         child: Column(
@@ -1217,10 +1262,9 @@ void _showRoutingCheatSheet(BuildContext context, AppLocalizations l10n) {
           children: [
             Text(
               l10n.routingCheatSheetTitle,
-              style: Theme.of(ctx)
-                  .textTheme
-                  .titleLarge
-                  ?.copyWith(color: AppTheme.text(ctx)),
+              style: Theme.of(
+                ctx,
+              ).textTheme.titleLarge?.copyWith(color: AppTheme.text(ctx)),
             ),
             const SizedBox(height: 10),
             ..._cheatLines(ctx, l10n.routingCheatSheetBody),
@@ -1239,24 +1283,28 @@ List<Widget> _cheatLines(BuildContext context, String body) {
       out.add(const SizedBox(height: 10));
       continue;
     }
-    out.add(Padding(
-      padding: EdgeInsets.only(top: isHeader ? 8 : 1, bottom: isHeader ? 4 : 1),
-      child: Text(
-        isHeader ? raw.substring(3) : raw,
-        style: isHeader
-            ? Theme.of(context)
-                .textTheme
-                .emphasized(Theme.of(context).textTheme.labelLarge)
-                ?.copyWith(
-                  letterSpacing: 0.3,
-                  color: AppTheme.accent(context),
-                )
-            : Theme.of(context).textTheme.bodyMedium?.copyWith(
+    out.add(
+      Padding(
+        padding: EdgeInsets.only(
+          top: isHeader ? 8 : 1,
+          bottom: isHeader ? 4 : 1,
+        ),
+        child: Text(
+          isHeader ? raw.substring(3) : raw,
+          style: isHeader
+              ? Theme.of(context).textTheme
+                    .emphasized(Theme.of(context).textTheme.labelLarge)
+                    ?.copyWith(
+                      letterSpacing: 0.3,
+                      color: AppTheme.accent(context),
+                    )
+              : Theme.of(context).textTheme.bodyMedium?.copyWith(
                   height: 1.45,
                   color: AppTheme.text(context),
                 ),
+        ),
       ),
-    ));
+    );
   }
   return out;
 }
@@ -1295,8 +1343,9 @@ class _ProviderOverridesTile extends StatelessWidget {
               children: [
                 Text(
                   l10n.routingIgnoreFromProvider,
-                  style: textTheme.titleMedium
-                      ?.copyWith(color: AppTheme.text(context)),
+                  style: textTheme.titleMedium?.copyWith(
+                    color: AppTheme.text(context),
+                  ),
                 ),
                 const SizedBox(height: ExpressiveSpacing.small),
                 Wrap(

@@ -11,7 +11,9 @@ Widget _host(ServerFlag? flag) => MaterialApp(
     colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF7B61FF)),
   ),
   home: Scaffold(
-    body: Center(child: ServerAvatar(flag: flag, protocol: 'vless')),
+    body: Center(
+      child: ServerAvatar(flag: flag, protocol: 'vless'),
+    ),
   ),
 );
 
@@ -156,21 +158,19 @@ void main() {
   });
 
   group('цепочка', () {
-    Widget hostChain({required ServerFlag? flag, required int hops}) =>
-        MaterialApp(
-          theme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF7B61FF)),
-          ),
-          home: Scaffold(
-            body: Center(
-              child: ServerAvatar(
-                flag: flag,
-                protocol: 'chain',
-                chainHops: hops,
-              ),
-            ),
-          ),
-        );
+    Widget hostChain({
+      required ServerFlag? flag,
+      required int hops,
+    }) => MaterialApp(
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF7B61FF)),
+      ),
+      home: Scaffold(
+        body: Center(
+          child: ServerAvatar(flag: flag, protocol: 'chain', chainHops: hops),
+        ),
+      ),
+    );
 
     testWidgets('число узлов приезжает значком поверх флага', (tester) async {
       await tester.pumpWidget(hostChain(flag: const FlagArt('jp'), hops: 3));
@@ -199,14 +199,14 @@ void main() {
     // под цвета темы, а не будет синей». Цвет стал настройкой, поэтому тест
     // сторожит оба её положения.
     Widget host(ServerIconPalette palette) => MaterialApp(
-          theme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF7B61FF)),
-            extensions: [ServerIconPaletteTheme(palette: palette)],
-          ),
-          home: const Scaffold(
-            body: Center(child: ServerAvatar(flag: null, protocol: 'vless')),
-          ),
-        );
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF7B61FF)),
+        extensions: [ServerIconPaletteTheme(palette: palette)],
+      ),
+      home: const Scaffold(
+        body: Center(child: ServerAvatar(flag: null, protocol: 'vless')),
+      ),
+    );
 
     Color background(WidgetTester tester) => tester
         .widget<ColoredBox>(
@@ -219,8 +219,7 @@ void main() {
 
     testWidgets('по умолчанию — тон акцента темы', (tester) async {
       await tester.pumpWidget(host(ServerIconPalette.themed));
-      final scheme =
-          ColorScheme.fromSeed(seedColor: const Color(0xFF7B61FF));
+      final scheme = ColorScheme.fromSeed(seedColor: const Color(0xFF7B61FF));
       expect(background(tester), scheme.primaryContainer);
       // Буква остаётся читаемой: цвет из той же тональной пары, не белый.
       expect(
@@ -231,8 +230,7 @@ void main() {
 
     testWidgets('с выключенной настройкой — цвет протокола', (tester) async {
       await tester.pumpWidget(host(ServerIconPalette.protocol));
-      final scheme =
-          ColorScheme.fromSeed(seedColor: const Color(0xFF7B61FF));
+      final scheme = ColorScheme.fromSeed(seedColor: const Color(0xFF7B61FF));
       expect(background(tester), isNot(scheme.primaryContainer));
       expect(tester.widget<Text>(find.text('V')).style!.color, Colors.white);
     });

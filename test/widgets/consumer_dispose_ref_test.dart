@@ -76,15 +76,16 @@ void main() {
     final container = ProviderContainer();
     addTearDown(container.dispose);
     Widget scope(Widget body) => UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp(home: Scaffold(body: body)),
-        );
+      container: container,
+      child: MaterialApp(home: Scaffold(body: body)),
+    );
     await tester.pumpWidget(scope(child));
     await tester.pumpWidget(scope(const SizedBox.shrink()));
   }
 
-  testWidgets('ref in dispose aborts unmount before Riverpod closes its subs',
-      (tester) async {
+  testWidgets('ref in dispose aborts unmount before Riverpod closes its subs', (
+    tester,
+  ) async {
     await pumpThenDrop(tester, const _RefInDispose());
 
     // StateError вылетает ИЗ unmount(): всё, что Riverpod делает после

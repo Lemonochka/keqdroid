@@ -108,14 +108,13 @@ Map<String, dynamic> _decode(String raw) =>
     jsonDecode(raw) as Map<String, dynamic>;
 
 List<Map<String, dynamic>> _rules(Map<String, dynamic> config) => [
-      for (final r in (config['routing'] as Map)['rules'] as List)
-        (r as Map).cast<String, dynamic>(),
-    ];
+  for (final r in (config['routing'] as Map)['rules'] as List)
+    (r as Map).cast<String, dynamic>(),
+];
 
 List<String?> _outboundTags(Map<String, dynamic> config) => [
-      for (final o in config['outbounds'] as List)
-        (o as Map)['tag'] as String?,
-    ];
+  for (final o in config['outbounds'] as List) (o as Map)['tag'] as String?,
+];
 
 void main() {
   group('CustomXrayConfig', () {
@@ -131,9 +130,7 @@ void main() {
 
     test('reads the endpoint from every outbound shape', () {
       ({String address, int port}) endpointOf(String outbound) =>
-          CustomXrayConfig.tryParse(
-            '{"outbounds": [$outbound]}',
-          )!.endpoint;
+          CustomXrayConfig.tryParse('{"outbounds": [$outbound]}')!.endpoint;
 
       // trojan/ss/socks — `servers`
       expect(
@@ -218,8 +215,9 @@ void main() {
       expect(dropped, contains('geosite:sberbank'));
       final rules = _rules(config);
       // Правило с двумя доменами осталось, но уже без неизвестного кода.
-      final mixed = rules.firstWhere((r) => r['outboundTag'] == 'direct' &&
-          r.containsKey('domain'));
+      final mixed = rules.firstWhere(
+        (r) => r['outboundTag'] == 'direct' && r.containsKey('domain'),
+      );
       expect(mixed['domain'], ['geosite:google']);
       // Правило, у которого не осталось ни одного условия, ядро не приняло бы.
       expect(rules.any((r) => r['outboundTag'] == 'block'), isFalse);
@@ -360,13 +358,18 @@ void main() {
     });
 
     test('splits a json array into separate servers', () {
-      expect(splitServerImportPayload('[$_customConfig, $_customConfig]').length, 2);
+      expect(
+        splitServerImportPayload('[$_customConfig, $_customConfig]').length,
+        2,
+      );
     });
 
     test('takes a config with comments, as xray itself does', () {
-      final configs = splitServerImportPayload(File(
-        'test/fixtures/subscription_payloads/xray-json-comments.txt',
-      ).readAsStringSync());
+      final configs = splitServerImportPayload(
+        File(
+          'test/fixtures/subscription_payloads/xray-json-comments.txt',
+        ).readAsStringSync(),
+      );
       expect(configs, hasLength(1));
       expect(ServersNotifier.validateServerConfig(configs.single), isNull);
       final server = ServerItem.fromRaw(configs.single);
@@ -418,22 +421,23 @@ void main() {
 
       // Авторские правила целы и в своём порядке: наши узнаются по ruleTag,
       // у автора его нет.
-      final authorRules =
-          _rules(config).where((r) => r['ruleTag'] == null).toList();
+      final authorRules = _rules(
+        config,
+      ).where((r) => r['ruleTag'] == null).toList();
       expect(authorRules.length, 5);
       expect(authorRules.first['ip'], ['185.73.195.0/24']);
       expect(authorRules.last['outboundTag'], 'proxy');
 
       // Dns и аутбаунды — авторские: серверы автора первые и в своём порядке,
       // наш резерв лежит после них (см. CustomXrayConfig.mergeDns).
-      expect(
-        ((config['dns'] as Map)['servers'] as List).take(2),
-        ['1.1.1.1', '1.0.0.1'],
-      );
-      expect(
-        ((config['outbounds'] as List).first as Map)['streamSettings'],
-        {'network': 'tcp', 'security': 'reality'},
-      );
+      expect(((config['dns'] as Map)['servers'] as List).take(2), [
+        '1.1.1.1',
+        '1.0.0.1',
+      ]);
+      expect(((config['outbounds'] as List).first as Map)['streamSettings'], {
+        'network': 'tcp',
+        'security': 'reality',
+      });
 
       // Уровень логов из настроек: без info ядро не печатает правила, и экран
       // «Соединения» остаётся без вердиктов.
@@ -560,7 +564,9 @@ void main() {
       expect(_outboundTags(config), contains('keq-block'));
       // freedom просит только локалка: она напрямую и при блоке остального, как у ссылок
       expect(_outboundTags(config), contains('keq-direct'));
-      final private = rules.singleWhere((r) => r['ruleTag'] == 'direct-private');
+      final private = rules.singleWhere(
+        (r) => r['ruleTag'] == 'direct-private',
+      );
       expect(private['outboundTag'], 'keq-direct');
       expect(rules.indexOf(private), lessThan(rules.length - 1));
     });
@@ -592,10 +598,10 @@ void main() {
       expect(rules.last['outboundTag'], 'proxy');
       // Авторские правила в пробу не попадают: они могли бы увести её в direct.
       expect(rules.any((r) => r['protocol'] != null), isFalse);
-      expect(
-        (config['outbounds'] as List).last,
-        {'protocol': 'freedom', 'tag': 'keq-ping-direct'},
-      );
+      expect((config['outbounds'] as List).last, {
+        'protocol': 'freedom',
+        'tag': 'keq-ping-direct',
+      });
     });
   });
 
@@ -625,7 +631,8 @@ void main() {
         ['domain:example.org'],
       );
 
-      final proxy = ((config['outbounds'] as List).first as Map)['settings'] as Map;
+      final proxy =
+          ((config['outbounds'] as List).first as Map)['settings'] as Map;
       expect(proxy.containsKey('reverse'), isFalse);
       expect(proxy['address'], 'nl1.example.com');
     });
@@ -662,8 +669,9 @@ void main() {
     });
 
     test('выход для маршрута по приложениям идёт без обратного прокси', () {
-      final outbounds =
-          CustomXrayConfig.tryParse(_greedyConfig)!.routeOutbounds('route-1')!;
+      final outbounds = CustomXrayConfig.tryParse(
+        _greedyConfig,
+      )!.routeOutbounds('route-1')!;
       expect(jsonEncode(outbounds), isNot(contains('reverse')));
       expect(outbounds.single['tag'], 'route-1');
     });

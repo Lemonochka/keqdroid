@@ -3,7 +3,6 @@ import 'package:uuid/uuid.dart';
 import 'subscription_card_layout.dart';
 import 'subscription_card_theme.dart';
 
-
 class SubscriptionFetchIdentity {
   final bool enabled;
 
@@ -42,13 +41,13 @@ class SubscriptionFetchIdentity {
   }
 
   Map<String, dynamic> toJson() => {
-        'enabled': enabled,
-        if (hwid != null) 'hwid': hwid,
-        if (userAgent != null) 'userAgent': userAgent,
-        if (deviceModel != null) 'deviceModel': deviceModel,
-        if (deviceOs != null) 'deviceOs': deviceOs,
-        if (osVersion != null) 'osVersion': osVersion,
-      };
+    'enabled': enabled,
+    if (hwid != null) 'hwid': hwid,
+    if (userAgent != null) 'userAgent': userAgent,
+    if (deviceModel != null) 'deviceModel': deviceModel,
+    if (deviceOs != null) 'deviceOs': deviceOs,
+    if (osVersion != null) 'osVersion': osVersion,
+  };
 
   String? get activeHwid => enabled ? hwid : null;
   String? get activeUserAgent => enabled ? userAgent : null;
@@ -168,74 +167,74 @@ class Subscription {
     required String url,
     bool nameIsAuto = false,
     SubscriptionFetchIdentity fetchIdentity = SubscriptionFetchIdentity.empty,
-  }) =>
-      Subscription(
-        id: const Uuid().v4(),
-        name: name,
-        url: url,
-        nameIsAuto: nameIsAuto,
-        fetchIdentity: fetchIdentity,
-        autoSelectVisible: true,
-      );
+  }) => Subscription(
+    id: const Uuid().v4(),
+    name: name,
+    url: url,
+    nameIsAuto: nameIsAuto,
+    fetchIdentity: fetchIdentity,
+    autoSelectVisible: true,
+  );
 
   factory Subscription.fromJson(Map<String, dynamic> json) {
     final name = json['name'] as String;
     final url = json['url'] as String;
     return Subscription(
-    id: json['id'] as String,
-    name: name,
-    url: url,
-    lastUpdatedAt: json['lastUpdatedAt'] != null
-        ? DateTime.tryParse(json['lastUpdatedAt'] as String)
-        : null,
-    usedBytes: json['usedBytes'] as int?,
-    totalBytes: json['totalBytes'] as int?,
-    expiresAt: json['expiresAt'] != null
-        ? DateTime.tryParse(json['expiresAt'] as String)
-        : null,
-    autoUpdate: json['autoUpdate'] as bool? ?? true,
-    serverCount: json['serverCount'] as int? ?? 0,
-    updateIntervalHours: json['updateIntervalHours'] as int? ?? 12,
-    userAgent: json['userAgent'] as String?,
-    providerTitle: json['providerTitle'] as String?,
-    announce: json['announce'] as String?,
-    supportUrl: json['supportUrl'] as String?,
-    webPageUrl: json['webPageUrl'] as String?,
-    // старые подписки без флага: имя по умолчанию было хостом из URL
-    nameIsAuto:
-        json['nameIsAuto'] as bool? ?? (name == Uri.tryParse(url)?.host),
-    cardThemeId: migrateCardThemeId(json['cardThemeId'] as String? ?? ''),
-    cardThemeInServers: json['cardThemeInServers'] as bool? ?? true,
-    hiddenCardElements:
-        SubscriptionCardElement.setFromJson(json['cardHidden']),
-    cardVeil: CardVeil.byName(json['cardVeil'] as String?),
-    autoSelectVisible: json['autoSelectVisible'] as bool? ?? false,
-    autoSelect: json['autoSelect'] as bool? ?? false,
-    fallbackUrl: json['fallbackUrl'] as String?,
-    remindExpiry: json['remindExpiry'] as bool? ?? false,
-    groupChoices: json['groupChoices'] is Map
-        ? {
-            for (final MapEntry(:key, :value)
-                in (json['groupChoices'] as Map).entries)
-              key.toString(): value.toString(),
-          }
-        : const {},
-    excludedProtocols: json['excludedProtocols'] is List
-        ? {for (final p in json['excludedProtocols'] as List) p.toString()}
-        : const {},
-    protocolCounts: json['protocolCounts'] is Map
-        ? {
-            for (final MapEntry(:key, :value)
-                in (json['protocolCounts'] as Map).entries)
-              if (value is int) key.toString(): value,
-          }
-        : const {},
-    fetchIdentity: json['fetchIdentity'] is Map
-        ? SubscriptionFetchIdentity.fromJson(
-            (json['fetchIdentity'] as Map).cast<String, dynamic>(),
-          )
-        : SubscriptionFetchIdentity.empty,
-  );
+      id: json['id'] as String,
+      name: name,
+      url: url,
+      lastUpdatedAt: json['lastUpdatedAt'] != null
+          ? DateTime.tryParse(json['lastUpdatedAt'] as String)
+          : null,
+      usedBytes: json['usedBytes'] as int?,
+      totalBytes: json['totalBytes'] as int?,
+      expiresAt: json['expiresAt'] != null
+          ? DateTime.tryParse(json['expiresAt'] as String)
+          : null,
+      autoUpdate: json['autoUpdate'] as bool? ?? true,
+      serverCount: json['serverCount'] as int? ?? 0,
+      updateIntervalHours: json['updateIntervalHours'] as int? ?? 12,
+      userAgent: json['userAgent'] as String?,
+      providerTitle: json['providerTitle'] as String?,
+      announce: json['announce'] as String?,
+      supportUrl: json['supportUrl'] as String?,
+      webPageUrl: json['webPageUrl'] as String?,
+      // старые подписки без флага: имя по умолчанию было хостом из URL
+      nameIsAuto:
+          json['nameIsAuto'] as bool? ?? (name == Uri.tryParse(url)?.host),
+      cardThemeId: migrateCardThemeId(json['cardThemeId'] as String? ?? ''),
+      cardThemeInServers: json['cardThemeInServers'] as bool? ?? true,
+      hiddenCardElements: SubscriptionCardElement.setFromJson(
+        json['cardHidden'],
+      ),
+      cardVeil: CardVeil.byName(json['cardVeil'] as String?),
+      autoSelectVisible: json['autoSelectVisible'] as bool? ?? false,
+      autoSelect: json['autoSelect'] as bool? ?? false,
+      fallbackUrl: json['fallbackUrl'] as String?,
+      remindExpiry: json['remindExpiry'] as bool? ?? false,
+      groupChoices: json['groupChoices'] is Map
+          ? {
+              for (final MapEntry(:key, :value)
+                  in (json['groupChoices'] as Map).entries)
+                key.toString(): value.toString(),
+            }
+          : const {},
+      excludedProtocols: json['excludedProtocols'] is List
+          ? {for (final p in json['excludedProtocols'] as List) p.toString()}
+          : const {},
+      protocolCounts: json['protocolCounts'] is Map
+          ? {
+              for (final MapEntry(:key, :value)
+                  in (json['protocolCounts'] as Map).entries)
+                if (value is int) key.toString(): value,
+            }
+          : const {},
+      fetchIdentity: json['fetchIdentity'] is Map
+          ? SubscriptionFetchIdentity.fromJson(
+              (json['fetchIdentity'] as Map).cast<String, dynamic>(),
+            )
+          : SubscriptionFetchIdentity.empty,
+    );
   }
 
   Map<String, dynamic> toJson() => {
@@ -302,37 +301,36 @@ class Subscription {
     Map<String, String>? groupChoices,
     Set<String>? excludedProtocols,
     Map<String, int>? protocolCounts,
-  }) =>
-      Subscription(
-        id: id ?? this.id,
-        name: name ?? this.name,
-        url: url ?? this.url,
-        lastUpdatedAt: lastUpdatedAt ?? this.lastUpdatedAt,
-        usedBytes: usedBytes ?? this.usedBytes,
-        totalBytes: totalBytes ?? this.totalBytes,
-        expiresAt: expiresAt ?? this.expiresAt,
-        autoUpdate: autoUpdate ?? this.autoUpdate,
-        serverCount: serverCount ?? this.serverCount,
-        updateIntervalHours: updateIntervalHours ?? this.updateIntervalHours,
-        userAgent: userAgent ?? this.userAgent,
-        providerTitle: providerTitle ?? this.providerTitle,
-        announce: announce ?? this.announce,
-        supportUrl: supportUrl ?? this.supportUrl,
-        webPageUrl: webPageUrl ?? this.webPageUrl,
-        nameIsAuto: nameIsAuto ?? this.nameIsAuto,
-        cardThemeId: cardThemeId ?? this.cardThemeId,
-        cardThemeInServers: cardThemeInServers ?? this.cardThemeInServers,
-        hiddenCardElements: hiddenCardElements ?? this.hiddenCardElements,
-        cardVeil: cardVeil ?? this.cardVeil,
-        autoSelectVisible: autoSelectVisible ?? this.autoSelectVisible,
-        autoSelect: autoSelect ?? this.autoSelect,
-        fetchIdentity: fetchIdentity ?? this.fetchIdentity,
-        fallbackUrl: fallbackUrl ?? this.fallbackUrl,
-        remindExpiry: remindExpiry ?? this.remindExpiry,
-        groupChoices: groupChoices ?? this.groupChoices,
-        excludedProtocols: excludedProtocols ?? this.excludedProtocols,
-        protocolCounts: protocolCounts ?? this.protocolCounts,
-      );
+  }) => Subscription(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    url: url ?? this.url,
+    lastUpdatedAt: lastUpdatedAt ?? this.lastUpdatedAt,
+    usedBytes: usedBytes ?? this.usedBytes,
+    totalBytes: totalBytes ?? this.totalBytes,
+    expiresAt: expiresAt ?? this.expiresAt,
+    autoUpdate: autoUpdate ?? this.autoUpdate,
+    serverCount: serverCount ?? this.serverCount,
+    updateIntervalHours: updateIntervalHours ?? this.updateIntervalHours,
+    userAgent: userAgent ?? this.userAgent,
+    providerTitle: providerTitle ?? this.providerTitle,
+    announce: announce ?? this.announce,
+    supportUrl: supportUrl ?? this.supportUrl,
+    webPageUrl: webPageUrl ?? this.webPageUrl,
+    nameIsAuto: nameIsAuto ?? this.nameIsAuto,
+    cardThemeId: cardThemeId ?? this.cardThemeId,
+    cardThemeInServers: cardThemeInServers ?? this.cardThemeInServers,
+    hiddenCardElements: hiddenCardElements ?? this.hiddenCardElements,
+    cardVeil: cardVeil ?? this.cardVeil,
+    autoSelectVisible: autoSelectVisible ?? this.autoSelectVisible,
+    autoSelect: autoSelect ?? this.autoSelect,
+    fetchIdentity: fetchIdentity ?? this.fetchIdentity,
+    fallbackUrl: fallbackUrl ?? this.fallbackUrl,
+    remindExpiry: remindExpiry ?? this.remindExpiry,
+    groupChoices: groupChoices ?? this.groupChoices,
+    excludedProtocols: excludedProtocols ?? this.excludedProtocols,
+    protocolCounts: protocolCounts ?? this.protocolCounts,
+  );
 
   // новое поле модели добавлять и сюда, иначе оно слетает при каждом обновлении подписки;
   // copyWith не годится: у него null оставляет поле как было, а снятое объявление надо стирать

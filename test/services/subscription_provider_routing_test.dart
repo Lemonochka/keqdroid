@@ -13,10 +13,12 @@ import 'package:mocktail/mocktail.dart';
 
 class _MockStorageService extends Mock implements StorageService {}
 
-const _servers = 'vless://00000000-0000-4000-8000-000000000000@198.51.100.10:443'
+const _servers =
+    'vless://00000000-0000-4000-8000-000000000000@198.51.100.10:443'
     '?security=reality&type=tcp#Alpha';
 
-final _happLink = 'happ://routing/onadd/${base64.encode(utf8.encode(jsonEncode({
+final _happLink =
+    'happ://routing/onadd/${base64.encode(utf8.encode(jsonEncode({
       'Name': 'RU напрямую',
       'GlobalProxy': 'true',
       'DirectSites': ['geosite:category-ru'],
@@ -43,8 +45,9 @@ void main() {
     when(() => storage.setHwid(any())).thenAnswer((_) async {});
     when(() => storage.getServers()).thenAnswer((_) async => const []);
     when(() => storage.getActiveServerId()).thenReturn(null);
-    when(() => storage.replaceServersBySubscription(any(), any()))
-        .thenAnswer((_) async {});
+    when(
+      () => storage.replaceServersBySubscription(any(), any()),
+    ).thenAnswer((_) async {});
     when(() => storage.upsertSubscription(any())).thenAnswer((_) async {});
     when(() => storage.getRoutingProfiles()).thenAnswer((_) async => profiles);
     when(() => storage.saveRoutingProfiles(any())).thenAnswer((inv) async {
@@ -52,13 +55,19 @@ void main() {
     });
   });
 
-  const sub = Subscription(id: 's1', name: 'Моя подписка', url: 'https://example.com/sub');
+  const sub = Subscription(
+    id: 's1',
+    name: 'Моя подписка',
+    url: 'https://example.com/sub',
+  );
 
-  Future<UpdateResult> update(String body, {Map<String, String> headers = const {}}) =>
-      SubscriptionService(
-        storage,
-        dio: Dio()..httpClientAdapter = _Adapter(body, headers),
-      ).updateSubscription(sub);
+  Future<UpdateResult> update(
+    String body, {
+    Map<String, String> headers = const {},
+  }) => SubscriptionService(
+    storage,
+    dio: Dio()..httpClientAdapter = _Adapter(body, headers),
+  ).updateSubscription(sub);
 
   test('заголовок routing заводит профиль, привязанный к подписке', () async {
     final result = await update(_servers, headers: {'routing': _happLink});
@@ -92,18 +101,28 @@ void main() {
     verifyNever(() => storage.saveRoutingProfiles(any()));
   });
 
-  test('свой профиль у подписки остаётся, провайдерский не появляется', () async {
-    const own = RoutingProfile(id: 'mine', name: 'Моё', subscriptionIds: ['s1']);
-    profiles = const [own];
-    final result = await update(_servers, headers: {'routing': _happLink});
-    expect(result.routingChanged, isFalse);
-    expect(profiles.single.id, 'mine');
-  });
+  test(
+    'свой профиль у подписки остаётся, провайдерский не появляется',
+    () async {
+      const own = RoutingProfile(
+        id: 'mine',
+        name: 'Моё',
+        subscriptionIds: ['s1'],
+      );
+      profiles = const [own];
+      final result = await update(_servers, headers: {'routing': _happLink});
+      expect(result.routingChanged, isFalse);
+      expect(profiles.single.id, 'mine');
+    },
+  );
 
   test('routing/off убирает профиль провайдера', () async {
     await update(_servers, headers: {'routing': _happLink});
     expect(profiles, hasLength(1));
-    final result = await update(_servers, headers: {'routing': 'happ://routing/off'});
+    final result = await update(
+      _servers,
+      headers: {'routing': 'happ://routing/off'},
+    );
     expect(result.routingChanged, isTrue);
     expect(profiles, isEmpty);
   });
@@ -129,13 +148,12 @@ class _Adapter implements HttpClientAdapter {
     RequestOptions options,
     Stream<List<int>>? requestStream,
     Future<void>? cancelFuture,
-  ) async =>
-      ResponseBody.fromString(
-        body,
-        200,
-        headers: {
-          'content-type': ['text/plain; charset=utf-8'],
-          for (final e in headers.entries) e.key: [e.value],
-        },
-      );
+  ) async => ResponseBody.fromString(
+    body,
+    200,
+    headers: {
+      'content-type': ['text/plain; charset=utf-8'],
+      for (final e in headers.entries) e.key: [e.value],
+    },
+  );
 }

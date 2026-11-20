@@ -15,9 +15,8 @@ import 'package:keqdroid/utils/socks5_credentials.dart';
 const _vless =
     'vless://uuid@de.example.com:443?security=reality&pbk=pub&sid=aa&fp=chrome&sni=de.example.com&type=tcp#DE';
 
-AppSettings _withHosts(String hosts) => const AppSettings().copyWith(
-      xrayCore: XrayCoreSettings(dnsHosts: hosts),
-    );
+AppSettings _withHosts(String hosts) =>
+    const AppSettings().copyWith(xrayCore: XrayCoreSettings(dnsHosts: hosts));
 
 void main() {
   setUp(() => Socks5Credentials().init('u', 'p'));
@@ -45,27 +44,32 @@ void main() {
       expect(parsed.entries['b.example.com'], ['3.3.3.3']);
     });
 
-    test('IPv6 в любом порядке и записи, двоеточия в адресе не делят строку', () {
-      final parsed = XrayCoreSettings.parseDnsHosts(
-        'a.example.com fd00::10\n'
-        '[fd00::11] b.example.com\n'
-        'c.example.com: [fd00::12], 10.0.0.1\n'
-        'd.example.com:fd00::13\n'
-        'e.example.com:10.0.0.2',
-      );
+    test(
+      'IPv6 в любом порядке и записи, двоеточия в адресе не делят строку',
+      () {
+        final parsed = XrayCoreSettings.parseDnsHosts(
+          'a.example.com fd00::10\n'
+          '[fd00::11] b.example.com\n'
+          'c.example.com: [fd00::12], 10.0.0.1\n'
+          'd.example.com:fd00::13\n'
+          'e.example.com:10.0.0.2',
+        );
 
-      expect(parsed.entries, {
-        'a.example.com': ['fd00::10'],
-        'b.example.com': ['fd00::11'],
-        'c.example.com': ['fd00::12', '10.0.0.1'],
-        'd.example.com': ['fd00::13'],
-        'e.example.com': ['10.0.0.2'],
-      });
-      expect(parsed.dropped, isEmpty);
-    });
+        expect(parsed.entries, {
+          'a.example.com': ['fd00::10'],
+          'b.example.com': ['fd00::11'],
+          'c.example.com': ['fd00::12', '10.0.0.1'],
+          'd.example.com': ['fd00::13'],
+          'e.example.com': ['10.0.0.2'],
+        });
+        expect(parsed.dropped, isEmpty);
+      },
+    );
 
     test('псевдоним: вместо адреса другой домен', () {
-      final parsed = XrayCoreSettings.parseDnsHosts('old.example.com new.example.com');
+      final parsed = XrayCoreSettings.parseDnsHosts(
+        'old.example.com new.example.com',
+      );
 
       expect(parsed.entries['old.example.com'], ['new.example.com']);
     });
@@ -84,15 +88,20 @@ void main() {
 
   group('в конфигах ядер', () {
     test('xray: точное имя как есть, маска через domain:', () {
-      final config = jsonDecode(
-        ConfigGeneratorV2.generateConfig(
-          _vless,
-          _withHosts('example.com 10.0.0.5\n*.lan.example.com 10.0.0.6'),
-        ),
-      ) as Map<String, dynamic>;
+      final config =
+          jsonDecode(
+                ConfigGeneratorV2.generateConfig(
+                  _vless,
+                  _withHosts(
+                    'example.com 10.0.0.5\n*.lan.example.com 10.0.0.6',
+                  ),
+                ),
+              )
+              as Map<String, dynamic>;
 
-      final hosts = (config['dns'] as Map<String, dynamic>)['hosts']
-          as Map<String, dynamic>;
+      final hosts =
+          (config['dns'] as Map<String, dynamic>)['hosts']
+              as Map<String, dynamic>;
       expect(hosts['example.com'], '10.0.0.5');
       expect(hosts['domain:lan.example.com'], '10.0.0.6');
     });
@@ -110,9 +119,14 @@ void main() {
     });
 
     test('IPv6 доходит до обоих ядер без скобок', () {
-      final xray = jsonDecode(
-        ConfigGeneratorV2.generateConfig(_vless, _withHosts('nas.home [fd00::10]')),
-      ) as Map<String, dynamic>;
+      final xray =
+          jsonDecode(
+                ConfigGeneratorV2.generateConfig(
+                  _vless,
+                  _withHosts('nas.home [fd00::10]'),
+                ),
+              )
+              as Map<String, dynamic>;
       final mihomo = MihomoConfigGen.build(
         _vless,
         _withHosts('nas.home [fd00::10]'),
@@ -128,16 +142,21 @@ void main() {
     });
 
     test('пустое поле не добавляет ключей', () {
-      final xray = jsonDecode(
-        ConfigGeneratorV2.generateConfig(_vless, const AppSettings()),
-      ) as Map<String, dynamic>;
+      final xray =
+          jsonDecode(
+                ConfigGeneratorV2.generateConfig(_vless, const AppSettings()),
+              )
+              as Map<String, dynamic>;
       final mihomo = MihomoConfigGen.build(
         _vless,
         const AppSettings(),
         socksPort: 2080,
       );
 
-      expect((xray['dns'] as Map<String, dynamic>).containsKey('hosts'), isFalse);
+      expect(
+        (xray['dns'] as Map<String, dynamic>).containsKey('hosts'),
+        isFalse,
+      );
       expect(mihomo.containsKey('hosts'), isFalse);
     });
   });

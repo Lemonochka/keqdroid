@@ -67,9 +67,11 @@ class _ServerPickerSheetState extends ConsumerState<ServerPickerSheet> {
     final needle = _query.text.trim().toLowerCase();
     if (needle.isEmpty) return widget.candidates;
     return widget.candidates
-        .where((s) =>
-            s.displayName.toLowerCase().contains(needle) ||
-            s.address.toLowerCase().contains(needle))
+        .where(
+          (s) =>
+              s.displayName.toLowerCase().contains(needle) ||
+              s.address.toLowerCase().contains(needle),
+        )
         .toList();
   }
 
@@ -88,8 +90,10 @@ class _ServerPickerSheetState extends ConsumerState<ServerPickerSheet> {
     final entries = <_PickerEntry>[];
     void addGroup(String title, String groupKey, List<ServerItem>? group) {
       if (group == null || group.isEmpty) return;
-      final sorted =
-          sortServersBy(group, ServerSortMode.fromName(sortModes[groupKey]));
+      final sorted = sortServersBy(
+        group,
+        ServerSortMode.fromName(sortModes[groupKey]),
+      );
       entries.add(_PickerHeader(title, sorted.length));
       entries.addAll(sorted.map(_PickerServer.new));
     }
@@ -153,8 +157,9 @@ class _ServerPickerSheetState extends ConsumerState<ServerPickerSheet> {
                     filled: true,
                     fillColor: AppTheme.inset(context),
                     border: OutlineInputBorder(
-                      borderRadius:
-                          ExpressiveShape.radius(ExpressiveShape.medium),
+                      borderRadius: ExpressiveShape.radius(
+                        ExpressiveShape.medium,
+                      ),
                       borderSide: BorderSide.none,
                     ),
                   ),
@@ -166,8 +171,9 @@ class _ServerPickerSheetState extends ConsumerState<ServerPickerSheet> {
                   child: Text(
                     widget.emptyText,
                     textAlign: TextAlign.center,
-                    style: theme.textTheme.bodyMedium
-                        ?.copyWith(color: AppTheme.textLight(context)),
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: AppTheme.textLight(context),
+                    ),
                   ),
                 )
               else
@@ -177,13 +183,15 @@ class _ServerPickerSheetState extends ConsumerState<ServerPickerSheet> {
                     child: DecoratedBox(
                       decoration: BoxDecoration(
                         color: AppTheme.card(context),
-                        borderRadius:
-                            ExpressiveShape.radius(ExpressiveShape.extraLarge),
+                        borderRadius: ExpressiveShape.radius(
+                          ExpressiveShape.extraLarge,
+                        ),
                         border: Border.all(color: AppTheme.divider(context)),
                       ),
                       child: ClipRRect(
-                        borderRadius:
-                            ExpressiveShape.radius(ExpressiveShape.extraLarge),
+                        borderRadius: ExpressiveShape.radius(
+                          ExpressiveShape.extraLarge,
+                        ),
                         child: ListView.builder(
                           padding: EdgeInsets.zero,
                           shrinkWrap: true,
@@ -191,8 +199,10 @@ class _ServerPickerSheetState extends ConsumerState<ServerPickerSheet> {
                           itemBuilder: (context, i) => switch (items[i]) {
                             _PickerHeader(:final title, :final count) =>
                               _groupHeader(title, count),
-                            _PickerServer(:final server) =>
-                              _pickerRow(server, settings),
+                            _PickerServer(:final server) => _pickerRow(
+                              server,
+                              settings,
+                            ),
                           },
                         ),
                       ),
@@ -207,56 +217,53 @@ class _ServerPickerSheetState extends ConsumerState<ServerPickerSheet> {
   }
 
   Widget _groupHeader(String title, int count) => Container(
-        height: 38,
-        width: double.infinity,
-        color: AppTheme.inset(context),
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        alignment: AlignmentDirectional.centerStart,
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context)
-                    .textTheme
-                    .titleSmall
-                    ?.copyWith(color: AppTheme.textLight(context)),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              '$count',
-              style: Theme.of(context)
-                  .textTheme
-                  .labelSmall
-                  ?.copyWith(color: AppTheme.textLight(context)),
-            ),
-          ],
-        ),
-      );
-
-  Widget _pickerRow(ServerItem server, AppSettings settings) => SizedBox(
-        height: ServerRow.height,
-        child: Material(
-          type: MaterialType.transparency,
-          child: InkWell(
-            onTap: () => Navigator.of(context).pop(server),
-            child: ServerRow(
-              server: server,
-              pingMs: server.pingMs,
-              lastTestedAt: server.lastTestedAt,
-              pingColorType:
-                  PingService.pingColorTypeForServer(server, settings),
-              trailing: Icon(
-                server.id == widget.selectedId
-                    ? Icons.check_circle_rounded
-                    : Icons.add_circle_outline_rounded,
-                color: AppTheme.accent(context),
-              ),
+    height: 38,
+    width: double.infinity,
+    color: AppTheme.inset(context),
+    padding: const EdgeInsets.symmetric(horizontal: 16),
+    alignment: AlignmentDirectional.centerStart,
+    child: Row(
+      children: [
+        Expanded(
+          child: Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              color: AppTheme.textLight(context),
             ),
           ),
         ),
-      );
+        const SizedBox(width: 8),
+        Text(
+          '$count',
+          style: Theme.of(
+            context,
+          ).textTheme.labelSmall?.copyWith(color: AppTheme.textLight(context)),
+        ),
+      ],
+    ),
+  );
+
+  Widget _pickerRow(ServerItem server, AppSettings settings) => SizedBox(
+    height: ServerRow.height,
+    child: Material(
+      type: MaterialType.transparency,
+      child: InkWell(
+        onTap: () => Navigator.of(context).pop(server),
+        child: ServerRow(
+          server: server,
+          pingMs: server.pingMs,
+          lastTestedAt: server.lastTestedAt,
+          pingColorType: PingService.pingColorTypeForServer(server, settings),
+          trailing: Icon(
+            server.id == widget.selectedId
+                ? Icons.check_circle_rounded
+                : Icons.add_circle_outline_rounded,
+            color: AppTheme.accent(context),
+          ),
+        ),
+      ),
+    ),
+  );
 }

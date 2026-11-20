@@ -83,13 +83,15 @@ void main() {
   });
 
   group('название от провайдера', () {
-    Subscription sub({required bool nameIsAuto, String name = 'sub.example.com'}) =>
-        Subscription(
-          id: 'x',
-          name: name,
-          url: 'https://sub.example.com/abc',
-          nameIsAuto: nameIsAuto,
-        );
+    Subscription sub({
+      required bool nameIsAuto,
+      String name = 'sub.example.com',
+    }) => Subscription(
+      id: 'x',
+      name: name,
+      url: 'https://sub.example.com/abc',
+      nameIsAuto: nameIsAuto,
+    );
 
     test('авто-имя заменяется названием сервиса', () {
       final s = sub(nameIsAuto: true).withProfileHeaders(
@@ -274,18 +276,19 @@ void main() {
     });
 
     test('после сброса название провайдера снова подхватывается', () {
-      final s = reset(
-        Subscription(
-          id: 'x',
-          name: 'Моя подписка',
-          url: 'https://sub.example.com/abc',
-        ),
-      ).withProfileHeaders(
-        title: 'Тихий Интернет',
-        announce: null,
-        supportUrl: null,
-        webPageUrl: null,
-      );
+      final s =
+          reset(
+            Subscription(
+              id: 'x',
+              name: 'Моя подписка',
+              url: 'https://sub.example.com/abc',
+            ),
+          ).withProfileHeaders(
+            title: 'Тихий Интернет',
+            announce: null,
+            supportUrl: null,
+            webPageUrl: null,
+          );
       expect(s.name, 'Тихий Интернет');
     });
   });
@@ -337,40 +340,51 @@ void main() {
       expect(p.remindExpiry, isTrue);
     });
 
-    test('не ссылка не принимается, напоминание включает только 1 или true', () {
-      final p = SubscriptionService.parseProfileHeadersForTest(
-        _headers({
-          'new-url': 'vless://x@y:1',
-          'fallback-url': 'backup.example',
-          'notification-subs-expire': '0',
-        }),
-      );
-      expect(p.newUrl, isNull);
-      expect(p.fallbackUrl, isNull);
-      expect(p.remindExpiry, isFalse);
-      expect(
-        SubscriptionService.parseProfileHeadersForTest(_headers({})).remindExpiry,
-        isFalse,
-      );
-    });
+    test(
+      'не ссылка не принимается, напоминание включает только 1 или true',
+      () {
+        final p = SubscriptionService.parseProfileHeadersForTest(
+          _headers({
+            'new-url': 'vless://x@y:1',
+            'fallback-url': 'backup.example',
+            'notification-subs-expire': '0',
+          }),
+        );
+        expect(p.newUrl, isNull);
+        expect(p.fallbackUrl, isNull);
+        expect(p.remindExpiry, isFalse);
+        expect(
+          SubscriptionService.parseProfileHeadersForTest(
+            _headers({}),
+          ).remindExpiry,
+          isFalse,
+        );
+      },
+    );
 
-    test('строки в теле, как в документации Happ, и тело сильнее заголовка', () {
-      const body = '#new-url https://new.example/s/2\n'
-          '#fallback-url: https://backup.example/s/2\n'
-          '#notification-subs-expire: true\n'
-          'vless://u@198.51.100.1:443#A\n';
-      final fromHeaders = SubscriptionService.parseProfileHeadersForTest(
-        _headers({'new-url': 'https://header.example/s'}),
-      );
-      for (final b in [body, base64.encode(utf8.encode(body))]) {
-        final p = fromHeaders.withBody(b);
-        expect(p.newUrl, 'https://new.example/s/2');
-        expect(p.fallbackUrl, 'https://backup.example/s/2');
-        expect(p.remindExpiry, isTrue);
-      }
-      expect(fromHeaders.withBody('vless://u@198.51.100.1:443#A').newUrl,
-          'https://header.example/s');
-    });
+    test(
+      'строки в теле, как в документации Happ, и тело сильнее заголовка',
+      () {
+        const body =
+            '#new-url https://new.example/s/2\n'
+            '#fallback-url: https://backup.example/s/2\n'
+            '#notification-subs-expire: true\n'
+            'vless://u@198.51.100.1:443#A\n';
+        final fromHeaders = SubscriptionService.parseProfileHeadersForTest(
+          _headers({'new-url': 'https://header.example/s'}),
+        );
+        for (final b in [body, base64.encode(utf8.encode(body))]) {
+          final p = fromHeaders.withBody(b);
+          expect(p.newUrl, 'https://new.example/s/2');
+          expect(p.fallbackUrl, 'https://backup.example/s/2');
+          expect(p.remindExpiry, isTrue);
+        }
+        expect(
+          fromHeaders.withBody('vless://u@198.51.100.1:443#A').newUrl,
+          'https://header.example/s',
+        );
+      },
+    );
 
     test('запасной адрес переживает ответ без него, напоминание нет', () {
       const sub = Subscription(

@@ -62,10 +62,7 @@ void main() {
       final paragraphs = [
         for (var i = 0; i < 3; i++)
           tester.renderObject<RenderParagraph>(
-            find.descendant(
-              of: labels.at(i),
-              matching: find.byType(RichText),
-            ),
+            find.descendant(of: labels.at(i), matching: find.byType(RichText)),
           ),
       ];
       for (final p in paragraphs) {

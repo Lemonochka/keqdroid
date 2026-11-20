@@ -21,8 +21,11 @@ class PrefsRecovery {
       repairIn(await getApplicationSupportDirectory());
     } catch (e, st) {
       // починка сама не должна мешать запуску
-      AppLogger.instance
-          .warn('Prefs recovery skipped', error: e, stackTrace: st);
+      AppLogger.instance.warn(
+        'Prefs recovery skipped',
+        error: e,
+        stackTrace: st,
+      );
     }
   }
 

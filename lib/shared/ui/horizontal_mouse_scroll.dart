@@ -56,9 +56,12 @@ class _HorizontalMouseScrollState extends State<HorizontalMouseScroll> {
     if (delta == 0 || !controller.hasClients) return;
     final position = controller.position;
     // у края колесо отдаём странице вокруг
-    final atStart = position.pixels <= position.minScrollExtent &&
+    final atStart =
+        position.pixels <= position.minScrollExtent &&
         (controller is! CarouselController || (_target ?? 0) <= 0);
-    if (delta > 0 ? position.pixels >= position.maxScrollExtent : atStart) return;
+    if (delta > 0 ? position.pixels >= position.maxScrollExtent : atStart) {
+      return;
+    }
     // забираем щелчок себе, иначе его же разбирала страница вокруг
     GestureBinding.instance.pointerSignalResolver.register(event, (_) {
       if (controller is CarouselController) {
@@ -77,7 +80,10 @@ class _HorizontalMouseScrollState extends State<HorizontalMouseScroll> {
     _wheel += delta;
     if (_wheel.abs() < 40) return;
     _wheel = 0;
-    final next = math.max(0, (_target ?? controller.leadingItem) + (delta > 0 ? 1 : -1));
+    final next = math.max(
+      0,
+      (_target ?? controller.leadingItem) + (delta > 0 ? 1 : -1),
+    );
     _target = next;
     controller.animateToItem(
       next,

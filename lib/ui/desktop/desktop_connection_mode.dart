@@ -28,16 +28,16 @@ class DesktopModeDeps {
   final VpnStatus? Function() status;
 
   factory DesktopModeDeps.of(WidgetRef ref) => DesktopModeDeps(
-        vpn: ref.read(vpnStateProvider.notifier),
-        settings: ref.read(settingsNotifierProvider.notifier),
-        status: () => ref.read(vpnStateProvider).value?.status,
-      );
+    vpn: ref.read(vpnStateProvider.notifier),
+    settings: ref.read(settingsNotifierProvider.notifier),
+    status: () => ref.read(vpnStateProvider).value?.status,
+  );
 
   factory DesktopModeDeps.ofRef(Ref ref) => DesktopModeDeps(
-        vpn: ref.read(vpnStateProvider.notifier),
-        settings: ref.read(settingsNotifierProvider.notifier),
-        status: () => ref.read(vpnStateProvider).value?.status,
-      );
+    vpn: ref.read(vpnStateProvider.notifier),
+    settings: ref.read(settingsNotifierProvider.notifier),
+    status: () => ref.read(vpnStateProvider).value?.status,
+  );
 }
 
 Future<void> applyDesktopConnectionMode(
@@ -62,27 +62,27 @@ Future<void> applyDesktopConnectionMode(
       await deps.vpn.disconnect();
     } catch (e) {
       if (context.mounted) {
-        AppSnack.of(context).showSnackBar(
-          SnackBar(content: Text(friendlyError(e, context))),
-        );
+        AppSnack.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(friendlyError(e, context))));
       }
       return;
     }
   }
   await deps.settings.save(
-        settings.copyWith(
-          connectionMode: next.storageValue,
-          connectionModeChosen: true,
-        ),
-      );
+    settings.copyWith(
+      connectionMode: next.storageValue,
+      connectionModeChosen: true,
+    ),
+  );
   if (wasActive) {
     try {
       await deps.vpn.connect();
     } catch (e) {
       if (context.mounted) {
-        AppSnack.of(context).showSnackBar(
-          SnackBar(content: Text(friendlyError(e, context))),
-        );
+        AppSnack.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(friendlyError(e, context))));
       }
     }
   }
@@ -143,10 +143,7 @@ Future<bool?> showDesktopTunServiceDialog(
         update
             ? l10n.desktopTunServiceUpdateMessage
             : l10n.desktopTunServiceMessage,
-        style: TextStyle(
-          color: AppTheme.textLight(ctx),
-          height: 1.4,
-        ),
+        style: TextStyle(color: AppTheme.textLight(ctx), height: 1.4),
       ),
       actions: [
         TextButton(
@@ -156,7 +153,9 @@ Future<bool?> showDesktopTunServiceDialog(
         FilledButton(
           onPressed: () => Navigator.pop(ctx, true),
           child: Text(
-            update ? l10n.desktopTunServiceUpdate : l10n.desktopTunServiceInstall,
+            update
+                ? l10n.desktopTunServiceUpdate
+                : l10n.desktopTunServiceInstall,
           ),
         ),
       ],

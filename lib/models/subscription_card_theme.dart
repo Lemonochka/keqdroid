@@ -13,11 +13,11 @@ enum CardVeil {
   strong;
 
   List<double> get alphas => switch (this) {
-        CardVeil.none => const [0, 0, 0],
-        CardVeil.light => const [0.62, 0.38, 0.1],
-        CardVeil.medium => const [0.9, 0.62, 0.22],
-        CardVeil.strong => const [0.98, 0.86, 0.5],
-      };
+    CardVeil.none => const [0, 0, 0],
+    CardVeil.light => const [0.62, 0.38, 0.1],
+    CardVeil.medium => const [0.9, 0.62, 0.22],
+    CardVeil.strong => const [0.98, 0.86, 0.5],
+  };
 
   static CardVeil byName(String? name) {
     for (final veil in values) {
@@ -28,11 +28,7 @@ enum CardVeil {
 }
 
 class CardVeilOverlay extends StatelessWidget {
-  const CardVeilOverlay({
-    super.key,
-    required this.color,
-    required this.veil,
-  });
+  const CardVeilOverlay({super.key, required this.color, required this.veil});
 
   final Color color;
 
@@ -51,17 +47,14 @@ class CardVeilOverlay extends StatelessWidget {
 }
 
 class SubscriptionCardTheme {
-  const SubscriptionCardTheme.plain()
-      : id = '',
-        art = null,
-        asset = null;
+  const SubscriptionCardTheme.plain() : id = '', art = null, asset = null;
 
   const SubscriptionCardTheme.art(this.id, this.art) : asset = null;
 
   SubscriptionCardTheme.file(String fileName, String directory)
-      : id = '$filePrefix$fileName',
-        art = null,
-        asset = '$directory/$fileName';
+    : id = '$filePrefix$fileName',
+      art = null,
+      asset = '$directory/$fileName';
 
   static const filePrefix = 'file:';
 
@@ -87,11 +80,11 @@ class SubscriptionCardTheme {
   // фото 4000 px с телефона занимает 53 МБ в пикселях, а на AMD картинка стоила в 5-6 раз больше (проба 30.10.2026);
   // карточка не шире 920 dp, и крупнее 2048 декодер работал бы впустую
   static ImageProvider coverImage(String path) => ResizeImage(
-        FileImage(File(path)),
-        width: 2048,
-        height: 2048,
-        policy: ResizeImagePolicy.fit,
-      );
+    FileImage(File(path)),
+    width: 2048,
+    height: 2048,
+    policy: ResizeImagePolicy.fit,
+  );
 
   String? get still {
     final asset = this.asset;
@@ -141,13 +134,13 @@ const kSubscriptionCardThemes = <SubscriptionCardTheme>[
 
 // прежние заготовки, их id остались в настройках подписок и в бэкапах
 String migrateCardThemeId(String id) => switch (id) {
-      'sunset' => 'halftone',
-      'aurora' => 'depth',
-      'dusk' => 'cookieLayers',
-      'mint' => 'shapePattern',
-      'ember' => 'cookieShift',
-      _ => id,
-    };
+  'sunset' => 'halftone',
+  'aurora' => 'depth',
+  'dusk' => 'cookieLayers',
+  'mint' => 'shapePattern',
+  'ember' => 'cookieShift',
+  _ => id,
+};
 
 SubscriptionCardTheme resolveCardTheme(String? id) {
   if (id == null || id.isEmpty) return const SubscriptionCardTheme.plain();

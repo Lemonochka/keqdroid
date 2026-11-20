@@ -98,17 +98,26 @@ Future<_FakeSettings> _openSheet(
 /// Ввод как с клавиатуры: каждый символ встаёт на место выделения или курсора
 /// и проходит через форматтеры поля. enterText меняет текст целиком в обход
 /// них, поэтому с ним поле, куда нельзя напечатать ни знака, выглядело рабочим.
-Future<void> _type(WidgetTester tester, String chars, {bool paste = false}) async {
+Future<void> _type(
+  WidgetTester tester,
+  String chars, {
+  bool paste = false,
+}) async {
   final pieces = paste ? [chars] : chars.split('');
   for (final piece in pieces) {
-    final value = tester.widget<TextField>(find.byType(TextField)).controller!.value;
+    final value = tester
+        .widget<TextField>(find.byType(TextField))
+        .controller!
+        .value;
     final selection = value.selection.isValid
         ? value.selection
         : TextSelection.collapsed(offset: value.text.length);
     tester.testTextInput.updateEditingValue(
       TextEditingValue(
         text: value.text.replaceRange(selection.start, selection.end, piece),
-        selection: TextSelection.collapsed(offset: selection.start + piece.length),
+        selection: TextSelection.collapsed(
+          offset: selection.start + piece.length,
+        ),
       ),
     );
     await tester.pump();
@@ -176,10 +185,15 @@ void main() {
     await _frames(tester);
 
     final hue = tester.widgetList<Slider>(find.byType(Slider)).first;
-    expect(hue.value, closeTo(HSVColor.fromColor(const Color(0xFF7B2CBF)).hue, 0.5));
+    expect(
+      hue.value,
+      closeTo(HSVColor.fromColor(const Color(0xFF7B2CBF)).hue, 0.5),
+    );
   });
 
-  testWidgets('свой код печатается поверх старого с первого нажатия', (tester) async {
+  testWidgets('свой код печатается поверх старого с первого нажатия', (
+    tester,
+  ) async {
     // В поле всегда шесть знаков сохранённого цвета, и ограничитель длины
     // молча отбрасывал любой набранный символ: код было видно, а сменить нельзя
     _phoneScreen(tester);
@@ -195,9 +209,15 @@ void main() {
     await _tapHexField(tester);
     await _type(tester, 'FF5722');
 
-    expect(tester.widget<TextField>(find.byType(TextField)).controller!.text, 'FF5722');
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).controller!.text,
+      'FF5722',
+    );
     final hue = tester.widgetList<Slider>(find.byType(Slider)).first;
-    expect(hue.value, closeTo(HSVColor.fromColor(const Color(0xFFFF5722)).hue, 0.5));
+    expect(
+      hue.value,
+      closeTo(HSVColor.fromColor(const Color(0xFFFF5722)).hue, 0.5),
+    );
 
     await tester.tap(find.text('Apply'));
     await _frames(tester);
@@ -221,7 +241,9 @@ void main() {
     await _type(tester, '#ff5722', paste: true);
 
     expect(
-      parseThemeSeed(tester.widget<TextField>(find.byType(TextField)).controller!.text),
+      parseThemeSeed(
+        tester.widget<TextField>(find.byType(TextField)).controller!.text,
+      ),
       const Color(0xFFFF5722),
     );
 
@@ -254,7 +276,10 @@ void main() {
       await _frames(tester);
     }
 
-    final text = tester.widget<TextField>(find.byType(TextField)).controller!.text;
+    final text = tester
+        .widget<TextField>(find.byType(TextField))
+        .controller!
+        .text;
     final picked = HSVColor.fromColor(parseThemeSeed(text)!);
     expect(picked.saturation, greaterThanOrEqualTo(0.09));
     expect(picked.value, greaterThanOrEqualTo(0.14));

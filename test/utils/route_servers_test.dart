@@ -7,9 +7,11 @@ import 'package:keqdroid/utils/route_servers.dart';
 import 'package:keqdroid/utils/rule_lists.dart';
 import 'package:keqdroid/utils/traffic_routes.dart';
 
-const _vless = 'vless://00000000-0000-4000-8000-000000000000@de.example:443'
+const _vless =
+    'vless://00000000-0000-4000-8000-000000000000@de.example:443'
     '?type=tcp&security=tls&sni=de.example#DE';
-const _tuic = 'tuic://00000000-0000-4000-8000-000000000000:pw@fi.example:443'
+const _tuic =
+    'tuic://00000000-0000-4000-8000-000000000000:pw@fi.example:443'
     '?sni=fi.example#FI';
 const _xrayJson =
     '{"outbounds":[{"protocol":"vless","tag":"proxy","settings":{}}]}';
@@ -31,15 +33,14 @@ TrafficRoute _route(
   String sites = 'youtube.com',
   bool enabled = true,
   List<String> apps = const [],
-}) =>
-    TrafficRoute(
-      id: id,
-      sites: sites,
-      target: RouteTarget.server,
-      serverId: server,
-      enabled: enabled,
-      apps: apps,
-    );
+}) => TrafficRoute(
+  id: id,
+  sites: sites,
+  target: RouteTarget.server,
+  serverId: server,
+  enabled: enabled,
+  apps: apps,
+);
 
 void main() {
   group('какой сервер встаёт в маршрут', () {
@@ -59,7 +60,8 @@ void main() {
     });
 
     test('JSON, у которого dialerProxy ведёт мимо его выходов, — нет', () {
-      const broken = '{"outbounds":[{"protocol":"vless","tag":"proxy",'
+      const broken =
+          '{"outbounds":[{"protocol":"vless","tag":"proxy",'
           '"streamSettings":{"sockopt":{"dialerProxy":"fragment"}}}]}';
       expect(routeServerSupported(broken, VpnBackend.xray), isFalse);
     });
@@ -71,14 +73,26 @@ void main() {
         // фильтр сверяется с именами, а в маршруте они наши
         'exclude-filter: NL',
       ]) {
-        final yaml = _clashYaml.replaceFirst('type: select', 'type: select\n    $key');
-        expect(routeServerSupported(yaml, VpnBackend.mihomo), isFalse,
-            reason: key);
+        final yaml = _clashYaml.replaceFirst(
+          'type: select',
+          'type: select\n    $key',
+        );
+        expect(
+          routeServerSupported(yaml, VpnBackend.mihomo),
+          isFalse,
+          reason: key,
+        );
       }
       for (final key in ['include-all: false', 'use: []', 'filter: NL']) {
-        final yaml = _clashYaml.replaceFirst('type: select', 'type: select\n    $key');
-        expect(routeServerSupported(yaml, VpnBackend.mihomo), isTrue,
-            reason: key);
+        final yaml = _clashYaml.replaceFirst(
+          'type: select',
+          'type: select\n    $key',
+        );
+        expect(
+          routeServerSupported(yaml, VpnBackend.mihomo),
+          isTrue,
+          reason: key,
+        );
       }
       final unknown = _clashYaml.replaceFirst('[NL]', '[NL, Missing]');
       expect(routeServerSupported(unknown, VpnBackend.mihomo), isFalse);
@@ -86,11 +100,15 @@ void main() {
 
     test('сервер из Clash-подписки с пробелом по краю имени узла — да', () {
       for (final name in [' NL', 'NL ']) {
-        final single = '{"name":"NL","proxies":[{"name":"$name","type":"trojan",'
+        final single =
+            '{"name":"NL","proxies":[{"name":"$name","type":"trojan",'
             '"server":"nl.example","port":443,"password":"password"}],'
             '"rules":["MATCH,NL"]}';
-        expect(routeServerSupported(single, VpnBackend.mihomo), isTrue,
-            reason: '[$name]');
+        expect(
+          routeServerSupported(single, VpnBackend.mihomo),
+          isTrue,
+          reason: '[$name]',
+        );
       }
     });
   });
@@ -160,7 +178,9 @@ void main() {
 
     test('маршрут отдельных приложений здесь не участвует', () {
       final out = routeServerOutbounds(
-        routes: [_route('app', 'de', apps: ['chrome'])],
+        routes: [
+          _route('app', 'de', apps: ['chrome']),
+        ],
         servers: servers,
         activeServerId: 'active',
         core: VpnBackend.mihomo,

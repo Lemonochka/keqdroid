@@ -58,10 +58,10 @@ class PingTestConfig {
   }
 
   static String presetLabelKey(String target) => switch (target) {
-        targetGstatic => 'settingsPingTargetGstatic',
-        targetCloudflare => 'settingsPingTargetCloudflare',
-        targetMicrosoft => 'settingsPingTargetMicrosoft',
-        targetCustom => 'settingsPingTargetCustom',
-        _ => 'settingsPingTargetGstatic',
-      };
+    targetGstatic => 'settingsPingTargetGstatic',
+    targetCloudflare => 'settingsPingTargetCloudflare',
+    targetMicrosoft => 'settingsPingTargetMicrosoft',
+    targetCustom => 'settingsPingTargetCustom',
+    _ => 'settingsPingTargetGstatic',
+  };
 }

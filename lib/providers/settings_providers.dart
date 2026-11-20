@@ -12,11 +12,10 @@ class SplitTunnelingState {
   SplitTunnelingState copyWith({
     Set<String>? excludePackages,
     Set<String>? includePackages,
-  }) =>
-      SplitTunnelingState(
-        excludePackages: excludePackages ?? this.excludePackages,
-        includePackages: includePackages ?? this.includePackages,
-      );
+  }) => SplitTunnelingState(
+    excludePackages: excludePackages ?? this.excludePackages,
+    includePackages: includePackages ?? this.includePackages,
+  );
 }
 
 class SplitTunnelingNotifier extends Notifier<SplitTunnelingState> {
@@ -116,27 +115,28 @@ class SplitTunnelingNotifier extends Notifier<SplitTunnelingState> {
 }
 
 final splitTunnelingProvider =
-NotifierProvider<SplitTunnelingNotifier, SplitTunnelingState>(
-  SplitTunnelingNotifier.new,
-);
+    NotifierProvider<SplitTunnelingNotifier, SplitTunnelingState>(
+      SplitTunnelingNotifier.new,
+    );
 
-final installedAppsProvider =
-    FutureProvider.autoDispose.family<List<AppInfo>, bool>(
-      (ref, includeSystem) async {
-    final link = ref.keepAlive();
-    Timer? release;
-    ref.onCancel(() {
-      release?.cancel();
-      release = Timer(const Duration(minutes: 3), link.close);
+final installedAppsProvider = FutureProvider.autoDispose
+    .family<List<AppInfo>, bool>((ref, includeSystem) async {
+      final link = ref.keepAlive();
+      Timer? release;
+      ref.onCancel(() {
+        release?.cancel();
+        release = Timer(const Duration(minutes: 3), link.close);
+      });
+      ref.onResume(() => release?.cancel());
+      ref.onDispose(() => release?.cancel());
+      final engine = ref.read(vpnEngineProvider);
+      final rawList = await engine.getInstalledApps(
+        includeSystem: includeSystem,
+      );
+      return rawList.map(AppInfo.fromJson).toList()..sort(
+        (a, b) => a.appName.toLowerCase().compareTo(b.appName.toLowerCase()),
+      );
     });
-    ref.onResume(() => release?.cancel());
-    ref.onDispose(() => release?.cancel());
-    final engine = ref.read(vpnEngineProvider);
-    final rawList = await engine.getInstalledApps(includeSystem: includeSystem);
-    return rawList.map(AppInfo.fromJson).toList()
-      ..sort((a, b) => a.appName.toLowerCase().compareTo(b.appName.toLowerCase()));
-  },
-);
 
 class SettingsNotifier extends AsyncNotifier<AppSettings> {
   @override
@@ -155,7 +155,7 @@ class SettingsNotifier extends AsyncNotifier<AppSettings> {
 }
 
 final settingsNotifierProvider =
-AsyncNotifierProvider<SettingsNotifier, AppSettings>(SettingsNotifier.new);
+    AsyncNotifierProvider<SettingsNotifier, AppSettings>(SettingsNotifier.new);
 
 // владельца соединения Android называет с 10-й версии (getConnectionOwnerUid), ниже защите адреса сервера не на чем работать
 final androidSdkIntProvider = FutureProvider<int?>((ref) async {
@@ -176,8 +176,9 @@ final activeVpnBackendProvider = Provider<VpnBackend>((ref) {
         : VpnBackend.xray;
   }
   final sub = server.subscriptionId;
-  final template =
-      sub == null ? null : ref.watch(subscriptionTemplateProvider(sub));
+  final template = sub == null
+      ? null
+      : ref.watch(subscriptionTemplateProvider(sub));
   return serverBackendChoice(
     server,
     preference: preference,

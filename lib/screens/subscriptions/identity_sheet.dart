@@ -25,7 +25,9 @@ class _IdentityTile extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final value = summary(identity);
     final active = value != null;
-    final accent = active ? ExpressiveAccent.tertiary : ExpressiveAccent.secondary;
+    final accent = active
+        ? ExpressiveAccent.tertiary
+        : ExpressiveAccent.secondary;
 
     return ExpressiveGroupTile(
       onTap: onTap,
@@ -41,8 +43,9 @@ class _IdentityTile extends StatelessWidget {
               children: [
                 Text(
                   l10n.subscriptionIdentityTitle,
-                  style: theme.textTheme.titleMedium
-                      ?.copyWith(color: scheme.onSurface),
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: scheme.onSurface,
+                  ),
                 ),
                 Text(
                   value ?? l10n.subscriptionIdentityAppDefault,
@@ -55,7 +58,11 @@ class _IdentityTile extends StatelessWidget {
               ],
             ),
           ),
-          Icon(Icons.chevron_right_rounded, size: 22, color: scheme.onSurfaceVariant),
+          Icon(
+            Icons.chevron_right_rounded,
+            size: 22,
+            color: scheme.onSurfaceVariant,
+          ),
         ],
       ),
     );
@@ -137,16 +144,17 @@ class _IdentitySheetState extends ConsumerState<_IdentitySheet> {
   late String? _osVersion = widget.initial.osVersion;
 
   SubscriptionFetchIdentity get _identity => SubscriptionFetchIdentity(
-        enabled: _enabled,
-        hwid: _hwid,
-        userAgent: _userAgent,
-        deviceOs: _deviceOs,
-        deviceModel: _deviceModel,
-        osVersion: _osVersion,
-      );
+    enabled: _enabled,
+    hwid: _hwid,
+    userAgent: _userAgent,
+    deviceOs: _deviceOs,
+    deviceModel: _deviceModel,
+    osVersion: _osVersion,
+  );
 
   List<String> _used(String? Function(SubscriptionFetchIdentity) pick) {
-    final subs = ref.read(subscriptionsProvider).value ?? const <Subscription>[];
+    final subs =
+        ref.read(subscriptionsProvider).value ?? const <Subscription>[];
     final out = <String>[];
     for (final sub in subs) {
       final value = pick(sub.fetchIdentity);
@@ -161,10 +169,10 @@ class _IdentitySheetState extends ConsumerState<_IdentitySheet> {
     List<String> extra = const [],
   }) {
     final known = presets.expand((s) => s.items).toSet();
-    final used = [...extra, ..._used(pick)]
-        .where((v) => !known.contains(v))
-        .toSet()
-        .toList();
+    final used = [
+      ...extra,
+      ..._used(pick),
+    ].where((v) => !known.contains(v)).toSet().toList();
     return [
       if (used.isNotEmpty)
         _IdentitySection(
@@ -204,8 +212,9 @@ class _IdentitySheetState extends ConsumerState<_IdentitySheet> {
               child: Text(
                 l10n.subscriptionIdentityHint,
                 textAlign: TextAlign.center,
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: scheme.onSurfaceVariant),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
               ),
             ),
             ExpressiveGroup(
@@ -217,8 +226,9 @@ class _IdentitySheetState extends ConsumerState<_IdentitySheet> {
                       Expanded(
                         child: Text(
                           l10n.subscriptionIdentityEnable,
-                          style: theme.textTheme.titleMedium
-                              ?.copyWith(color: scheme.onSurface),
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: scheme.onSurface,
+                          ),
                         ),
                       ),
                       Switch(
@@ -235,7 +245,9 @@ class _IdentitySheetState extends ConsumerState<_IdentitySheet> {
               if (!shareHwid)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
-                  child: _IdentityWarning(text: l10n.subscriptionIdentityHwidOff),
+                  child: _IdentityWarning(
+                    text: l10n.subscriptionIdentityHwidOff,
+                  ),
                 ),
               Flexible(
                 child: SmoothScroll(
@@ -256,7 +268,8 @@ class _IdentitySheetState extends ConsumerState<_IdentitySheet> {
                               const [],
                               (i) => i.hwid,
                               extra: [
-                                if (deviceHwid?.isNotEmpty ?? false) deviceHwid!,
+                                if (deviceHwid?.isNotEmpty ?? false)
+                                  deviceHwid!,
                               ],
                             ),
                             onChanged: (v) => setState(() => _hwid = v),
@@ -265,22 +278,30 @@ class _IdentitySheetState extends ConsumerState<_IdentitySheet> {
                             label: l10n.subscriptionIdentityUserAgent,
                             icon: Icons.http_rounded,
                             value: _userAgent,
-                            sections: _sections(_uaPresets(l10n), (i) => i.userAgent),
+                            sections: _sections(
+                              _uaPresets(l10n),
+                              (i) => i.userAgent,
+                            ),
                             onChanged: (v) => setState(() => _userAgent = v),
                           ),
                           _IdentityOptionRow(
                             label: l10n.subscriptionIdentityDeviceOs,
                             icon: Icons.phone_android_rounded,
                             value: _deviceOs,
-                            sections: _sections(_osPresets(l10n), (i) => i.deviceOs),
+                            sections: _sections(
+                              _osPresets(l10n),
+                              (i) => i.deviceOs,
+                            ),
                             onChanged: (v) => setState(() => _deviceOs = v),
                           ),
                           _IdentityOptionRow(
                             label: l10n.subscriptionIdentityDeviceModel,
                             icon: Icons.smartphone_rounded,
                             value: _deviceModel,
-                            sections:
-                                _sections(_modelPresets(l10n), (i) => i.deviceModel),
+                            sections: _sections(
+                              _modelPresets(l10n),
+                              (i) => i.deviceModel,
+                            ),
                             onChanged: (v) => setState(() => _deviceModel = v),
                           ),
                           _IdentityOptionRow(
@@ -305,10 +326,8 @@ class _IdentitySheetState extends ConsumerState<_IdentitySheet> {
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () => Navigator.pop(
-                      context,
-                      SubscriptionFetchIdentity.empty,
-                    ),
+                    onPressed: () =>
+                        Navigator.pop(context, SubscriptionFetchIdentity.empty),
                     child: Text(
                       l10n.subscriptionIdentityReset,
                       maxLines: 1,
@@ -427,13 +446,18 @@ class _IdentityWarning extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: Row(
         children: [
-          Icon(Icons.info_outline_rounded, size: 18, color: scheme.onErrorContainer),
+          Icon(
+            Icons.info_outline_rounded,
+            size: 18,
+            color: scheme.onErrorContainer,
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               text,
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: scheme.onErrorContainer),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: scheme.onErrorContainer,
+              ),
             ),
           ),
         ],
@@ -504,7 +528,9 @@ class _IdentityOptionRow extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: set ? scheme.primaryContainer : scheme.surfaceContainerHighest,
+              color: set
+                  ? scheme.primaryContainer
+                  : scheme.surfaceContainerHighest,
               borderRadius: ExpressiveShape.radius(ExpressiveShape.medium),
             ),
             child: Icon(
@@ -521,8 +547,9 @@ class _IdentityOptionRow extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: theme.textTheme.labelMedium
-                      ?.copyWith(color: scheme.onSurfaceVariant),
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
                 Text(
                   set
@@ -616,7 +643,10 @@ class _IdentityOptionPickerState extends State<_IdentityOptionPicker> {
                 controller: _queryCtrl,
                 hintText: l10n.subscriptionIdentitySearchOrEnter,
                 autoFocus: false,
-                leading: Icon(Icons.search_rounded, color: scheme.onSurfaceVariant),
+                leading: Icon(
+                  Icons.search_rounded,
+                  color: scheme.onSurfaceVariant,
+                ),
                 onChanged: (q) => setState(() => _query = q),
                 onSubmitted: (_) {
                   if (_typedValue != null) _pick(_typedValue);
@@ -651,8 +681,7 @@ class _IdentityOptionPickerState extends State<_IdentityOptionPicker> {
                         ),
                       ],
                     ),
-                    for (final section in widget.sections)
-                      ..._section(section),
+                    for (final section in widget.sections) ..._section(section),
                   ],
                 ),
               ),

@@ -28,7 +28,8 @@ class AutoSelectHome {
     required String fromId,
     required String toId,
   }) {
-    final keep = previous != null &&
+    final keep =
+        previous != null &&
         previous.subscriptionId == subscriptionId &&
         previous.pickedId == fromId &&
         previous.homeId != toId;
@@ -71,18 +72,18 @@ class AutoSelectHome {
   }
 
   AutoSelectHome afterCheck({required bool homeAnswered}) => AutoSelectHome(
-        subscriptionId: subscriptionId,
-        homeId: homeId,
-        pickedId: pickedId,
-        aliveStreak: homeAnswered ? aliveStreak + 1 : 0,
-      );
+    subscriptionId: subscriptionId,
+    homeId: homeId,
+    pickedId: pickedId,
+    aliveStreak: homeAnswered ? aliveStreak + 1 : 0,
+  );
 
   Map<String, Object> toJson() => {
-        'sub': subscriptionId,
-        'home': homeId,
-        'picked': pickedId,
-        'streak': aliveStreak,
-      };
+    'sub': subscriptionId,
+    'home': homeId,
+    'picked': pickedId,
+    'streak': aliveStreak,
+  };
 
   static AutoSelectHome? fromJson(Object? raw) {
     if (raw is! Map) return null;

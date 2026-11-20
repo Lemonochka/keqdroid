@@ -56,14 +56,18 @@ class AndroidTunnelBackend implements TunnelBackend {
   @override
   Future<({String username, String password})> fetchSocksCredentials() async {
     try {
-      final result = await _method.invokeMethod<Map<Object?, Object?>>('getSocksCredentials');
+      final result = await _method.invokeMethod<Map<Object?, Object?>>(
+        'getSocksCredentials',
+      );
       if (result == null) {
         throw const VpnException('getSocksCredentials returned null');
       }
       final username = result['username'] as String? ?? '';
       final password = result['password'] as String? ?? '';
       if (username.isEmpty || password.isEmpty) {
-        throw const VpnException('Native service returned empty SOCKS5 credentials');
+        throw const VpnException(
+          'Native service returned empty SOCKS5 credentials',
+        );
       }
       return (username: username, password: password);
     } on PlatformException catch (e) {
@@ -73,10 +77,11 @@ class AndroidTunnelBackend implements TunnelBackend {
 
   @override
   Future<({String username, String password})?>
-      fetchActiveSocksCredentials() async {
+  fetchActiveSocksCredentials() async {
     try {
-      final result =
-          await _method.invokeMethod<Map<Object?, Object?>>('getActiveSocksCredentials');
+      final result = await _method.invokeMethod<Map<Object?, Object?>>(
+        'getActiveSocksCredentials',
+      );
       final username = result?['username'] as String? ?? '';
       final password = result?['password'] as String? ?? '';
       if (username.isEmpty || password.isEmpty) return null;
@@ -157,10 +162,7 @@ class AndroidTunnelBackend implements TunnelBackend {
         throw const VpnPermissionDeniedException();
       }
       if (e.code == 'PERMISSION_IN_PROGRESS') {
-        throw VpnException(
-          'VPN permission dialog is already shown',
-          cause: e,
-        );
+        throw VpnException('VPN permission dialog is already shown', cause: e);
       }
       throw _wrap(e, 'requestVpnPermission');
     }
@@ -172,7 +174,9 @@ class AndroidTunnelBackend implements TunnelBackend {
   @override
   Future<VpnState> getCurrentState() async {
     try {
-      final result = await _method.invokeMethod<Map<Object?, Object?>>('getStatus');
+      final result = await _method.invokeMethod<Map<Object?, Object?>>(
+        'getStatus',
+      );
       if (result == null) return VpnState.disconnected;
       return VpnState.fromMap(result.cast<Object?, Object?>());
     } on PlatformException catch (e) {
@@ -219,9 +223,7 @@ class AndroidTunnelBackend implements TunnelBackend {
         'getInstalledApps',
         {'includeSystem': includeSystem},
       );
-      return result
-              ?.map((e) => Map<String, dynamic>.from(e as Map))
-              .toList() ??
+      return result?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ??
           [];
     } on PlatformException catch (e) {
       throw _wrap(e, 'getInstalledApps');
@@ -250,16 +252,19 @@ class AndroidTunnelBackend implements TunnelBackend {
       _pingProgressListeners[batchId] = (map) => onEach(_urlTestResult(map));
     }
     try {
-      final result = await _method.invokeMethod<List<Object?>>('xrayUrlTestMulti', {
-        'config': config,
-        'core': core.wireValue,
-        'testUrl': testUrl,
-        'timeoutMs': timeoutMs,
-        'keepAlive': keepAlive,
-        'concurrency': concurrency,
-        'probes': probes.map((e) => {'id': e.$1, 'port': e.$2}).toList(),
-        'batchId': ?batchId,
-      });
+      final result = await _method.invokeMethod<List<Object?>>(
+        'xrayUrlTestMulti',
+        {
+          'config': config,
+          'core': core.wireValue,
+          'testUrl': testUrl,
+          'timeoutMs': timeoutMs,
+          'keepAlive': keepAlive,
+          'concurrency': concurrency,
+          'probes': probes.map((e) => {'id': e.$1, 'port': e.$2}).toList(),
+          'batchId': ?batchId,
+        },
+      );
       if (result == null || result.isEmpty) return null;
       return [
         for (final raw in result)
@@ -272,14 +277,13 @@ class AndroidTunnelBackend implements TunnelBackend {
     }
   }
 
-  static ServerUrlTestResult
-      _urlTestResult(Map<Object?, Object?> map) => (
-            id: map['id'] as String? ?? '',
-            success: map['success'] as bool? ?? false,
-            latencyMs: (map['latencyMs'] as num?)?.toInt(),
-            error: map['error'] as String? ?? '',
-            httpStatus: (map['httpStatus'] as num?)?.toInt(),
-          );
+  static ServerUrlTestResult _urlTestResult(Map<Object?, Object?> map) => (
+    id: map['id'] as String? ?? '',
+    success: map['success'] as bool? ?? false,
+    latencyMs: (map['latencyMs'] as num?)?.toInt(),
+    error: map['error'] as String? ?? '',
+    httpStatus: (map['httpStatus'] as num?)?.toInt(),
+  );
 
   // подписка заводится до первого вызова: канал шлёт в никуда, пока его не слушают
   static const _pingProgress = EventChannel('keqdroid_ping_progress');
@@ -289,20 +293,16 @@ class AndroidTunnelBackend implements TunnelBackend {
   static var _pingBatchSeq = 0;
 
   static void _listenPingProgress() {
-    _pingProgressSub ??= _pingProgress.receiveBroadcastStream().listen(
-      (event) {
-        if (event is! Map) return;
-        final batch = event['batch'];
-        if (batch is! String) return;
-        _pingProgressListeners[batch]?.call(Map<Object?, Object?>.from(event));
-      },
-      onError: (_) {},
-    );
+    _pingProgressSub ??= _pingProgress.receiveBroadcastStream().listen((event) {
+      if (event is! Map) return;
+      final batch = event['batch'];
+      if (batch is! String) return;
+      _pingProgressListeners[batch]?.call(Map<Object?, Object?>.from(event));
+    }, onError: (_) {});
   }
 
   @override
-  Future<
-      List<ServerUrlTestResult>> xrayUrlTestBatch({
+  Future<List<ServerUrlTestResult>> xrayUrlTestBatch({
     required List<(String id, String xrayConfig)> items,
     required int socksPort,
     VpnBackend core = VpnBackend.xray,
@@ -312,21 +312,17 @@ class AndroidTunnelBackend implements TunnelBackend {
   }) async {
     if (items.isEmpty) return [];
     try {
-      final result = await _method.invokeMethod<List<Object?>>('xrayUrlTestBatch', {
-        'socksPort': socksPort,
-        'core': core.wireValue,
-        'testUrl': testUrl,
-        'timeoutMs': timeoutMs,
-        'keepAlive': keepAlive,
-        'items': items
-            .map(
-              (e) => {
-                'id': e.$1,
-                'xrayConfig': e.$2,
-              },
-            )
-            .toList(),
-      });
+      final result = await _method.invokeMethod<List<Object?>>(
+        'xrayUrlTestBatch',
+        {
+          'socksPort': socksPort,
+          'core': core.wireValue,
+          'testUrl': testUrl,
+          'timeoutMs': timeoutMs,
+          'keepAlive': keepAlive,
+          'items': items.map((e) => {'id': e.$1, 'xrayConfig': e.$2}).toList(),
+        },
+      );
       if (result == null) return [];
       return result.map((raw) {
         final map = Map<Object?, Object?>.from(raw as Map);
@@ -354,8 +350,7 @@ class AndroidTunnelBackend implements TunnelBackend {
   }
 
   @override
-  Future<
-      List<ServerSpeedTestResult>> xraySpeedTestBatch({
+  Future<List<ServerSpeedTestResult>> xraySpeedTestBatch({
     required List<(String id, String xrayConfig)> items,
     required int socksPort,
     VpnBackend core = VpnBackend.xray,
@@ -364,20 +359,16 @@ class AndroidTunnelBackend implements TunnelBackend {
   }) async {
     if (items.isEmpty) return [];
     try {
-      final result = await _method.invokeMethod<List<Object?>>('xraySpeedTestBatch', {
-        'socksPort': socksPort,
-        'core': core.wireValue,
-        'downloadUrl': downloadUrl,
-        'timeoutMs': timeoutMs,
-        'items': items
-            .map(
-              (e) => {
-                'id': e.$1,
-                'xrayConfig': e.$2,
-              },
-            )
-            .toList(),
-      });
+      final result = await _method.invokeMethod<List<Object?>>(
+        'xraySpeedTestBatch',
+        {
+          'socksPort': socksPort,
+          'core': core.wireValue,
+          'downloadUrl': downloadUrl,
+          'timeoutMs': timeoutMs,
+          'items': items.map((e) => {'id': e.$1, 'xrayConfig': e.$2}).toList(),
+        },
+      );
       if (result == null) return [];
       return result.map((raw) {
         final map = Map<Object?, Object?>.from(raw as Map);
@@ -403,13 +394,12 @@ class AndroidTunnelBackend implements TunnelBackend {
   }
 
   AppException _wrap(PlatformException e, String method) => switch (e.code) {
-        'PERMISSION_DENIED' => const VpnPermissionDeniedException(),
-        'VPN_START_FAILED' =>
-          VpnStartException(e.message ?? 'Failed to start VPN'),
-        _ => PlatformChannelException(
-            '[$method] ${e.code}: ${e.message}',
-            channel: 'keqdroid_vpn_channel',
-            cause: e,
-          ),
-      };
+    'PERMISSION_DENIED' => const VpnPermissionDeniedException(),
+    'VPN_START_FAILED' => VpnStartException(e.message ?? 'Failed to start VPN'),
+    _ => PlatformChannelException(
+      '[$method] ${e.code}: ${e.message}',
+      channel: 'keqdroid_vpn_channel',
+      cause: e,
+    ),
+  };
 }

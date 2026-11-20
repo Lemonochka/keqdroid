@@ -8,15 +8,7 @@ import '../core/connections_poll_stats.dart';
 import '../models/traffic_split.dart';
 import '../utils/mihomo_config_gen.dart';
 
-enum TrafficChannel {
-  vpn,
-
-  direct,
-
-  blocked,
-
-  unknown,
-}
+enum TrafficChannel { vpn, direct, blocked, unknown }
 
 class ConnectionTraffic {
   final String id;
@@ -113,14 +105,16 @@ class TrafficSplitSource {
       final meta = item['metadata'];
       if (meta is Map && meta['type'] == 'Inner') continue;
       final chains = item['chains'];
-      out.add(ConnectionTraffic(
-        id: id,
-        chains: chains is List
-            ? [for (final c in chains) c.toString()]
-            : const <String>[],
-        download: (item['download'] as num?)?.toInt() ?? 0,
-        upload: (item['upload'] as num?)?.toInt() ?? 0,
-      ));
+      out.add(
+        ConnectionTraffic(
+          id: id,
+          chains: chains is List
+              ? [for (final c in chains) c.toString()]
+              : const <String>[],
+          download: (item['download'] as num?)?.toInt() ?? 0,
+          upload: (item['upload'] as num?)?.toInt() ?? 0,
+        ),
+      );
     }
     return ConnectionsSnapshot(
       connections: out,
@@ -233,7 +227,8 @@ class TrafficSplitTracker {
       directDownload: _directDown,
       directUpload: _directUp,
       connections: {
-        for (final e in _prev.entries) e.key: (e.value.download, e.value.upload)
+        for (final e in _prev.entries)
+          e.key: (e.value.download, e.value.upload),
       },
     );
   }
@@ -247,36 +242,42 @@ class TrafficSplitTracker {
     _directUp = stored.directUpload;
     _prev
       ..clear()
-      ..addEntries(stored.connections.entries.map(
-        (e) => MapEntry(
-          e.key,
-          ConnectionTraffic(
-            id: e.key,
-            chains: const [],
-            download: e.value.$1,
-            upload: e.value.$2,
+      ..addEntries(
+        stored.connections.entries.map(
+          (e) => MapEntry(
+            e.key,
+            ConnectionTraffic(
+              id: e.key,
+              chains: const [],
+              download: e.value.$1,
+              upload: e.value.$2,
+            ),
           ),
         ),
-      ));
+      );
     _baselineTaken = true;
     _gapPending = true;
   }
 
-  TrafficSplit _snapshot(int vpnDown, int vpnUp, int directDown, int directUp) =>
-      TrafficSplit(
-        vpn: ChannelTraffic(
-          downloadSpeed: vpnDown,
-          uploadSpeed: vpnUp,
-          totalDownload: _vpnDown,
-          totalUpload: _vpnUp,
-        ),
-        direct: ChannelTraffic(
-          downloadSpeed: directDown,
-          uploadSpeed: directUp,
-          totalDownload: _directDown,
-          totalUpload: _directUp,
-        ),
-      );
+  TrafficSplit _snapshot(
+    int vpnDown,
+    int vpnUp,
+    int directDown,
+    int directUp,
+  ) => TrafficSplit(
+    vpn: ChannelTraffic(
+      downloadSpeed: vpnDown,
+      uploadSpeed: vpnUp,
+      totalDownload: _vpnDown,
+      totalUpload: _vpnUp,
+    ),
+    direct: ChannelTraffic(
+      downloadSpeed: directDown,
+      uploadSpeed: directUp,
+      totalDownload: _directDown,
+      totalUpload: _directUp,
+    ),
+  );
 
   void reset() {
     _prev.clear();

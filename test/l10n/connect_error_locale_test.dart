@@ -12,7 +12,11 @@ import 'package:keqdroid/utils/error_messages.dart';
 /// Тест сторожит обе стороны правки: на `en` строка обязана остаться ровно той
 /// же, что была до неё, на `ru` — стать русской. Первое важнее: если бы
 /// перегрузка была выбрана неправильно, английский текст тоже поехал бы.
-Future<String> _renderFor(WidgetTester tester, String locale, Object error) async {
+Future<String> _renderFor(
+  WidgetTester tester,
+  String locale,
+  Object error,
+) async {
   late String rendered;
   await tester.pumpWidget(
     MaterialApp(
@@ -44,12 +48,17 @@ void main() {
       expect(await _renderFor(tester, 'en', error), explainError(error).full);
     });
 
-    testWidgets('заголовок различает коды, а не только вид ошибки',
-        (tester) async {
+    testWidgets('заголовок различает коды, а не только вид ошибки', (
+      tester,
+    ) async {
       // До правки заголовок брался по UiErrorKind: шесть видов на одиннадцать
       // кодов, поэтому «лимит устройств» и «отказ авторизации» показывались
       // одинаковым «Connection failed: auth». Теперь у каждого свой.
-      final deviceLimit = await _renderFor(tester, 'en', 'device limit reached');
+      final deviceLimit = await _renderFor(
+        tester,
+        'en',
+        'device limit reached',
+      );
       final authDenied = await _renderFor(tester, 'en', 'unauthorized');
 
       expect(deviceLimit.split('\n').first, 'Device Limit Reached');
@@ -63,7 +72,9 @@ void main() {
       expect(rendered, isNot(equals(explainError(error).full)));
     });
 
-    testWidgets('локаль без перевода действия не ломает формат', (tester) async {
+    testWidgets('локаль без перевода действия не ломает формат', (
+      tester,
+    ) async {
       // Три строки: заголовок, сообщение, действие — на любой локали.
       for (final locale in ['en', 'ru', 'de', 'zh', 'fa']) {
         final rendered = await _renderFor(tester, locale, error);

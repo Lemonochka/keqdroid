@@ -31,7 +31,14 @@ void main() {
       final after = [
         for (var m = 48; m <= 53; m++) schedule.onBeat(at(m)).reason,
       ];
-      expect(after, ['1 min after sleep', null, null, null, '5 min after sleep', null]);
+      expect(after, [
+        '1 min after sleep',
+        null,
+        null,
+        null,
+        '5 min after sleep',
+        null,
+      ]);
     });
 
     test('опоздание такта меньше трёх минут сном не считается', () {
@@ -86,12 +93,15 @@ void main() {
       );
     });
 
-    test('без выделенной памяти растёт резидентная, без ядра так и сказано', () {
-      const sample = MemorySample(rss: 200 * _mb, peakRss: 250 * _mb);
-      expect(sample.size, 200 * _mb);
-      expect(sample.describe(), contains('no core running'));
-      expect(sample.describe(), isNot(contains('private')));
-    });
+    test(
+      'без выделенной памяти растёт резидентная, без ядра так и сказано',
+      () {
+        const sample = MemorySample(rss: 200 * _mb, peakRss: 250 * _mb);
+        expect(sample.size, 200 * _mb);
+        expect(sample.describe(), contains('no core running'));
+        expect(sample.describe(), isNot(contains('private')));
+      },
+    );
   });
 
   test('сводка опросов /connections: максимумы за период, висящие — как есть', () {

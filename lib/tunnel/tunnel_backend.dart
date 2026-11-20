@@ -3,10 +3,7 @@ import 'tunnel_session_request.dart';
 import 'vpn_backend.dart';
 import 'tunnel_state.dart';
 
-typedef UrlTestProgress = void Function(
-  ServerUrlTestResult
-      result,
-);
+typedef UrlTestProgress = void Function(ServerUrlTestResult result);
 
 abstract class TunnelBackend {
   Stream<VpnState> get stateStream;
@@ -18,7 +15,7 @@ abstract class TunnelBackend {
 
   // логин и пароль, с которыми поднято работающее ядро; на ПК их держит само приложение
   Future<({String username, String password})?>
-      fetchActiveSocksCredentials() async => null;
+  fetchActiveSocksCredentials() async => null;
 
   Future<void> startSession(TunnelSessionRequest request);
 
@@ -41,8 +38,7 @@ abstract class TunnelBackend {
 
   Future<String?> getAppIcon(String path) async => null;
 
-  Future<
-      List<ServerUrlTestResult>> xrayUrlTestBatch({
+  Future<List<ServerUrlTestResult>> xrayUrlTestBatch({
     required List<(String id, String xrayConfig)> items,
     required int socksPort,
     VpnBackend core = VpnBackend.xray,
@@ -62,27 +58,24 @@ abstract class TunnelBackend {
     bool keepAlive = true,
     int concurrency = 16,
     UrlTestProgress? onEach,
-  }) async =>
-      null;
+  }) async => null;
 
-  Future<
-      List<ServerSpeedTestResult>> xraySpeedTestBatch({
+  Future<List<ServerSpeedTestResult>> xraySpeedTestBatch({
     required List<(String id, String xrayConfig)> items,
     required int socksPort,
     VpnBackend core = VpnBackend.xray,
     String downloadUrl = kDefaultSpeedTestUrl,
     int timeoutMs = 20000,
-  }) async =>
-      items
-          .map(
-            (e) => (
-              id: e.$1,
-              success: false,
-              kbps: null,
-              error: 'Speed test is only available on desktop',
-            ),
-          )
-          .toList();
+  }) async => items
+      .map(
+        (e) => (
+          id: e.$1,
+          success: false,
+          kbps: null,
+          error: 'Speed test is only available on desktop',
+        ),
+      )
+      .toList();
 }
 
 // cloudflare отдаёт ровно N байт на __down?bytes=N

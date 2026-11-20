@@ -16,13 +16,14 @@ class SteadyBaseline extends StatefulWidget {
   State<SteadyBaseline> createState() => _SteadyBaselineState();
 }
 
-class _SteadyBaselineState extends State<SteadyBaseline> with SingleTickerProviderStateMixin {
+class _SteadyBaselineState extends State<SteadyBaseline>
+    with SingleTickerProviderStateMixin {
   @override
   Widget build(BuildContext context) => _SteadyBaselineBox(
-        vsync: this,
-        devicePixelRatio: MediaQuery.devicePixelRatioOf(context),
-        child: widget.child,
-      );
+    vsync: this,
+    devicePixelRatio: MediaQuery.devicePixelRatioOf(context),
+    child: widget.child,
+  );
 }
 
 class _SteadyBaselineBox extends SingleChildRenderObjectWidget {
@@ -40,10 +41,12 @@ class _SteadyBaselineBox extends SingleChildRenderObjectWidget {
       RenderSteadyBaseline(vsync, devicePixelRatio);
 
   @override
-  void updateRenderObject(BuildContext context, RenderSteadyBaseline renderObject) =>
-      renderObject
-        ..vsync = vsync
-        ..devicePixelRatio = devicePixelRatio;
+  void updateRenderObject(
+    BuildContext context,
+    RenderSteadyBaseline renderObject,
+  ) => renderObject
+    ..vsync = vsync
+    ..devicePixelRatio = devicePixelRatio;
 }
 
 class RenderSteadyBaseline extends RenderProxyBox {
@@ -100,7 +103,9 @@ class RenderSteadyBaseline extends RenderProxyBox {
       _ticker?.stop();
       return;
     }
-    if (SchedulerBinding.instance.currentFrameTimeStamp - _moved >= _rest) markNeedsPaint();
+    if (SchedulerBinding.instance.currentFrameTimeStamp - _moved >= _rest) {
+      markNeedsPaint();
+    }
   }
 
   double _baselineOnScreen(RenderBox child) {
@@ -144,7 +149,8 @@ class RenderSteadyBaseline extends RenderProxyBox {
       _moved = now;
       if (!(_ticker?.isActive ?? true)) _ticker!.start();
     } else if (now - _moved >= _rest) {
-      final t = ((now - _moved - _rest).inMicroseconds / _settle.inMicroseconds).clamp(0.0, 1.0);
+      final t = ((now - _moved - _rest).inMicroseconds / _settle.inMicroseconds)
+          .clamp(0.0, 1.0);
       final landing = (y + _bias).roundToDouble() - y;
       final bias = _bias + (landing - _bias) * Curves.easeInOut.transform(t);
       if (t >= 1) {
@@ -156,14 +162,25 @@ class RenderSteadyBaseline extends RenderProxyBox {
         return;
       }
       _dy = bias / devicePixelRatio;
-      context.pushTransform(needsCompositing, offset.translate(0, _dy), _tilt, _paintChild);
+      context.pushTransform(
+        needsCompositing,
+        offset.translate(0, _dy),
+        _tilt,
+        _paintChild,
+      );
       return;
     }
     _dy = _bias / devicePixelRatio;
-    context.pushTransform(needsCompositing, offset.translate(0, _dy), _tilt, _paintChild);
+    context.pushTransform(
+      needsCompositing,
+      offset.translate(0, _dy),
+      _tilt,
+      _paintChild,
+    );
   }
 
-  void _paintChild(PaintingContext context, Offset offset) => context.paintChild(child!, offset);
+  void _paintChild(PaintingContext context, Offset offset) =>
+      context.paintChild(child!, offset);
 
   @override
   void applyPaintTransform(RenderBox child, Matrix4 transform) =>
@@ -174,6 +191,7 @@ class RenderSteadyBaseline extends RenderProxyBox {
       result.addWithPaintOffset(
         offset: Offset(0, _dy),
         position: position,
-        hitTest: (result, position) => child?.hitTest(result, position: position) ?? false,
+        hitTest: (result, position) =>
+            child?.hitTest(result, position: position) ?? false,
       );
 }

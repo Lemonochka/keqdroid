@@ -44,9 +44,9 @@ class LinuxBackgroundService with WindowListener, TrayListener {
 
   // абстрактный сокет с uid: TCP-порт на петле общий для всех пользователей машины
   static InternetAddress _lockAddress() => InternetAddress(
-        '@keqdroid-${_uid() ?? 'user'}',
-        type: InternetAddressType.unix,
-      );
+    '@keqdroid-${_uid() ?? 'user'}',
+    type: InternetAddressType.unix,
+  );
 
   static int? _uid() {
     try {
@@ -93,7 +93,8 @@ class LinuxBackgroundService with WindowListener, TrayListener {
   }
 
   @visibleForTesting
-  static String peerMessage(String? link) => link == null ? 'show' : 'link $link';
+  static String peerMessage(String? link) =>
+      link == null ? 'show' : 'link $link';
 
   void _readPeer(Socket socket) {
     final bytes = <int>[];
@@ -155,12 +156,14 @@ class LinuxBackgroundService with WindowListener, TrayListener {
   }
 
   Future<void> _applyTrayMenu() => trayManager.setContextMenu(
-        Menu(items: [
-          MenuItem(key: 'show', label: _showLabel),
-          MenuItem.separator(),
-          MenuItem(key: 'quit', label: _quitLabel),
-        ]),
-      );
+    Menu(
+      items: [
+        MenuItem(key: 'show', label: _showLabel),
+        MenuItem.separator(),
+        MenuItem(key: 'quit', label: _quitLabel),
+      ],
+    ),
+  );
 
   Future<void> showConnected(bool connected) async {
     try {
@@ -268,8 +271,10 @@ class LinuxBackgroundService with WindowListener, TrayListener {
 
   void _scheduleBoundsSave() {
     _boundsSaveDebounce?.cancel();
-    _boundsSaveDebounce =
-        Timer(const Duration(milliseconds: 600), () => _saveWindowBounds());
+    _boundsSaveDebounce = Timer(
+      const Duration(milliseconds: 600),
+      () => _saveWindowBounds(),
+    );
   }
 
   Future<void> _saveWindowBounds() async {
@@ -376,4 +381,3 @@ class LinuxBackgroundService with WindowListener, TrayListener {
     await windowManager.destroy();
   }
 }
-

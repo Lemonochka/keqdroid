@@ -44,16 +44,22 @@ void main() {
 
   group('normalizeProcessName прочее', () {
     test('регистр сохраняется: на Linux ядро сравнивает имя точно', () {
-      expect(normalizeProcessName('Telegram.exe', windows: true), 'Telegram.exe');
+      expect(
+        normalizeProcessName('Telegram.exe', windows: true),
+        'Telegram.exe',
+      );
     });
 
     test('имя без расширения получает .exe', () {
       expect(normalizeProcessName('Discord', windows: true), 'Discord.exe');
     });
 
-    test('уже .exe второй раз не дописывается, регистр расширения не важен', () {
-      expect(normalizeProcessName('Foo.EXE', windows: true), 'Foo.EXE');
-    });
+    test(
+      'уже .exe второй раз не дописывается, регистр расширения не важен',
+      () {
+        expect(normalizeProcessName('Foo.EXE', windows: true), 'Foo.EXE');
+      },
+    );
 
     test('пусто остаётся пустым', () {
       expect(normalizeProcessName('   '), isEmpty);
@@ -106,10 +112,7 @@ void main() {
     // Ядро сравнивает регуляркой: точка без кодирования значила бы «любой
     // символ», а запятая разрезала бы правило mihomo на поля.
     test('всё, кроме латиницы и цифр, кодируется', () {
-      expect(
-        processRegexLiteral('a,b (x).exe'),
-        r'a\x2cb\x20\x28x\x29\x2eexe',
-      );
+      expect(processRegexLiteral('a,b (x).exe'), r'a\x2cb\x20\x28x\x29\x2eexe');
       expect(processRegexLiteral('Телега.exe'), r'Телега\x2eexe');
     });
 

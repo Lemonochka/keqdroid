@@ -66,9 +66,7 @@ class WindowsTrayMenu with TrayListener {
 
   Future<void> _showConnected(bool connected) async {
     try {
-      await trayManager.setIcon(
-        connected ? _connectedIconAsset : _iconAsset,
-      );
+      await trayManager.setIcon(connected ? _connectedIconAsset : _iconAsset);
     } catch (e, st) {
       AppLogger.instance.warn(
         'Tray icon update failed',
@@ -142,7 +140,8 @@ class WindowsTrayMenu with TrayListener {
     final status =
         _ref.read(vpnStateProvider).value?.status ?? VpnStatus.disconnected;
 
-    final busy = _busy ||
+    final busy =
+        _busy ||
         status == VpnStatus.connecting ||
         status == VpnStatus.disconnecting;
     final connected =
@@ -220,8 +219,7 @@ class WindowsTrayMenu with TrayListener {
         (bySub[id] ??= (() {
           subOrder.add(id);
           return <ServerItem>[];
-        })())
-            .add(s);
+        })()).add(s);
       }
     }
 
@@ -240,17 +238,17 @@ class WindowsTrayMenu with TrayListener {
         a.cleanName.toLowerCase().compareTo(b.cleanName.toLowerCase());
 
     MenuItem entry(ServerItem s) => MenuItem.checkbox(
-          key: '$_serverPrefix${s.id}',
-          label: s.cleanName,
-          checked: s.id == active?.id,
-        );
+      key: '$_serverPrefix${s.id}',
+      label: s.cleanName,
+      checked: s.id == active?.id,
+    );
 
     final groups = <(String, List<ServerItem>)>[
       if (manual.isNotEmpty) (l10n.serversManualServers, manual),
-      for (final id in [...subOrder]..sort(
-            (a, b) => subTitle(a).toLowerCase().compareTo(
-                  subTitle(b).toLowerCase(),
-                ),
+      for (final id
+          in [...subOrder]..sort(
+            (a, b) =>
+                subTitle(a).toLowerCase().compareTo(subTitle(b).toLowerCase()),
           ))
         (subTitle(id), bySub[id]!),
     ];
@@ -264,9 +262,7 @@ class WindowsTrayMenu with TrayListener {
       for (final (title, list) in groups)
         MenuItem.submenu(
           label: title,
-          submenu: Menu(
-            items: _chunked([...list]..sort(byName), entry),
-          ),
+          submenu: Menu(items: _chunked([...list]..sort(byName), entry)),
         ),
     ];
   }
@@ -286,7 +282,8 @@ class WindowsTrayMenu with TrayListener {
       final part = servers.sublist(i, end);
       chunks.add(
         MenuItem.submenu(
-          label: '${_short(part.first.cleanName)} … '
+          label:
+              '${_short(part.first.cleanName)} … '
               '${_short(part.last.cleanName)}',
           submenu: Menu(items: [for (final s in part) entry(s)]),
         ),
@@ -297,7 +294,8 @@ class WindowsTrayMenu with TrayListener {
         : [
             for (var i = 0; i < chunks.length; i += _maxItemsPerMenu)
               MenuItem.submenu(
-                label: '${i + 1}–'
+                label:
+                    '${i + 1}–'
                     '${math.min(i + _maxItemsPerMenu, chunks.length)}',
                 submenu: Menu(
                   items: chunks.sublist(
@@ -346,55 +344,55 @@ class WindowsTrayMenu with TrayListener {
   }
 
   Future<void> _toggleVpn() => _guard(() async {
-        final status =
-            _ref.read(vpnStateProvider).value?.status ?? VpnStatus.disconnected;
-        final notifier = _ref.read(vpnStateProvider.notifier);
-        if (status == VpnStatus.connected) {
-          await notifier.disconnect();
-        } else if (status == VpnStatus.connecting) {
-          await notifier.cancelConnect();
-        } else if (_ref.read(serversProvider).activeServer != null) {
-          await notifier.connect();
-        }
-      }, 'VPN toggle');
+    final status =
+        _ref.read(vpnStateProvider).value?.status ?? VpnStatus.disconnected;
+    final notifier = _ref.read(vpnStateProvider.notifier);
+    if (status == VpnStatus.connected) {
+      await notifier.disconnect();
+    } else if (status == VpnStatus.connecting) {
+      await notifier.cancelConnect();
+    } else if (_ref.read(serversProvider).activeServer != null) {
+      await notifier.connect();
+    }
+  }, 'VPN toggle');
 
   Future<void> _selectServer(String id) => _guard(() async {
-        final serversState = _ref.read(serversProvider);
-        ServerItem? server;
-        for (final s in serversState.servers) {
-          if (s.id == id) {
-            server = s;
-            break;
-          }
-        }
-        if (server == null) return;
-        await _ref.read(subscriptionsProvider.notifier).releaseMainGroup(server);
-        final status =
-            _ref.read(vpnStateProvider).value?.status ?? VpnStatus.disconnected;
-        final tunnelActive = status == VpnStatus.connected ||
-            status == VpnStatus.connecting;
-        if (tunnelActive && server.id == serversState.activeServer?.id) return;
-        await _ref.read(serversProvider.notifier).setActive(server);
-        if (tunnelActive) {
-          await _ref.read(vpnStateProvider.notifier).reconnectToActiveServer();
-        }
-      }, 'server select');
+    final serversState = _ref.read(serversProvider);
+    ServerItem? server;
+    for (final s in serversState.servers) {
+      if (s.id == id) {
+        server = s;
+        break;
+      }
+    }
+    if (server == null) return;
+    await _ref.read(subscriptionsProvider.notifier).releaseMainGroup(server);
+    final status =
+        _ref.read(vpnStateProvider).value?.status ?? VpnStatus.disconnected;
+    final tunnelActive =
+        status == VpnStatus.connected || status == VpnStatus.connecting;
+    if (tunnelActive && server.id == serversState.activeServer?.id) return;
+    await _ref.read(serversProvider.notifier).setActive(server);
+    if (tunnelActive) {
+      await _ref.read(vpnStateProvider.notifier).reconnectToActiveServer();
+    }
+  }, 'server select');
 
   Future<void> _setMode(ConnectionMode next) => _guard(() async {
-        final settings =
-            _ref.read(settingsNotifierProvider).value ?? const AppSettings();
-        if (next == settings.connectionModeEnum) return;
-        // окно сперва разворачиваем: переход в TUN может спросить про UAC, диалогу нужен экран
-        await WindowsDesktopService.restoreMainWindow();
-        final context = rootNavigatorKey.currentContext;
-        if (context == null || !context.mounted) return;
-        await applyDesktopConnectionMode(
-          context,
-          DesktopModeDeps.ofRef(_ref),
-          settings,
-          next,
-        );
-      }, 'mode switch');
+    final settings =
+        _ref.read(settingsNotifierProvider).value ?? const AppSettings();
+    if (next == settings.connectionModeEnum) return;
+    // окно сперва разворачиваем: переход в TUN может спросить про UAC, диалогу нужен экран
+    await WindowsDesktopService.restoreMainWindow();
+    final context = rootNavigatorKey.currentContext;
+    if (context == null || !context.mounted) return;
+    await applyDesktopConnectionMode(
+      context,
+      DesktopModeDeps.ofRef(_ref),
+      settings,
+      next,
+    );
+  }, 'mode switch');
 
   Future<void> _exit() async {
     // сначала рвём туннель, иначе системный прокси после выхода смотрит в мёртвый порт

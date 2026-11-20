@@ -146,52 +146,54 @@ class _RailItem extends StatelessWidget {
               children: [
                 TvFocusHighlight(
                   radius: BorderRadius.circular(ExpressiveShape.full),
-                  child: Builder(builder: (context) {
-                    final fcs = Theme.of(context).colorScheme;
-                    return Material(
-                      type: MaterialType.transparency,
-                      shape: shape,
-                      clipBehavior: Clip.antiAlias,
-                      child: InkWell(
-                        onTap: onTap,
-                        customBorder: shape,
-                        child: SizedBox(
-                          width: _indicatorWidth,
-                          height: _indicatorHeight,
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              Ink(
-                                width: lerpDouble(
-                                  _indicatorHeight,
-                                  _indicatorWidth,
-                                  t,
-                                ),
-                                height: _indicatorHeight,
-                                decoration: ShapeDecoration(
-                                  color: Color.lerp(
-                                    Colors.transparent,
-                                    fcs.secondaryContainer,
-                                    tc,
+                  child: Builder(
+                    builder: (context) {
+                      final fcs = Theme.of(context).colorScheme;
+                      return Material(
+                        type: MaterialType.transparency,
+                        shape: shape,
+                        clipBehavior: Clip.antiAlias,
+                        child: InkWell(
+                          onTap: onTap,
+                          customBorder: shape,
+                          child: SizedBox(
+                            width: _indicatorWidth,
+                            height: _indicatorHeight,
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                Ink(
+                                  width: lerpDouble(
+                                    _indicatorHeight,
+                                    _indicatorWidth,
+                                    t,
                                   ),
-                                  shape: shape,
+                                  height: _indicatorHeight,
+                                  decoration: ShapeDecoration(
+                                    color: Color.lerp(
+                                      Colors.transparent,
+                                      fcs.secondaryContainer,
+                                      tc,
+                                    ),
+                                    shape: shape,
+                                  ),
                                 ),
-                              ),
-                              NavIcon(
-                                icon: icon,
-                                badge: badge,
-                                color: Color.lerp(
-                                  fcs.onSurfaceVariant,
-                                  fcs.onSecondaryContainer,
-                                  tc,
-                                )!,
-                              ),
-                            ],
+                                NavIcon(
+                                  icon: icon,
+                                  badge: badge,
+                                  color: Color.lerp(
+                                    fcs.onSurfaceVariant,
+                                    fcs.onSecondaryContainer,
+                                    tc,
+                                  )!,
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                    );
-                  }),
+                      );
+                    },
+                  ),
                 ),
                 const SizedBox(height: ExpressiveSpacing.extraSmall),
                 Padding(
@@ -202,12 +204,17 @@ class _RailItem extends StatelessWidget {
                     label,
                     textAlign: TextAlign.center,
                     maxLines: 2,
-                    style: (selected
-                            ? textTheme.emphasized(textTheme.labelMedium)
-                            : textTheme.labelMedium)
-                        ?.copyWith(
-                      color: Color.lerp(cs.onSurfaceVariant, cs.secondary, tc),
-                    ),
+                    style:
+                        (selected
+                                ? textTheme.emphasized(textTheme.labelMedium)
+                                : textTheme.labelMedium)
+                            ?.copyWith(
+                              color: Color.lerp(
+                                cs.onSurfaceVariant,
+                                cs.secondary,
+                                tc,
+                              ),
+                            ),
                   ),
                 ),
               ],

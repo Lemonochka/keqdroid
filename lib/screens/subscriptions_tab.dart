@@ -75,8 +75,11 @@ class SubscriptionsTab extends ConsumerWidget {
     return ValueListenableBuilder<double>(
       valueListenable: FloatingBar.bottomInset,
       builder: (context, _, _) => Scaffold(
-          backgroundColor: bgColor,
-          body: _withFloatingAction(context, ref, SafeArea(
+        backgroundColor: bgColor,
+        body: _withFloatingAction(
+          context,
+          ref,
+          SafeArea(
             child: DesktopPageLayout(
               maxWidth: 920,
               child: Column(
@@ -92,16 +95,17 @@ class SubscriptionsTab extends ConsumerWidget {
                     child: Text(
                       l10n.subscriptionsTitle,
                       style: Theme.of(context).textTheme
-                          .emphasized(Theme.of(context).textTheme.headlineMedium)
+                          .emphasized(
+                            Theme.of(context).textTheme.headlineMedium,
+                          )
                           ?.copyWith(color: textColor),
                     ),
                   ),
                   Expanded(
                     child: subsAsync.when(
                       skipLoadingOnReload: true,
-                      loading: () => const Center(
-                        child: ShapeLoadingIndicator(),
-                      ),
+                      loading: () =>
+                          const Center(child: ShapeLoadingIndicator()),
                       error: (e, _) => _SubsErrorView(
                         error: e,
                         onRetry: () => ref.invalidate(subscriptionsProvider),
@@ -114,8 +118,7 @@ class SubscriptionsTab extends ConsumerWidget {
                               builder: (context, controller) => ScrollEdgeFade(
                                 bottom: FloatingBar.shown(context) ? 28 : 0,
                                 child: ReorderZoomFix(
-                                builder: (context, fix) =>
-                                  ReorderableListView.builder(
+                                  builder: (context, fix) => ReorderableListView.builder(
                                     scrollController: controller,
                                     physics: const ClampingScrollPhysics(),
                                     padding: EdgeInsets.fromLTRB(
@@ -154,39 +157,45 @@ class SubscriptionsTab extends ConsumerWidget {
                                           );
                                     },
                                     proxyDecorator: (child, index, animation) {
-                                      return fix(AnimatedBuilder(
-                                        animation: animation,
-                                        builder: (context, child) {
-                                          final scale =
-                                              Tween<double>(
-                                                begin: 1.0,
-                                                end: 1.02,
-                                              ).evaluate(
-                                                CurvedAnimation(
-                                                  parent: animation,
-                                                  curve: Curves.easeOut,
-                                                ),
-                                              );
-                                          return Transform.scale(
-                                            scale: scale,
-                                            child: Material(
-                                              color: Colors.transparent,
-                                              elevation: 8,
-                                              shadowColor: Colors.black26,
-                                              borderRadius:
-                                                  BorderRadius.circular(ExpressiveShape.largeIncreased),
-                                              child: child,
-                                            ),
-                                          );
-                                        },
-                                        child: child,
-                                      ), animation);
+                                      return fix(
+                                        AnimatedBuilder(
+                                          animation: animation,
+                                          builder: (context, child) {
+                                            final scale =
+                                                Tween<double>(
+                                                  begin: 1.0,
+                                                  end: 1.02,
+                                                ).evaluate(
+                                                  CurvedAnimation(
+                                                    parent: animation,
+                                                    curve: Curves.easeOut,
+                                                  ),
+                                                );
+                                            return Transform.scale(
+                                              scale: scale,
+                                              child: Material(
+                                                color: Colors.transparent,
+                                                elevation: 8,
+                                                shadowColor: Colors.black26,
+                                                borderRadius:
+                                                    BorderRadius.circular(
+                                                      ExpressiveShape
+                                                          .largeIncreased,
+                                                    ),
+                                                child: child,
+                                              ),
+                                            );
+                                          },
+                                          child: child,
+                                        ),
+                                        animation,
+                                      );
                                     },
                                     itemCount: subs.length,
                                     itemBuilder: (_, i) =>
                                         items[i] ??= _listItem(ref, subs, i),
                                   ),
-                              ),
+                                ),
                               ),
                             ),
                     ),
@@ -194,19 +203,20 @@ class SubscriptionsTab extends ConsumerWidget {
                 ],
               ),
             ),
-          )),
-          floatingActionButton: FloatingBar.owns(context)
-              ? null
-              : TvFocus.fab(
-            (fabContext) => FloatingActionButton.extended(
-              heroTag: 'subscriptions_add_fab',
-              backgroundColor: AppTheme.accentContainer(fabContext),
-              foregroundColor: AppTheme.onAccentContainer(fabContext),
-              icon: const Icon(Icons.add_rounded),
-              label: Text(l10n.subscriptionsAddButton),
-              onPressed: () => _showAddSubDialog(context, ref),
-            ),
           ),
+        ),
+        floatingActionButton: FloatingBar.owns(context)
+            ? null
+            : TvFocus.fab(
+                (fabContext) => FloatingActionButton.extended(
+                  heroTag: 'subscriptions_add_fab',
+                  backgroundColor: AppTheme.accentContainer(fabContext),
+                  foregroundColor: AppTheme.onAccentContainer(fabContext),
+                  icon: const Icon(Icons.add_rounded),
+                  label: Text(l10n.subscriptionsAddButton),
+                  onPressed: () => _showAddSubDialog(context, ref),
+                ),
+              ),
       ),
     );
   }
@@ -233,7 +243,9 @@ class SubscriptionsTab extends ConsumerWidget {
   Widget _withFloatingAction(BuildContext context, WidgetRef ref, Widget body) {
     if (!FloatingBar.owns(context)) return body;
     FloatingBar.actions[1] = () => _showAddSubDialog(context, ref);
-    return FloatingBar.shown(context) ? FloatingBarHideOnScroll(child: body) : body;
+    return FloatingBar.shown(context)
+        ? FloatingBarHideOnScroll(child: body)
+        : body;
   }
 
   Widget _emptySubsState(BuildContext context) {
@@ -258,8 +270,9 @@ class SubscriptionsTab extends ConsumerWidget {
           const SizedBox(height: 8),
           Text(
             l10n.subscriptionsEmptyHint,
-            style: Theme.of(context).textTheme.bodySmall
-                ?.copyWith(color: textLightColor),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: textLightColor),
           ),
         ],
       ),
@@ -353,8 +366,7 @@ class SubscriptionsTab extends ConsumerWidget {
                           }
                           final uri = Uri.tryParse(raw);
                           if (uri != null &&
-                              (uri.scheme == 'http' ||
-                                  uri.scheme == 'https')) {
+                              (uri.scheme == 'http' || uri.scheme == 'https')) {
                             urlCtrl.text = raw;
                             setModalState(() => sheetError = null);
                           } else {
@@ -369,8 +381,10 @@ class SubscriptionsTab extends ConsumerWidget {
               _IdentityTile(
                 identity: identity,
                 onTap: () async {
-                  final picked =
-                      await _showIdentitySheet(ctx, initial: identity);
+                  final picked = await _showIdentitySheet(
+                    ctx,
+                    initial: identity,
+                  );
                   if (picked == null) return;
                   setModalState(() => identity = picked);
                 },
@@ -379,10 +393,9 @@ class SubscriptionsTab extends ConsumerWidget {
                 const SizedBox(height: 8),
                 Text(
                   sheetError!,
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodySmall
-                      ?.copyWith(color: AppTheme.red(context)),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: AppTheme.red(context)),
                 ),
               ],
               const SizedBox(height: 24),
@@ -524,8 +537,9 @@ class _SubsErrorView extends StatelessWidget {
             Text(
               friendlyError(error, context),
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium
-                  ?.copyWith(color: textLightColor),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: textLightColor),
             ),
             const SizedBox(height: 24),
             TextButton.icon(
@@ -553,51 +567,42 @@ class _SubAnnounceBanner extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final collapsed = ref.watch(
+    final collapsed =
+        ref.watch(
           collapsedSubscriptionCardsProvider.select((m) => m[sub.id] ?? false),
         ) ||
         _CardPreviewScope.of(context);
     return Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-        child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 10,
-          ),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.tertiaryContainer,
-            borderRadius: ExpressiveShape.radius(
-              ExpressiveShape.medium,
-            ),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(
-                Icons.campaign_rounded,
-                size: 18,
-                color: Theme.of(context).colorScheme.onTertiaryContainer,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  sub.announce!,
-                  style: Theme.of(context).textTheme.bodyMedium
-                      ?.copyWith(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onTertiaryContainer,
-                      ),
-                  maxLines: collapsed ? 2 : null,
-                  overflow: collapsed
-                      ? TextOverflow.ellipsis
-                      : TextOverflow.clip,
-                ),
-              ),
-            ],
-          ),
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.tertiaryContainer,
+          borderRadius: ExpressiveShape.radius(ExpressiveShape.medium),
         ),
-      );
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              Icons.campaign_rounded,
+              size: 18,
+              color: Theme.of(context).colorScheme.onTertiaryContainer,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                sub.announce!,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onTertiaryContainer,
+                ),
+                maxLines: collapsed ? 2 : null,
+                overflow: collapsed ? TextOverflow.ellipsis : TextOverflow.clip,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -639,7 +644,10 @@ class _SubRefreshErrorBanner extends ConsumerWidget {
     return AnimatedSwitcher(
       duration: still ? Duration.zero : _subAlertIn,
       reverseDuration: still ? Duration.zero : ExpressiveMotion.durationFast,
-      switchInCurve: const SpringCurve(ExpressiveMotion.spatialDefault, _subAlertIn),
+      switchInCurve: const SpringCurve(
+        ExpressiveMotion.spatialDefault,
+        _subAlertIn,
+      ),
       switchOutCurve: ExpressiveMotion.emphasizedAccelerate.flipped,
       layoutBuilder: (current, previous) => Stack(
         alignment: Alignment.topCenter,
@@ -723,8 +731,9 @@ class _SubAlertPlate extends StatelessWidget {
                     message,
                     style: textTheme.bodyMedium?.copyWith(color: ink),
                     maxLines: messageMaxLines,
-                    overflow:
-                        messageMaxLines == null ? null : TextOverflow.ellipsis,
+                    overflow: messageMaxLines == null
+                        ? null
+                        : TextOverflow.ellipsis,
                   ),
                 ],
               ),
@@ -774,7 +783,10 @@ class _SubCardDetailsState extends ConsumerState<_SubCardDetails>
   var _shut = false;
   late final AnimationController _open = AnimationController.unbounded(
     vsync: this,
-    value: (ref.read(collapsedSubscriptionCardsProvider)[widget.sub.id] ?? false) ? 0 : 1,
+    value:
+        (ref.read(collapsedSubscriptionCardsProvider)[widget.sub.id] ?? false)
+        ? 0
+        : 1,
   );
 
   @override
@@ -802,7 +814,9 @@ class _SubCardDetailsState extends ConsumerState<_SubCardDetails>
             _open,
             next ? 0 : 1,
             snapToEnd: true,
-            spring: next ? ExpressiveMotion.fold : ExpressiveMotion.spatialDefault,
+            spring: next
+                ? ExpressiveMotion.fold
+                : ExpressiveMotion.spatialDefault,
           );
         }
       },
@@ -824,7 +838,9 @@ class _SubCardDetailsState extends ConsumerState<_SubCardDetails>
         final v = _open.value;
         // отдача пружины снова приоткрывала бы свёрнутое: дошли до нуля, дальше пружинит один край
         if (collapsed && v <= 0) _shut = true;
-        final open = collapsed && (_shut || !_open.isAnimating) ? 0.0 : math.max(0.0, v);
+        final open = collapsed && (_shut || !_open.isAnimating)
+            ? 0.0
+            : math.max(0.0, v);
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -837,100 +853,100 @@ class _SubCardDetailsState extends ConsumerState<_SubCardDetails>
                 ),
               ),
             SizedBox(
-              height: math.max(0.0, 10 * (1 - math.min(open, 1.0)) + math.min(0.0, v) * 60),
+              height: math.max(
+                0.0,
+                10 * (1 - math.min(open, 1.0)) + math.min(0.0, v) * 60,
+              ),
             ),
           ],
         );
       },
       child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 6, 16, 14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (sub.usedDisplay != null && showsUsage)
-                // LtrBlock: в фарси Row зеркалился и выходило / 100 GiB 621.8 GiB
-                LtrBlock(
-                  // числа не переносим, а в узком окне с крупным шрифтом ужимаем: строка вылезала на 100 px
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.baseline,
-                      textBaseline: TextBaseline.alphabetic,
-                      children: [
-                        Text(
-                          sub.usedDisplay!,
-                          style: Theme.of(context).textTheme
-                              .emphasized(
-                                Theme.of(context).textTheme.headlineSmall,
-                              )
-                              ?.copyWith(color: textColor),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '/ ${sub.limitDisplay}',
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(color: textLightColor),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              if (_subIsInsecureHttp(sub))
-                Padding(
-                  padding: const EdgeInsets.only(top: 6),
+        padding: const EdgeInsets.fromLTRB(16, 6, 16, 14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (sub.usedDisplay != null && showsUsage)
+              // LtrBlock: в фарси Row зеркалился и выходило / 100 GiB 621.8 GiB
+              LtrBlock(
+                // числа не переносим, а в узком окне с крупным шрифтом ужимаем: строка вылезала на 100 px
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
                   child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
                     children: [
-                      Icon(Icons.lock_open_rounded, size: 14, color: orangeColor),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          l10n.subInsecureHttpWarning,
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodySmall
-                              ?.copyWith(color: orangeColor),
-                        ),
+                      Text(
+                        sub.usedDisplay!,
+                        style: Theme.of(context).textTheme
+                            .emphasized(
+                              Theme.of(context).textTheme.headlineSmall,
+                            )
+                            ?.copyWith(color: textColor),
                       ),
-                      TextButton(
-                        onPressed: onSwitchToHttps,
-                        style: TextButton.styleFrom(
-                          visualDensity: VisualDensity.compact,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                          ),
-                        ),
-                        child: Text(
-                          l10n.subSwitchToHttps,
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodySmall
-                              ?.copyWith(color: accentColor),
-                        ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '/ ${sub.limitDisplay}',
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodyMedium?.copyWith(color: textLightColor),
                       ),
                     ],
                   ),
                 ),
-              if (pct != null && showsUsage) ...[
-                const SizedBox(height: 10),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(ExpressiveShape.extraSmall),
-                  child: LinearProgressIndicator(
-                    value: pct,
-                    minHeight: 5,
-                    backgroundColor: accentColor.withValues(alpha: 0.2),
-                    valueColor: AlwaysStoppedAnimation(
-                      pct > 0.9
-                          ? redColor
-                          : pct > 0.7
-                          ? orangeColor
-                          : accentColor,
+              ),
+            if (_subIsInsecureHttp(sub))
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Row(
+                  children: [
+                    Icon(Icons.lock_open_rounded, size: 14, color: orangeColor),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        l10n.subInsecureHttpWarning,
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodySmall?.copyWith(color: orangeColor),
+                      ),
                     ),
+                    TextButton(
+                      onPressed: onSwitchToHttps,
+                      style: TextButton.styleFrom(
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                      ),
+                      child: Text(
+                        l10n.subSwitchToHttps,
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodySmall?.copyWith(color: accentColor),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            if (pct != null && showsUsage) ...[
+              const SizedBox(height: 10),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(ExpressiveShape.extraSmall),
+                child: LinearProgressIndicator(
+                  value: pct,
+                  minHeight: 5,
+                  backgroundColor: accentColor.withValues(alpha: 0.2),
+                  valueColor: AlwaysStoppedAnimation(
+                    pct > 0.9
+                        ? redColor
+                        : pct > 0.7
+                        ? orangeColor
+                        : accentColor,
                   ),
                 ),
-              ],
-              if (sub.showsCard(SubscriptionCardElement.meta)) ...[
+              ),
+            ],
+            if (sub.showsCard(SubscriptionCardElement.meta)) ...[
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -968,14 +984,15 @@ class _SubCardDetailsState extends ConsumerState<_SubCardDetails>
                     const SizedBox(width: 8),
                     Text(
                       _subFormatDate(context, sub.lastUpdatedAt!),
-                      style: Theme.of(context).textTheme.labelMedium
-                          ?.copyWith(color: textLightColor),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.labelMedium?.copyWith(color: textLightColor),
                     ),
                   ],
                 ],
               ),
-              ],
-              if (sub.showsCard(SubscriptionCardElement.actions)) ...[
+            ],
+            if (sub.showsCard(SubscriptionCardElement.actions)) ...[
               const SizedBox(height: 12),
               Wrap(
                 spacing: 8,
@@ -1027,11 +1044,11 @@ class _SubCardDetailsState extends ConsumerState<_SubCardDetails>
                     ),
                 ],
               ),
-              ],
             ],
-          ),
+          ],
         ),
-      );
+      ),
+    );
   }
 }
 
@@ -1044,10 +1061,7 @@ Widget _subHeaderDragTarget({
     return Expanded(child: child);
   }
   return Expanded(
-    child: ReorderableDelayedDragStartListener(
-      index: listIndex,
-      child: child,
-    ),
+    child: ReorderableDelayedDragStartListener(index: listIndex, child: child),
   );
 }
 
@@ -1087,130 +1101,122 @@ class _SubCardHeader extends ConsumerWidget {
         .read(collapsedSubscriptionCardsProvider.notifier)
         .update((m) => {...m, sub.id: !collapsed});
     return Padding(
-        padding: EdgeInsets.fromLTRB(16, 14, isDesktop ? 16 : 8, 0),
-        child: Row(
-          children: [
-            if (isDesktop) ...[
-              ReorderableDragStartListener(
-                index: listIndex,
-                child: Padding(
-                  padding: const EdgeInsetsDirectional.only(end: 6),
-                  child: Icon(
-                    Icons.drag_handle_rounded,
-                    size: 22,
-                    color: textLightColor,
-                  ),
+      padding: EdgeInsets.fromLTRB(16, 14, isDesktop ? 16 : 8, 0),
+      child: Row(
+        children: [
+          if (isDesktop) ...[
+            ReorderableDragStartListener(
+              index: listIndex,
+              child: Padding(
+                padding: const EdgeInsetsDirectional.only(end: 6),
+                child: Icon(
+                  Icons.drag_handle_rounded,
+                  size: 22,
+                  color: textLightColor,
                 ),
               ),
-            ],
-            _subHeaderDragTarget(
-              isDesktop: isDesktop,
-              listIndex: listIndex,
-              child: Row(
-                children: [
-                  TvTappable(
+            ),
+          ],
+          _subHeaderDragTarget(
+            isDesktop: isDesktop,
+            listIndex: listIndex,
+            child: Row(
+              children: [
+                TvTappable(
+                  onTap: toggleFold,
+                  radius: BorderRadius.circular(10),
+                  child: GestureDetector(
                     onTap: toggleFold,
-                    radius: BorderRadius.circular(10),
-                    child: GestureDetector(
-                      onTap: toggleFold,
-                      child: AnimatedRotation(
-                        turns: collapsed ? -0.25 : 0,
-                        duration: ExpressiveMotion.durationFast,
-                        curve: ExpressiveMotion.emphasized,
-                        child: Builder(
-                          builder: (context) => Icon(
-                            Icons.expand_more_rounded,
-                            size: 20,
-                            color: TvFocusHighlight.containerOf(context) != null
-                                ? Theme.of(context).colorScheme.onSurface
-                                : textLightColor,
-                          ),
+                    child: AnimatedRotation(
+                      turns: collapsed ? -0.25 : 0,
+                      duration: ExpressiveMotion.durationFast,
+                      curve: ExpressiveMotion.emphasized,
+                      child: Builder(
+                        builder: (context) => Icon(
+                          Icons.expand_more_rounded,
+                          size: 20,
+                          color: TvFocusHighlight.containerOf(context) != null
+                              ? Theme.of(context).colorScheme.onSurface
+                              : textLightColor,
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: toggleFold,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: toggleFold,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          sub.name,
+                          style: Theme.of(context).textTheme
+                              .emphasized(
+                                Theme.of(context).textTheme.titleMedium,
+                              )
+                              ?.copyWith(color: textColor),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        if (sub.providerSubtitle != null)
                           Text(
-                            sub.name,
-                            style: Theme.of(context).textTheme
-                                .emphasized(
-                                  Theme.of(context).textTheme.titleMedium,
-                                )
-                                ?.copyWith(color: textColor),
+                            sub.providerSubtitle!,
+                            style: Theme.of(context).textTheme.labelMedium
+                                ?.copyWith(color: textLightColor),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          if (sub.providerSubtitle != null)
-                            Text(
-                              sub.providerSubtitle!,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .labelMedium
-                                  ?.copyWith(color: textLightColor),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                        ],
-                      ),
+                      ],
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-            SizedBox(width: isDesktop ? 12 : 4),
-            IconButton(
-              style: TvFocus.iconButtonStyle(
-                context,
-                color: hasRefreshError ? redColor : textLightColor,
-              ),
-              icon: isRefreshing
-                  ? ShapeLoadingIndicator(size: 18, color: accentColor)
-                  : const Icon(Icons.refresh_rounded, size: 20),
-              onPressed: isRefreshing
-                  ? null
-                  : () async {
-                      try {
-                        await onRefresh();
-                      } catch (e) {
-                        if (!context.mounted) return;
-                        AppSnack.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(friendlyError(e, context)),
-                            backgroundColor: redColor,
-                          ),
-                        );
-                      }
-                    },
-              visualDensity: VisualDensity.compact,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(
-                minWidth: 36,
-                minHeight: 36,
-              ),
+          ),
+          SizedBox(width: isDesktop ? 12 : 4),
+          IconButton(
+            style: TvFocus.iconButtonStyle(
+              context,
+              color: hasRefreshError ? redColor : textLightColor,
             ),
-            SizedBox(width: isDesktop ? 10 : 4),
-            IconButton(
-              icon: const Icon(Icons.more_vert_rounded, size: 20),
-              style: TvFocus.iconButtonStyle(context, color: textLightColor),
-              tooltip: l10n.subscriptionsCardMenu,
-              onPressed: () => onShowMenu(),
-              visualDensity: VisualDensity.compact,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(
-                minWidth: 36,
-                minHeight: 36,
-              ),
-            ),
-          ],
-        ),
-      );
+            icon: isRefreshing
+                ? ShapeLoadingIndicator(size: 18, color: accentColor)
+                : const Icon(Icons.refresh_rounded, size: 20),
+            onPressed: isRefreshing
+                ? null
+                : () async {
+                    try {
+                      await onRefresh();
+                    } catch (e) {
+                      if (!context.mounted) return;
+                      AppSnack.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(friendlyError(e, context)),
+                          backgroundColor: redColor,
+                        ),
+                      );
+                    }
+                  },
+            visualDensity: VisualDensity.compact,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+          ),
+          SizedBox(width: isDesktop ? 10 : 4),
+          IconButton(
+            icon: const Icon(Icons.more_vert_rounded, size: 20),
+            style: TvFocus.iconButtonStyle(context, color: textLightColor),
+            tooltip: l10n.subscriptionsCardMenu,
+            onPressed: () => onShowMenu(),
+            visualDensity: VisualDensity.compact,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -1233,9 +1239,10 @@ class _SubItem extends ConsumerStatefulWidget {
 
 class _SubItemState extends ConsumerState<_SubItem> {
   Future<void> _switchToHttps() async {
-    final httpsUrl = widget.sub.url
-        .trim()
-        .replaceFirst(RegExp(r'^http://', caseSensitive: false), 'https://');
+    final httpsUrl = widget.sub.url.trim().replaceFirst(
+      RegExp(r'^http://', caseSensitive: false),
+      'https://',
+    );
     await ref
         .read(subscriptionsProvider.notifier)
         .editMeta(widget.sub.id, url: httpsUrl);
@@ -1266,8 +1273,9 @@ class _SubItemState extends ConsumerState<_SubItem> {
           borderRadius: cardRadius,
           boxShadow: [
             BoxShadow(
-              color:
-                  Theme.of(context).colorScheme.shadow.withValues(alpha: 0.10),
+              color: Theme.of(
+                context,
+              ).colorScheme.shadow.withValues(alpha: 0.10),
               blurRadius: 12,
               offset: const Offset(0, 3),
             ),
@@ -1294,7 +1302,10 @@ class _SubItemState extends ConsumerState<_SubItem> {
                         right: -1,
                         bottom: -1,
                         child: IgnorePointer(
-                          child: cardTheme.background(context, veil: sub.cardVeil),
+                          child: cardTheme.background(
+                            context,
+                            veil: sub.cardVeil,
+                          ),
                         ),
                       ),
                     ],
@@ -1302,20 +1313,20 @@ class _SubItemState extends ConsumerState<_SubItem> {
                 ),
               ),
             Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _SubCardHeader(
-              sub: sub,
-              listIndex: widget.listIndex,
-              onRefresh: widget.onRefresh,
-              onShowMenu: () => _showCardMenu(context),
-            ),
-            if (sub.announce != null &&
-                sub.showsCard(SubscriptionCardElement.announce))
-              _SubAnnounceBanner(sub: sub),
-            if (sub.isExpired) _SubExpiredBanner(sub: sub),
-            _SubRefreshErrorBanner(sub: sub),
-            _SubCardDetails(sub: sub, onSwitchToHttps: _switchToHttps),
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _SubCardHeader(
+                  sub: sub,
+                  listIndex: widget.listIndex,
+                  onRefresh: widget.onRefresh,
+                  onShowMenu: () => _showCardMenu(context),
+                ),
+                if (sub.announce != null &&
+                    sub.showsCard(SubscriptionCardElement.announce))
+                  _SubAnnounceBanner(sub: sub),
+                if (sub.isExpired) _SubExpiredBanner(sub: sub),
+                _SubRefreshErrorBanner(sub: sub),
+                _SubCardDetails(sub: sub, onSwitchToHttps: _switchToHttps),
               ],
             ),
           ],
@@ -1324,24 +1335,22 @@ class _SubItemState extends ConsumerState<_SubItem> {
     );
   }
 
-
   void _showEditDialog(BuildContext context) =>
       _showSubscriptionEditSheet(context, ref, widget.sub);
 
   void _showCardMenu(BuildContext context) => _showSubscriptionCardMenu(
-        context,
-        sub: widget.sub,
-        onEdit: () => _showEditDialog(context),
-        onShare: () => _showShareSheet(context),
-        onDelete: () => _showDeleteConfirmation(context),
-      );
+    context,
+    sub: widget.sub,
+    onEdit: () => _showEditDialog(context),
+    onShare: () => _showShareSheet(context),
+    onDelete: () => _showDeleteConfirmation(context),
+  );
 
   void _showShareSheet(BuildContext context) => _showSubscriptionShareSheet(
-        context,
-        sub: widget.sub,
-        currentSub: () => widget.sub,
-      );
-
+    context,
+    sub: widget.sub,
+    currentSub: () => widget.sub,
+  );
 
   void _showDeleteConfirmation(BuildContext context) =>
       _showSubscriptionDeleteDialog(
@@ -1349,7 +1358,6 @@ class _SubItemState extends ConsumerState<_SubItem> {
         sub: widget.sub,
         onConfirmed: () => widget.onDelete(),
       );
-
 }
 
 class _CardThemePicker extends StatefulWidget {
@@ -1396,7 +1404,9 @@ class _CardThemePickerState extends State<_CardThemePicker> {
     final CardImageResult result;
     setState(() => _busy = true);
     try {
-      result = await CardImageService.pick(subscriptionId: widget.subscriptionId);
+      result = await CardImageService.pick(
+        subscriptionId: widget.subscriptionId,
+      );
     } catch (e) {
       if (mounted) setState(() => _error = friendlyErrorDetailed(e, context));
       return;
@@ -1407,14 +1417,18 @@ class _CardThemePickerState extends State<_CardThemePicker> {
 
     final rejection = result.rejection;
     if (rejection != null) {
-      setState(() => _error = switch (rejection) {
-            CardImageRejection.aspect => l10n.cardImageRejectAspect,
-            CardImageRejection.tooSmall =>
-              l10n.cardImageRejectSmall(CardImageService.minWidth),
-            CardImageRejection.tooLarge =>
-              l10n.cardImageRejectLarge(CardImageService.maxWidth),
-            CardImageRejection.unreadable => l10n.cardImageRejectUnreadable,
-          });
+      setState(
+        () => _error = switch (rejection) {
+          CardImageRejection.aspect => l10n.cardImageRejectAspect,
+          CardImageRejection.tooSmall => l10n.cardImageRejectSmall(
+            CardImageService.minWidth,
+          ),
+          CardImageRejection.tooLarge => l10n.cardImageRejectLarge(
+            CardImageService.maxWidth,
+          ),
+          CardImageRejection.unreadable => l10n.cardImageRejectUnreadable,
+        },
+      );
       return;
     }
     setState(() => _error = null);
@@ -1433,8 +1447,8 @@ class _CardThemePickerState extends State<_CardThemePicker> {
           child: Text(
             l10n.subscriptionCardThemeTitle,
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: AppTheme.textLight(context),
-                ),
+              color: AppTheme.textLight(context),
+            ),
           ),
         ),
         SizedBox(
@@ -1442,32 +1456,34 @@ class _CardThemePickerState extends State<_CardThemePicker> {
           child: HorizontalMouseScroll(
             controller: _carousel,
             child: CarouselView.weighted(
-            controller: _carousel,
-            flexWeights: const [3, 2, 1],
-            consumeMaxWeight: true,
-            itemSnapping: true,
-            padding: const EdgeInsets.all(ExpressiveSpacing.extraSmall),
-            shape: RoundedRectangleBorder(
-              borderRadius: ExpressiveShape.radius(ExpressiveShape.extraLarge),
-            ),
-            backgroundColor: AppTheme.card(context),
-            onTap: (index) {
-              if (index == 0) {
-                if (!_busy) unawaited(_pick());
-                return;
-              }
-              final theme = kSubscriptionCardThemes[index - 1];
-              widget.onSelect(theme.id == currentId ? '' : theme.id);
-            },
-            children: [
-              _CustomImageSlot(themeId: currentId, busy: _busy),
-              for (final theme in kSubscriptionCardThemes)
-                _CardThemeSlot(
-                  theme: theme,
-                  veil: widget.veil,
-                  selected: theme.id == currentId,
+              controller: _carousel,
+              flexWeights: const [3, 2, 1],
+              consumeMaxWeight: true,
+              itemSnapping: true,
+              padding: const EdgeInsets.all(ExpressiveSpacing.extraSmall),
+              shape: RoundedRectangleBorder(
+                borderRadius: ExpressiveShape.radius(
+                  ExpressiveShape.extraLarge,
                 ),
-            ],
+              ),
+              backgroundColor: AppTheme.card(context),
+              onTap: (index) {
+                if (index == 0) {
+                  if (!_busy) unawaited(_pick());
+                  return;
+                }
+                final theme = kSubscriptionCardThemes[index - 1];
+                widget.onSelect(theme.id == currentId ? '' : theme.id);
+              },
+              children: [
+                _CustomImageSlot(themeId: currentId, busy: _busy),
+                for (final theme in kSubscriptionCardThemes)
+                  _CardThemeSlot(
+                    theme: theme,
+                    veil: widget.veil,
+                    selected: theme.id == currentId,
+                  ),
+              ],
             ),
           ),
         ),
@@ -1476,10 +1492,9 @@ class _CardThemePickerState extends State<_CardThemePicker> {
             padding: const EdgeInsets.only(left: 4, top: 8),
             child: Text(
               _error!,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: AppTheme.red(context)),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: AppTheme.red(context)),
             ),
           ),
         if (!resolveCardTheme(currentId).isPlain)
@@ -1562,8 +1577,8 @@ class _CardThemeSlot extends StatelessWidget {
               softWrap: false,
               overflow: TextOverflow.clip,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppTheme.textLight(context),
-                  ),
+                color: AppTheme.textLight(context),
+              ),
             ),
           ),
         if (selected) const _CardThemeRing(),
@@ -1586,72 +1601,71 @@ class _CustomImageSlot extends StatelessWidget {
     return Stack(
       fit: StackFit.expand,
       children: [
-          FutureBuilder<String?>(
-            // ключ по id: иначе после смены картинки FutureBuilder показывал бы старую
-            key: ValueKey(themeId),
-            future: CardImageService.resolvePath(themeId),
-            builder: (context, snapshot) {
-              final path = snapshot.data;
-              if (path == null) {
-                return _CarouselLabel(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(
-                        selected
-                            ? Icons.image_not_supported_rounded
-                            : Icons.add_photo_alternate_rounded,
-                        size: ExpressiveIconSize.large,
-                        color: accent,
-                      ),
-                      const SizedBox(height: ExpressiveSpacing.extraSmall),
-                      Text(
-                        CardImageService.sizeHint,
-                        maxLines: 1,
-                        softWrap: false,
-                        overflow: TextOverflow.clip,
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: AppTheme.textLight(context),
-                            ),
-                      ),
-                    ],
-                  ),
-                );
-              }
-              return Stack(
-                fit: StackFit.expand,
-                children: [
-                  Image(
-                    image: SubscriptionCardTheme.coverImage(
-                      SubscriptionCardTheme.isVideoFile(path)
-                          ? SubscriptionCardTheme.posterFor(path)
-                          : path,
+        FutureBuilder<String?>(
+          // ключ по id: иначе после смены картинки FutureBuilder показывал бы старую
+          key: ValueKey(themeId),
+          future: CardImageService.resolvePath(themeId),
+          builder: (context, snapshot) {
+            final path = snapshot.data;
+            if (path == null) {
+              return _CarouselLabel(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      selected
+                          ? Icons.image_not_supported_rounded
+                          : Icons.add_photo_alternate_rounded,
+                      size: ExpressiveIconSize.large,
+                      color: accent,
                     ),
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => const SizedBox.shrink(),
-                  ),
-                  Align(
-                    alignment: AlignmentDirectional.bottomStart,
-                    child: Padding(
-                      padding: const EdgeInsets.all(ExpressiveSpacing.small),
-                      child: Icon(
-                        selected
-                            ? Icons.check_circle_rounded
-                            : Icons.edit_rounded,
-                        size: ExpressiveIconSize.medium,
-                        color: accent,
+                    const SizedBox(height: ExpressiveSpacing.extraSmall),
+                    Text(
+                      CardImageService.sizeHint,
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.clip,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: AppTheme.textLight(context),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               );
-            },
-          ),
+            }
+            return Stack(
+              fit: StackFit.expand,
+              children: [
+                Image(
+                  image: SubscriptionCardTheme.coverImage(
+                    SubscriptionCardTheme.isVideoFile(path)
+                        ? SubscriptionCardTheme.posterFor(path)
+                        : path,
+                  ),
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                ),
+                Align(
+                  alignment: AlignmentDirectional.bottomStart,
+                  child: Padding(
+                    padding: const EdgeInsets.all(ExpressiveSpacing.small),
+                    child: Icon(
+                      selected
+                          ? Icons.check_circle_rounded
+                          : Icons.edit_rounded,
+                      size: ExpressiveIconSize.medium,
+                      color: accent,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
         if (selected) const _CardThemeRing(),
-        if (busy)
-          const Center(child: ShapeLoadingIndicator(size: 40)),
+        if (busy) const Center(child: ShapeLoadingIndicator(size: 40)),
       ],
     );
   }
@@ -1675,13 +1689,15 @@ class _CardChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => TvFocusHighlight(
-        radius: ExpressiveShape.radius(ExpressiveShape.small),
-        child: Builder(builder: _buildChip),
-      );
+    radius: ExpressiveShape.radius(ExpressiveShape.small),
+    child: Builder(builder: _buildChip),
+  );
 
   Widget _buildChip(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final bg = muted ? scheme.surfaceContainerHighest : accent.container(scheme);
+    final bg = muted
+        ? scheme.surfaceContainerHighest
+        : accent.container(scheme);
     final fg = muted ? scheme.onSurfaceVariant : accent.onContainer(scheme);
     final shape = ExpressiveShape.radius(ExpressiveShape.small);
 
@@ -1703,9 +1719,9 @@ class _CardChip extends StatelessWidget {
                   label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: fg,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelMedium?.copyWith(color: fg),
                 ),
               ),
             ],
@@ -1715,4 +1731,3 @@ class _CardChip extends StatelessWidget {
     );
   }
 }
-
