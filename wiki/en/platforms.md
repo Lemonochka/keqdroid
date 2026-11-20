@@ -111,6 +111,8 @@ The “Linux” section has “Minimize to tray on close”, “Start at login�
 
 With “Minimize to tray on close” on, the close button doesn't quit the app: the window hides to the tray, or gets minimized if there is no tray. In Hyprland, Sway, niri and river the window is simply hidden. Ctrl+Q quits the app.
 
+The tray icon menu lets you connect or disconnect, open the window and quit.
+
 On Linux, hotkeys only work while the app window has focus.
 
 ## Backup

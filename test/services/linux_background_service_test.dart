@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/services/linux_background_service.dart';
+import 'package:keqdroid/tunnel/tunnel_state.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tray_manager/tray_manager.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -12,6 +16,7 @@ void main() {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
 
   late List<String> calls;
+  late List<List<Map<Object?, Object?>>> menus;
   late Object? trayAvailable;
 
   setUp(() {
@@ -19,6 +24,7 @@ void main() {
     LinuxBackgroundService.quitSettleDelay = Duration.zero;
     LinuxBackgroundService.closeToBackground = () async => true;
     calls = [];
+    menus = [];
     trayAvailable = true;
     messenger.setMockMethodCallHandler(windowChannel, (call) async {
       calls.add('window.${call.method}');
@@ -31,6 +37,13 @@ void main() {
     });
     messenger.setMockMethodCallHandler(trayChannel, (call) async {
       calls.add('tray.${call.method}');
+      if (call.method == 'setContextMenu') {
+        final menu = (call.arguments as Map)['menu'] as Map;
+        menus.add([
+          for (final item in menu['items'] as List)
+            item as Map<Object?, Object?>,
+        ]);
+      }
       if (call.method == 'isAvailable') {
         final answer = trayAvailable;
         if (answer is Exception) throw answer;
@@ -100,6 +113,114 @@ void main() {
       await pumpEventQueue();
 
       expect(calls, contains('window.hide'));
+    });
+  });
+
+  // Меню трея на Linux: пункт подключения сверху, как на Windows. Меню
+  // AppIndicator не пересобирается по клику, поэтому идёт за состоянием VPN.
+  group('tray connect item', () {
+    String describe(Map<Object?, Object?> item) => item['type'] == 'separator'
+        ? '---'
+        : '${item['label']}${item['disabled'] == true ? ' (off)' : ''}';
+
+    Future<List<String>> menuFor(VpnStatus status, {bool server = true}) async {
+      final service = LinuxBackgroundService.forTesting();
+      await service.setTrayLabels(
+        show: 'Open',
+        quit: 'Exit',
+        connect: 'Connect',
+        disconnect: 'Disconnect',
+      );
+      await service.setTrayVpn(status: status, hasServer: server);
+      return [for (final item in menus.last) describe(item)];
+    }
+
+    test('no item until the screen reports the VPN state', () async {
+      final service = LinuxBackgroundService.forTesting();
+      await service.setTrayLabels(
+        show: 'Open',
+        quit: 'Exit',
+        connect: 'Connect',
+        disconnect: 'Disconnect',
+      );
+
+      expect(
+        [for (final item in menus.last) describe(item)],
+        ['Open', '---', 'Exit'],
+      );
+    });
+
+    test('label and availability follow the VPN state', () async {
+      expect(await menuFor(VpnStatus.disconnected), [
+        'Connect',
+        '---',
+        'Open',
+        '---',
+        'Exit',
+      ]);
+      expect(
+        (await menuFor(VpnStatus.disconnected, server: false)).first,
+        'Connect (off)',
+      );
+      expect((await menuFor(VpnStatus.connecting)).first, 'Disconnect');
+      expect((await menuFor(VpnStatus.connected)).first, 'Disconnect');
+      expect((await menuFor(VpnStatus.disconnecting)).first, 'Connect (off)');
+      expect((await menuFor(VpnStatus.error)).first, 'Connect');
+      expect(
+        (await menuFor(VpnStatus.error, server: false)).first,
+        'Connect (off)',
+      );
+    });
+
+    test('the menu is not resent when the item stays the same', () async {
+      final service = LinuxBackgroundService.forTesting();
+      await service.setTrayVpn(status: VpnStatus.disconnected, hasServer: true);
+      await service.setTrayVpn(status: VpnStatus.error, hasServer: true);
+      expect(menus, hasLength(1));
+
+      await service.setTrayVpn(status: VpnStatus.connecting, hasServer: true);
+      await service.setTrayVpn(status: VpnStatus.connected, hasServer: true);
+      expect(menus, hasLength(2));
+    });
+
+    test(
+      'a click runs the toggle once, even when clicked again meanwhile',
+      () async {
+        final service = LinuxBackgroundService.forTesting();
+        final release = Completer<void>();
+        var toggles = 0;
+        service.onToggleVpn = () async {
+          toggles++;
+          await release.future;
+        };
+
+        service.onTrayMenuItemClick(MenuItem(key: 'vpn'));
+        service.onTrayMenuItemClick(MenuItem(key: 'vpn'));
+        await pumpEventQueue();
+        expect(toggles, 1);
+
+        release.complete();
+        await pumpEventQueue();
+        service.onTrayMenuItemClick(MenuItem(key: 'vpn'));
+        await pumpEventQueue();
+        expect(toggles, 2);
+      },
+    );
+
+    test('a failed toggle does not lock the item', () async {
+      final service = LinuxBackgroundService.forTesting();
+      var toggles = 0;
+      service.onToggleVpn = () async {
+        toggles++;
+        throw StateError('core died');
+      };
+
+      service.onTrayMenuItemClick(MenuItem(key: 'vpn'));
+      await pumpEventQueue();
+      service.onTrayMenuItemClick(MenuItem(key: 'vpn'));
+      await pumpEventQueue();
+
+      expect(toggles, 2);
     });
   });
 

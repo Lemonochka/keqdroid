@@ -8,6 +8,7 @@ import 'package:tray_manager/tray_manager.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../core/app_logger.dart';
+import '../tunnel/tunnel_state.dart';
 import 'linux_autostart.dart';
 import 'linux_deep_links.dart';
 import 'linux_desktop_entry.dart';
@@ -37,6 +38,13 @@ class LinuxBackgroundService with WindowListener, TrayListener {
 
   String _showLabel = 'Show keqdroid';
   String _quitLabel = 'Quit';
+  String _connectLabel = 'Connect';
+  String _disconnectLabel = 'Disconnect';
+
+  ({bool connected, bool enabled})? _vpnItem;
+  bool _togglingVpn = false;
+
+  Future<void> Function()? onToggleVpn;
 
   ServerSocket? _lock;
 
@@ -155,15 +163,51 @@ class LinuxBackgroundService with WindowListener, TrayListener {
     }
   }
 
-  Future<void> _applyTrayMenu() => trayManager.setContextMenu(
-    Menu(
-      items: [
-        MenuItem(key: 'show', label: _showLabel),
-        MenuItem.separator(),
-        MenuItem(key: 'quit', label: _quitLabel),
-      ],
-    ),
-  );
+  Future<void> _applyTrayMenu() {
+    final vpn = _vpnItem;
+    return trayManager.setContextMenu(
+      Menu(
+        items: [
+          if (vpn != null) ...[
+            MenuItem(
+              key: 'vpn',
+              label: vpn.connected ? _disconnectLabel : _connectLabel,
+              disabled: !vpn.enabled,
+            ),
+            MenuItem.separator(),
+          ],
+          MenuItem(key: 'show', label: _showLabel),
+          MenuItem.separator(),
+          MenuItem(key: 'quit', label: _quitLabel),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _refreshTrayMenu() async {
+    try {
+      await _applyTrayMenu();
+    } catch (e) {
+      AppLogger.instance.debug('Tray menu not updated', error: e);
+    }
+  }
+
+  // меню AppIndicator живёт в хосте трея и по клику не пересобирается, как на Windows,
+  // поэтому подпись и доступность обновляем на каждую смену состояния VPN
+  Future<void> setTrayVpn({
+    required VpnStatus status,
+    required bool hasServer,
+  }) async {
+    final connected =
+        status == VpnStatus.connected || status == VpnStatus.connecting;
+    final item = (
+      connected: connected,
+      enabled: connected || (hasServer && status != VpnStatus.disconnecting),
+    );
+    if (item == _vpnItem) return;
+    _vpnItem = item;
+    await _refreshTrayMenu();
+  }
 
   Future<void> showConnected(bool connected) async {
     try {
@@ -180,15 +224,20 @@ class LinuxBackgroundService with WindowListener, TrayListener {
   Future<void> setTrayLabels({
     required String show,
     required String quit,
+    required String connect,
+    required String disconnect,
   }) async {
-    if (show == _showLabel && quit == _quitLabel) return;
+    if (show == _showLabel &&
+        quit == _quitLabel &&
+        connect == _connectLabel &&
+        disconnect == _disconnectLabel) {
+      return;
+    }
     _showLabel = show;
     _quitLabel = quit;
-    try {
-      await _applyTrayMenu();
-    } catch (e) {
-      AppLogger.instance.debug('Tray menu not updated', error: e);
-    }
+    _connectLabel = connect;
+    _disconnectLabel = disconnect;
+    await _refreshTrayMenu();
   }
 
   void unawaitedShow() {
@@ -354,10 +403,29 @@ class LinuxBackgroundService with WindowListener, TrayListener {
   @override
   void onTrayMenuItemClick(MenuItem menuItem) {
     switch (menuItem.key) {
+      case 'vpn':
+        _toggleVpn();
       case 'show':
         _showWindow();
       case 'quit':
         quit();
+    }
+  }
+
+  Future<void> _toggleVpn() async {
+    final toggle = onToggleVpn;
+    if (toggle == null || _togglingVpn) return;
+    _togglingVpn = true;
+    try {
+      await toggle();
+    } catch (e, st) {
+      AppLogger.instance.warn(
+        'Tray VPN toggle failed',
+        error: e,
+        stackTrace: st,
+      );
+    } finally {
+      _togglingVpn = false;
     }
   }
 

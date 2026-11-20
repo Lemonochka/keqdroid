@@ -1,0 +1,63 @@
+import 'dart:async';
+import 'dart:io';
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../providers/providers.dart';
+import 'linux_background_service.dart';
+import 'vpn_engine.dart';
+
+class LinuxTrayVpn {
+  LinuxTrayVpn(this._ref, this._tray);
+
+  final Ref _ref;
+  final LinuxBackgroundService _tray;
+
+  void init() {
+    _tray.onToggleVpn = _toggle;
+    _ref.listen(
+      vpnStateProvider.select((a) => a.value?.status),
+      (_, _) => _sync(),
+    );
+    _ref.listen(
+      serversProvider.select((s) => s.activeServer != null),
+      (_, _) => _sync(),
+      fireImmediately: true,
+    );
+  }
+
+  void dispose() => _tray.onToggleVpn = null;
+
+  void _sync() => unawaited(
+    _tray.setTrayVpn(
+      status:
+          _ref.read(vpnStateProvider).value?.status ?? VpnStatus.disconnected,
+      hasServer: _ref.read(serversProvider).activeServer != null,
+    ),
+  );
+
+  Future<void> _toggle() async {
+    final status =
+        _ref.read(vpnStateProvider).value?.status ?? VpnStatus.disconnected;
+    final notifier = _ref.read(vpnStateProvider.notifier);
+    switch (status) {
+      case VpnStatus.connected:
+        await notifier.disconnect();
+      case VpnStatus.connecting:
+        await notifier.cancelConnect();
+      case VpnStatus.disconnecting:
+        return;
+      case VpnStatus.disconnected || VpnStatus.error:
+        if (_ref.read(serversProvider).activeServer == null) return;
+        await notifier.connect();
+    }
+  }
+}
+
+final linuxTrayVpnProvider = Provider<LinuxTrayVpn?>((ref) {
+  if (!Platform.isLinux) return null;
+  final vpn = LinuxTrayVpn(ref, LinuxBackgroundService.instance);
+  ref.onDispose(vpn.dispose);
+  vpn.init();
+  return vpn;
+});

@@ -12,6 +12,7 @@ import '../../services/desktop_background_service.dart';
 import '../../services/hotkey_service.dart';
 import '../../services/linux_autostart.dart';
 import '../../services/linux_background_service.dart';
+import '../../services/linux_tray_vpn.dart';
 import '../../services/resume_after_update.dart';
 
 import '../../l10n/app_localizations.dart';
@@ -96,6 +97,8 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
         LinuxBackgroundService.instance.setTrayLabels(
           show: l10n.trayOpenApp,
           quit: l10n.trayExit,
+          connect: l10n.trayConnect,
+          disconnect: l10n.trayDisconnect,
         ),
       );
     }
@@ -428,6 +431,7 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
     });
 
     ref.watch(windowsTrayMenuProvider);
+    ref.watch(linuxTrayVpnProvider);
     if (Platform.isLinux) {
       ref.listen(
         vpnStateProvider.select((a) => a.value?.status == VpnStatus.connected),
