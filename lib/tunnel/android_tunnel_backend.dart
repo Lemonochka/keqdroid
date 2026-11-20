@@ -89,8 +89,8 @@ class AndroidTunnelBackend implements TunnelBackend {
   Future<void> startSession(TunnelSessionRequest request) async {
     try {
       final coreConfig = request.xrayConfig;
-      // генераторы вписали в конфиг креды синглтона, и сервис обязан запомнить их же:
-      // в режиме прокси с паролем это пароль из настроек, а не тот, что выдала нативная часть
+      // генераторы вписали в конфиг логин и пароль синглтона, и сервис обязан запомнить их же:
+      // в режиме прокси с паролем там пароль из настроек, а не тот, что выдала нативная часть
       final creds = Socks5Credentials();
 
       final args = <String, dynamic>{

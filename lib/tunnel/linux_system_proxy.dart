@@ -61,7 +61,7 @@ class LinuxSystemProxy {
   bool get _isKde => desktop.split(':').contains('KDE');
 
   Future<bool> enable({required int httpPort, required int socksPort}) async {
-    // снимок уже лежит, значит прошлая сессия упала: в нём настоящие настройки, текущие наши
+    // снимок уже лежит, если прошлая сессия упала: в нём настоящие настройки, а текущие наши
     if (!backupFile.existsSync()) {
       final gnome = await _readGnome();
       final kde = _isKde ? await _readKde() : null;

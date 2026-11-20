@@ -6,8 +6,8 @@ import 'package:flutter/services.dart';
 
 import '../models/subscription_card_theme.dart';
 
-// шапки подписок видео: гифку разбирал процессор, ~50% ядра Pixel 6a на потоке io (26.10.2026),
-// видео разбирает аппаратный декодер. Кодирует и режет нативная часть, CardMedia.kt
+// Шапки подписок в видео: гифку разбирал процессор, ~50% ядра Pixel 6a на потоке io (26.10.2026),
+// а видео разбирает аппаратный декодер. Кодирует и режет нативная часть, CardMedia.kt
 class CardVideo {
   CardVideo._();
 
@@ -68,7 +68,7 @@ class CardVideo {
     }
   }
 
-  // как в браузерах: кадр короче 20 мс в гифках означает «по умолчанию», 100 мс
+  // как в браузерах: кадр короче 20 мс в гифке берётся за умолчание, 100 мс
   static int _frameMicros(Duration duration) =>
       duration.inMilliseconds < 20 ? 100000 : duration.inMicroseconds;
 

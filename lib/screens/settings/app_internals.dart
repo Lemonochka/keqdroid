@@ -46,7 +46,8 @@ class _AppInternalsScreen extends ConsumerWidget {
               text: friendlyError(error, context),
             ),
           ],
-        // смена настроек пересобирает провайдер в AsyncLoading со старым значением: крутилка на это время сбрасывала прокрутку наверх
+        // смена настроек пересобирает провайдер в AsyncLoading со старым значением, и крутилка на это время
+        // сбрасывала прокрутку наверх
         AsyncValue(:final value?) => _sections(context, ref, l10n, value),
         _ => const [
             Padding(

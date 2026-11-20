@@ -141,7 +141,8 @@ class HotkeyService {
       _syncKeyHandler();
       return const [];
     }
-    // снять набор = закрыть сессию портала, а новая снова спросит человека. на время записи сочетания держим прежний
+    // снятие набора закрывает сессию портала, и новая снова спросит пользователя;
+    // на время записи сочетания держим прежний
     if (backend == LinuxHotkeyBackend.portal && captureMode && bindings.isEmpty) {
       return const [];
     }
@@ -184,7 +185,7 @@ class HotkeyService {
     return _reportable(backend, failed);
   }
 
-  // отказ в окне портала не значит, что сочетание занято: про «занято другим приложением» молчим
+  // отказ в окне портала не говорит, что сочетание занято, поэтому про занято другим приложением молчим
   static List<String> _reportable(
     LinuxHotkeyBackend backend,
     List<String> failed,

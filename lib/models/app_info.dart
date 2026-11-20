@@ -15,7 +15,7 @@ class AppInfo {
     this.installPath,
   });
 
-  // нативка иногда присылает int
+  // нативная часть иногда присылает int
   factory AppInfo.fromJson(Map<String, dynamic> json) => AppInfo(
     packageName: json['packageName']?.toString() ?? '',
     appName: json['appName']?.toString() ?? '',

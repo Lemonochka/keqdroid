@@ -4,8 +4,8 @@ import android.content.Context
 import androidx.core.content.pm.PackageInfoCompat
 import java.io.File
 
-// распаковка повторяется при каждой смене вшитой базы: прежняя проверка есть файл оставляла первую копию навсегда,
-// и новые коды (geoip:telegram, geosite:refilter) молча выпадали. в штампе отпечаток того, что распаковано,
+// Распаковка повторяется при каждой смене вшитой базы. Прежняя проверка, есть ли файл, оставляла первую копию
+// навсегда, и новые коды (geoip:telegram, geosite:refilter) молча выпадали. В штампе отпечаток распакованного,
 // поэтому неожиданный отпечаток не зациклит распаковку 25 МБ на каждом старте
 object XrayGeoAssets {
     // geoip вшит урезанным (0.6 МБ из 23.5), остальное докачивается по правилам. geosite целиком
@@ -72,8 +72,8 @@ object XrayGeoAssets {
     internal fun geoUpToDate(outLength: Long?, previous: String?, fingerprint: String): Boolean =
         outLength != null && outLength > 0L && previous == fingerprint
 
-    // базу богаче вшитой не затираем: полная (скачанная или от старой версии) иначе откатилась бы на урезанную.
-    // файл больше ассета значит кодов в нём больше
+    // базу богаче вшитой не затираем, иначе полная (скачанная или от старой версии) откатилась бы на урезанную;
+    // файл больше ассета несёт больше кодов
     internal fun keepsRicherBase(outLength: Long?, assetSize: Long): Boolean =
         outLength != null && assetSize > 0L && outLength > assetSize
 
@@ -84,7 +84,7 @@ object XrayGeoAssets {
     internal fun fingerprintOf(assetSize: Long, versionCode: () -> Long): String =
         if (assetSize > 0L) "size:$assetSize" else "app:${versionCode()}"
 
-    // available() у нетронутого потока это весь файл
+    // available() у нетронутого потока отдаёт размер всего файла
     private fun assetSize(context: Context, assetKey: String): Long =
         runCatching {
             context.assets.open(assetKey).use { it.available().toLong() }

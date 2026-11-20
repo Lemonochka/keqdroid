@@ -112,8 +112,8 @@ int GetEncoderClsid(const WCHAR* format, CLSID* pClsid) {
   return -1;
 }
 
-// ExtractIconW всегда даёт 32×32, и на 125–150% это мыло. SHDefExtractIconW просит конкретный размер,
-// берём первый, отданный целиком (S_OK): S_FALSE значит вариант растянут
+// ExtractIconW всегда даёт 32x32, и на 125-150% иконка мылится; SHDefExtractIconW просит конкретный размер,
+// берём первый, отданный целиком (S_OK), а S_FALSE отдаёт растянутый вариант
 HICON ExtractIconAtSize(const std::wstring& path, int index) {
   // только стандартные размеры: на 96 система вернёт S_OK с растянутым 64. 256 не просим, для слота 40dp он тяжело кодируется
   static const int kSizes[] = {128, 64, 48};

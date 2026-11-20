@@ -4,8 +4,8 @@ data class ProxyCredentials(val username: String, val password: String) {
     val isComplete: Boolean get() = username.isNotEmpty() && password.isNotEmpty()
 }
 
-// пароль, вписанный Dart в конфиг, важнее сгенерированного здесь: в режиме прокси с паролем это пароль из настроек,
-// и сервис запоминал бы случайный, которого ядро не знает
+// пароль, вписанный Dart в конфиг, важнее сгенерированного здесь: в режиме прокси с паролем туда попадает
+// пароль из настроек, и сервис запоминал бы случайный, которого ядро не знает
 fun startCredentials(fromDart: ProxyCredentials?, pending: ProxyCredentials?): ProxyCredentials? = when {
     fromDart?.isComplete == true -> fromDart
     pending?.isComplete == true -> pending

@@ -150,7 +150,7 @@ Future<PastedLinksResult> importPastedLinksInto(
   );
 }
 
-// routing/off во вставке выключать нечего: такую ссылку шлёт подписка, а не человек
+// routing/off во вставке выключать нечего: такую ссылку шлёт подписка, а не пользователь
 Future<String?> importRoutingLink(
   WidgetRef ref,
   String link, {
@@ -189,8 +189,8 @@ SnackBar _bar(Widget content, {Duration duration = const Duration(seconds: 4)}) 
 void _toast(BuildContext context, String msg) =>
     AppSnack.of(context).showSnackBar(_bar(Text(msg)));
 
-// подписка добавляется только после скачивания, и несколько секунд не видно ничего.
-// сервер добавляется сразу, поэтому загрузка с задержкой: иначе мелькала бы на кадр
+// подписка добавляется только после скачивания, и несколько секунд не видно ничего;
+// сервер добавляется сразу, поэтому загрузка с задержкой, иначе мелькала бы на кадр
 class _Busy {
   _Busy(BuildContext context) : _snack = AppSnack.of(context) {
     final label = AppLocalizations.of(context)!.clipboardAdding;

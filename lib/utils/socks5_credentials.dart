@@ -13,7 +13,7 @@ class Socks5Credentials {
   String get username => _username;
   String get password => _password;
 
-  // растёт на каждой смене: повтор после 407 нужен, только если креды сменились
+  // растёт на каждой смене: повтор после 407 нужен, только если логин и пароль сменились
   int get generation => _generation;
 
   void init(String user, String pass) {

@@ -17,8 +17,8 @@
 namespace {
 constexpr UINT kAutostartConnectMsg = WM_APP + 100;
 
-// окно по первому кадру, без кадра остаётся процесс без окна и трея.
-// id не единица: её первой берёт window_manager, который сабклассит это окно
+// окно показывается по первому кадру, без кадра остаётся процесс без окна и трея;
+// id не единица, её первой берёт window_manager, который сабклассит это окно
 constexpr UINT_PTR kStartupWatchdogTimerId = 0x4B440001;
 // с запасом на самый медленный честный старт
 constexpr UINT kStartupWatchdogMs = 20000;
@@ -49,7 +49,7 @@ FlutterWindow::FlutterWindow(const flutter::DartProject& project)
     : project_(project) {}
 
 // деструктор unique_ptr удаляет, не обнулив указатель, и WM_PARENTNOTIFY от гибнущего вида Flutter
-// ушёл бы в HandleTopLevelWindowProc уже без вида. так выходит window_manager destroy()
+// ушёл бы в HandleTopLevelWindowProc уже без вида; так выходит window_manager destroy()
 FlutterWindow::~FlutterWindow() { flutter_controller_ = nullptr; }
 
 bool FlutterWindow::OnCreate() {
@@ -121,7 +121,7 @@ LRESULT
 FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
                               WPARAM const wparam,
                               LPARAM const lparam) noexcept {
-  // до Flutter и плагинов: любой может ответить сам, и прокси повис бы. на WM_QUERYENDSESSION рано, выключение ещё отменят
+  // до Flutter и плагинов: любой может ответить сам, и прокси повис бы; на WM_QUERYENDSESSION рано, выключение ещё отменят
   if (message == WM_ENDSESSION && wparam) {
     KeqdroidClearSystemProxyOnSessionEnd();
   }

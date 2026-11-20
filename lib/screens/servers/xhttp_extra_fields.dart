@@ -6,8 +6,8 @@ import 'package:keqdroid/shared/ui/app_theme.dart';
 
 import '../../utils/bidi.dart';
 
-// ключи по SplitHTTPConfig и XmuxConfig в infra/conf/transport_method.go Xray. подписи ключами:
-// так их пишут панели и документация, перевод разошёлся бы с тем, что человек видит у провайдера
+// Ключи по SplitHTTPConfig и XmuxConfig в infra/conf/transport_method.go Xray. Подписи ключами: так их пишут
+// панели и документация, и перевод разошёлся бы с тем, что пользователь видит у провайдера
 enum _Kind { number, text, flag }
 
 const _padding = <(String, _Kind)>[
@@ -82,7 +82,7 @@ class XhttpExtraFields extends StatefulWidget {
 class _XhttpExtraFieldsState extends State<XhttpExtraFields> {
   late Map<String, dynamic> _map;
   final _ctrls = <String, TextEditingController>{};
-  // стёртое поле не прячем, пока его правят. контроллер для этого не годится: он есть у всего, что раскрывали
+  // стёртое поле не прячем, пока его правят; контроллер для этого не годится, он есть у всего, что раскрывали
   final _touched = <String>{};
   late final TextEditingController _rest = TextEditingController();
   bool _restInvalid = false;

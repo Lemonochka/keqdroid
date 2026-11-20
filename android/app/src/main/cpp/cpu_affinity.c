@@ -4,8 +4,8 @@
 #include <stdio.h>
 #include <unistd.h>
 
-/* как fml::RequestAffinity(kNotEfficiency) в движке: все ядра, кроме самых медленных по cpuinfo_max_freq.
- * одинаковые ядра или нечитаемые частоты: маску не трогаем */
+/* как fml::RequestAffinity(kNotEfficiency) в движке: все ядра, кроме самых медленных по cpuinfo_max_freq;
+ * если ядра одинаковые или частоты не читаются, маску не трогаем */
 JNIEXPORT jboolean JNICALL
 Java_com_keqdroid_keqdroid_NativeHelper_nativeAvoidEfficiencyCores(JNIEnv *env, jclass clazz) {
     (void)env; (void)clazz;
@@ -34,6 +34,6 @@ Java_com_keqdroid_keqdroid_NativeHelper_nativeAvoidEfficiencyCores(JNIEnv *env, 
     for (long i = 0; i < count; i++) {
         if (speeds[i] > min) CPU_SET((int)i, &set);
     }
-    /* 0 значит вызывающий поток, а не весь процесс */
+    /* pid 0 у sched_setaffinity указывает на вызывающий поток, а не на весь процесс */
     return sched_setaffinity(0, sizeof(set), &set) == 0 ? JNI_TRUE : JNI_FALSE;
 }

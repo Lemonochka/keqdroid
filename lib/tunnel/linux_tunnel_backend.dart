@@ -87,7 +87,7 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
   // root-процессу обычный пользователь сигнал не пошлёт, останавливаем удалением сентинела
   bool _mihomoRunsAsRoot = false;
 
-  // пока идёт штатный стоп, вотчдог не должен принять наш kill за смерть ядра
+  // пока идёт штатный стоп, сторож не должен принять наш kill за смерть ядра
   bool _stoppingSession = false;
 
 
@@ -172,7 +172,7 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
 
       unawaited(_verifyChainReachable(request));
 
-      // без вотчдога смерть ядра оставляла UI в Connected, а системный прокси на мёртвом порту
+      // без сторожа смерть ядра оставляла интерфейс в Connected, а системный прокси на мёртвом порту
       _watchProcessExit(_xrayProcess, 'xray');
       _watchProcessExit(_mihomoProcess, 'mihomo');
       _watchProcessExit(_rootXrayProcess, 'xray TUN');
@@ -372,7 +372,7 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
     }
   }
 
-  // путь версионирован: тело обёртки это контракт по позициям аргументов, и со старым путём
+  // путь версионирован: тело обёртки служит контрактом по позициям аргументов, и со старым путём
   // у тех, кто уже поставил правило, mihomo запускался бы командой keqrnel
 
   static const _polkitHelperPath = '/usr/local/lib/keqdroid/core-tun-root';
@@ -404,9 +404,10 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
   @visibleForTesting
   static const helperVersionMarkForTest = _helperVersionMark;
 
-  // беспарольный хелпер может позвать любая программа пользователя, поэтому названное в аргументах читается его правами,
-  // а root пишет только в свой /run/keqdroid/<uid>. журнал отдан владельцу 0600: в нём адреса серверов.
-  // ядро без пароля только доверенная копия и под systemd с ProtectSystem=strict: подсунутый конфиг не допишет файлы мимо RUN
+  // Беспарольный хелпер может позвать любая программа пользователя, поэтому названное в аргументах читается
+  // его правами, а root пишет только в свой /run/keqdroid/<uid>. Журнал отдан владельцу 0600, в нём адреса серверов.
+  // Ядро без пароля запускается только доверенной копией и под systemd с ProtectSystem=strict, так подсунутый
+  // конфиг не допишет файлы мимо RUN
   static const _tunWrapperBody = r'''umask 022
 SB="$1"; CFG="$2"; GEO="$3"; SENT="$4"; APPPID="$5"; KIND="$6"
 HELPER=/usr/local/lib/keqdroid/core-tun-root
@@ -483,7 +484,7 @@ polkit.addRule(function(action, subject) {
 });
 ''';
 
-  // правило не статим: /etc/polkit-1/rules.d с правами 0700, existsSync оттуда всегда false. признак это хелпер
+  // правило не статим: /etc/polkit-1/rules.d с правами 0700, existsSync оттуда всегда false; признаком служит хелпер
   static bool isPasswordlessTunInstalled() {
     if (!Platform.isLinux) return false;
     try {
@@ -722,7 +723,7 @@ $run''';
     final sentinelFile = File(p.join(_sessionDir!.path, 'core.run'));
     await sentinelFile.writeAsString('1');
     _rootSentinel = sentinelFile;
-    // маркер создаёт обёртка сразу после polkit: по нему отличаем ввод пароля от старта ядра.
+    // маркер создаёт обёртка сразу после polkit, по нему отличаем ввод пароля от старта ядра;
     // каталог переживает сессию, поэтому маркер прошлой отсекаем по времени
     final authMarker = File(p.join(_rootRunDir, 'core.auth'));
     _rootCoreLaunchedAt = DateTime.now();
@@ -774,7 +775,7 @@ $run''';
     onStarted(process);
     _pipeProcessOutput(process, log);
 
-    // сначала ждём polkit: иначе бюджет готовности TUN тикал, пока человек вводил пароль
+    // сначала ждём polkit, иначе бюджет готовности TUN тикал, пока пользователь вводил пароль
     final authorized = await _waitForElevation(
       process: process,
       authMarker: authMarker,
@@ -883,7 +884,7 @@ $run''';
     return false;
   }
 
-  // 126 значит окно пароля закрыли, 127 не авторизовано или нет агента polkit
+  // код 126 приходит, когда окно пароля закрыли, 127 когда не авторизовано или нет агента polkit
   String _elevationError(int code, StringBuffer log) {
     switch (code) {
       case 126:
@@ -1272,9 +1273,9 @@ $run''';
   void _pipeProcessOutput(Process process, StringBuffer buffer) {
     void append(String line) => _appendCoreLine(buffer, line);
 
-    // allowMalformed: строка ядра не в UTF-8 иначе роняет весь пайп лога
+    // allowMalformed: строка ядра не в UTF-8 иначе роняет весь поток лога
     const decoder = Utf8Decoder(allowMalformed: true);
-    // строки режем по всему потоку: кусок пайпа обрывается где попало
+    // строки режем по всему потоку: кусок из трубы обрывается где попало
     process.stderr
         .transform(decoder)
         .transform(const LineSplitter())
@@ -1285,7 +1286,7 @@ $run''';
         .listen(append);
   }
 
-  // убитый сигналом процесс на Linux даёт отрицательный код, поэтому вышел значит не null
+  // убитый сигналом процесс на Linux даёт отрицательный код, поэтому выход проверяем по null
   static Future<int?> _exitCodeOrNull(Process process) => process.exitCode
       .then<int?>((c) => c)
       .timeout(const Duration(milliseconds: 1), onTimeout: () => null);

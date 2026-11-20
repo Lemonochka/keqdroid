@@ -7,8 +7,8 @@ import 'package:flutter/rendering.dart';
 import 'package:keqdroid/shared/ui/expressive.dart';
 import 'package:keqdroid/shared/ui/floating_bar.dart';
 
-// уведомление Модерна: капля вытекает из левого края экрана и растекается в плитку над
-// лентой, уходит обратно в край. в письме справа налево из правого. смахивается в тот же край
+// Уведомление Модерна: капля вытекает из левого края экрана, растекается в плитку над лентой и уходит обратно
+// в край. В письме справа налево капля идёт из правого края, смахивается в тот же край
 class LiquidToast {
   const LiquidToast({
     required this.message,
@@ -45,8 +45,8 @@ class LiquidToast {
   static void hide() => current.value = null;
 }
 
-// уведомления приложения: в Модерне капля из края, иначе прежний SnackBar. берётся до
-// await, как ScaffoldMessenger.of: после него context может быть уже не тот
+// уведомления приложения: в Модерне капля из края, иначе прежний SnackBar; берётся до await,
+// как ScaffoldMessenger.of, после него context может быть уже не тот
 class AppSnack {
   AppSnack._(this._messenger, this._theme);
 
@@ -388,8 +388,8 @@ class _BeyondEdge extends CustomClipper<Rect> {
   bool shouldReclip(_BeyondEdge old) => old.edge != edge || old.rtl != rtl;
 }
 
-// кромка, из которой капля вытекает на ПК: боковая панель. страница поверх закрывает панель,
-// тогда капля идёт из края окна. secondaryAnimation двигают только страницы, диалоги нет
+// Кромка, из которой капля вытекает на ПК, это боковая панель. Страница поверх закрывает панель,
+// и тогда капля идёт из края окна. secondaryAnimation двигают только страницы, диалоги нет
 class LiquidToastSource extends StatefulWidget {
   const LiquidToastSource({super.key, required this.child});
 

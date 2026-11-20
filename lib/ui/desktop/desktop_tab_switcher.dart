@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../shared/ui/expressive.dart';
 
-// как IndexedStack: живут все три, скрытые не рисуются и не ловят нажатия и фокус.
+// как IndexedStack: живут все три, скрытые не рисуются и не ловят нажатия и фокус;
 // тикеры у скрытых стоят, иначе гифки подписок крутятся и на чужой вкладке
 class DesktopTabSwitcher extends StatefulWidget {
   const DesktopTabSwitcher({
@@ -20,8 +20,8 @@ class DesktopTabSwitcher extends StatefulWidget {
   final int index;
   final List<Widget> children;
 
-  // Skia на Windows собирает шейдеры при первом показе и не хранит их между запусками: первый заход на
-  // подписки стоил 75 мс растра посреди перехода. скрытые вкладки заранее рисуются под текущей
+  // Skia на Windows собирает шейдеры при первом показе и не хранит их между запусками: первый заход на подписки
+  // стоил 75 мс растра посреди перехода, поэтому скрытые вкладки заранее рисуются под текущей
   final Duration? warmUpAfter;
 
   // в трее окна не видно, и тогда прогоняются ещё и позы самого перехода
@@ -66,7 +66,7 @@ class _DesktopTabSwitcherState extends State<DesktopTabSwitcher>
         if (i != current) i,
     ];
     // под выключенным TickerMode Riverpod 3 держит подписки виджета на паузе, и скрытая вкладка с запуска
-    // показывает загрузку. перестройка читает свежие данные, пауза при этом остаётся
+    // показывает загрузку; перестройка читает свежие данные, пауза при этом остаётся
     _rebuildConsumers(hidden.toSet());
     final scenes = <List<_Under>>[
       for (final opacity in const [1.0, 0.5])
@@ -121,8 +121,8 @@ class _DesktopTabSwitcherState extends State<DesktopTabSwitcher>
 
   int _sign(int from, int to) => to > from ? 1 : -1;
 
-  // новая проявляется поверх уходящей, а та гаснет, только когда её уже накрыли.
-  // через ноль, как в спеке M3, экран 75 мс проваливался в фон и моргал
+  // новая проявляется поверх уходящей, а та гаснет, только когда её уже накрыли;
+  // через ноль, как в спецификации M3, экран 75 мс проваливался в фон и моргал
   double _inOpacity(double t) => (t / 0.5).clamp(0.0, 1.0);
   double _fade(double t) => 1 - ((t - 0.5) / 0.3).clamp(0.0, 1.0);
   double _inOffset(double t) => _dir * DesktopTabSwitcher.shift * (1 - t);

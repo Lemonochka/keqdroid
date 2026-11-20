@@ -142,9 +142,9 @@ final subscriptionServiceProvider = Provider<SubscriptionService>((ref) {
   );
 });
 
-// спрашиваем раз на подключение и смену сервера: выход меняется только с ними.
-// неответ повторяем: новый изолят на Android видит подключено раньше, чем получит пароль входа, и первый запрос ловил 407.
-// ответ держим до смены подключения: шапка пересобирается на каждом возврате, и флаг пропадал бы
+// Спрашиваем раз на подключение и смену сервера, выход меняется только с ними. Неответ повторяем: новый изолят
+// на Android видит подключено раньше, чем получит пароль входа, и первый запрос ловил 407. Ответ держим до смены
+// подключения, иначе шапка пересобирается на каждом возврате и флаг пропадал бы
 final exitIpProvider = FutureProvider.autoDispose<ExitIp?>((ref) async {
   final connected = ref.watch(
     vpnStateProvider.select((a) => a.value?.status == VpnStatus.connected),
@@ -184,8 +184,8 @@ const _exitIpRetryPauses = [
 final vpnEngineProvider = Provider<VpnEngine>((ref) {
   final engine = VpnEngine();
   engine.init();
-  // трей на Windows прячет окно, а движок отдаёт это как inactive,
-  // поэтому видимость берём ещё и из натива
+  // трей на Windows прячет окно, а движок сообщает о нём как об inactive,
+  // поэтому видимость берём ещё и из нативной части
   var lifecycleForeground = true;
   var uiVisible = true;
   void applyPolling() =>
@@ -262,7 +262,7 @@ final updateInfoProvider = FutureProvider<UpdateInfo?>((ref) async {
   return UpdateService.checkForUpdate(
     force: false,
     viaLocalProxy: vpnConnected,
-    // порт сессии: если настроенный был занят, ядро слушает другой
+    // тот же порт сессии, что в _activeLocalHttpProxyPort
     httpPort: ActiveLocalPorts().httpPortOr(settings.httpPort),
   );
 }, retry: (_, _) => null);

@@ -140,7 +140,7 @@ class XrayCoreSettings {
 
   static const noiseKinds = [noiseRandom, noiseStr, noiseHex, noiseBase64];
 
-  // пустой rand у ядра значит ноль байт, то есть шума нет
+  // пустой rand ядро читает как ноль байт, шума тогда нет
   static const defaultNoiseRandLength = '50-100';
 
   static const defaultMuxConcurrency = 8;
@@ -203,7 +203,7 @@ class XrayCoreSettings {
       final v = (json[k] as num?)?.toInt() ?? def;
       return v < 0 ? 0 : v;
     }
-    // у mux минус значит не мультиплексировать, общий i срезал бы его в ноль
+    // у mux минус запрещает мультиплексирование, и общий i срезал бы его в ноль
     int signed(String k, int def, int min, int max) {
       final v = (json[k] as num?)?.toInt() ?? def;
       return v < min ? min : (v > max ? max : v);
@@ -562,8 +562,8 @@ class XrayCoreSettings {
     };
   }
 
-  // liftedDomains: домены маршрутов, поднятых на экране над обходом. их сервер пишется раньше сервера обхода:
-  // совпавшие xray опрашивает в порядке записи (sortClients в app/dns/dns.go)
+  // liftedDomains: домены маршрутов, поднятых на экране над обходом; их сервер пишется раньше сервера обхода,
+  // потому что совпавшие xray опрашивает в порядке записи (sortClients в app/dns/dns.go)
   Map<String, dynamic> buildDnsBlock({
     required List<String> directDomains,
     List<String> liftedDomains = const [],

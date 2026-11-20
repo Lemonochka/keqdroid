@@ -95,8 +95,8 @@ class NotificationService {
     await _showSubscriptionNotice(ns._plugin!, subscriptionId, title, body);
   }
 
-  // фоновый изолят: свой плагин без запроса разрешения, окна для него нет. канал и номер те же,
-  // напоминание и «истекла» заменяют друг друга
+  // фоновый изолят: свой плагин без запроса разрешения, окна для него нет; канал и номер те же,
+  // так напоминание и уведомление об истёкшей подписке заменяют друг друга
   static Future<void> showSubscriptionNoticeInBackground({
     required String subscriptionId,
     required String title,

@@ -19,8 +19,8 @@ internal fun orphanCoreName(cmdline: ByteArray): String? =
         .substringAfterLast('/')
         .takeIf { it in CORE_BINARIES }
 
-// только свои: список живёт в памяти процесса и умирает с ним, всё прочее в /proc запущено прошлой жизнью.
-// pid известен лишь после окна в 250 мс внутри nativeStartCore, и скан в это окно убивал пробы пинга
+// Только свои: список живёт в памяти процесса и умирает с ним, всё прочее в /proc запущено прошлой жизнью.
+// Pid известен лишь после окна в 250 мс внутри nativeStartCore, и скан в это окно убивал пробы пинга
 internal class CoreLaunches {
     private val gate = ReentrantReadWriteLock()
     private val pids = Collections.synchronizedSet(mutableSetOf<Int>())
@@ -48,7 +48,7 @@ object NativeHelper {
     @JvmStatic
     private external fun nativeSetCoreLogLevel(level: Int)
 
-    // 0 пропускает всё, дальше debug, info, warning, error, none. счётчик отказов видит все строки
+    // 0 пропускает всё, дальше debug, info, warning, error, none; счётчик отказов видит все строки
     fun setCoreLogLevel(level: Int) {
         runCatching { nativeSetCoreLogLevel(level) }
     }
@@ -77,7 +77,7 @@ object NativeHelper {
         ownerSocket: String,
     ): Int
 
-    // пустой logName выключает файл. tunFd -1 значит туннеля нет, FD_CLOEXEC снимает натив
+    // пустой logName выключает файл, tunFd -1 запускает без туннеля; FD_CLOEXEC снимает нативная часть
     fun startCore(
         binPath: String,
         configPath: String,
@@ -90,8 +90,8 @@ object NativeHelper {
         nativeStartCore(binPath, configPath, assetDir, logName, coreKind, tunFd, ownerSocket)
     }
 
-    // ядро живёт отдельно и переживает смерть приложения (force stop, flutter run), продолжая сидеть на 2080.
-    // новое тогда порт не займёт, а прокси приложения ходит в старое с чужими кредами. ядра замера свои и не трогаются
+    // ядро живёт отдельно и переживает смерть приложения (force stop, flutter run), продолжая сидеть на 2080;
+    // новое тогда порт не займёт, а прокси приложения ходит в старое с чужим паролем. Ядра замера свои и не трогаются
     fun killOrphans(): Int = launches.sweep { livePids ->
         var killed = 0
         val mine = android.os.Process.myPid()

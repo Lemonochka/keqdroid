@@ -7,7 +7,7 @@
 
 #include <utility>
 
-// условие и удаление как в AdapterCleanupOrphanedDevices wintun 0.14.1. там уборку делает фоновый поток ядра,
+// условие и удаление как в AdapterCleanupOrphanedDevices wintun 0.14.1; там уборку делает фоновый поток ядра,
 // и ядро, вышедшее или убитое сразу после неудачи, её не дожидается
 std::vector<std::wstring> KeqdroidRemoveStaleWintunAdapters(
     const std::vector<std::wstring>& instance_ids) {

@@ -153,7 +153,7 @@ class _ConnectHeader extends ConsumerWidget {
   final void Function(VpnStatus) onToggle;
   final VoidCallback onJumpToActive;
 
-  // из плашки (легаси) или кнопки (модерн) вытекает строка трафика
+  // из плашки (Легаси) или кнопки (Модерн) вытекает строка трафика
   final GlobalKey plaqueKey;
   final GlobalKey buttonKey;
 
@@ -196,7 +196,7 @@ class _ConnectHeader extends ConsumerWidget {
       }),
     );
 
-    // connecting тапабелен: это отмена попытки
+    // в состоянии connecting нажатие отменяет попытку
     final VoidCallback? onTap =
         vpnStatus == VpnStatus.disconnecting ? null : () => onToggle(vpnStatus);
     final halloween = ref.watch(halloweenActiveProvider);
@@ -205,8 +205,8 @@ class _ConnectHeader extends ConsumerWidget {
     final topPad = isDesktop ? 20.0 : MediaQuery.of(context).padding.top + 24;
     final shownStatus =
         serverSwitchInProgress ? VpnStatus.connecting : vpnStatus;
-    // вода догасает ниже шапки: под плашкой места мало, и она обрывалась. снизу пустой
-    // отступ списка или ничего, а непрозрачные карточки ложатся поверх
+    // вода догасает ниже шапки, потому что под плашкой места мало и она обрывалась; снизу пустой отступ списка
+    // или ничего, а непрозрачные карточки ложатся поверх
     const overhang = 44.0;
     return Stack(
       clipBehavior: Clip.none,
@@ -406,7 +406,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // на десктопе inactive значит окно видно без фокуса, Windows при развороте из трея часто шлёт только его
+    // на десктопе inactive приходит, когда окно видно без фокуса, и Windows при развороте из трея часто шлёт только его
     final isDesktop =
         Platform.isWindows || Platform.isLinux || Platform.isMacOS;
     final background = state == AppLifecycleState.paused ||
@@ -445,7 +445,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
         status == VpnStatus.connected ||
         status == VpnStatus.connecting ||
         status == VpnStatus.disconnecting;
-    // снапшоты из натива приходят и при обычном подключении, жёсткий value= обрывал морф волны
+    // снимки из нативной части приходят и при обычном подключении, и жёсткий value= обрывал морф волны
     final target = active ? 1.0 : 0.0;
     final atTarget = _stateCtrl.value == target && !_stateCtrl.isAnimating;
     final movingToTarget = active
@@ -1003,7 +1003,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
       if (ctx.mounted) _showImportError(ctx, e, detailed: true);
       return;
     } catch (e, st) {
-      // битый или не картинка: движок не декодирует, для человека это тот же «кода нет»
+      // битый файл или не картинка: движок не декодирует, и пользователь видит то же, что при отсутствии кода
       AppLogger.instance.warn('QR picture could not be read', error: e, stackTrace: st);
     }
     if (!ctx.mounted) return;

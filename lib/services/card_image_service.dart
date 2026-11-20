@@ -168,7 +168,7 @@ class CardImageService {
     final path = await resolvePath(themeId);
     if (path == null || p.extension(path).toLowerCase() != '.gif') return null;
     final dir = await _directory();
-    // неудачу помним: иначе каждый холодный старт заново читал все кадры с GPU, пока человек смотрит на экран
+    // неудачу помним, иначе каждый холодный старт заново читал все кадры с GPU, пока пользователь смотрит на экран
     final tried = File(p.join(dir.path, _gifTriedDir, p.basename(path)));
     if (tried.existsSync()) return null;
     final video = await _gifToVideo(

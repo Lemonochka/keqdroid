@@ -177,7 +177,7 @@ class _ServerPingPlaque extends ConsumerWidget {
   }
 }
 
-// легаси: прежнее «Подключено к: X» двумя половинами
+// вид Легаси: прежнее Подключено к: X двумя половинами
 class _StatusServerPlaque extends StatelessWidget {
   const _StatusServerPlaque({
     required this.server,
@@ -274,7 +274,7 @@ class _StatusServerPlaque extends StatelessWidget {
   }
 }
 
-// волна живёт в фоне шапки: в панели полосой у дна, в легаси под кнопкой
+// волна живёт в фоне шапки: в панели полосой у дна, в Легаси под кнопкой
 class _HeaderLiquid extends ConsumerWidget {
   const _HeaderLiquid({
     required this.clock,
@@ -324,7 +324,7 @@ class _HeaderLiquid extends ConsumerWidget {
       _ => LiquidPhase.idle,
     };
     final active = phase != LiquidPhase.idle;
-    // у тыквы в легаси своё небо вокруг
+    // у тыквы в Легаси своё небо вокруг
     final halloween = ref.watch(halloweenActiveProvider);
     final scheme = Theme.of(context).colorScheme;
     final connected = status == VpnStatus.connected && !switching;

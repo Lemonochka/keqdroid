@@ -4,7 +4,7 @@ import 'custom_clash_config.dart';
 import 'raw_share_uri.dart';
 import 'server_field_rules.dart';
 
-// ссылка в поля редактора и обратно. чужие параметры остаются в RawShareUri, порядок и кодирование не трогаем
+// ссылка в поля редактора и обратно; чужие параметры остаются в RawShareUri, порядок и кодирование не трогаем
 class ServerConfigForm {
   String _protocol = 'unknown';
 
@@ -112,7 +112,7 @@ class ServerConfigForm {
         break;
       case 'trojan':
         _ctrl('userInfo', uri.userInfo);
-        // у trojan пустой security значит tls, ссылки его обычно не пишут
+        // у trojan пустой security подразумевает tls, ссылки его обычно не пишут
         final trojanSecurity = uri.takeParam('security');
         _drop['security'] =
             trojanSecurity.isEmpty ? 'tls' : trojanSecurity;
@@ -207,8 +207,8 @@ class ServerConfigForm {
     return null;
   }
 
-  // ссылки несут набивку и плоским x_padding_bytes, и в extra. в редакторе поле у неё одно, в extra: оттуда
-  // её читают оба генератора, а если заданы обе, config_gen берёт значение из extra
+  // ссылки несут набивку и плоским x_padding_bytes, и в extra; в редакторе поле у неё одно, в extra,
+  // оттуда её читают оба генератора, а если заданы обе, config_gen берёт значение из extra
   void _paddingIntoExtra() {
     final flat = parsedText['x_padding_bytes']!.trim();
     if (flat.isEmpty) return;
@@ -220,7 +220,7 @@ class ServerConfigForm {
   }
 
   // xray берёт host, path и mode только снаружи extra (SplitHTTPConfig.Build), а mihomo из extra, когда снаружи
-  // пусто. держим их в «Транспорте»: оба ядра видят одно, и в остальных параметрах нет повтора
+  // пусто; держим их в Транспорте, так оба ядра видят одно, и в остальных параметрах нет повтора
   void _outerFromExtra() {
     if (normalizeTransport(_drop['type'] ?? '') != 'xhttp') return;
     final extra = _extraMap();

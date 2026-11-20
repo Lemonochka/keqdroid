@@ -168,7 +168,7 @@ std::vector<std::string> X11Apply(const std::vector<Spec>& specs) {
     }
     XSync(xdisplay, False);
     if (gdk_x11_display_error_trap_pop(display) != 0) {
-      // BadAccess: сочетание держит другой клиент. свои вариации снимаем, иначе сработало бы только при NumLock
+      // BadAccess: сочетание держит другой клиент; свои вариации снимаем, иначе сработало бы только при NumLock
       gdk_x11_display_error_trap_push(display);
       for (unsigned lock : kLockVariants) {
         XUngrabKey(xdisplay, keycode, mods | lock, root);
@@ -347,7 +347,7 @@ void PortalStartNext() {
   PortalRun();
 }
 
-// окно портала ждёт человека, а настройки могут смениться ещё раз: держим только последний набор
+// окно портала ждёт пользователя, а настройки могут смениться ещё раз, поэтому держим только последний набор
 void PortalApply(FlMethodCall* call, std::vector<Spec> specs) {
   if (g_queued_call != nullptr) {
     RespondList(g_queued_call, {});

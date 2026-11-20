@@ -48,7 +48,7 @@ Future<void> applyDesktopConnectionMode(
 ) async {
   if (next == settings.connectionModeEnum) return;
 
-  // на Linux права даёт pkexec при подключении. на Windows без прав TUN поднимает служба keqdroid
+  // на Linux права даёт pkexec при подключении, на Windows без прав TUN поднимает служба keqdroid
   if (next == ConnectionMode.tun && !await ensureWindowsTunService(context)) {
     return;
   }

@@ -87,7 +87,7 @@ abstract final class AwgUri {
     final dns = _list(_first(q, const ['dns', 'dnsservers']));
     final mtu = _first(q, const ['mtu']);
     final presharedKey = _first(q, const ['presharedkey', 'psk']);
-    // AllowedIPs в ссылках обычно нет, а пустой список это туннель, который не пропускает ничего
+    // AllowedIPs в ссылках обычно нет, а с пустым списком туннель не пропускает ничего
     final allowedIps = _list(_first(q, const ['allowedips', 'allowedip']));
     // без keepalive WG за NAT замолкает через минуту тишины, 25 пишет в .conf сама Amnezia
     final keepalive =

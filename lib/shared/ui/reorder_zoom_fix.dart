@@ -4,9 +4,9 @@ import 'package:flutter/rendering.dart';
 typedef ReorderProxyFix =
     Widget Function(Widget proxy, Animation<double> animation);
 
-// перенос в ReorderableList ставит поднятый элемент по экранной точке пальца минус точке
-// захвата внутри элемента. под масштабом интерфейса (_UiZoom в app.dart) это разные единицы,
-// и элемент уезжал вбок. логику выбора места не трогаем, поправляем только рисование
+// Перенос в ReorderableList ставит поднятый элемент по экранной точке пальца минус точке захвата внутри
+// элемента. Под масштабом интерфейса (_UiZoom в app.dart) у них разные единицы, и элемент уезжал вбок.
+// Логику выбора места не трогаем, поправляем только рисование
 class ReorderZoomFix extends StatefulWidget {
   const ReorderZoomFix({super.key, required this.builder});
 

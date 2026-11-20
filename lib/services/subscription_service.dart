@@ -276,7 +276,7 @@ class SubscriptionService {
         }
       }
 
-      // Uri.parse не берёт порт вида host:20000-20050, ключ уходил бы в фолбэк и менялся вместе с именем
+      // Uri.parse не берёт порт вида host:20000-20050, и ключ уходил бы в запасной вариант, меняясь вместе с именем
       final uri = Uri.parse(_parsableUri(rawConfig));
       final host = uri.host.toLowerCase();
       final port = uri.port.toString();
@@ -290,7 +290,7 @@ class SubscriptionService {
         }
       }
 
-      // из сырой строки: uri.host портит регистр base64, и ключ уходил бы в фолбэк вместе с именем
+      // из сырой строки: uri.host портит регистр base64, и ключ уходил бы в запасной вариант вместе с именем
       if (rawConfig.startsWith('vmess://')) {
         try {
           final payload = rawConfig.substring('vmess://'.length);
@@ -341,7 +341,7 @@ class SubscriptionService {
       throw SubscriptionFetchException('Forbidden URL', url: url);
     }
 
-    // настройку читаем на каждый запрос: поле с дефолтом расходится с тумблером в фоновых изолятах
+    // настройку читаем на каждый запрос: в фоновых изолятах значение по умолчанию расходится с переключателем
     final shareHwid = (await _storage.getSettings()).shareDeviceHwid;
     // выключенный тумблер HWID главнее подмены
     final hwid =
@@ -354,7 +354,7 @@ class SubscriptionService {
             overrideOsVersion: identity.activeOsVersion,
           )
         : const <String, String>{};
-    // закреплённый UA не перебираем, иначе подмена схлопнется в наш. кириллица в заголовке роняет dart:io
+    // закреплённый UA не перебираем, иначе подмена схлопнется в наш; кириллица в заголовке роняет dart:io
     final pinnedUserAgent = _asciiHeaderValueOrNull(identity.activeUserAgent);
 
     try {
@@ -1345,7 +1345,7 @@ class SubscriptionService {
     return clash.address.isNotEmpty || clash.usesProviders;
   }
 
-  // без адреса сервера это болванка панели (истёкшая подписка, непривязанный HWID)
+  // без адреса сервера перед нами заглушка панели (истёкшая подписка, непривязанный HWID)
   static bool _isUsableCustomConfig(String config) {
     if (_isMetadataConfig(config)) return false;
     final custom = CustomXrayConfig.tryParse(config);
@@ -1493,7 +1493,7 @@ class SubscriptionService {
     return found.toList();
   }
 
-  // файл и буфер раскладываются по узлам так же, как подписка. профиль на proxy-providers остаётся целым
+  // файл и буфер раскладываются по узлам так же, как подписка; профиль на proxy-providers остаётся целым
   static List<String> clashNodeConfigs(String content) {
     final clash = CustomClashConfig.tryParse(content);
     if (clash == null || CustomClashConfig.usesProviderNodes(clash.map)) {
@@ -1507,7 +1507,7 @@ class SubscriptionService {
     }.toList();
   }
 
-  // ссылки у этих типов нет, узел исполняет mihomo. по adapter/parser.go 1.19.32 без вырезанных сборкой
+  // ссылки у этих типов нет, узел исполняет mihomo; список по adapter/parser.go 1.19.32 без вырезанных сборкой
   static const _mihomoOnlyTypes = {
     'snell',
     'hysteria',
@@ -1555,7 +1555,7 @@ class SubscriptionService {
   // skip-cert-verify ссылка не несёт намеренно (_applyTransport), name и udp генератор пишет свои
   static const _nodeKeysLinkMayDrop = {'name', 'skip-cert-verify', 'udp'};
 
-  // ссылка обязана довезти до ядра всё, что нёс узел: пин, token tuic, ss-opts, dialer-proxy терялись молча.
+  // ссылка обязана довезти до ядра всё, что нёс узел, а пин, token tuic, ss-opts и dialer-proxy терялись молча;
   // сверяем обратным ходом через генератор mihomo
   static bool _linkKeepsNode(Map<String, dynamic> node, String link) =>
       _keysLinkLoses(node, link).isEmpty;
@@ -1580,8 +1580,8 @@ class SubscriptionService {
     ];
   }
 
-  // всё заданное в узле есть и в результате, добавленное генератором не потеря (флаг постквантового ключа).
-  // пусто, false и 0 у mihomo значат не задано, числа в YAML бывают строками
+  // всё заданное в узле есть и в результате, добавленное генератором потерей не считается (флаг постквантового
+  // ключа); пусто, false и 0 у mihomo читаются как не задано, а числа в YAML бывают строками
   static bool _carried(Object? want, Object? got) {
     bool unset(Object? v) =>
         v == null || v == false || v == '' || v == 0 || v == '0' ||
@@ -1742,7 +1742,7 @@ class SubscriptionService {
     return parts.map((e) => '${e.value} of type ${e.key}').join(', ');
   }
 
-  // standalone: узел без ссылки можно отдать mihomo одного. строчный разбор теряет вложенные карты (amnezia-wg-option),
+  // standalone: узел без ссылки можно отдать mihomo одного. Строчный разбор теряет вложенные карты (amnezia-wg-option),
   // а у профиля на proxy-providers вынутый socks5 заслонил бы узлы провайдера, и профиль целиком уже не собрался бы
   static ({
     List<Map<String, dynamic>> proxies,
@@ -2173,7 +2173,7 @@ class SubscriptionService {
     return null;
   }
 
-  // type у Clash это протокол узла, в транспорт он не годится
+  // type у Clash называет протокол узла, в транспорт он не годится
   static Map<String, String> _clashTransportQuery(
     String Function(List<String>) pick,
   ) {
@@ -2188,7 +2188,7 @@ class SubscriptionService {
     if (serviceName.isNotEmpty) query['serviceName'] = serviceName;
     final mode = pick(['mode']);
     if (mode.isNotEmpty) query['mode'] = mode;
-    // network: http у Clash это маскировка поверх tcp, в ссылке tcp и headerType=http
+    // network: http у Clash задаёт маскировку поверх tcp, в ссылке ей соответствуют tcp и headerType=http
     if (network.toLowerCase() == 'http') {
       query['type'] = 'tcp';
       query['headerType'] = 'http';
@@ -2227,7 +2227,7 @@ class SubscriptionService {
     if (flow.isNotEmpty) query['flow'] = flow;
     final alpn = pick(['alpn']);
     if (alpn.isNotEmpty) query['alpn'] = alpn;
-    // fingerprint у Clash это пин сертификата, отпечаток uTLS лежит в client-fingerprint
+    // fingerprint у Clash хранит пин сертификата, а отпечаток uTLS лежит в client-fingerprint
     final pin = pick(['fingerprint']);
     if (pin.isNotEmpty) query['pcs'] = pin;
     final verify = pick(['name-cert-verify']);
@@ -2426,7 +2426,7 @@ class SubscriptionService {
             next.addAll(_extractSubscriptionUrlsFromHtml(body, baseUrl: u));
           }
         } on Object {
-          // неудачный фолбэк-запрос не страшен
+          // неудачный запасной запрос не страшен
         }
       }
       frontier = next;
@@ -2817,8 +2817,8 @@ class SubscriptionService {
     }
   }
 
-  // переезд по new-url и new-domain: та же подписка с тем же id, меняется только адрес, поэтому карточка,
-  // серверы, профиль и HWID остаются. новый адрес сперва проверяем: сломанный переезд не уводит подписку в никуда
+  // Переезд по new-url и new-domain: та же подписка с тем же id, меняется только адрес, поэтому карточка,
+  // серверы, профиль и HWID остаются. Новый адрес сперва проверяем, чтобы сломанный переезд не увёл подписку в никуда
   Future<({SubscriptionFetchResult result, String url})> _followMove(
     Subscription sub,
     SubscriptionFetchResult result,
@@ -2938,7 +2938,7 @@ class SubscriptionService {
           matched[i] ?? byName(uniqueConfigs[i]),
       ];
 
-      // правленные руками серверы, разошедшиеся по ключу, рефреш не стирает
+      // правленные руками серверы, разошедшиеся по ключу, обновление не стирает
       servers.addAll(
         oldServers.where(
           (s) =>
@@ -2986,7 +2986,7 @@ class SubscriptionService {
             announce: result.profile.announce,
             supportUrl: result.profile.supportUrl,
             webPageUrl: result.profile.webPageUrl,
-            // интервал панели только при первой загрузке, дальше это выбор человека
+            // интервал панели только при первой загрузке, дальше его выбирает пользователь
             updateIntervalHours:
                 wasFirstFetch ? result.profile.updateIntervalHours : null,
             fallbackUrl: result.profile.fallbackUrl,

@@ -30,7 +30,7 @@ TextAlign uiStartAlign(BuildContext context) =>
         ? TextAlign.right
         : TextAlign.left;
 
-// ltrIsolate не поможет, когда значение собрано из нескольких Text в Row: Row зеркалится сам.
+// ltrIsolate не поможет, когда значение собрано из нескольких Text в Row, потому что Row зеркалится сам;
 // невидимых символов не добавляет, поэтому годится и для копируемого текста
 class LtrBlock extends StatelessWidget {
   final Widget child;

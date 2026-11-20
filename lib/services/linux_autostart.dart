@@ -27,7 +27,7 @@ class LinuxAutostart {
   };
 
   // Hyprland без uwsm (так у caelestia) ~/.config/autostart не читает и поднимает только hyprland-session.target.
-  // цепляем к ней службу, которую systemd-xdg-autostart-generator делает из ярлыка: под uwsm и в GNOME/KDE запуск остаётся один
+  // Цепляем к ней службу, которую systemd-xdg-autostart-generator делает из ярлыка: под uwsm и в GNOME/KDE запуск остаётся один
   static const _generatedUnit = 'app-keqdroid@autostart.service';
 
   static String _configHome() {
@@ -56,8 +56,9 @@ class LinuxAutostart {
     return true;
   }
 
-  // Hyprland без systemd-сборки (caelestia на EndeavourOS), sway, river и niri вне своей сессии ярлык не исполнят: никто не поднимает
-  // xdg-desktop-autostart.target. остаётся их собственный запуск при старте; строку ставим только там, иначе приложение стартовало бы дважды
+  // Hyprland без systemd-сборки (caelestia на EndeavourOS), sway, river и niri вне своей сессии ярлык не исполнят:
+  // xdg-desktop-autostart.target никто не поднимает. Остаётся их собственный запуск при старте; строку ставим
+  // только там, иначе приложение стартовало бы дважды
   static const _startMarker = 'keqdroid autostart, added and removed by the app';
 
   static const _compositors = ['hyprland', 'sway', 'river', 'niri'];

@@ -6,7 +6,7 @@ typedef ElevationLaunch = ({
   bool viaPkexec,
 });
 
-// dart:io не даёт geteuid, а id -u лишний процесс. решает effective uid
+// dart:io не даёт geteuid, а id -u стоит лишнего процесса; решает effective uid
 bool runningAsRoot() {
   if (!Platform.isLinux) return false;
   try {
@@ -21,7 +21,7 @@ bool runningAsRoot() {
   return false;
 }
 
-// реальный, а не effective: обёртка под pkexec узнаёт владельца из PKEXEC_UID, а это реальный uid вызвавшего
+// реальный, а не effective: обёртка под pkexec узнаёт владельца из PKEXEC_UID, а там реальный uid вызвавшего
 int linuxRealUid() {
   try {
     for (final line in File('/proc/self/status').readAsLinesSync()) {
@@ -34,7 +34,7 @@ int linuxRealUid() {
 }
 
 // три случая: уже root (pkexec не нужен), беспарольное правило polkit для фиксированного хелпера,
-// обычный pkexec с паролем. аргументы обёртка читает как $1..$6, sh перед ними это $0
+// обычный pkexec с паролем; аргументы обёртка читает как $1..$6, а sh перед ними становится $0
 ElevationLaunch planElevation({
   required List<String> coreArgs,
   required String wrapperBody,

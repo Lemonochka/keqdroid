@@ -70,8 +70,8 @@ class _HorizontalMouseScrollState extends State<HorizontalMouseScroll> {
     });
   }
 
-  // карусель с привязкой после pointerScroll доводилась обратно к той же картинке. шагаем по
-  // картинке на щелчок сразу, от цели, а не от того, куда успела доехать анимация
+  // карусель с привязкой после pointerScroll доводилась обратно к той же картинке; шагаем по картинке
+  // на щелчок сразу, от цели, а не от того места, куда успела доехать анимация
   void _step(CarouselController controller, double delta) {
     if (_wheel.sign != delta.sign) _wheel = 0;
     _wheel += delta;

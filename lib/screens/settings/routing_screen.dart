@@ -65,8 +65,8 @@ String _appLabel(String entry, [List<AppInfo> installed = const []]) {
 AppInfo? _installedApp(String entry, List<AppInfo> installed) =>
     installed.where((app) => splitEntryMatches(entry, app)).firstOrNull;
 
-// на Android запись маршрута это имя пакета, название и иконку даёт само
-// приложение; на ПК подпись и есть имя программы
+// на Android в записи маршрута лежит имя пакета, а название и иконку даёт само приложение;
+// на ПК подпись и есть имя программы
 List<AppInfo> _installedForLabels(WidgetRef ref, List<TrafficRoute> routes) {
   if (!Platform.isAndroid || routes.every((r) => r.allApps)) return const [];
   return ref.watch(installedAppsProvider(true)).value ?? const [];
@@ -777,7 +777,7 @@ class _RouteTile extends StatelessWidget {
   }
 }
 
-// маршруты всех приложений с переносом: зажать и тащить. своего Scrollable у списка нет нарочно,
+// маршруты всех приложений с переносом, зажать и тащить; своего Scrollable у списка нет нарочно,
 // SliverReorderableList берёт прокрутку страницы и листает её у края экрана
 class _ReorderableRouteGroup extends StatefulWidget {
   const _ReorderableRouteGroup({

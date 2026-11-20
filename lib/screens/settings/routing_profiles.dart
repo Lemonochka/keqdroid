@@ -1,6 +1,6 @@
 part of '../settings_tab.dart';
 
-// null это «Основной»: его маршруты в routesProvider, «Всё остальное» в настройках
+// профиль Основной приходит как null: его маршруты в routesProvider, Всё остальное в настройках
 Future<void> _upsertRoute(
   WidgetRef ref,
   String? profileId,

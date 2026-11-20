@@ -226,7 +226,8 @@ class ConnectionsService {
     final chains = (json['chains'] is List)
         ? (json['chains'] as List).map((e) => e.toString()).toList()
         : const <String>[];
-    // у xray звенья цепочки в журнал не пишутся, у mihomo это его собственное соединение к следующему узлу
+    // у xray звенья цепочки в журнал не пишутся, а у mihomo такая строка описывает его собственное соединение
+    // к следующему узлу
     if (chains.any(MihomoConfigGen.isChainHop)) return null;
 
     final ruleType = json['rule']?.toString().trim() ?? '';

@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:path/path.dart' as p;
 
-// установленную копию выдаёт след Inno Setup: деинсталлятор рядом с exe и запись в Uninstall с этой же папкой.
+// установленную копию выдаёт след Inno Setup: деинсталлятор рядом с exe и запись в Uninstall с этой же папкой;
 // в zip их нет, и портабельная копия обновляется zip-ом всегда
 class WindowsInstall {
   WindowsInstall._();

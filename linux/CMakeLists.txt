@@ -41,9 +41,8 @@ endif()
 # of modifying this function.
 function(APPLY_STANDARD_SETTINGS TARGET)
   target_compile_features(${TARGET} PUBLIC cxx_std_14)
-  # -Wno-error=deprecated-declarations: на новых Ubuntu (appindicator 0.5.94+)
-  # tray_manager использует устаревший app_indicator_new — с голым -Werror это
-  # роняет сборку. Оставляем -Werror для всего остального, но deprecation → warning.
+  # -Wno-error=deprecated-declarations: на новых Ubuntu (appindicator 0.5.94+) tray_manager зовёт устаревший
+  # app_indicator_new, и голый -Werror роняет сборку; для всего остального -Werror остаётся
   target_compile_options(${TARGET} PRIVATE -Wall -Werror -Wno-error=deprecated-declarations)
   target_compile_options(${TARGET} PRIVATE "$<$<NOT:$<CONFIG:Debug>>:-O3>")
   target_compile_definitions(${TARGET} PRIVATE "$<$<NOT:$<CONFIG:Debug>>:NDEBUG>")

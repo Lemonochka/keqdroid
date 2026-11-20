@@ -111,8 +111,8 @@ bool WindowsTrayHandleMessage(HWND hwnd,
       return false;
     }
 
-    // перехватываем только спрятанное в трей: у свёрнутого на панели есть кнопка, и съеденный restore
-    // на Windows 10 ломал второе нажатие по ней. спрятанное активирует только второй экземпляр (ActivateExistingInstance)
+    // перехватываем только спрятанное в трей: у свёрнутого на панели есть кнопка, и съеденный restore на Windows 10
+    // ломал второе нажатие по ней; спрятанное активирует только второй экземпляр (ActivateExistingInstance)
     if (g_window_hidden_in_tray || !::IsWindowVisible(hwnd)) {
       WindowsTrayActivateMainWindow();
       if (result != nullptr) {

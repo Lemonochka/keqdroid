@@ -7,7 +7,7 @@ import 'socks5_credentials.dart';
 
 typedef LocalProxyPortResolver = int? Function();
 
-// ставит VpnStateNotifier на Android: берёт креды у работающего ядра
+// ставит VpnStateNotifier на Android: берёт логин и пароль у работающего ядра
 typedef LocalProxyCredentialsSync = Future<void> Function();
 
 LocalProxyCredentialsSync? localProxyCredentialsSync;
@@ -16,8 +16,8 @@ bool isLocalProxyAuthRefusal(Object? error) =>
     error is HttpException &&
     error.message.contains('Proxy failed to establish tunnel (407');
 
-// 407 от своего входа значит, что креды приложения разошлись с ядром. повтор ровно один и только с новыми кредами:
-// бесконечный повтор старых в dart:io уже съедал гигабайты (_ProxyCredentials.authorize)
+// 407 от своего входа приходит, когда логин и пароль приложения разошлись с ядром; повтор ровно один и только
+// с новыми данными, бесконечный повтор старых в dart:io уже съедал гигабайты (_ProxyCredentials.authorize)
 class LocalProxyAuthRetry extends Interceptor {
   LocalProxyAuthRetry(this._dio);
 
@@ -81,7 +81,7 @@ void configureHttpClientForLocalVpnProxy(
 }) {
   client.findProxy = (_) => localProxyDirective(
         resolvePort(),
-        // синглтон читаем в момент запроса: после пересоздания изолята креды приезжают позже
+        // синглтон читаем в момент запроса: после пересоздания изолята логин и пароль приезжают позже
         username: username ?? Socks5Credentials().username,
         password: password ?? Socks5Credentials().password,
       );
@@ -105,7 +105,7 @@ void configureDioForLocalVpnProxy(
       return client;
     },
   );
-  // креды, переданные явно, сверка не поменяет: повторять было бы нечем
+  // логин и пароль, переданные явно, сверка не поменяет, повторять было бы нечем
   if ((username ?? password) == null &&
       !dio.interceptors.any((i) => i is LocalProxyAuthRetry)) {
     dio.interceptors.add(LocalProxyAuthRetry(dio));

@@ -10,7 +10,7 @@ import '../../utils/bidi.dart';
 import '../../utils/error_messages.dart';
 import 'app_theme.dart';
 
-// программа, которая не запущена, в списке процессов отсутствует, и иначе её не выбрать. проверку имени делает вызывающий
+// программы, которая не запущена, в списке процессов нет, и иначе её не выбрать; проверку имени делает вызывающий код
 Future<String?> showAddProcessDialog(BuildContext context) async {
   final l10n = AppLocalizations.of(context)!;
   final ctrl = TextEditingController();

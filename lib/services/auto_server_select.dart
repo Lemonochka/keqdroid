@@ -164,7 +164,7 @@ abstract final class AutoServerSelect {
     ];
   }
 
-  // не ответил никто: это сеть (лифт, метро, переезд с Wi-Fi), а не серверы.
+  // не ответил никто: виновата сеть (лифт, метро, переезд с Wi-Fi), а не серверы;
   // такой провал сутки штрафовал бы лучших и уводил их в конец очереди замеров
   static bool worthRecording(
     Iterable<({String id, bool success, int? latencyMs})> results,

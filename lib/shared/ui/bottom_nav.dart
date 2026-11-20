@@ -15,8 +15,8 @@ List<({IconData icon, String label, bool badge})> appNavDestinations(
       (icon: Icons.settings_rounded, label: l10n.navSettings, badge: false),
     ];
 
-// своя реализация: у NavigationBar во Flutter 3.44 подпись только под иконкой.
-// анимация здесь, а не в пунктах: доля ряда считается из той же величины, что отступы
+// своя реализация: у NavigationBar во Flutter 3.44 подпись только под иконкой;
+// анимация здесь, а не в пунктах, потому что доля ряда считается из той же величины, что отступы
 class AppBottomNav extends StatefulWidget {
   final int index;
   final bool showConnectedBadge;

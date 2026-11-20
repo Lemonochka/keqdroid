@@ -3,7 +3,7 @@ import '../models/server_item.dart';
 import '../models/traffic_route.dart';
 import 'provider_routing.dart';
 
-// null значит «Основной»: свои серверы, подписки без профиля и выключенные профили
+// null у профиля Основной: свои серверы, подписки без профиля и выключенные профили
 RoutingProfile? profileForServer(
   List<RoutingProfile> profiles,
   ServerItem server,

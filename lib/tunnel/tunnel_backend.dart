@@ -15,7 +15,7 @@ abstract class TunnelBackend {
 
   Future<({String username, String password})> fetchSocksCredentials();
 
-  // креды, с которыми поднято работающее ядро; на ПК их держит само приложение
+  // логин и пароль, с которыми поднято работающее ядро; на ПК их держит само приложение
   Future<({String username, String password})?>
       fetchActiveSocksCredentials() async => null;
 
@@ -23,7 +23,7 @@ abstract class TunnelBackend {
 
   Future<void> stopSession();
 
-  // смена сервера на живом mihomo без пересборки туннеля. false значит «не вышло», и смена идёт стопом и стартом
+  // смена сервера на живом mihomo без пересборки туннеля; при false смена идёт остановкой и запуском
   Future<bool> reloadMihomoConfig(TunnelSessionRequest request) async => false;
 
   Future<bool> requestTunnelPermission();

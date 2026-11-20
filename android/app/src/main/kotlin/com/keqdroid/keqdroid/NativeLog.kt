@@ -12,7 +12,7 @@ import java.util.Locale
 object NativeLog {
     const val FILE_NAME = "native.log"
 
-    // как у app.log: столько ещё перешлют, а причина обычно в конце. старая половина в .1
+    // как у app.log: столько ещё перешлют, а причина обычно в конце; старая половина в .1
     private const val MAX_BYTES = 256 * 1024L
 
     @Volatile private var file: File? = null

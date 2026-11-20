@@ -13,7 +13,7 @@ class SingboxOutbounds {
       'subscription this is usually a provider stub: check subscription status '
       'and HWID binding in the provider panel.';
 
-  // у sing-box протокол в type, у xray в protocol, а protocol у SSR-узла sing-box значит обфускацию
+  // у sing-box протокол в type, у xray в protocol, а protocol у SSR-узла sing-box задаёт обфускацию
   static bool looksLike(String raw) => _config(raw) != null;
 
   static ({List<String> links, Map<String, int> skipped}) translate(
@@ -32,7 +32,7 @@ class SingboxOutbounds {
     for (final o in outbounds) {
       final type = _str(o['type']).toLowerCase();
       if (_service.contains(type)) continue;
-      // узел за другим узлом это цепочка, одна ссылка пошла бы к серверу напрямую
+      // узел за другим узлом образует цепочку, а одна ссылка пошла бы к серверу напрямую
       final detour = _str(o['detour']);
       if (detour.isNotEmpty && typeByTag[detour] != 'direct') {
         skip('$type via detour');
@@ -88,7 +88,7 @@ class SingboxOutbounds {
         final name = _str(_map(o['transport'])?['type']);
         return (link: null, kind: '$type over $name');
       }
-      // trojan без TLS генераторы соберут с TLS, здесь это был бы чужой сервер
+      // trojan без TLS генераторы соберут с TLS и получат чужой сервер
       if (type == 'trojan' && security.isEmpty) {
         return (link: null, kind: 'trojan without tls');
       }
@@ -231,7 +231,7 @@ class SingboxOutbounds {
   ) {
     final password = _str(o['password']);
     final server = _str(o['server']);
-    // диапазон у sing-box через двоеточие, у ссылки через дефис. со списком портов server_port ядро не читает
+    // диапазон у sing-box через двоеточие, у ссылки через дефис; со списком портов server_port ядро не читает
     final ports = [
       for (final range in _list(o['server_ports'])) range.replaceAll(':', '-'),
     ];

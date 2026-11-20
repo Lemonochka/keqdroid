@@ -1,8 +1,8 @@
 import '../core/exceptions.dart';
 import 'tun_failure_hints.dart';
 
-// WaitForInterface в api/adapter.c wintun 0.14.1. ядро, убитое посреди ожидания, оставляет
-// адаптер с ошибкой, и следующий запуск тратит на него ещё столько же
+// WaitForInterface в api/adapter.c wintun 0.14.1; ядро, убитое посреди ожидания, оставляет адаптер с ошибкой,
+// и следующий запуск тратит на него ещё столько же
 const kWintunWaitMs = 15000;
 
 // текст ошибки говорит три раза подряд, столько же пробует сам mihomo (listener/sing_tun/server_windows.go)

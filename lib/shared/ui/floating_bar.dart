@@ -61,8 +61,8 @@ class FloatingJump {
   final VoidCallback onTap;
 }
 
-// в Модерне нижняя навигация висит лентой над краем экрана, кнопка действия вкладки
-// стоит с ней в ряд, стрелка прокрутки с другой стороны. без тени
+// в Модерне нижняя навигация висит лентой над краем экрана, кнопка действия вкладки стоит с ней в ряд,
+// а стрелка прокрутки с другой стороны; без тени
 abstract final class FloatingBar {
   static const height = 64.0;
   static const margin = 16.0;
@@ -76,8 +76,8 @@ abstract final class FloatingBar {
       !WindowBreakpoints.isExpandedMobile(context) &&
       styleOf(context) != null;
 
-  // боком лента стоит у края: кнопку и стрелку берёт она, но места снизу не занимает
-  // и от прокрутки не прячется. на телевизоре прежняя панель, её водят пультом
+  // Боком лента стоит у края: кнопку и стрелку берёт она, но места снизу не занимает и от прокрутки
+  // не прячется. На телевизоре прежняя панель, её водят пультом
   static bool onRail(BuildContext context) =>
       WindowBreakpoints.isExpandedMobile(context) &&
       !PlatformBootstrap.isTelevision &&
@@ -121,7 +121,7 @@ abstract final class FloatingBar {
 
   static ui.FragmentShader? newDropShader() => _drop?.fragmentShader();
 
-  // лента на текущем экране: уведомления встают над ней. держит та панель, что поставила
+  // лента на текущем экране, уведомления встают над ней; держит та панель, что поставила
   static final barOnScreen = ValueNotifier<Object?>(null);
 
   // плитки ленты ярче карточек и фона: в тёмной теме даже Highest с ними сливался

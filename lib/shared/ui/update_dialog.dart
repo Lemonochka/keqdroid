@@ -26,8 +26,8 @@ class UpdatePrompt {
 
   static const _prefAutoPromptedAt = 'update_auto_prompted_at';
 
-  // проверка обновлений идёт как раньше, реже только окно: иначе карточка версии называла бы старую версию актуальной.
-  // часы ушли назад, значит отметке верить нельзя
+  // проверка обновлений идёт как раньше, реже только окно, иначе карточка версии называла бы старую версию
+  // актуальной; если часы ушли назад, отметке верить нельзя
   static Future<bool> autoPromptDue(int days) async {
     final prefs = await SharedPreferences.getInstance();
     final last = prefs.getInt(_prefAutoPromptedAt);

@@ -5,7 +5,7 @@ import 'package:yaml/yaml.dart';
 import 'geo_asset_index.dart';
 import 'geo_rule_sanitizer.dart';
 
-// храним JSON: YAML 1.2 его надмножество, и mihomo разбирает тем же парсером. инбаунды автора не берём никогда
+// храним JSON: YAML 1.2 его надмножество, и mihomo разбирает тем же парсером; инбаунды автора не берём никогда
 class CustomClashConfig {
   CustomClashConfig._(this.map);
 
@@ -47,7 +47,7 @@ class CustomClashConfig {
     'tuic-server',
     'tunnels',
     'iptables',
-    // автообновление geo это поход в сеть до того, как поднялся туннель
+    // автообновление geo пошло бы в сеть раньше, чем поднялся туннель
     'geo-auto-update',
     'geo-update-interval',
     'geox-url',
@@ -181,7 +181,7 @@ class CustomClashConfig {
     }
   }
 
-  // слияние << из YAML 1.1: package:yaml его не знает, а go-yaml у mihomo раскрывает. без этого узлы на якорях теряли type
+  // слияние << из YAML 1.1: package:yaml его не знает, а go-yaml у mihomo раскрывает; без этого узлы на якорях теряли type
   static Object? _plain(Object? node, {bool yamlMerge = false}) {
     if (node is Map) {
       final out = <String, dynamic>{};
@@ -298,8 +298,8 @@ class CustomClashConfig {
     'PASS-RULE',
   };
 
-  // узел со звеньями dialer-proxy, без них ядро его не соберёт. звеном бывает и группа (BasicOption в base.go), тогда едет её состав.
-  // null, если звена нет в конфиге или состав группы набирает ядро
+  // Узел со звеньями dialer-proxy, без них ядро его не соберёт. Звеном бывает и группа (BasicOption в base.go),
+  // тогда едет её состав. null, если звена нет в конфиге или состав группы набирает ядро
   static ({List<Map<String, dynamic>> proxies, List<Map<String, dynamic>> groups})?
       withHops(
     Map<String, dynamic> node,
@@ -542,8 +542,8 @@ class CustomClashConfig {
     return _aliasCommaTargets(_aliasTrimmedTarget(out));
   }
 
-  // ядро срезает пробелы у цели правила (trimArr в rules/common/base.go), а у имени узла нет.
-  // наши правила ведут на обрезанное имя, ему группа-двойник
+  // ядро срезает пробелы у цели правила (trimArr в rules/common/base.go), а у имени узла нет;
+  // наши правила ведут на обрезанное имя, и ему заводится группа-двойник
   Map<String, dynamic> _aliasTrimmedTarget(Map<String, dynamic> out) {
     final raw = _primaryName;
     final target = primaryTarget;
@@ -570,8 +570,8 @@ class CustomClashConfig {
     };
   }
 
-  // ядро режет правило по запятым без экранирования (rules/common/base.go), узел с запятой в имени правилом не найти.
-  // правила ведём на группу-двойник с широкой запятой, сам узел и ссылки на него прежние
+  // ядро режет правило по запятым без экранирования (rules/common/base.go), и узел с запятой в имени правилом
+  // не найти; правила ведём на группу-двойник с широкой запятой, сам узел и ссылки на него прежние
   static Map<String, dynamic> _aliasCommaTargets(Map<String, dynamic> out) {
     final authorGroups = out['proxy-groups'];
     final taken = <String>{
@@ -637,8 +637,8 @@ class CustomClashConfig {
     });
   }
 
-  // на коде, которого нет в geosite.dat, mihomo отказывает всему конфигу (list ru-direct not found).
-  // правило заменяем по таблице или выбрасываем, как у xray. lan у GEOIP псевдокод ядра, базы ему не надо
+  // на коде, которого нет в geosite.dat, mihomo отказывает всему конфигу (list ru-direct not found);
+  // правило заменяем по таблице или выбрасываем, как у xray, а lan у GEOIP ядро понимает без базы
   ({CustomClashConfig config, List<String> dropped}) withKnownGeo(
     GeoAssetIndex index,
   ) {

@@ -22,7 +22,7 @@ class CustomXrayConfig {
   static const _remarkKeys = ['remarks', 'remark', 'ps', 'name', 'label'];
 
   // остальное ядро исполняет на устройстве: api и metrics открывают порты, env меняет окружение ядра,
-  // geodata по расписанию перезаписывает файлы в каталоге геобаз, а на Windows это каталог программы
+  // geodata по расписанию перезаписывает файлы в каталоге геобаз, а на Windows там каталог программы
   static const _providerKeys = {
     'dns',
     'routing',
@@ -54,7 +54,7 @@ class CustomXrayConfig {
   static CustomXrayConfig? _fromMap(Map<String, dynamic> map) {
     final outbounds = _outboundsOf(map);
     if (outbounds.isEmpty) return null;
-    // у sing-box аутбаунд по type, у xray по protocol, а protocol у SSR-узла sing-box значит обфускацию
+    // у sing-box аутбаунд различается по type, у xray по protocol, а protocol у SSR-узла sing-box задаёт обфускацию
     if (!outbounds.any(_isXrayOutbound)) return null;
     return CustomXrayConfig._(map);
   }
@@ -214,7 +214,7 @@ class CustomXrayConfig {
     return out;
   }
 
-  // обратный прокси VLESS: сервер сам открывает соединения к человеку, и direct-private пускает их в локальную сеть
+  // обратный прокси VLESS: сервер сам открывает соединения к пользователю, и direct-private пускает их в локальную сеть
   static Map<String, dynamic> _withoutReverse(Map<String, dynamic> outbound) {
     final settings = outbound['settings'];
     if (outbound['protocol']?.toString().toLowerCase() != 'vless' ||
@@ -225,7 +225,8 @@ class CustomXrayConfig {
     return {...outbound, 'settings': _asStringMap(settings)..remove('reverse')};
   }
 
-  // script это Lua со стандартными библиотеками, то есть с os.execute; webhook шлёт сведения о соединениях на чужой адрес
+  // script запускает Lua со стандартными библиотеками, а с ними и os.execute; webhook шлёт сведения о соединениях
+  // на чужой адрес
   static Map<String, dynamic> _routingForCore(Map<dynamic, dynamic> routing) {
     final out = _asStringMap(routing)..remove('script');
     final rules = out['rules'];
@@ -271,8 +272,8 @@ class CustomXrayConfig {
     return _asStringMap(raw);
   }
 
-  // хвост для случая, когда авторский резолвер недостижим: DPI режет udp:1.1.1.1:53 на российском входе,
-  // а наш DoH идёт по 443. записи с domains в хвост не идут
+  // хвост на случай, когда авторский резолвер недостижим: DPI режет udp:1.1.1.1:53 на российском входе,
+  // а наш DoH идёт по 443; записи с domains в хвост не идут
   static Map<String, dynamic>? mergeDns(
     Map<String, dynamic>? author,
     Map<String, dynamic>? fallback,
@@ -383,8 +384,8 @@ class CustomXrayConfig {
     return out;
   }
 
-  // «Не учитывать правила провайдера»: уходят его сайты напрямую и в блок и его catch-all.
-  // правила к его узлам и технические (протокол, порт, вход) остаются, без них ломаются конфиги на несколько узлов
+  // Не учитывать правила провайдера: уходят его сайты напрямую и в блок и его catch-all. Правила к его узлам
+  // и технические (протокол, порт, вход) остаются, без них ломаются конфиги на несколько узлов
   CustomXrayConfig withoutProviderRules() {
     final routing = json['routing'];
     if (routing is! Map) return this;
@@ -455,8 +456,8 @@ class CustomXrayConfig {
     'network',
   };
 
-  // порт 0-65535 тоже catch-all: так его пишут провайдеры, у которых в конце «всё напрямую»
-  // ip 0.0.0.0/0 тоже: им кончался шаблон панели (16.11.2026) и обыгрывал маршрут человека напрямую
+  // порт 0-65535 тоже catch-all: так его пишут провайдеры, у которых в конце всё напрямую;
+  // ip 0.0.0.0/0 тоже, им кончался шаблон панели (16.11.2026) и перебивал маршрут пользователя напрямую
   static bool _isCatchAll(Map<String, dynamic> rule) {
     final conditions = rule.keys.where((k) => !_notConditions.contains(k)).toSet();
     if (conditions.isEmpty) return true;
@@ -650,8 +651,8 @@ List<String> stripUnknownGeoFromConfig(
             rule[field] = cleaned;
           }
         }
-        // условие вычистилось, значит правило стало бы шире задуманного ({ip: geoip:sberbank, port: 443} -> весь 443).
-        // урезать можно, расширять нельзя. без условий xray падает на this rule has no effective fields
+        // Если условие вычистилось, правило стало бы шире задуманного ({ip: geoip:sberbank, port: 443} -> весь 443).
+        // Урезать можно, расширять нельзя. Без условий xray падает на this rule has no effective fields
         if (lostCondition || !_ruleHasCondition(rule)) continue;
         keptRules.add(rule);
       }
@@ -673,7 +674,7 @@ List<String> stripUnknownGeoFromConfig(
         // сервер без доменов стал бы общим для всех запросов
         if (domains != null && domains.isEmpty) continue;
         if (domains != null) server['domains'] = domains;
-        // пустой expectIPs значит принимать любой адрес, шире, чем хотел автор
+        // пустой expectIPs пропускает любой адрес, шире, чем хотел автор
         var lostFilter = false;
         for (final field in const ['expectIPs', 'expectedIPs']) {
           final original = server[field];
@@ -696,7 +697,7 @@ List<String> stripUnknownGeoFromConfig(
   return dropped;
 }
 
-// ruleTag и domainMatcher это метки, а не условия. список по RawFieldRule в infra/conf/router.go:
+// ruleTag и domainMatcher служат метками, а не условиями; список по RawFieldRule в infra/conf/router.go,
 // без process правило по программе из готового конфига выбрасывалось как пустое
 bool _ruleHasCondition(Map<dynamic, dynamic> rule) => const [
       'domain',

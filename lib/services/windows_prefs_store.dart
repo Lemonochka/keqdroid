@@ -6,8 +6,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 import 'package:shared_preferences_platform_interface/types.dart';
 
-// тот же файл и формат, что у SharedPreferencesWindows 2.4.1, но тот писал весь файл синхронно в потоке
-// интерфейса: 575 КБ стоили 5,7 мс в медиане и до 22 мс (замер 18.11.2026). запись начинается сразу,
+// Тот же файл и формат, что у SharedPreferencesWindows 2.4.1, но тот писал весь файл синхронно в потоке
+// интерфейса: 575 КБ стоили 5,7 мс в медиане и до 22 мс (замер 18.11.2026). Запись начинается сразу,
 // не по таймеру: закрытие окна без трея гасит процесс мимо Dart
 class WindowsPrefsStore extends SharedPreferencesStorePlatform {
   WindowsPrefsStore({Future<Directory> Function()? directory})

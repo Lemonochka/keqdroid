@@ -476,7 +476,7 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
     );
   }
 
-  // глобальный обработчик: Focus.onKeyEvent на Linux/GTK событий не получал. физическая V работает и на ЙЦУКЕН
+  // глобальный обработчик: Focus.onKeyEvent на Linux/GTK событий не получал; физическая V работает и на ЙЦУКЕН
   bool _onGlobalKey(KeyEvent event) {
     if (event is! KeyDownEvent || !mounted) return false;
     if (Platform.isLinux && _isQuitShortcut(event)) {
@@ -528,7 +528,7 @@ class _DesktopTabHost extends StatelessWidget {
   }
 }
 
-// подписи для окна портала на Wayland: там человек видит, что подтверждает
+// подписи для окна портала на Wayland: там пользователь видит, что подтверждает
 Map<HotkeyAction, String> hotkeyDescriptions(AppLocalizations l10n) => {
       HotkeyAction.toggleConnection: l10n.hotkeyActionToggleConnection,
       HotkeyAction.toggleTunMode: l10n.hotkeyActionToggleTun,

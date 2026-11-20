@@ -6,8 +6,8 @@ import 'package:path_provider/path_provider.dart';
 
 import '../core/app_logger.dart';
 
-// плагин на Windows/Linux пишет JSON без атомарной замены, и перезагрузка посреди записи
-// оставляет файл из нулей. тогда getInstance() падает до runApp, и окно не появляется вовсе
+// плагин на Windows/Linux пишет JSON без атомарной замены, и перезагрузка посреди записи оставляет файл из нулей;
+// тогда getInstance() падает до runApp, и окно не появляется вовсе
 class PrefsRecovery {
   PrefsRecovery._();
 

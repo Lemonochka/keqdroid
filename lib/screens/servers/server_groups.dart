@@ -64,7 +64,7 @@ class _ServersListPanel extends ConsumerWidget {
     ];
 
 
-    // параметром сверху: вотч внутри карточки перестроил бы уходящий при кросс-фейде список
+    // передаём сверху: подписка на провайдер внутри карточки пересобрала бы и список, уходящий при смене
     final wantedColumns = ref.watch(
       settingsNotifierProvider.select(
         (a) => a.value == null ? 1 : ServerRow.wantedColumns(a.value!),
@@ -200,7 +200,7 @@ class _GroupHeaderBackground extends StatelessWidget {
     final headerFraction =
         _subCardRowHeight / (_subCardRowHeight + fadeHeight * open);
     final fadeStart = headerFraction * 0.72;
-    // гаснет по ходу всего сворачивания, а не за последний 1 dp. ниже 5% его нет: на отдаче
+    // гаснет по ходу всего сворачивания, а не за последний 1 dp; ниже 5% его нет, потому что на отдаче
     // пружины группа снова приоткрывается на доли процента, и затемнение вспыхивало
     final fadeStrength = ((open - 0.05) / 0.95).clamp(0.0, 1.0);
     final veils = Stack(
@@ -227,8 +227,8 @@ class _GroupHeaderBackground extends StatelessWidget {
         top: const Radius.circular(outer),
         bottom: Radius.circular(outer * (1 - open)),
       ),
-      // картинка и затемнение сглаживались по краю каждое само, и под картинкой светилась полоска
-      // до серверов (ПК). сперва слой, потом скругление; картинка шире шапки на 1 dp
+      // картинка и затемнение сглаживались по краю каждое само, и под картинкой светилась полоска до серверов (ПК);
+      // сперва слой, потом скругление, а картинка шире шапки на 1 dp
       clipBehavior:
           PlatformBootstrap.isDesktop ? Clip.antiAliasWithSaveLayer : Clip.antiAlias,
       child: Stack(
@@ -1421,8 +1421,8 @@ class _SubCardState extends ConsumerState<_SubCard>
   List<ServerItem>? _sortedSource;
   ServerSortMode? _sortedMode;
 
-  // пинг раз в 200 мс перестраивает группу целиком. плитка, у которой ничего не поменялось,
-  // уходит прежним виджетом и не собирается заново: свой пинг она и так слушает сама
+  // Пинг раз в 200 мс перестраивает группу целиком. Плитка, у которой ничего не поменялось, уходит прежним
+  // виджетом и не собирается заново, свой пинг она и так слушает сама
   final _tiles = <String, ({Object inputs, Widget tile})>{};
   List<ServerItem> _shown = const [];
 
@@ -1521,8 +1521,8 @@ class _SubCardState extends ConsumerState<_SubCard>
         if (MediaQuery.disableAnimationsOf(context)) {
           _open.value = target;
         } else {
-          // сама пружина после перелёта встаёт на 0,0002, и шапка считала группу приоткрытой.
-          // сворачивание упруже: перелёт за ноль даёт отдачу, как у разворачивания перелёт за 1
+          // сама пружина после перелёта встаёт на 0,0002, и шапка считала группу приоткрытой; сворачивание упруже,
+          // перелёт за ноль даёт отдачу, как у разворачивания перелёт за 1
           ExpressiveMotion.springTo(
             _open,
             target,
@@ -1687,7 +1687,7 @@ class _SubCardState extends ConsumerState<_SubCard>
         index: index,
         count: servers.length,
         columns: columns,
-        // радиус концентричный углу группы, со спековыми 16dp последний сервер выпирал за край
+        // радиус повторяет угол группы: с 16 dp из спецификации последний сервер выпирал за край
         endCorner: ExpressiveShape.extraLarge - ExpressiveListSegment.gap,
       ).resolve(direction);
       final margin = ExpressiveListSegment.segmentMargin(

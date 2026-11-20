@@ -34,7 +34,7 @@ class QrImageDecoder {
     return fromGray(gray);
   }
 
-  // декодирует движок, а значит те же форматы, что Image.file: PNG, JPEG, WebP, BMP, GIF
+  // картинку разбирает движок, поэтому годятся те же форматы, что у Image.file: PNG, JPEG, WebP, BMP, GIF
   static Future<GrayImage?> grayFromEncoded(Uint8List bytes) async {
     final buffer = await ui.ImmutableBuffer.fromUint8List(bytes);
     final descriptor = await ui.ImageDescriptor.encoded(buffer);

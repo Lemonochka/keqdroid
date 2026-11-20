@@ -38,7 +38,7 @@ class WindowsDesktopService {
     required bool enabled,
     required bool elevated,
     bool allowElevation = false,
-    // снять выключатель Диспетчера задач, только по нажатию человека
+    // снять выключатель Диспетчера задач, только по нажатию пользователя
     bool approve = false,
   }) async {
     if (!Platform.isWindows) return false;

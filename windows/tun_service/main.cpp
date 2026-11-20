@@ -33,14 +33,15 @@ constexpr wchar_t kParamsKey[] =
 constexpr DWORD kMaxFrame = 64u << 20;
 constexpr uint64_t kMaxCoreBytes = 256ull << 20;
 constexpr uint64_t kMaxGeoBytes = 256ull << 20;
-// приложение сверяет это число и суммы ядер со своими: иначе просит обновить службу
+// приложение сверяет это число и суммы ядер со своими и при расхождении просит обновить службу
 constexpr int kProtocolVersion = 1;
 
 // SYSTEM и администраторы, без наследования от Program Files: читать скопированное пользователь не должен
 constexpr wchar_t kPrivateDirSddl[] = L"D:P(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)";
 
-// обновлятор mihomo (POST /upgrade) переименовывает работающий exe и кладёт на его место скачанный. ядру от имени SYSTEM
-// в каталоге ядер нельзя создавать, переписывать и удалять: запрет на SID SYSTEM, служба снимает его только на свою запись
+// Обновлятор mihomo (POST /upgrade) переименовывает работающий exe и кладёт на его место скачанный. Ядру от имени
+// SYSTEM в каталоге ядер нельзя создавать, переписывать и удалять: запрет стоит на SID SYSTEM, служба снимает его
+// только на свою запись
 constexpr wchar_t kLockedBinSddl[] =
     L"D:P(D;OICI;0x10046;;;SY)(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)";
 
@@ -663,7 +664,7 @@ void ServeClient(HANDLE handle) {
       pipe.Write("error\nunknown command");
     }
   }
-  // приложение закрылось или упало: ядро уходит вместе с ним, как было с job у приложения.
+  // приложение закрылось или упало, и ядро уходит вместе с ним, как было с job у приложения;
   // канал рвём до ожидания потоков, иначе поток вывода висел бы на записи в него
   StopCore(&run, false);
   ::DisconnectNamedPipe(handle);
@@ -913,8 +914,8 @@ int Uninstall() {
     ::CloseServiceHandle(service);
   }
   ::CloseServiceHandle(scm);
-  // свой exe в каталоге службы удалить нельзя, пока он работает: удаляют копией из приложения.
-  // процесс остановленной службы отпускает exe не сразу, а что так и не отпустилось, Windows сотрёт при перезагрузке
+  // Свой exe в каталоге службы удалить нельзя, пока он работает, поэтому удаляют копией из приложения.
+  // Процесс остановленной службы отпускает exe не сразу, а что так и не отпустилось, Windows сотрёт при перезагрузке
   if (_wcsicmp(SelfPath().c_str(), ServiceExePath().c_str()) != 0) {
     const std::wstring dir = InstallDir();
     for (int i = 0; i < 25; ++i) {

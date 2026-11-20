@@ -10,7 +10,7 @@ const kTunFallbackInterfaceName = 'tun-keqdis2';
 String xrayTunNameForAttempt(int attempt) =>
     attempt == 1 ? kTunInterfaceName : kTunFallbackInterfaceName;
 
-// GUID у xray это MD5 имени (proxy/tun/tun_windows.go), у sing-tun в mihomo MD5 от wintun и имени
+// GUID у xray считается как MD5 имени (proxy/tun/tun_windows.go), у sing-tun в mihomo как MD5 от wintun и имени
 String xrayWintunInstanceId(String name) =>
     _instanceId(md5.convert(utf8.encode(name)).bytes);
 

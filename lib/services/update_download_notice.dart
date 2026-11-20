@@ -7,8 +7,8 @@ import 'package:flutter/widgets.dart';
 import '../l10n/app_localizations.dart';
 import '../platform/vpn_native_bridge.dart';
 
-// установщик из фона Android молча не открывает (запрет с Android 10, VPN не исключение), а плагин отвечает done:
-// окно закрывалось, и человек качал ту же версию снова. поэтому установщик ждёт, пока приложение вернётся
+// Установщик из фона Android молча не открывает (запрет с Android 10, VPN не исключение), а плагин отвечает done:
+// окно закрывалось, и пользователь качал ту же версию снова. Поэтому установщик ждёт, пока приложение вернётся
 class UpdateDownloadNotice {
   UpdateDownloadNotice(
     this._l10n,

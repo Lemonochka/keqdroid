@@ -63,7 +63,7 @@ List<String> unknownGeoTokens(String raw, GeoAssetIndex index) {
   return unknown;
 }
 
-// замены по составу категории, не по похожему имени: ru-blocked тоже про ru, но это обратное ru-direct
+// замены по составу категории, а не по похожему имени: ru-blocked тоже про ru, но по смыслу обратен ru-direct
 const _geositeAliases = {
   // huzgnm/ru-direct: category-ru v2fly + ru-available-only-inside runetfreedom + зоны .ru .su .рф
   'ru-direct': ['category-ru', 'ru-available-only-inside', 'tld-ru'],
@@ -74,7 +74,7 @@ const _geositeAliases = {
   'apple-cn': ['apple@cn'],
 };
 
-// незнакомый код на известные, если для него есть замена и вся она есть в базе. иначе null
+// незнакомый код на известные, если для него есть замена и вся она есть в базе, иначе null
 List<String>? geoSubstitutes(String token, GeoAssetIndex index) {
   final trimmed = token.trim();
   final colon = trimmed.indexOf(':');

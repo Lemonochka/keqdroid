@@ -4,7 +4,7 @@ import '../models/traffic_route.dart';
 import 'routing_presets.dart';
 import 'rule_lists.dart';
 
-// порядок разделов это порядок проверки в ядре: блокировка везде, отдельные приложения раньше общих
+// порядок разделов совпадает с порядком проверки в ядре: блокировка везде, отдельные приложения раньше общих
 enum RouteSection { block, apps, allApps }
 
 RouteSection sectionOf(TrafficRoute route) {
@@ -12,8 +12,9 @@ RouteSection sectionOf(TrafficRoute route) {
   return route.allApps ? RouteSection.allApps : RouteSection.apps;
 }
 
-// у приложений сайты и списки выше всего трафика: Chrome YouTube на Германию решает раньше Chrome всё на Нидерланды.
-// у всех приложений напрямую, другой сервер, через VPN, как стояли прежние списки, чтобы у обновившихся ничего не переставилось
+// У приложений сайты и списки выше всего трафика: Chrome YouTube на Германию решает раньше Chrome всё на Нидерланды.
+// У всех приложений напрямую, другой сервер, через VPN, как стояли прежние списки, чтобы у обновившихся ничего
+// не переставилось
 List<TrafficRoute> routesIn(RouteSection section, List<TrafficRoute> routes) {
   final inSection = [
     for (final r in routes)
@@ -39,8 +40,8 @@ int _targetRank(TrafficRoute r) => switch (r.target) {
       _ => 2,
     };
 
-// перетащенные стоят по своим местам, остальные встают за последним маршрутом своей цели или целей выше.
-// без единого места это прежняя сортировка по цели
+// перетащенные стоят по своим местам, остальные встают за последним маршрутом своей цели или целей выше;
+// пока мест нет, выходит прежняя сортировка по цели
 List<TrafficRoute> _allAppsOrder(List<TrafficRoute> inSection) {
   final placed = [
     for (final r in inSection)
@@ -116,7 +117,7 @@ bool routeIsEmpty(TrafficRoute route) =>
     route.content != RouteContent.allTraffic &&
     routingEntries(routeEntriesText(route)).isEmpty;
 
-// null, если набранное не порты: 0, больше 65535, перевёрнутый диапазон, буквы. пусто значит все порты
+// null, если набранное не порты: 0, больше 65535, перевёрнутый диапазон, буквы; пустая строка берёт все порты
 List<(int, int)>? routePortRanges(String text) {
   final out = <(int, int)>[];
   for (final part in text.split(RegExp(r'[\s,;/]+'))) {
@@ -138,9 +139,9 @@ bool routeHasProtocol(TrafficRoute route) =>
 bool _foldable(TrafficRoute route) =>
     route.enabled && route.allApps && !routeHasProtocol(route);
 
-// маршруты отдельных приложений сюда не попадают: в общих списках их сайты достались бы всем.
-// не едет на свой сервер, значит через VPN: связь важнее, причину покажет карточка.
-// при своём порядке сворачивается только блокировка: у трёх списков порядок один, остальные едут правилами (routeProtocolRules)
+// Маршруты отдельных приложений сюда не попадают, в общих списках их сайты достались бы всем. Маршрут, который
+// не едет на свой сервер, идёт через VPN: связь важнее, причину покажет карточка. При своём порядке сворачивается
+// только блокировка: у трёх списков порядок один, остальные едут правилами (routeProtocolRules)
 AppSettings foldRoutes(
   AppSettings settings,
   List<TrafficRoute> routes, {

@@ -417,7 +417,7 @@ class PingService {
     return results.first;
   }
 
-  // каждый замер это процесс с Go-рантаймом: 28 МБ у keqrnel, 19 у mihomo.
+  // каждый замер поднимает процесс с Go-рантаймом, 28 МБ у keqrnel и 19 у mihomo;
   // на телефоне больше шести держать негде
   static int get urlPingConcurrency => PlatformBootstrap.isDesktop ? 16 : 6;
 
@@ -744,8 +744,8 @@ class PingService {
               outboundInterface: outboundInterface,
             );
 
-  // в TUN туннель нюхает SNI раньше правила своих процессов и подменяет адрес REALITY на маску:
-  // замер сервера с маской store.teamfortress.com уходил к Valve. выходим той сетью, что ядро туннеля
+  // в TUN туннель нюхает SNI раньше правила своих процессов и подменяет адрес REALITY на маску, и замер сервера
+  // с маской store.teamfortress.com уходил к Valve; выходим той сетью, что ядро туннеля
   static Future<String?> _tunBypassInterface(AppSettings settings) async {
     if (!Platform.isWindows || !settings.tun.autoRoute) return null;
     final backend = WindowsTunnelBackend.activeInstance;
@@ -781,7 +781,7 @@ class PingService {
   }) async {
     // порт на каждый замер: с общим проба уходила в чужое ядро и мерила не тот сервер
     final socksPort = await _freePort(avoid: takenPorts);
-    // внутри try: исключение генератора иначе роняло бы весь батч
+    // внутри try: исключение генератора иначе роняло бы всю пачку
     try {
       final core = pingCoreFor(server.config, settings, viaTemplate: viaTemplate);
       final config = _pingConfigFor(
@@ -819,8 +819,8 @@ class PingService {
     }
   }
 
-  // у имени только AAAA, ответ придёт, лишь если выход сервера ходит по IPv6. замер всегда идёт по https, а
-  // ipv6.msftconnecttest.com его не держит: 20.11 через два сервера с IPv6 он молчал, этот отвечал 204
+  // У имени только AAAA, ответ придёт, лишь если выход сервера ходит по IPv6. Замер всегда идёт по https, а
+  // ipv6.msftconnecttest.com его не держит: 20.11 через два сервера с IPv6 он молчал, а этот отвечал 204
   static const ipv6ProbeUrl = 'https://ipv6.google.com/generate_204';
 
   static const ipv6ProbeMaxAge = Duration(hours: 24);

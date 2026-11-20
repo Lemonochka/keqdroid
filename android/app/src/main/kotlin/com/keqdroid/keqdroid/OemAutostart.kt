@@ -7,8 +7,8 @@ import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 
-// разрешения Автозапуск в Android нет: состояние снаружи не прочитать, экран каждая прошивка прячет по-своему.
-// экраны из библиотеки AutoStarter, realme она не знает, хотя у него та же ColorOS
+// разрешения Автозапуск в Android нет: состояние снаружи не прочитать, а экран каждая прошивка прячет по-своему;
+// экраны взяты из библиотеки AutoStarter, realme она не знает, хотя у него та же ColorOS
 object OemAutostart {
 
     // пакет и класс экрана

@@ -9,8 +9,8 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
 
-// прошивки с Автозапуском отнимают у плитки старт сервиса, но окно открыть дают, а из окна на переднем плане сервис стартует всегда.
-// образец TunnelToggleActivity в WireGuard
+// прошивки с Автозапуском отнимают у плитки старт сервиса, но окно открыть дают, а из окна на переднем плане
+// сервис стартует всегда; образец TunnelToggleActivity в WireGuard
 class QuickConnectActivity : ComponentActivity() {
 
     companion object {
@@ -29,7 +29,7 @@ class QuickConnectActivity : ComponentActivity() {
     private val consent =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             askingConsent = false
-            // отказ в согласии это ответ, закрываемся молча
+            // отказ в согласии тоже ответ, закрываемся молча
             if (result.resultCode != RESULT_OK) {
                 pending = null
                 finish()
@@ -43,7 +43,7 @@ class QuickConnectActivity : ComponentActivity() {
 
         val start = KeqdisVpnService.snapshotStartIntent(this)
         if (start == null) {
-            // снапшот пропал, подключит приложение
+            // снимок пропал, подключит приложение
             openApp()
             finish()
             return

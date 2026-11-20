@@ -66,7 +66,7 @@ class ServerRow extends StatelessWidget {
   static bool fitsCard(double width, TextScaler textScaler) =>
       width >= _cardChrome + textScaler.scale(16) / 16 * _cardMinText;
 
-  // 16 + флаг 40 + 12 слева, 16 справа. меньше 100 на текст: на Pixel 6a при 120% резались имена, при 140% и пинг
+  // 16 + флаг 40 + 12 слева, 16 справа; меньше 100 на текст нельзя, на Pixel 6a при 120% резались имена, при 140% и пинг
   static const double _cardChrome = 84;
   static const double _cardMinText = 100;
 

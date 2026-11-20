@@ -183,7 +183,7 @@ class BackupTransferServer {
       }
       if (_done) return _reply(response, HttpStatus.gone);
       _done = true;
-      // выбор, что восстановить, ждёт человека: отправитель не должен висеть до него
+      // выбор, что восстановить, ждёт пользователя, а отправитель не должен висеть до него
       final handled = _onReceived!(plain);
       await _reply(response, HttpStatus.ok);
       await handled;

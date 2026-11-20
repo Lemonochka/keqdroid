@@ -138,7 +138,7 @@ String? _adblockDomain(String rule) {
   } else if (body.endsWith('^')) {
     body = body.substring(0, body.length - 1);
   } else if (body.endsWith('.')) {
-    // ||ads.example. это начало имени, а не домен
+    // ||ads.example. задаёт начало имени, а не домен
     return null;
   }
   // ||*.example^ это только поддомены, правило на весь домен блокировало бы больше

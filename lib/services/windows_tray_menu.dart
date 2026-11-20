@@ -92,8 +92,8 @@ class WindowsTrayMenu with TrayListener {
 
   @override
   void onTrayIconRightMouseDown() {
-    // повторный правый клик должен закрыть меню: Windows гасит его сама, но тот же клик
-    // приходит к нам уведомлением. ловим и флагом, и окном времени, порядок не гарантирован
+    // повторный правый клик должен закрыть меню: Windows гасит его сама, но тот же клик приходит к нам
+    // уведомлением, поэтому ловим и флагом, и окном времени, порядок не гарантирован
     if (_menuOpen) return;
     final closedAt = _menuClosedAt;
     if (closedAt != null &&

@@ -55,7 +55,7 @@ class _ModernConnectPanel extends ConsumerWidget {
         serverSwitchInProgress || vpnStatus == VpnStatus.connecting;
     final isError = vpnStatus == VpnStatus.error && !serverSwitchInProgress;
 
-    // connecting тапабелен: это отмена попытки
+    // в состоянии connecting нажатие отменяет попытку
     final VoidCallback? onTap =
         vpnStatus == VpnStatus.disconnecting ? null : () => onToggle(vpnStatus);
 

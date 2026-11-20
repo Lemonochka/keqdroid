@@ -334,8 +334,8 @@ class Subscription {
         protocolCounts: protocolCounts ?? this.protocolCounts,
       );
 
-  // новое поле модели добавлять и сюда, иначе оно слетает при каждом обновлении подписки
-  // copyWith не годится: для него null значит не трогать, а снятое объявление надо стирать
+  // новое поле модели добавлять и сюда, иначе оно слетает при каждом обновлении подписки;
+  // copyWith не годится: у него null оставляет поле как было, а снятое объявление надо стирать
   Subscription withProfileHeaders({
     required String? title,
     required String? announce,

@@ -7,8 +7,8 @@ import 'proxy_chain.dart';
 import 'traffic_routes.dart';
 import 'vpn_core_support.dart';
 
-// из готового конфига в маршрут идут только его выходы: правила и DNS автора в чужую сессию не вставить.
-// цепочку берёт только mihomo: у xray сервер маршрута из ссылки собирается одним outbound (config_gen.dart)
+// из готового конфига в маршрут идут только его выходы, правила и DNS автора в чужую сессию не вставить;
+// цепочку берёт только mihomo, у xray сервер маршрута из ссылки собирается одним outbound (config_gen.dart)
 bool routeServerSupported(String config, VpnBackend core) =>
     switch (detectServerFormat(config)) {
       ServerFormat.link => backendsForLink(config).contains(core),

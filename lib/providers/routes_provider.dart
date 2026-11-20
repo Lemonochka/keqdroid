@@ -1,6 +1,6 @@
 part of 'providers.dart';
 
-// состояние меняется раньше записи на диск, как у настроек. порядок записей держит очередь StorageService
+// состояние меняется раньше записи на диск, как у настроек; порядок записей держит очередь StorageService
 class RoutesNotifier extends AsyncNotifier<List<TrafficRoute>> {
   @override
   Future<List<TrafficRoute>> build() => ref.read(storageProvider).getRoutes();
@@ -51,7 +51,7 @@ class RoutingProfilesNotifier extends AsyncNotifier<List<RoutingProfile>> {
         ),
       );
 
-  // профиль из вставленной ссылки свой: правится сразу, подписки к нему человек привяжет сам
+  // профиль из вставленной ссылки свой: правится сразу, подписки к нему пользователь привяжет сам
   Future<RoutingProfile> addFromRules(
     ProviderRoutingRules rules,
     String fallbackName,

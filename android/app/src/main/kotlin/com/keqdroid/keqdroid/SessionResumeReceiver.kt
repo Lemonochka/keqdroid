@@ -6,7 +6,7 @@ import android.content.Intent
 import android.net.VpnService
 import android.os.Build
 
-// перезагрузка и обновление убивают процесс без штатного выключения, и KEY_QS_SESSION_WANTED остаётся прежним.
+// перезагрузка и обновление убивают процесс без штатного выключения, и KEY_QS_SESSION_WANTED остаётся прежним;
 // без этого после обновления из приложения VPN оказывался выключенным
 class SessionResumeReceiver : BroadcastReceiver() {
 

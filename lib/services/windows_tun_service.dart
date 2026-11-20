@@ -223,7 +223,7 @@ class _ServiceCoreProcess implements Process {
   }
 }
 
-// закрытый stdin у xray значит «выйди сам», служба закрывает настоящий stdin ядра
+// закрытый stdin xray понимает как просьбу выйти, и служба закрывает настоящий stdin ядра
 class _StdinCloser implements StreamConsumer<List<int>> {
   @override
   Future<void> addStream(Stream<List<int>> stream) => stream.drain<void>();

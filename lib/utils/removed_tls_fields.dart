@@ -3,7 +3,7 @@ library;
 
 const _removedTlsKeys = {'allowInsecure'};
 
-// по всему дереву: поле встречается и в инбаундах-фолбэках, и внутри цепочек
+// по всему дереву: поле встречается и в запасных инбаундах, и внутри цепочек
 int stripRemovedTlsFields(Object? config) {
   var dropped = 0;
 

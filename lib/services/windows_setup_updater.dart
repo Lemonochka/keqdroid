@@ -23,7 +23,7 @@ class WindowsSetupUpdater {
     // BOM обязателен: Windows PowerShell 5.1 иначе читает .ps1 в ANSI
     await File(scriptPath).writeAsString('\u{FEFF}$script', flush: true);
 
-    // вне нашего дерева процессов, чтобы пережил exit. права у скрипта наши, с ними же он и вернёт приложение
+    // вне нашего дерева процессов, чтобы пережил exit; права у скрипта наши, с ними же он и вернёт приложение
     await Process.start(
       'cmd.exe',
       [
@@ -55,7 +55,7 @@ class WindowsSetupUpdater {
     exit(0);
   }
 
-  // установщик ждёт, пока приложение выйдет: в тихом режиме AppMutex отвечает за человека «Отмена».
+  // установщик ждёт, пока приложение выйдет: в тихом режиме AppMutex сам отвечает Отмена вместо пользователя;
   // отказ в UAC или сбой установки тоже возвращают приложение, просто прежней версии
   @visibleForTesting
   static const script = r'''

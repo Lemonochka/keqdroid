@@ -1,7 +1,7 @@
 import 'dart:convert';
 
-// отказ дозвона до сервера xray 26 пишет только на info, а по этим строкам автовыбор (CoreDialFailures) узнаёт об отказе.
-// поэтому встроенный xray работает на info, а строки ниже выбранного уровня видит только счётчик. на Android то же в forkexec.c
+// Отказ дозвона до сервера xray 26 пишет только на info, а по этим строкам автовыбор (CoreDialFailures) узнаёт об отказе.
+// Поэтому встроенный xray работает на info, а строки ниже выбранного уровня видит только счётчик. На Android то же в forkexec.c
 abstract final class XraySessionLog {
   static const _levels = ['debug', 'info', 'warning', 'error', 'none'];
 

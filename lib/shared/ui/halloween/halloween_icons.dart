@@ -62,7 +62,7 @@ _Glyph? _glyphFor(IconData d) {
   if (d == Icons.arrow_downward_rounded) return _Glyph.earth;
   if (d == Icons.data_usage_rounded) return _Glyph.cauldron;
   if (d == Icons.schedule_rounded) return _Glyph.hourglass;
-  // на телефоне это раздел Серверы, на ПК режим Proxy
+  // на телефоне так выглядит раздел Серверы, на ПК режим Proxy
   if (d == Icons.lan_rounded) return PlatformBootstrap.isDesktop ? _Glyph.amulet : _Glyph.crystalBall;
   if (d == Icons.dns_rounded || d == Icons.dns_outlined) return _Glyph.crystalBall;
   if (d == Icons.vpn_lock_rounded) return _Glyph.ward;

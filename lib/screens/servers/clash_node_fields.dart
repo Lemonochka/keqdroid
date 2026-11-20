@@ -7,7 +7,7 @@ import 'package:keqdroid/shared/ui/app_theme.dart';
 import '../../utils/bidi.dart';
 import 'editor_layers.dart';
 
-// раскладка ключей узла mihomo по тем же слоям, что у ссылки. подписи ключами, как в docs/config/proxies:
+// Раскладка ключей узла mihomo по тем же слоям, что у ссылки. Подписи ключами, как в docs/config/proxies:
 // узлы бывают двадцати типов, и перевод каждого поля разошёлся бы с тем, что пишет провайдер
 const _serverKeys = {
   'server', 'port', 'uuid', 'password', 'username', 'cipher', 'auth',
@@ -28,10 +28,10 @@ const _tuningKeys = {
   'congestion-controller', 'udp-relay-mode', 'reduce-rtt', 'mtu', 'reserved',
   'allowed-ips', 'persistent-keepalive', 'amnezia-wg-option',
 };
-// имя и тип в шапке: смена типа это другой протокол, её делают текстом
+// имя и тип в шапке: смена типа даёт другой протокол, её делают текстом
 const _hidden = {'name', 'type'};
 
-// узел готового Clash полями. источник строка узла: пока поля не трогали, конфиг уходит как был
+// узел готового Clash полями; источник остаётся строкой узла, и пока поля не трогали, конфиг уходит как был
 class ClashNodeFields extends StatefulWidget {
   const ClashNodeFields({
     super.key,

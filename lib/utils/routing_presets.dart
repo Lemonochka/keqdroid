@@ -1,4 +1,4 @@
-// голое слово без точки (ru) это суффикс домена: ловит все *.ru без geo-базы
+// голое слово без точки (ru) задаёт суффикс домена и ловит все *.ru без geo-базы
 
 enum RoutingField { direct, proxy, blocked }
 
@@ -27,7 +27,7 @@ class RoutingPreset {
 class RoutingPresets {
   RoutingPresets._();
 
-  // единственный источник дефолтов: на них ссылаются AppSettings и сброс экрана
+  // единственный источник значений по умолчанию: на них ссылаются AppSettings и сброс экрана
   static const String defaultDirectRules = 'ru, yandex.ru, vk.com';
   static const String defaultProxyRules = '';
   static const String defaultBlockedRules = '';
@@ -36,8 +36,8 @@ class RoutingPresets {
   // geoip:ru не входит намеренно: российскими по адресу выглядят и кэши у провайдера (TikTok через Akamai в Дом.ру)
   static const List<String> russia = ['geosite:category-ru'];
 
-  // Chocolate4U/Iran-v2ray-rules, домержен через tool/fetch_xray_geo.ps1. geoip вместе с иранскими CDN, как в их образце:
-  // часть иранских сайтов не пускает зарубежные адреса, а внутри страны иностранные CDN своих узлов не держат
+  // Chocolate4U/Iran-v2ray-rules, доклеен в базы через tool/fetch_xray_geo.ps1. geoip вместе с иранскими CDN,
+  // как в их образце: часть иранских сайтов не пускает зарубежные адреса, а внутри страны иностранные CDN своих узлов не держат
   static const List<String> iran = [
     'geosite:ir',
     'geoip:ir',
@@ -58,14 +58,14 @@ class RoutingPresets {
     'adsrvr.org',
   ];
 
-  // Re-filter (1andrevich) домержен в базы через tool/fetch_xray_geo.ps1. оба кода: часть сервисов ходит по IP без домена
+  // Re-filter (1andrevich) доклеен в базы через tool/fetch_xray_geo.ps1; оба кода, потому что часть сервисов ходит по IP без домена
   static const List<String> reFilter = [
     'geosite:refilter',
     'geoip:refilter',
   ];
 
-  // hxehex/russia-mobile-internet-whitelist, домержен тем же скриптом. подсети оттуда не берём:
-  // под TUN правило по подсети пустит напрямую любой сайт в диапазоне, а на net4people в октябре 2026 их списки ошибались в обе стороны
+  // hxehex/russia-mobile-internet-whitelist, доклеен тем же скриптом. Подсети оттуда не берём: под TUN правило по подсети
+  // пустит напрямую любой сайт в диапазоне, а на net4people в октябре 2026 их списки ошибались в обе стороны
   static const List<String> whitelist = ['geosite:ru-whitelist'];
 
   static const List<RoutingPreset> all = [

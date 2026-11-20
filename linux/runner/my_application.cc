@@ -23,7 +23,7 @@ constexpr guint kStartupWatchdogSeconds = 20;
 
 G_DEFINE_TYPE(MyApplication, my_application, GTK_TYPE_APPLICATION)
 
-// окно показывается по первому кадру. без кадра (старт упал до runApp) остаётся процесс без окна и трея, снять только kill
+// окно показывается по первому кадру; без кадра (старт упал до runApp) остаётся процесс без окна и трея, снять только kill
 static gboolean startup_watchdog_cb(gpointer user_data) {
   MyApplication* self = MY_APPLICATION(user_data);
   self->startup_watchdog_id = 0;
@@ -61,7 +61,7 @@ static void set_window_icon(GtkWindow* window) {
   if (icon != nullptr) gtk_window_set_icon(window, icon);
 }
 
-// тайлинговые композиторы рисуют окна без заголовков, шапка GTK там лишняя. тот же список в LinuxBackgroundService.isTilingDesktop
+// тайлинговые композиторы рисуют окна без заголовков, шапка GTK там лишняя; тот же список в LinuxBackgroundService.isTilingDesktop
 static gboolean is_tiling_desktop() {
   const gchar* desktop = g_getenv("XDG_CURRENT_DESKTOP");
   if (desktop == nullptr) return FALSE;
@@ -75,8 +75,8 @@ static gboolean is_tiling_desktop() {
   return FALSE;
 }
 
-// без OpenGL окно чёрное, на программную отрисовку движок сам не переходит (setup_opengl в fl_view.cc).
-// так бывает с неполным драйвером NVIDIA, по RDP, в виртуалках. заданная руками переменная важнее
+// Без OpenGL окно чёрное, на программную отрисовку движок сам не переходит (setup_opengl в fl_view.cc).
+// Так бывает с неполным драйвером NVIDIA, по RDP, в виртуалках. Заданная руками переменная важнее
 static void use_software_rendering_without_gl(GtkWindow* window) {
   if (g_getenv("FLUTTER_LINUX_RENDERER") != nullptr) return;
   gtk_widget_realize(GTK_WIDGET(window));
@@ -154,7 +154,7 @@ static void my_application_activate(GApplication* application) {
 
   g_autoptr(FlDartProject) project = fl_dart_project_new();
   // с октября 2025 Dart по умолчанию в потоке GTK и ждёт, пока тот выводит кадр: на стенде 3840x2400
-  // 30 к/с с рывками до 58 мс вместо ровных 60. отдельный поток был умолчанием до flutter#176759
+  // 30 к/с с рывками до 58 мс вместо ровных 60; отдельный поток был умолчанием до flutter#176759
   fl_dart_project_set_ui_thread_policy(project,
                                        FL_UI_THREAD_POLICY_RUN_ON_SEPARATE_THREAD);
   fl_dart_project_set_dart_entrypoint_arguments(

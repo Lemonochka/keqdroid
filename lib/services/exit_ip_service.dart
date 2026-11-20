@@ -21,8 +21,8 @@ class ExitIp {
   }
 }
 
-// трассировка Cloudflare отдаёт и ip=, и loc=, а Cloudflare приложению уже знаком по пингу.
-// через локальный HTTP-инбаунд: пакет приложения исключён из туннеля, прямой запрос показал бы адрес без VPN
+// Трассировка Cloudflare отдаёт и ip=, и loc=, а Cloudflare приложению уже знаком по пингу. Ходим через
+// локальный HTTP-инбаунд: пакет приложения исключён из туннеля, и прямой запрос показал бы адрес без VPN
 abstract final class ExitIpService {
   static Future<ExitIp?> lookup({
     required int proxyPort,

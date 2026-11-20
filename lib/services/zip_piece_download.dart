@@ -7,7 +7,7 @@ import 'package:dio/dio.dart';
 
 import '../utils/zip_layout.dart';
 
-// у соседних релизов 85-90% APK совпадают байт в байт (ядра, движок, базы), их берём из установленного.
+// у соседних релизов 85-90% APK совпадают байт в байт (ядра, движок, базы), их берём из установленного;
 // собранный файл проверяется тем же подписанным SHA256SUMS, что и скачанный целиком
 class ZipPieceDownload {
   ZipPieceDownload._();
@@ -173,7 +173,7 @@ class ZipPieceDownload {
         uri = uri.resolve(location);
         continue;
       }
-      // 200 значит Range не понят и пошёл весь файл: рвём, его скачает обычный путь
+      // ответ 200 приходит, когда Range не понят и пошёл весь файл: рвём, его скачает обычный путь
       await body?.listen(null).cancel();
       return null;
     }

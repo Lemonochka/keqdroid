@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-// всё после схемы base64, и хоста с портом там, где их ищет Uri, нет. разбор сверен с converter.go mihomo
+// всё после схемы закодировано base64, и хоста с портом там, где их ищет Uri, нет; разбор сверен с converter.go mihomo
 class SsrLink {
   const SsrLink({
     required this.host,

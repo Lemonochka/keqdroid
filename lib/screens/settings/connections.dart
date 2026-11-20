@@ -455,7 +455,7 @@ class _ConnectionsScreenState extends ConsumerState<_ConnectionsScreen> {
           note: l10n.connectionsDetailsExitBlock,
         );
       case ConnectionVerdict.proxied:
-        // proxy у обоих ядер это сервер подключения, keq-srv-N выход маршрута на свой сервер (routeServerOutbounds)
+        // proxy у обоих ядер ведёт на сервер подключения, а keq-srv-N на свой сервер маршрута (routeServerOutbounds)
         final routeServer = switch (explanation) {
           ByRoute(:final route)
               when route.target == RouteTarget.server &&

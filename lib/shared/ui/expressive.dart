@@ -163,7 +163,7 @@ abstract final class ExpressiveMotion {
       );
 }
 
-// пружина как кривая для неявных анимаций вроде AnimatedSize: им нужна длительность и кривая.
+// пружина как кривая для неявных анимаций вроде AnimatedSize, которым нужны длительность и кривая;
 // длительность берётся с запасом на успокоение, иначе в конце будет скачок
 class SpringCurve extends Curve {
   const SpringCurve(this.spring, this.duration);

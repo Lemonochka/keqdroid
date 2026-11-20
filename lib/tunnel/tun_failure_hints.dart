@@ -77,7 +77,7 @@ TunFailureHint? tunFailureHint(String coreOutput, {required bool windows}) {
     );
   }
 
-  // строгий маршрут у xray это фильтры WFP: без них ядро TUN не поднимает, а не течёт молча
+  // строгий маршрут у xray держится на фильтрах WFP: без них ядро TUN не поднимает, а не течёт молча
   if (has('autosystemwfpblockleak')) {
     return const TunFailureHint(
       'wfp-refused',

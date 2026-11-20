@@ -177,7 +177,7 @@ class AwgProfile {
     }
   }
 
-  // с AWG 3.1 это диапазон (22-30), плюс off из wg-quick. int.tryParse на обоих терял keepalive,
+  // с AWG 3.1 туда пишут диапазон (22-30), плюс off из wg-quick; int.tryParse на обоих терял keepalive,
   // и за NAT туннель рвался
   static String? _keepalive(String? raw) {
     final value = raw?.trim();

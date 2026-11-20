@@ -31,7 +31,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
   bool _awaitingSessionStart = false;
   bool _serverSwitchInProgress = false;
   bool _cancelRequested = false;
-  // сессия, которую поднял этот connect: смена сервера на mihomo берёт из неё порты, креды и API
+  // сессия, которую поднял этот connect: смена сервера на mihomo берёт из неё порты, логин и пароль и API
   _LiveSession? _live;
   Completer<void>? _disconnectWaiter;
   Timer? _androidPollTimer;
@@ -128,11 +128,11 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
   @visibleForTesting
   static bool? debugSyncsCredentials;
 
-  // на ПК креды держит само приложение, сверять не с кем
+  // на ПК логин и пароль держит само приложение, сверять не с кем
   static bool get _syncsCredentials => debugSyncsCredentials ?? Platform.isAndroid;
 
-  // креды приложения и ядра расходились: свежий изолят пуст, а старт поверх живой сессии ядро не перезапускает.
-  // тогда всё своё приложение получало 407 от своего же прокси, до перезапуска (Pixel 6a, 12.11.2026)
+  // Логин и пароль приложения и ядра расходились: свежий изолят пуст, а старт поверх живой сессии ядро
+  // не перезапускает. Тогда всё приложение до перезапуска получало 407 от своего же прокси (Pixel 6a, 12.11.2026)
   Future<void> syncSocksCredentialsFromService() {
     if (!_syncsCredentials || _connectInFlight) return Future<void>.value();
     return _credsSync ??=
@@ -277,8 +277,8 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     }
   }
 
-  // в конфиге mihomo закрепить узел в url-test нечем, а store-selected выключен: шлём после каждого подключения.
-  // список proxy-providers ядро может ещё качать, тогда Set отвечает proxy not exist
+  // в конфиге mihomo закрепить узел в url-test нечем, а store-selected выключен, поэтому шлём после каждого
+  // подключения; список proxy-providers ядро может ещё качать, тогда Set отвечает proxy not exist
   Future<void> _applyTemplatePins() async {
     final server = ref.read(serversProvider).activeServer;
     final subId = server?.subscriptionId;
@@ -365,7 +365,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     await ref.read(settingsNotifierProvider.notifier).save(change(saved));
   }
 
-  // неизвестные geo-коды выбрасываем: xray на таком коде роняет весь конфиг. нечитаемый кэш списков подключению не мешает
+  // неизвестные geo-коды выбрасываем, xray на таком коде роняет весь конфиг; нечитаемый кэш списков подключению не мешает
   Future<({String entries, List<String> listDomains})> _prepareRouteEntries(
     String entries,
     GeoAssetIndex index,
@@ -523,8 +523,8 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     }
   }
 
-  // сборка сессии для connect и для смены сервера на ходу. reuse: порты, креды и API работающего ядра;
-  // null значит, что на ходу эту сессию не поднять
+  // сборка сессии для connect и для смены сервера на ходу; в reuse порты, логин и пароль и API работающего ядра,
+  // а null возвращается, когда на ходу эту сессию не поднять
   Future<_LiveSession?> _buildSession(
     ServerItem server,
     VpnEngine engine, {
@@ -570,8 +570,8 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     }
     final runConfig = templated ?? server.config;
 
-    // готовый конфиг исполняет ядро его языка, настройка решает только для обычной ссылки.
-    // выбираем до свёртки маршрутов: от ядра зависит, какие другие серверы встанут в конфиг
+    // готовый конфиг исполняет ядро его языка, настройка решает только для обычной ссылки; выбираем до свёртки
+    // маршрутов, потому что от ядра зависит, какие другие серверы встанут в конфиг
     final resolved = resolveVpnBackend(
       config: runConfig,
       preference: stored.vpnCore,
@@ -585,7 +585,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
             skip: VpnCoreSkip.clashTemplate,
           )
         : resolved;
-    // на ходу меняется только конфиг mihomo: другое ядро значит стоп и старт
+    // на ходу меняется только конфиг mihomo, для другого ядра нужны стоп и старт
     if (reuse != null && choice.backend != VpnBackend.mihomo) return null;
     // режим сохранённый: если автозапуск откатится в прокси, генератор без туннеля правил по процессам и так не напишет
     final appsRun = appRoutesRun(TunnelSessionBuilder.resolveMode(stored));
@@ -666,7 +666,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
         'to apply per-process rules.',
       );
     }
-    // на ходу права проверены ещё при подключении. без прав TUN поднимает служба KeqdroidTun
+    // на ходу права проверены ещё при подключении; без прав TUN поднимает служба KeqdroidTun
     if (reuse == null &&
         Platform.isWindows &&
         connectionMode == ConnectionMode.tun) {
@@ -712,7 +712,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     }
 
     final creds = reuse?.creds ?? await engine.fetchSocksCredentials();
-    // в режиме прокси креды вписывают руками в чужое приложение, сессионные протухали бы на реконнекте
+    // в режиме прокси логин и пароль вписывают руками в чужое приложение, а сессионные устаревали бы при каждом переподключении
     if (Platform.isAndroid &&
         connectionMode == ConnectionMode.proxy &&
         settings.proxyModeAuth) {
@@ -770,7 +770,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     final tunSession = connectionMode == ConnectionMode.tun;
     final strictRoute =
         settings.tun.strictRouteEnabled(windows: Platform.isWindows);
-    // IPv6-адрес на TUN при выключенном в системе IPv6 роняет ядро. строгий маршрут на Linux закрывал IPv6
+    // IPv6-адрес на TUN при выключенном в системе IPv6 роняет ядро; строгий маршрут на Linux закрывал IPv6
     // без маршрута (sing-tun, unreachable), теперь так же: захват и блок
     final captureIpv6 = desktop &&
         tunSession &&
@@ -1275,7 +1275,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     if (target == null) return;
     final received = state.value?.totalDownload ?? 0;
     final sent = state.value?.totalUpload ?? 0;
-    // меньше прошлого значит новая сессия, раньше такой сброс будил судью зря
+    // меньше прошлого бывает только у новой сессии, раньше такой сброс будил судью зря
     final newSession =
         received < _autoSelectSeenReceived || sent < _autoSelectSeenSent;
     final moved = newSession || received > _autoSelectSeenReceived;
@@ -1405,7 +1405,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
         _autoSelectRest((await VpnNativeBridge.physicalNetworks())?.changes);
       } else {
         _autoSelectDeadRounds = 0;
-        // подписка под подозрением, а сеть жива: второй раунд нужен скоро, человек сидит без связи
+        // подписка под подозрением, а сеть жива: второй раунд нужен скоро, пользователь сидит без связи
         final soon = switched || _autoSelectOutage.suspects(target.subId);
         _autoSelectQuietUntil = DateTime.now().add(
           soon ? AutoSelectWatchdog.quietAfterSwitch : AutoSelectWatchdog.quietAfterCheck,
@@ -1415,7 +1415,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     }
   }
 
-  // вся своя подписка молчит: соседние по экрану служат контролем. молчат и они, значит сеть, а не серверы
+  // вся своя подписка молчит, и соседние по экрану служат контролем; если молчат и они, виновата сеть, а не серверы
   Future<({String? nextId, bool answered})> _autoSelectAcross(
     _AutoTarget target,
     _AutoSelectMeasure own,
@@ -1457,7 +1457,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       );
       return (nextId: null, answered: false);
     }
-    // сеть жива, значит отказы своей подписки настоящие
+    // сеть жива, поэтому отказы своей подписки настоящие
     unawaited(_autoSelectRecord(own.pings));
     if (!_autoSelectOutage.shouldJump) {
       AppLogger.instance.info(
@@ -1665,7 +1665,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     }
   }
 
-  // туннель не снимается, и на время смены трафику некуда уйти мимо него. всё, что задаёт сам туннель
+  // туннель не снимается, и на время смены трафику некуда уйти мимо него; всё, что задаёт сам туннель
   // и входы, обязано совпасть с работающей сессией, иначе стоп и старт
   Future<bool> _switchInPlace() async {
     final live = _live;

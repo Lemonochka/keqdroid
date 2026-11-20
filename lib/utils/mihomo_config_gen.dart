@@ -37,7 +37,7 @@ class MihomoTunOptions {
     this.ipv6,
   });
 
-  // file-descriptor и mtu в готовый конфиг дописывает нативный сервис, это его числа
+  // file-descriptor и mtu в готовый конфиг дописывает нативный сервис, числа его
   final bool fromFileDescriptor;
 
   // без имени mihomo берёт Meta, а wintun считает GUID адаптера от имени, и соседний клиент забирает наш адаптер
@@ -148,7 +148,7 @@ class MihomoConfigGen {
         appRules.any((r) => !r.forAllApps) ||
         guard != OwnerGuard.off;
 
-    // без правил по процессам режим только выбранные держит финал DIRECT, и в DIRECT уходило всё.
+    // без правил по процессам режим только выбранные держит финал DIRECT, и в DIRECT уходило всё;
     // там, где процесс не найти, верный режим один: весь трафик
     final effectiveRoutingMode = processRules
         ? routingMode
@@ -257,8 +257,8 @@ class MihomoConfigGen {
     };
   }
 
-  // адрес интерфейса не задать: mihomo считает его из dns.fake-ip-range, даже без fake-ip.
-  // поэтому готовность туннеля по имени, а не по адресу
+  // адрес интерфейса не задать, mihomo считает его из dns.fake-ip-range даже без fake-ip;
+  // поэтому готовность туннеля проверяем по имени, а не по адресу
 
   static Map<String, dynamic> buildTun(MihomoTunOptions tun) =>
       <String, dynamic>{
@@ -311,10 +311,10 @@ class MihomoConfigGen {
       ),
       sniffer: buildSniffer(settings.xrayCore),
       logLevel: _logLevel(settings.xrayCore.logLevel),
-      // наш DNS, если у автора своего нет или человек поставил наш поверх
+      // наш DNS, если у автора своего нет или пользователь поставил наш поверх
       dns: buildDns(settings, fakeIp: fakeIp),
       ownDns: settings.ignoreProviderDns,
-      // правила по процессам раньше авторских: это решение человека о своей машине
+      // правила по процессам раньше авторских: так пользователь решает за свою машину
       prependRules: [
         ?outsideVpnRule(ownerGuard),
         exitIpProbeRule(clash.primaryTarget),
@@ -342,7 +342,7 @@ class MihomoConfigGen {
           appRoutes: appRoutes,
         ),
         if (tun?.closesIpv6 ?? false) closedTunIpv6Rule,
-        // MATCH провайдера выброшен вместе с его правилами, остальное решает человек
+        // MATCH провайдера выброшен вместе с его правилами, остальное решает пользователь
         if (settings.ignoreProviderRules)
           'MATCH,${_customFinalTarget(settings, clash, routingMode, managedProcessNames)}',
       ],
@@ -404,11 +404,11 @@ class MihomoConfigGen {
     final creds = Socks5Credentials();
     return <String, dynamic>{
       'socks-port': socksPort,
-      // port у mihomo это HTTP-прокси: через него ходит апдейтер и на него смотрит системный прокси
+      // port у mihomo открывает HTTP-прокси: через него ходит апдейтер и на него смотрит системный прокси
       'port': ?httpPort,
       'bind-address': '127.0.0.1',
       'allow-lan': false,
-      // глобальный ipv6: false режет AAAA независимо от dns.ipv6, берём из той же стратегии.
+      // глобальный ipv6: false режет AAAA независимо от dns.ipv6, поэтому берём из той же стратегии;
       // он же даёт TUN адрес IPv6 (config.go parseIPV6), а AAAA тогда режет dns.ipv6
       'ipv6': settings.xrayCore.dnsQueryStrategy != 'UseIPv4' || tunIpv6,
       // глобальная авторизация на socks-port, LAN-листенеры из-под неё выведены своим users
@@ -422,7 +422,7 @@ class MihomoConfigGen {
     };
   }
 
-  // маска *. переводится в +.: у mihomo звёздочка значит ровно один уровень
+  // маска *. переводится в +., у mihomo звёздочка ловит ровно один уровень
 
   static Map<String, dynamic> buildNameserverPolicy(XrayCoreSettings core) {
     final parsed = XrayCoreSettings.parseDnsPolicy(core.dnsPolicy).entries;
@@ -455,7 +455,7 @@ class MihomoConfigGen {
     };
   }
 
-  // parse-pure-ip обязателен: без него ядро нюхает только соединения с именем хоста, а у нас его нет.
+  // parse-pure-ip обязателен: без него ядро нюхает только соединения с именем хоста, а у нас его нет;
   // порты только строками, число роняет конфиг (cannot unmarshal !!int into string)
   static Map<String, dynamic> buildSniffer(XrayCoreSettings core) => {
         'enable': core.sniffingEnabled,
@@ -474,7 +474,7 @@ class MihomoConfigGen {
         },
       };
 
-  // пустой users значит без пароля, а отсутствующий ключ подставит глобальный authentication с нашими кредами
+  // пустой users выключает пароль, а без ключа ядро подставит глобальный authentication с нашим логином и паролем
 
   static List<Map<String, dynamic>> buildLanListeners(AppSettings settings) {
     final users = lanUsers(settings);
@@ -531,8 +531,8 @@ class MihomoConfigGen {
     bool httpInbound = false,
     String? outboundInterface,
   }) {
-    // готовый Clash узлов-ссылок не имеет: buildProxies на нём бросал, и любой сервер из Clash-подписки
-    // не пинговался вовсе (31.10.2026). узлы берём как у сервера маршрута, главный под именем proxyName
+    // у готового Clash узлов-ссылок нет: buildProxies на нём бросал, и любой сервер из Clash-подписки не пинговался
+    // вовсе (31.10.2026); узлы берём как у сервера маршрута, главный под именем proxyName
     final clash = CustomClashConfig.looksLikeClash(input)
         ? CustomClashConfig.tryParse(input.trim())
         : null;
@@ -565,7 +565,7 @@ class MihomoConfigGen {
     });
   }
 
-  // фиксированный, как у xray: UDP-53 у части провайдеров подменяют. #DIRECT значит мимо правил
+  // фиксированный, как у xray, потому что UDP-53 у части провайдеров подменяют; #DIRECT ведёт мимо правил
   static Map<String, dynamic> _pingDns() => <String, dynamic>{
         'enable': true,
         'ipv6': false,
@@ -650,8 +650,8 @@ class MihomoConfigGen {
 
   static const _bootstrapFallback = ['1.1.1.1', '8.8.8.8'];
 
-  // DoH к публичным резолверам провайдер может резать, и прямое соединение висело на резолве (issue #9).
-  // список опрашивается параллельно, живой DoH запасной не тормозит. system не годится: на Android это 114.114.114.114
+  // DoH к публичным резолверам провайдер может резать, и прямое соединение висело на резолве (issue #9);
+  // список опрашивается параллельно, живой DoH запасной не тормозит, а system не годится, на Android он 114.114.114.114
   static List<String> directPlainFallback(List<String> servers) {
     final hasPlain = servers.any((s) =>
         s == 'system' ||
@@ -687,7 +687,7 @@ class MihomoConfigGen {
       if (close < 0) return '';
       host = host.substring(1, close);
     } else if (':'.allMatches(host).length == 1) {
-      // одно двоеточие это порт, у голого IPv6 их больше
+      // одно двоеточие отделяет порт, у голого IPv6 их больше
       host = host.substring(0, host.indexOf(':'));
     }
     return host;
@@ -801,8 +801,8 @@ class MihomoConfigGen {
     return '';
   }
 
-  // ech у xray это либо сам ECHConfigList, либо адрес DNS для него. у mihomo первому отвечает config,
-  // второму пустой config с запросом HTTPS-записи, адрес DNS подставить некуда
+  // ech у xray задают либо сам ECHConfigList, либо адрес DNS для него; у mihomo первому соответствует config,
+  // второму пустой config с запросом HTTPS-записи, и адрес DNS подставить некуда
   static Map<String, dynamic>? _echOpts(String raw) {
     final value = raw.trim();
     if (value.isEmpty) return null;
@@ -815,7 +815,7 @@ class MihomoConfigGen {
   }
 
   // REALITY в xray с 26.9.9 молча отказывает приветствию без X25519MLKEM768 (REALITY authentication failed),
-  // а mihomo без флага ключ вырезает. ключ несут только профили chrome, firefox у mihomo застрял на 120
+  // а mihomo без флага ключ вырезает; ключ несут только профили chrome, firefox у mihomo застрял на 120
   static Map<String, dynamic> _realityOpts({
     required String publicKey,
     required String shortId,
@@ -832,7 +832,7 @@ class MihomoConfigGen {
     return list.isEmpty ? null : list;
   }
 
-  // незнакомый транспорт это ошибка, а не тихий откат на tcp: xhttp уже превращался в голый tcp.
+  // незнакомый транспорт считаем ошибкой, а не тихо откатываемся на tcp: xhttp уже превращался в голый tcp;
   // skip-cert-verify не пишем никогда, как и allowInsecure у xray
   static void _applyTransport(
     Map<String, dynamic> out,
@@ -879,7 +879,7 @@ class MihomoConfigGen {
           'grpc-service-name': _param(uri, 'serviceName'),
         };
       case 'http' || 'h2':
-        // host, а не sni: у h2 это имя в заголовке, сервер за общим фронтом различает по нему узлы
+        // host, а не sni: у h2 он задаёт имя в заголовке, и сервер за общим фронтом различает по нему узлы
         final h2Host = _param(uri, 'host', host);
         out['network'] = 'h2';
         out['h2-opts'] = {
@@ -997,7 +997,7 @@ class MihomoConfigGen {
     return opts;
   }
 
-  // этими полями описан сам вид запроса, без них mihomo слал свои и сервер отвечал 400.
+  // этими полями описан сам вид запроса, без них mihomo слал свои и сервер отвечал 400;
   // у части полей два написания, берётся первое непустое, порядок значим
   static const Map<String, String> _xhttpExtraFields = {
     'xPaddingKey': 'x-padding-key',
@@ -1026,7 +1026,7 @@ class MihomoConfigGen {
   };
 
   // в режиме obfs xray кладёт набивку в X-Padding, и сервер без неё отвечает 400, а mihomo при пустом
-  // x-padding-placement её не добавляет. дописываем дефолты xray
+  // x-padding-placement её не добавляет; дописываем умолчания xray
   static void _applyXPaddingObfsDefaults(Map<String, dynamic> opts) {
     if (opts['x-padding-obfs-mode'] != true) return;
     opts.putIfAbsent('x-padding-placement', () => 'queryInHeader');
@@ -1074,8 +1074,8 @@ class MihomoConfigGen {
     return {for (final e in raw.entries) e.key.toString(): e.value.toString()};
   }
 
-  // у xray это полное описание подключения, а mihomo незаданное берёт у основного, и скачивание
-  // уехало бы с его SNI, REALITY и пином. поэтому пишем явно, даже пустым
+  // у xray эти поля полностью описывают подключение, а mihomo незаданное берёт у основного, и скачивание
+  // уехало бы с его SNI, REALITY и пином; поэтому пишем явно, даже пустым
   static Map<String, dynamic>? _downloadSettings(Object? raw) {
     if (raw is! Map) return null;
     Map<String, dynamic> obj(Object? v) =>
@@ -1139,7 +1139,7 @@ class MihomoConfigGen {
     return out;
   }
 
-  // name-cert-verify аналог verifyPeerCertByName: без него сертификат сверяется с маскировочным sni.
+  // name-cert-verify повторяет verifyPeerCertByName, без него сертификат сверяется с маскировочным sni;
   // переносим только одно значение, чужой отпечаток наугад закрыл бы соединение
   static void _applyCertPinning(Map<String, dynamic> out, Uri uri) {
     final names = _csv(_param(uri, 'vcn'));
@@ -1212,7 +1212,7 @@ class MihomoConfigGen {
     return out;
   }
 
-  // два формата vmess, различаем как converter.go: не base64 значит ссылка
+  // два формата vmess, различаем как converter.go: что не base64, то ссылка
   static Map<String, dynamic> _vmess(String link) {
     final payload = link.substring('vmess://'.length).trim();
     if (payload.isEmpty) throw ArgumentError('VMess payload is empty');
@@ -1271,7 +1271,7 @@ class MihomoConfigGen {
       host: host.isEmpty ? 'x' : host,
       queryParameters: {
         'type': net,
-        // type в json vmess это заголовок маскировки, не транспорт
+        // type в json vmess задаёт заголовок маскировки, а не транспорт
         'headerType': s('type'),
         'path': s('path', '/'),
         'host': s('host'),
@@ -1344,7 +1344,7 @@ class MihomoConfigGen {
     return out;
   }
 
-  // alpn на ws-пути в mihomo читает только trojan, у vless и vmess http/1.1 подставляется само.
+  // alpn на ws-пути в mihomo читает только trojan, у vless и vmess http/1.1 подставляется само;
   // одиночный h2 не трогаем
   static List<String> _alpnForTrojan(String network, List<String> alpn) =>
       network == 'ws' &&
@@ -1534,7 +1534,7 @@ class MihomoConfigGen {
     return out;
   }
 
-  // двоеточия нет, значит паролем работает весь userInfo
+  // без двоеточия паролем работает весь userInfo
   static Map<String, dynamic> _anytls(String link) {
     final uri = _parse(link);
     final userInfo = uri.userInfo;
@@ -1559,7 +1559,7 @@ class MihomoConfigGen {
     };
     final alpn = _alpn(_param(uri, 'alpn'));
     if (alpn != null) out['alpn'] = alpn;
-    // hpkp это пин сертификата, у ядра поле fingerprint
+    // hpkp хранит пин сертификата, у ядра поле называется fingerprint
     final pin = _rawParam(uri, 'hpkp');
     if (pin.isNotEmpty) out['fingerprint'] = pin;
     final ech = _echOpts(_rawParam(uri, 'ech'));
@@ -1755,8 +1755,8 @@ class MihomoConfigGen {
   static List<String> _parseRuleList(String s) =>
       routingEntries(s).where((e) => !isRuleListUrl(e)).toList();
 
-  // раньше правил пользователя и автора готового конфига. трафик туннеля к этому хосту идёт по общим правилам:
-  // адрес сервера за CDN бывает ровно им
+  // раньше правил пользователя и автора готового конфига; трафик туннеля к этому хосту идёт по общим правилам,
+  // потому что адрес сервера за CDN бывает ровно им
   static String exitIpProbeRule(String proxyTarget) =>
       'AND,((NOT,((IN-TYPE,TUN))),(DOMAIN,$kExitIpProbeHost)),$proxyTarget';
 
@@ -1823,7 +1823,7 @@ class MihomoConfigGen {
     );
   }
 
-  // address у цепочки это её входной узел, у готового конфига первый из его узлов
+  // address у цепочки указывает на её входной узел, у готового конфига на первый из его узлов
   static List<String> routeServerDirectRules(
     List<RouteServerOutbound> servers,
   ) =>
@@ -1863,8 +1863,8 @@ class MihomoConfigGen {
   static const directListSet = 'keq-list-direct';
   static const proxyListSet = 'keq-list-proxy';
 
-  // набором, а не правилом на домен: на 100 тысячах это 4,5 мс на соединение против 1,4 (замер 09.10.2026).
-  // встроенным, а не файлом: у Linux-туннеля под root дом свой на каждую сессию
+  // набором, а не правилом на домен: на 100 тысячах набор стоит 4,5 мс на соединение против 1,4 (замер 09.10.2026);
+  // встроенным, а не файлом, потому что у Linux-туннеля под root дом свой на каждую сессию
   static Map<String, dynamic> buildRuleListProviders(RuleListDomains lists) {
     Map<String, dynamic> set(List<String> domains) => {
           'type': 'inline',
@@ -1939,7 +1939,7 @@ class MihomoConfigGen {
       ),
     ];
 
-    // сплит решает, чьи соединения идут в туннель, а финал что делать с остальным.
+    // сплит решает, чьи соединения идут в туннель, а финал решает, что делать с остальным;
     // исключение: только выбранные без единого имени, там прежний DIRECT
     final unnamedSelection = routingMode == AppRoutingMode.onlySelected &&
         managedProcessNames.every((name) => name.trim().isEmpty);
@@ -1961,8 +1961,8 @@ class MihomoConfigGen {
   // со значением all проверяет и DNS, который перехватывает раньше правил
   static const ownerGuardKey = 'keqdroid-owner-guard';
 
-  // читает только наш mihomo, tool/patches/mihomo-v6-tun-reset.patch: TCP по IPv6 из TUN получает сброс до рукопожатия,
-  // и браузер сразу идёт на IPv4. правило ниже ловит остальное, UDP
+  // читает только наш mihomo, tool/patches/mihomo-v6-tun-reset.patch: TCP по IPv6 из TUN получает сброс
+  // до рукопожатия, и браузер сразу идёт на IPv4; правило ниже ловит остальное, UDP
   static const closeTunIpv6Key = 'keqdroid-tun-close-ipv6';
 
   static const closedTunIpv6Rule = 'AND,((IN-TYPE,TUN),(IP-CIDR6,::/0)),REJECT';
@@ -1980,8 +1980,8 @@ class MihomoConfigGen {
 
   static const fakeIpFilter = kFakeIpFilter;
 
-  // свой процесс и чужие VPN раньше сплита, иначе режим кроме выбранных утащил бы в туннель наши пинг-сокеты.
-  // имя сравнивается без регистра (EqualFold), вариантов регистра как у sing-box не нужно
+  // свой процесс и чужие VPN раньше сплита, иначе режим кроме выбранных утащил бы в туннель наши пинг-сокеты;
+  // имя сравнивается без регистра (EqualFold), вариантов регистра, как у sing-box, не нужно
   static List<String> buildProcessRules({
     required AppRoutingMode routingMode,
     required List<String> managedProcessNames,
@@ -1995,7 +1995,7 @@ class MihomoConfigGen {
     final exe = (windows ?? Platform.isWindows) ? '.exe' : '';
 
     final rules = <String>[
-      // наши сокеты мимо туннеля, иначе пинг мерил бы локальный конец. только пришедшие из TUN: на HTTP-вход
+      // наши сокеты мимо туннеля, иначе пинг мерил бы локальный конец; только пришедшие из TUN, потому что на HTTP-вход
       // приложение шлёт то, что обязано ехать в туннель (подписки, апдейтер, флаг выхода)
       if (app.isNotEmpty)
         'AND,((IN-TYPE,TUN),(PROCESS-NAME-REGEX,^${processRegexLiteral(app)}\$)),DIRECT',
@@ -2004,7 +2004,7 @@ class MihomoConfigGen {
       'PROCESS-NAME,mihomo$exe,DIRECT',
       'PROCESS-NAME,xray$exe,DIRECT',
       'PROCESS-NAME,sing-box$exe,DIRECT',
-      // чужие VPN-клиенты мимо нашего туннеля, иначе туннель в туннеле. только в режиме весь трафик
+      // чужие VPN-клиенты мимо нашего туннеля, иначе туннель в туннеле; только в режиме весь трафик
       if (routingMode == AppRoutingMode.allProxy) ...[
         'PROCESS-NAME,tailscaled$exe,DIRECT',
         'PROCESS-NAME,wireguard$exe,DIRECT',
@@ -2012,8 +2012,8 @@ class MihomoConfigGen {
       ],
     ];
 
-    // одной регуляркой: ядро режет правило по запятым и считает скобки, exe с запятой в имени ронял весь конфиг.
-    // только из TUN: на HTTP-вход приложение шлёт подписки и апдейтер, а невыбранное мимо уводило их напрямую
+    // одной регуляркой: ядро режет правило по запятым и считает скобки, и exe с запятой в имени ронял весь конфиг;
+    // только из TUN, на HTTP-вход приложение шлёт подписки и апдейтер, а невыбранное мимо уводило их напрямую
     String fromTun(String rule) => 'AND,((IN-TYPE,TUN),($rule)),DIRECT';
     final names = <String>[];
     final paths = <String>[];
@@ -2062,8 +2062,8 @@ class MihomoConfigGen {
     );
   }
 
-  // тип входа проверяется первым, у остальных процесс не ищется вовсе.
-  // порты через «/»: запятая разрезала бы правило на поля (ParseRulePayload)
+  // тип входа проверяется первым, у остальных процесс не ищется вовсе;
+  // порты через /, потому что запятая разрезала бы правило на поля (ParseRulePayload)
   static String _appRouteCondition(RouteAppRules route) {
     final parts = [
       if (!route.forAllApps) ...[
@@ -2183,7 +2183,7 @@ class MihomoConfigGen {
             },
       };
 
-  // no-resolve всегда: резолв ради правила против круга это тот же круг на шаг раньше
+  // no-resolve всегда: резолв ради правила против круга сам замкнул бы тот же круг на шаг раньше
   static List<String> buildServerDirectRules({
     required String serverAddress,
     String? resolvedServerIp,
@@ -2200,8 +2200,8 @@ class MihomoConfigGen {
     return rules;
   }
 
-  // IP-правила дважды: на месте с no-resolve и в конце с резолвом, mihomo идёт одним проходом,
-  // а xray сначала сверяет все домены. раньше GEOIP резолвил всегда, и TikTok уходил напрямую через кэш Akamai
+  // IP-правила дважды, на месте с no-resolve и в конце с резолвом: mihomo идёт одним проходом,
+  // а xray сначала сверяет все домены; раньше GEOIP резолвил всегда, и TikTok уходил напрямую через кэш Akamai
   static List<String> buildUserRules(
     AppSettings settings, {
     String proxyTarget = proxyName,
@@ -2256,7 +2256,8 @@ class MihomoConfigGen {
     }
     if (blockedOnly) return rules;
 
-    // приватные сети резолва не получают. при маршрутах приложений они раньше них: весь трафик на сервер не должен увозить роутер с принтером
+    // приватные сети резолва не получают; при маршрутах приложений они стоят раньше них, потому что весь трафик
+    // на сервер не должен увозить роутер с принтером
     final privateRanges = [
       for (final range in _privateRanges) 'IP-CIDR,$range,DIRECT,no-resolve',
     ];
@@ -2378,7 +2379,7 @@ class MihomoConfigGen {
           ? 'DIRECT'
           : _finalTarget(settings.finalOutbound, clash.primaryTarget);
 
-  // голое слово это зона: DOMAIN-KEYWORD ловил буквы где угодно, su уводил напрямую AI Studio
+  // голое слово задаёт зону: DOMAIN-KEYWORD ловил буквы где угодно, и su уводил напрямую AI Studio
   static String _domainRule(String raw) {
     final v = raw.trim();
     final lower = v.toLowerCase();

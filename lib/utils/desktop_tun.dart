@@ -7,7 +7,7 @@ const kTunInterfacePrefix = '$kTunInterfaceAddress/30';
 
 const kTunInterfaceIpv6Prefix = 'fdfe:dcba:9876::1/126';
 
-// резолвер системы на Windows, следующий адрес в /30. держать в паре с ConfigGeneratorV2._androidTunDns
+// резолвер системы на Windows, следующий адрес в /30; держать в паре с ConfigGeneratorV2._androidTunDns
 const kTunDnsAddress = '172.19.0.2';
 
 // wintun считает GUID из имени, у чужого клиента с тем же именем адаптер общий

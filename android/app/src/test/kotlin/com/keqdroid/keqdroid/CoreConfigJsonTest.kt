@@ -130,7 +130,7 @@ class CoreConfigJsonTest {
     fun `no IPv6 in the config leaves the tunnel IPv4 only, as before`() {
         assertNull(tunIpv6Of("""{"inbounds":[{"tag":"tun-in","protocol":"tun","settings":{"name":"tun0","mtu":9000}}]}""", mihomo = false))
         assertNull(tunIpv6Of("""{"tun":{"enable":true}}""", mihomo = true))
-        // пустой список у mihomo значит мимо VPN, на телефоне его не бывает, но и адреса из него нет
+        // пустой список у mihomo отправляет IPv6 мимо VPN; на телефоне его не бывает, но и адреса из него нет
         assertNull(tunIpv6Of("""{"tun":{"enable":true,"inet6-address":[]}}""", mihomo = true))
         assertNull(tunIpv6Of("""{"inbounds":[{"protocol":"tun","settings":{"gateway":["172.19.0.1/30"]}}]}""", mihomo = false))
     }

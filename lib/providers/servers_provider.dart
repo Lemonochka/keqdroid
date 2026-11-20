@@ -8,8 +8,8 @@ class ServersState {
 
   final Map<String, ServerItem> byId;
 
-  // новое на любую перемену, кроме пометки «Авто»: на ней список не перестраивается целиком,
-  // на Pixel 6a это стоило 17–36 мс на нажатие при бюджете кадра 16,7
+  // новое на любую перемену, кроме пометки Авто: на ней список не перестраивается целиком,
+  // на Pixel 6a перестройка стоила 17-36 мс на нажатие при бюджете кадра 16,7
   final int shape;
   static int _shapes = 0;
 
@@ -79,7 +79,7 @@ class ServersNotifier extends Notifier<ServersState> {
     try {
       await pingSubscription(subscriptionId);
     } catch (_) {
-      // все замеры упали: на ручном пинге это сообщение, тут его показать некому
+      // все замеры упали; при ручном пинге показали бы сообщение, а тут его показать некому
     }
   }
 
@@ -438,7 +438,7 @@ class ServersNotifier extends Notifier<ServersState> {
     Map<String, ({int? pingMs, String? lastPingType})> updates,
   ) async {
     if (updates.isEmpty) return;
-    // мержим внутри очереди storage: запись снапшота целиком затирала параллельно обновлённую подписку
+    // сливаем внутри очереди storage: запись старого снимка целиком затирала подписку, обновлённую параллельно
     final merged = await ref
         .read(storageProvider)
         .applyPingUpdates(updates, DateTime.now());
@@ -547,7 +547,7 @@ class ServersNotifier extends Notifier<ServersState> {
     }
 
     if (pending.isNotEmpty) {
-      // мержим в список из storage: снапшот провайдера затёр бы подписку, обновлённую за время пинга
+      // сливаем со списком из storage: снимок провайдера затёр бы подписку, обновлённую за время пинга
       final merged = await ref
           .read(storageProvider)
           .applyPingUpdates(pending, DateTime.now());

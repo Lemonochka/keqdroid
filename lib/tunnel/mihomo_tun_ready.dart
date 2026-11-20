@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 // API mihomo открывает раньше TUN (hub.ApplyConfig: applyRoute, потом executor), и пока адаптер создаётся,
-// tun в /configs пустой: enable false без device. замер в ВМ 29.10.2026: 135 мс пусто, 499 мс enable true
+// tun в /configs пустой, enable false без device; замер в ВМ 29.10.2026: 135 мс пусто, 499 мс enable true
 enum MihomoTunState { pending, up, failed }
 
 MihomoTunState mihomoTunState({required String coreOutput, Object? configs}) {

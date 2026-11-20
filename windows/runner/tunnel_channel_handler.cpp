@@ -765,7 +765,7 @@ bool OurSystemProxyActive(std::wstring* server) {
          (bypass == kProxyBypass || bypass == kPerConnBypass);
 }
 
-// после грязного выхода реестр мог оставить систему на мёртвом порту. до main Dart, с автоподключением не гоняется
+// после грязного выхода реестр мог оставить систему на мёртвом порту; до main Dart, с автоподключением не гоняется
 void CleanupStaleSystemProxy() {
   std::wstring server;
   if (!OurSystemProxyActive(&server)) {
@@ -777,7 +777,7 @@ void CleanupStaleSystemProxy() {
 }
 
 // TokenIsElevated говорит да и у токена runas /trustlevel, и при выключенном UAC, хотя группа администраторов
-// там только запрещающая и адаптер не создать. спрашиваем саму группу
+// там только запрещающая и адаптер не создать; спрашиваем саму группу
 bool IsProcessElevated() {
   SID_IDENTIFIER_AUTHORITY nt = SECURITY_NT_AUTHORITY;
   PSID admins = nullptr;
@@ -931,7 +931,8 @@ void DispatchDeepLinkToDart() {
   if (g_vpn_channel == nullptr || g_pending_deep_link.empty()) {
     return;
   }
-  // без данных намеренно: пока открыто меню трея, вкладки серверов нет, и пуш со ссылкой потерялся бы. ссылка ждёт getPendingDeepLink
+  // без данных намеренно: пока открыто меню трея, вкладки серверов нет, и пуш со ссылкой потерялся бы;
+  // ссылка ждёт getPendingDeepLink
   g_vpn_channel->InvokeMethod("onDeepLink",
                               std::make_unique<flutter::EncodableValue>());
 }
@@ -1005,8 +1006,8 @@ void KeqdroidClearStaleSystemProxy() {
   CleanupStaleSystemProxy();
 }
 
-// без WM_SETTINGCHANGE: сеанс кончается, а две рассылки по закрывающимся окнам съели бы до десяти секунд на выход.
-// без этого после перезагрузки системный трафик шёл в мёртвый порт до открытия приложения
+// Без WM_SETTINGCHANGE: сеанс кончается, а две рассылки по закрывающимся окнам съели бы до десяти секунд на выход.
+// Без самой уборки после перезагрузки системный трафик шёл в мёртвый порт до открытия приложения
 void KeqdroidClearSystemProxyOnSessionEnd() {
   std::wstring server;
   if (!OurSystemProxyActive(&server)) {

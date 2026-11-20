@@ -73,7 +73,7 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
   // до фильтра уровня: при loglevel error строка Warning в буфер не попадает
   bool _xrayStarted = false;
 
-  // пока идёт штатный стоп, вотчдог не должен принять наш kill за смерть ядра
+  // пока идёт штатный стоп, сторож не должен принять наш kill за смерть ядра
   bool _stoppingSession = false;
   // TUN без прав администратора: ядро поднимает служба KeqdroidTun от имени SYSTEM
   bool _viaService = false;
@@ -148,7 +148,7 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
       // _cleanupForRestart обнуляет режим, без возврата опрос счётчиков после трея не перезапустится
       _activeMode = request.mode;
 
-      // без прав администратора и без службы ядро просто умирает с exit code 1, отсекаем заранее.
+      // без прав администратора и без службы ядро просто умирает с exit code 1, поэтому отсекаем заранее;
       // слова administrator rights ловит explainError (UiErrorCode.tunAdmin)
       _viaService = false;
       if (request.mode == ConnectionMode.tun && await _isElevated() == false) {
@@ -190,7 +190,7 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
 
       unawaited(_verifyChainReachable(request));
 
-      // без вотчдога смерть ядра оставляла UI в Connected, а системный прокси на мёртвом порту
+      // без сторожа смерть ядра оставляла интерфейс в Connected, а системный прокси на мёртвом порту
       _watchProcessExit(_mihomoProcess, 'mihomo');
       _watchProcessExit(_xrayProcess, 'xray');
     } catch (e, st) {
@@ -258,7 +258,7 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
         mode: ProcessStartMode.normal,
       );
       _coreOutputDone = _pipeProcessOutput(_xrayProcess!, _xrayLog, 'xray');
-      // в job сразу: адаптер ядро ждёт десятки секунд, и закрытое в это время приложение оставляло его сиротой
+      // в job сразу: адаптер ядро ждёт десятки секунд, и приложение, закрытое в это время, оставляло его сиротой
       await WindowsDesktopService.registerSessionCoreProcesses(
         xrayPid: _xrayProcess!.pid,
         singboxPid: 0,
@@ -446,8 +446,8 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
         'Reinstall the app or use Proxy mode.',
       );
     }
-    // остаток ядра, убитого посреди ожидания: пока такой висел, 27.10.2026 Windows отказала и mihomo четыре раза подряд.
-    // без прав удалить адаптер может только служба, она делает это перед запуском ядра
+    // Остаток ядра, убитого посреди ожидания: пока такой висел, 27.10.2026 Windows отказала и mihomo четыре раза
+    // подряд. Без прав удалить адаптер может только служба, она делает это перед запуском ядра
     if (!_viaService) {
       final removed = await WindowsDesktopService.removeStaleTunAdapters(
         ourWintunInstanceIds(),
@@ -630,7 +630,7 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
 
     // мягко, чтобы xray вернул адаптер, маршруты и weak host send
     await _killProcess(_xrayProcess, graceful: true);
-    // mihomo слушает сигналы, а не stdin, на Windows это жёсткий TerminateProcess.
+    // mihomo слушает сигналы, а не stdin, и на Windows его остановит только жёсткий TerminateProcess;
     // уборку адаптера доделывает драйвер, её ждёт _awaitTunAdapterGone
     await _killProcess(_mihomoProcess);
     _xrayProcess = null;
@@ -639,8 +639,8 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
 
     await WindowsDesktopService.clearSessionCoreProcesses();
 
-    // процесс мёртв, адаптер ещё нет: на занятом имени ядро делает OpenAdapter и настраивает умирающий.
-    // ждём только после TUN: чужой sing-box рядом держит тот же 172.19.0.1
+    // процесс мёртв, а адаптер ещё нет, и на занятом имени ядро делает OpenAdapter и настраивает умирающий;
+    // ждём только после TUN, потому что чужой sing-box рядом держит тот же 172.19.0.1
     if (wasTun) await _awaitTunAdapterGone();
 
     final dir = _sessionDir;
@@ -864,9 +864,9 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
       }
     }
 
-    // allowMalformed: строка ядра в ANSI-кодировке русской Windows иначе роняет весь пайп лога
+    // allowMalformed: строка ядра в ANSI-кодировке русской Windows иначе роняет весь поток лога
     const decoder = Utf8Decoder(allowMalformed: true);
-    // строки режем по всему потоку: кусок пайпа обрывается где попало
+    // строки режем по всему потоку: кусок из трубы обрывается где попало
     Future<void> pipe(Stream<List<int>> stream) => stream
         .transform(decoder)
         .transform(const LineSplitter())
@@ -884,7 +884,7 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
     if (process == null) return;
     try {
       if (graceful) {
-        // kill на Windows это жёсткий TerminateProcess, и ядро не вернуло бы адаптер и маршруты.
+        // kill на Windows делает жёсткий TerminateProcess, и ядро не вернуло бы адаптер и маршруты;
         // xray мягко выходит по EOF на stdin, tool/patches/xray-desktop-stdin-stop.patch
         try {
           await process.stdin.close();
@@ -927,7 +927,7 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
     return false;
   }
 
-  // xray сперва открывает адаптер по имени, потом создаёт, mihomo создаёт трижды; 10 с на geo-базы.
+  // xray сперва открывает адаптер по имени, потом создаёт, mihomo создаёт трижды, и ещё 10 с на geo-базы;
   // убитое раньше ядро бросило бы адаптер с ошибкой
   static const _xrayTunBudgetMs = 2 * kWintunWaitMs + 10000;
   static const _mihomoTunBudgetMs = kWintunAttempts * kWintunWaitMs + 10000;

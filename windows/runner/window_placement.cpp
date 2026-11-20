@@ -5,7 +5,7 @@ namespace {
 constexpr wchar_t kRegistryKey[] = L"Software\\KeqDroid";
 constexpr wchar_t kPlacementValue[] = L"MainWindowPlacement";
 
-// меньше этого запись битая, такого размера человек окну не тянул
+// меньше этого запись битая, такого размера пользователь окну не тянул
 constexpr int kMinSavedWidth = 400;
 constexpr int kMinSavedHeight = 300;
 

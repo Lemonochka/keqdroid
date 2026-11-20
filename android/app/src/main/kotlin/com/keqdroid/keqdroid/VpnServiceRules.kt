@@ -17,7 +17,7 @@ internal fun sessionTunnelMode(extra: String?): String =
         KeqdisVpnService.TUNNEL_MODE_VPN
     }
 
-// startsTunnel null: снапшота нет
+// startsTunnel null: снимка нет
 internal fun restoreRefusal(
     startsTunnel: Boolean?,
     alwaysOn: Boolean,
@@ -30,8 +30,8 @@ internal fun restoreRefusal(
     else -> null
 }
 
-// ядро, прожившее дольше 30 с, поднимаем всегда. трижды подряд умершее сразу сломано само,
-// круг перезапусков прятал бы это за подключено
+// ядро, прожившее дольше 30 с, поднимаем всегда; трижды подряд умершее сразу сломано само,
+// и круг перезапусков прятал бы это за подключено
 internal const val CORE_QUICK_DEATH_MS = 30_000L
 internal const val CORE_MAX_QUICK_DEATHS = 3
 

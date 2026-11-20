@@ -322,7 +322,7 @@ bool SetRunValue(bool enable) {
   return status == ERROR_SUCCESS;
 }
 
-// формат не опубликован: включённое 02 и нули, выключенное 03 и время выключения. нечётный первый байт, как читает Firefox
+// формат не опубликован: включённое 02 и нули, выключенное 03 и время выключения; нечётный первый байт, как читает Firefox
 bool RunValueDisabledByUser() {
   BYTE data[64] = {};
   DWORD size = sizeof(data);
@@ -430,11 +430,11 @@ bool KeqdroidAutostartInTray() {
 
 bool KeqdroidApplyAutostart(bool enabled, bool elevated, bool allow_elevation) {
   const bool want_task = enabled && elevated;
-  // выключая, сносим любую задачу: после переезда папки осталась бы чужая. включая, пересоздаём при другом пути
+  // выключая, сносим любую задачу, иначе после переезда папки осталась бы чужая; включая, пересоздаём при другом пути
   const ElevatedTask task = ReadElevatedTask();
   const bool task_present = !task.exe.empty();
   const bool task_matches = TaskMatchesThisExe(task.exe);
-  // задачи до этой версии стоят с приоритетом 7. запущенное ими приложение уже с правами, пересоздаём без UAC
+  // задачи до этой версии стоят с приоритетом 7; запущенное ими приложение уже с правами, пересоздаём без UAC
   const bool stale_priority =
       want_task && task_matches && task.priority != kTaskPriority;
 

@@ -26,7 +26,7 @@ class AppListTile extends StatelessWidget {
   // кэш иконок сверху: свой ConsumerStatefulWidget на строке тащил бы область зависимостей Riverpod, а строк сотни
   final AppIconCache iconCache;
 
-  // 40dp иконки и две строки текста с полями по 8. на этом шаге живёт SliverFixedExtentList
+  // 40 dp иконки и две строки текста с полями по 8; на этом шаге живёт SliverFixedExtentList
   static const double height = 72;
 
   static const double _markSize = 24;

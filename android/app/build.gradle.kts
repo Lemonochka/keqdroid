@@ -64,13 +64,10 @@ android {
     packaging {
         jniLibs {
             useLegacyPackaging = true
-            // `abiFilters` выше до чужих библиотек не достаёт: ML Kit из
-            // mobile_scanner приносит libbarhopper_v3.so в AAR, и в APK
-            // приезжали ВСЕ три её сборки — x86_64 на 5.9 МБ и armeabi-v7a на
-            // 3.2 МБ поверх нужной. С двумя наборами ядер в jniLibs то же
-            // самое стоило бы ещё ~80 МБ соседней архитектуры. Поэтому APK
-            // берёт только свою, а make_release.ps1 проверяет это по готовому
-            // файлу.
+            // abiFilters выше до чужих библиотек не достаёт: ML Kit из mobile_scanner приносит libbarhopper_v3.so в AAR,
+            // и в APK приезжали все три её сборки, x86_64 на 5.9 МБ и armeabi-v7a на 3.2 МБ поверх нужной. С двумя
+            // наборами ядер в jniLibs соседняя архитектура стоила бы ещё ~80 МБ, поэтому APK берёт только свою,
+            // а make_release.ps1 проверяет это по готовому файлу
             excludes += listOf("x86", "x86_64", "armeabi-v7a", "arm64-v8a")
                 .filter { it != targetAbi }
                 .map { "**/$it/**" }

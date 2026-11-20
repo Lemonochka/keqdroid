@@ -170,7 +170,7 @@ class EphemeralXrayPing {
     bool keepAlive = true,
   }) async {
     if (items.isEmpty) return [];
-    // по очереди: у всех элементов батча один socksPort
+    // по очереди: у всех элементов пачки один socksPort
     final out = <({
       String id,
       bool success,
@@ -198,8 +198,8 @@ class EphemeralXrayPing {
     return out;
   }
 
-  // не поднялось ядро, значит null: по нему PingService делит пачку пополам, а список отказов
-  // той же длины он принял бы за ответ, и живые соседи негодного сервера ушли бы в красные
+  // если ядро не поднялось, возвращаем null, и по нему PingService делит пачку пополам; список отказов той же
+  // длины он принял бы за ответ, и живые соседи негодного сервера ушли бы в красные
   static Future<
       List<
           ({
@@ -277,7 +277,7 @@ class EphemeralXrayPing {
         return null;
       }
 
-      // первая удачная проба значит, что ядро дочитало конфиг: остальным отказам верим сразу
+      // первая удачная проба показывает, что ядро дочитало конфиг, и остальным отказам верим сразу
       var coreAwake = false;
       return await mapPooled(probes, concurrency, (probe) async {
         while (true) {
@@ -365,8 +365,8 @@ class EphemeralXrayPing {
     });
   }
 
-  // открытый порт у mihomo ещё не готовность: до Running он молча закрывает соединения.
-  // на Pixel 6a при живом туннеле это 1.3-1.8 с
+  // открытый порт у mihomo ещё не готовность: до Running он молча закрывает соединения,
+  // на Pixel 6a при живом туннеле около 1.3-1.8 с
   static const coreWakeupGrace = Duration(seconds: 3);
 
   @visibleForTesting
@@ -720,7 +720,7 @@ class EphemeralXrayPing {
     return trimmed;
   }
 
-  // ядра стартуют пачкой и делят диск с антивирусом, 5 с не хватало. таймаут пробы сюда не годится:
+  // ядра стартуют пачкой и делят диск с антивирусом, 5 с не хватало; таймаут пробы сюда не годится,
   // он обрезал срок до 8 с у пинга и до 4 у автовыбора, #18
   static const coreStartupBudget = Duration(seconds: 12);
 

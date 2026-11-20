@@ -1,4 +1,4 @@
-// new-url целиком, new-domain меняет только хост, порт по желанию. с https на http не переезжаем: там пароли серверов
+// new-url целиком, new-domain меняет только хост, порт по желанию; с https на http не переезжаем, там пароли серверов
 String? movedSubscriptionUrl(
   String current, {
   String? newUrl,

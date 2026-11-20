@@ -129,8 +129,9 @@ internal fun parseOwnerQuery(line: String): OwnerQuery? {
     return OwnerQuery(parts[0] == "udp", parts[1], srcPort, parts[3], dstPort)
 }
 
-// без владельца система отвечает и про приложение вне VPN, привязавшее сокет к tun0: это имя ловит правило защиты адреса сервера.
-// сам Android ходит только на наш DNS в туннеле и на сервер строгого Частного DNS, чьих адресов приложению не выдают
+// без владельца система отвечает и про приложение вне VPN, привязавшее сокет к tun0, его и ловит правило
+// защиты адреса сервера; сам Android ходит только на наш DNS в туннеле и на сервер строгого Частного DNS,
+// чьих адресов приложению не выдают
 internal fun unownedAnswer(
     systemOutsideVpn: Boolean,
     dstIp: String,

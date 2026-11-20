@@ -351,7 +351,7 @@ class UpdateService {
 
   static const _arm32ApkMarker = 'armeabi-v7a';
 
-  // APK своей ABI: arm64 на 32-битную прошивку не встанет.
+  // APK своей ABI, arm64 на 32-битную прошивку не встанет;
   // первый .apk брать нельзя, его выбирают версии до 32-битного APK
   static Map<String, dynamic>? _findApkAsset(
     List? assets, {

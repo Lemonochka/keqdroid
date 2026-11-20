@@ -148,7 +148,7 @@ const kThemePresets = <ThemePreset>[
   ThemePreset(id: 'mono', name: 'Monochrome', seed: Color(0xFF607D8B)),
   ThemePreset(id: 'mint', name: 'Mint', seed: Color(0xFF2EC4B6)),
   ThemePreset(id: 'rose', name: 'Rose', seed: Color(0xFFE76FAD)),
-  // id остался с двухцветной версии, он сохранён у людей в настройках
+  // id остался с двухцветной версии, он сохранён в настройках у пользователей
   ThemePreset(
     id: 'sakura_sky',
     name: 'Sakura ✿',
@@ -463,7 +463,7 @@ class _ThemedApp extends ConsumerWidget {
       onGenerateTitle: (context) => AppLocalizations.of(context)!.appTitle,
       debugShowCheckedModeBanner: false,
       themeMode: settings.darkTheme ? ThemeMode.dark : ThemeMode.light,
-      // анимация темы пересобирает всё дерево на каждом кадре, на Pixel 6a это 55 мс на кадр
+      // анимация темы пересобирает всё дерево на каждом кадре, на Pixel 6a по 55 мс
       themeAnimationDuration: Duration.zero,
       theme: buildAppTheme(useSystem ? lightScheme : customLight,
           flair: flair,
@@ -485,10 +485,9 @@ class _ThemedApp extends ConsumerWidget {
         final theme = Theme.of(context);
         final icons =
             theme.brightness == Brightness.dark ? Brightness.light : Brightness.dark;
-        // панель навигации по теме приложения: без этого её красит прошивка по теме системы,
-        // и на HyperOS после обновления под кнопками оставалась белая полоса до перезагрузки.
-        // строку состояния тоже: стоит задать одну панель, и Pixel 6a в тёмной теме
-        // перекрасил значки сверху в тёмные (apr=LIGHT_STATUS_BARS)
+        // Панель навигации по теме приложения: без этого её красит прошивка по теме системы, и на HyperOS после
+        // обновления под кнопками оставалась белая полоса до перезагрузки. Строку состояния тоже: стоит задать одну
+        // панель, и Pixel 6a в тёмной теме перекрасил значки сверху в тёмные (apr=LIGHT_STATUS_BARS)
         return AnnotatedRegion<SystemUiOverlayStyle>(
           value: SystemUiOverlayStyle(
             statusBarIconBrightness: icons,

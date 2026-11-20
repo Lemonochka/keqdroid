@@ -5,7 +5,7 @@ import 'route_servers.dart';
 import 'split_tunneling_entries.dart';
 import 'traffic_routes.dart';
 
-// одно правило на экран и на подключение. владельца соединения ядро узнаёт только у своего туннеля
+// одно правило на экран и на подключение; владельца соединения ядро узнаёт только у своего туннеля
 bool appRoutesRun(ConnectionMode mode) => mode == ConnectionMode.tun;
 
 class RouteAppRules {
@@ -69,7 +69,7 @@ class RouteAppRules {
 }
 
 // маршрут всех приложений, который едет своим правилом, а не в трёх списках: с протоколом, а при своём
-// порядке любой, кроме блокировки. с неверными портами в ядро не идёт: ошибку показывает его карточка
+// порядке любой, кроме блокировки; с неверными портами в ядро не идёт, ошибку показывает его карточка
 List<RouteAppRules> routeProtocolRules({
   required List<TrafficRoute> routes,
   required List<RouteServerOutbound> outbounds,
@@ -84,7 +84,7 @@ List<RouteAppRules> routeProtocolRules({
     final ports = routePortRanges(route.ports);
     if (ports == null || routeIsEmpty(route)) continue;
     final allTraffic = route.content == RouteContent.allTraffic;
-    // весь трафик без протокола это строка «Всё остальное», маршрутом он ничего не значит
+    // весь трафик без протокола показан строкой Всё остальное, маршрутом он ничего не задаёт
     if (allTraffic && !routeHasProtocol(route)) continue;
     out.add(RouteAppRules(
       tag: routeHasProtocol(route)

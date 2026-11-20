@@ -127,7 +127,7 @@ class LinuxCorePaths {
     String assetKey,
     String fileName,
   ) async {
-    // там, где лежит бинарь, +x не поставить (монт AppImage, /opt от root), поэтому копируем в кэш.
+    // там, где лежит бинарь, +x не поставить (монт AppImage, /opt от root), поэтому копируем в кэш;
     // без этого Process.start падает с Permission denied
     final fromFlutterBundle = _pathBesideFlutterAssets(fileName);
     if (fromFlutterBundle != null) {
@@ -165,8 +165,8 @@ class LinuxCorePaths {
   @visibleForTesting
   static String? cacheRootOverride;
 
-  // File.copy пишет поверх с O_TRUNC, и параллельные замеры переписывали ядро, пока другие его запускали.
-  // уборка в whenComplete блоком: стрелка вернула бы эту же раскладку, и whenComplete ждал бы сам себя
+  // File.copy пишет поверх с O_TRUNC, и параллельные замеры переписывали ядро, пока другие его запускали;
+  // уборка в whenComplete блоком, потому что стрелка вернула бы эту же раскладку, и whenComplete ждал бы сам себя
   @visibleForTesting
   static Future<String> stageExecutable(String src, String fileName) =>
       _staging[fileName] ??= _stage(src, fileName).whenComplete(() {

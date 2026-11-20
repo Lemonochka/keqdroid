@@ -14,7 +14,7 @@ class _ContentPreset extends _ContentChoice {
   final RoutingPreset preset;
 }
 
-// сохраняет сам, без кнопки. новый маршрут появляется в списке, только когда начал что-то забирать
+// сохраняет сам, без кнопки; новый маршрут появляется в списке, только когда начал что-то забирать
 class _RouteEditorScreen extends ConsumerStatefulWidget {
   const _RouteEditorScreen({this.initial, this.profileId});
 
@@ -47,7 +47,7 @@ class _RouteEditorScreenState extends ConsumerState<_RouteEditorScreen> {
     super.dispose();
   }
 
-  // все приложения и весь трафик без протокола это и есть всё остальное
+  // все приложения и весь трафик без протокола уже покрывает Всё остальное
   bool get _savable =>
       _stored ||
       (!(_route.allApps &&

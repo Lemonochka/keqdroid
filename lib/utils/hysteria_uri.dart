@@ -23,7 +23,7 @@ class HysteriaLinkParams {
     this.hopInterval = '',
   });
 
-  // схема одна на обе версии, решают параметры. без признаков считаем второй: часть панелей так выдаёт hysteria2
+  // схема одна на обе версии, решают параметры; без признаков считаем второй, часть панелей так выдаёт hysteria2
   static bool isV1(String config) {
     final trimmed = config.trim();
     if (!trimmed.toLowerCase().startsWith('hysteria://')) return false;
@@ -39,7 +39,7 @@ class HysteriaLinkParams {
         .any((key) => (params[key] ?? '').trim().isNotEmpty);
   }
 
-  // без порта 443 (Hysteria 2 URI Scheme). явный :0 оставляем, как v2rayN: Uri его от пропуска не отличает
+  // без порта 443 (Hysteria 2 URI Scheme); явный :0 оставляем, как v2rayN, Uri его от пропуска не отличает
   static int port(String config) {
     final raw = RawShareUri.parse(splitPorts(config).$1);
     if (raw == null || raw.port.isEmpty) return 443;

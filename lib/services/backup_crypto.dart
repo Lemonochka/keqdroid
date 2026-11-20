@@ -92,7 +92,7 @@ class BackupCrypto {
     return Uint8List.fromList(gzip.decode(clear));
   }
 
-  // своя соль на каждый файл: nonce GCM случайный, а файлов с одним ключом у всех людей много
+  // своя соль на каждый файл: nonce GCM случайный, а файлов с одним ключом у всех пользователей много
   static Future<SecretKey> _fileKey(List<int> key, List<int> salt) =>
       _hkdf.deriveKey(secretKey: SecretKey(key), nonce: salt, info: _info);
 }
@@ -146,7 +146,7 @@ class BackupKeys {
     return out;
   }
 
-  // сборки без секрета (свои сборки людей, тесты): ключ открытый, копия из них читается любой сборкой
+  // сборки без секрета (собранные самостоятельно, тесты): ключ открытый, копия из них читается любой сборкой
   static final List<int> dev =
       hashes.sha256.convert(utf8.encode('keqdroid public backup key 1')).bytes;
 

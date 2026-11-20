@@ -5,7 +5,7 @@ import 'proxy_chain.dart';
 final _scheme = RegExp(r'^([a-z][a-z0-9+.-]*)://', caseSensitive: false);
 
 // всё, кроме имени: у barry-far/V2ray-Config 15.11.2026 копий под тегами каналов 3582 из 9489,
-// и ещё 352 адреса с тем же UUID, но другим SNI или путём, а это уже разные серверы
+// и ещё 352 адреса с тем же UUID, но другим SNI или путём, а такие уже разные серверы
 String sameServerKeyOf(String config) {
   final s = config.trim();
   if (s.startsWith('{')) return _withoutTopLevel(s, 'remarks') ?? s;

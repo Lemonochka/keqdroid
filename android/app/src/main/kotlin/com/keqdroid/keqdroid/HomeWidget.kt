@@ -54,8 +54,8 @@ internal object HomeWidget {
     private const val REQ_CONNECT = 3
     private const val REQ_OPEN = 4
 
-    // налив идёт 2,4 с с появления слоя, и только после него налив и доворот меняются на стоячие картинки.
-    // анимация, оставленная на виду, повторялась бы при каждом возврате на рабочий стол
+    // налив идёт 2,4 с с появления слоя, и только после него налив и доворот меняются на стоячие картинки;
+    // оставленная на виду анимация повторялась бы при каждом возврате на рабочий стол
     private const val SETTLE_MS = 2700L
 
     internal enum class Look { OFF, CONNECTING, ON, ERROR }
@@ -221,8 +221,8 @@ internal object HomeWidget {
                         refresh(app)
                         return
                     }
-                    // прошивка глотает старт и без исключения. запомненный отказ перерисует кнопку на окно,
-                    // окно из приёмника система откроет не всегда, а из нажатия на виджет откроет
+                    // прошивка глотает старт и без исключения; запомненный отказ перерисует кнопку на окно, потому что окно
+                    // из приёмника система откроет не всегда, а из нажатия на виджет откроет
                     waiting = true
                     handler.postDelayed({
                         runCatching {
@@ -266,7 +266,7 @@ internal object HomeWidget {
         val last = prefs.getString("w${id}_look", null)
             ?.let { runCatching { Look.valueOf(it) }.getOrNull() }
         var front = prefs.getInt("w${id}_front", 0)
-        // слои меняются местами через translationZ, а он доступен RemoteViews с Android 12. раньше вид меняется сразу
+        // слои меняются местами через translationZ, а он доступен RemoteViews с Android 12; на старых вид меняется сразу
         val transition = Build.VERSION.SDK_INT >= 31 && last != null && last != look
         if (transition) {
             front = 1 - front
@@ -349,7 +349,8 @@ internal object HomeWidget {
 
     internal class WidgetServer(val name: String, val ping: String?)
 
-    // виджет, как плитка, подключает сервер последней сессии. имя без флага и пинг от приложения берём, только если это он
+    // виджет, как плитка, подключает сервер последней сессии; имя без флага и пинг от приложения берём,
+    // только если приложение прислало тот же сервер
     internal fun widgetServer(last: String?, key: String?, flag: String?, name: String?, ping: String?): WidgetServer {
         val known = last == null || last == key
         if (!known) return WidgetServer(last ?: "", null)
@@ -418,7 +419,7 @@ internal object HomeWidget {
         }
     }
 
-    // pour: слой только что появился, вода наливается и логотип доворачивается. без него всё стоит
+    // pour: слой только что появился, вода наливается и логотип доворачивается; без него всё стоит
     private fun fill(rv: RemoteViews, app: Context, kind: Kind, s: Slot, look: Look, d: Data, pour: Boolean) {
         rv.setInt(s.bg, "setColorFilter", d.color("surfaceContainer"))
 

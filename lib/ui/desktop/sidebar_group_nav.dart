@@ -21,7 +21,7 @@ import '../../shared/ui/expressive.dart';
 import '../../tunnel/tunnel_state.dart';
 
 // быстрый переход каруселью M3 (hero по центру): большая обложка группы, на которой стоит список,
-// края соседних сверху и снизу. карусель едет за прокруткой списка
+// и края соседних сверху и снизу; карусель едет за прокруткой списка
 class SidebarGroupNav extends ConsumerStatefulWidget {
   const SidebarGroupNav({
     super.key,
@@ -111,9 +111,9 @@ class _SidebarGroupNavState extends ConsumerState<SidebarGroupNav> {
   Timer? _settle;
   bool _dragging = false;
 
-  // своя прокрутка карусели после каждого щелчка доводилась до ближайшей обложки и дёргалась
-  // туда-обратно. щелчок (в Windows 100 пикселей при трёх строках) = шаг сразу, без ожидания
-  // анимации; список догоняет один раз, когда колесо остановилось
+  // Своя прокрутка карусели после каждого щелчка доводилась до ближайшей обложки и дёргалась туда-обратно.
+  // Щелчок (в Windows 100 пикселей при трёх строках) делает шаг сразу, без ожидания анимации,
+  // а список догоняет один раз, когда колесо остановилось
   void _onWheel(PointerSignalEvent event) {
     if (event is! PointerScrollEvent) return;
     GestureBinding.instance.pointerSignalResolver.register(event, (event) {
@@ -274,14 +274,14 @@ class _SidebarGroupNavState extends ConsumerState<SidebarGroupNav> {
                       child: CarouselView.weighted(
                         controller: _carousel,
                         scrollDirection: Axis.vertical,
-                        // при [6, 1] последняя группа во Flutter 3.44 не становится большой: прокрутка упирается в конец.
+                        // при [6, 1] последняя группа во Flutter 3.44 не становится большой, прокрутка упирается в конец;
                         // по кругу не крутим: список не круговой, и прыжок с последней на первую путал
                         flexWeights: _weights,
                         itemSnapping: true,
                         padding: const EdgeInsets.symmetric(vertical: 4),
                         backgroundColor: scheme.surfaceContainerHigh,
-                        // картинка и затемнение сглаживались по краю каждое само, и край светился
-                        // полоской. сперва слой, потом скругление; фон обложки шире её на 1 dp
+                        // картинка и затемнение сглаживались по краю каждое само, и край светился полоской;
+                        // сперва слой, потом скругление, а фон обложки шире её на 1 dp
                         itemClipBehavior: Clip.antiAliasWithSaveLayer,
                         onTap: _open,
                         children: [
@@ -470,9 +470,9 @@ class _GroupCover extends StatelessWidget {
   }
 }
 
-// Skia на ПК ставит начало слоя в целый пиксель (ComputeIntegralTransCTM в flow), а край обложки
-// режет без этого: пока обложка растёт, картинка и подпись под краем прыгали на пиксель туда и обратно.
-// содержимое сдвигается на отброшенную долю, край обложки всегда отдельный слой
+// Skia на ПК ставит начало слоя в целый пиксель (ComputeIntegralTransCTM в flow), а край обложки режет без этого:
+// пока обложка растёт, картинка и подпись под краем прыгали на пиксель туда и обратно. Содержимое сдвигается
+// на отброшенную долю, а край обложки всегда отдельный слой
 class _UnsnappedCover extends SingleChildRenderObjectWidget {
   const _UnsnappedCover({required this.motion, required super.child});
 
@@ -590,8 +590,8 @@ final _sharpShapes = [
 ];
 final _shapePaths = <RoundedPolygon, Path>{};
 
-// обложка группы без картинки: крупная мягкая форма M3 срезана краем, маленькая острая с другой
-// стороны, не касаясь её. по спеке M3E абстрактные формы уместны в декоративной графике
+// обложка группы без картинки: крупная мягкая форма M3 срезана краем, маленькая острая с другой стороны,
+// не касаясь её; по спецификации M3E абстрактные формы уместны в декоративной графике
 class _DefaultCoverPainter extends CustomPainter {
   _DefaultCoverPainter({required this.seed, required this.kind, required this.colors});
 
@@ -652,9 +652,9 @@ class _DefaultCoverPainter extends CustomPainter {
       old.seed != seed || old.kind != kind || old.colors != colors;
 }
 
-// смещение карусели на 1/8 высоты уже меняет большую обложку целиком (6 весов против 1):
-// мышь тянула её в шесть раз резвее, чем шла сама, а бросок проскакивал соседнюю обложку.
-// снаружи CarouselScrollPhysics, иначе до её доводки скорость не доходит поделённой
+// Смещение карусели на 1/8 высоты уже меняет большую обложку целиком (6 весов против 1): мышь тянула её
+// в шесть раз резвее, чем шла сама, а бросок проскакивал соседнюю обложку. Снаружи CarouselScrollPhysics,
+// иначе до её доводки скорость не доходит поделённой
 class _CoverController extends CarouselController {
   @override
   ScrollPosition createScrollPosition(

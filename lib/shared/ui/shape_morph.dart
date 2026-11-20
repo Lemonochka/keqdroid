@@ -32,7 +32,7 @@ class ShapeMorphCycle extends ChangeNotifier {
     MaterialShapes.oval,
   ];
 
-  // Morph сопоставляет кривые перебором, строить его в build или пейнтере значит 60 раз в секунду
+  // Morph сопоставляет кривые перебором, и в build или пейнтере он строился бы 60 раз в секунду
   static final List<Morph> morphs = [
     for (var i = 0; i < shapes.length; i++)
       Morph(shapes[i], shapes[(i + 1) % shapes.length]),

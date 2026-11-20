@@ -561,7 +561,7 @@ class _GroupPickSheet extends ConsumerWidget {
     final direction = Directionality.of(context);
     final l10n = context.l10n;
 
-    // ref закрытой шторки уже мёртв: notifier берём до pop
+    // ref закрытой шторки уже мёртв, поэтому notifier берём до pop
     Future<void> choose(String member) async {
       AppHaptics.selection();
       final subs = ref.read(subscriptionsProvider.notifier);
@@ -569,7 +569,7 @@ class _GroupPickSheet extends ConsumerWidget {
       await subs.chooseInGroup(subscriptionId, group.name, member);
     }
 
-    // сервер в главной это то же, что нажать его в списке: туда и переподключаемся
+    // сервер в главной группе выбирают так же, как нажатием в списке, и переподключаемся на него
     void chooseNode(String member) {
       if (!isMain) {
         unawaited(choose(member));
@@ -766,7 +766,7 @@ class _GroupServersSheet extends ConsumerWidget {
       return order[a]!.compareTo(order[b]!);
     });
 
-    // ref закрытой шторки уже мёртв: notifier берём до pop
+    // notifier берём до pop, как в choose
     Future<void> pick(String? member) async {
       AppHaptics.selection();
       final subs = ref.read(subscriptionsProvider.notifier);

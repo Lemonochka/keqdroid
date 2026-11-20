@@ -47,7 +47,7 @@ class TrafficRoute {
   final String id;
   final bool enabled;
 
-  // записи в формате сплита: пакет на Android, имя процесса или путь на ПК. пусто значит все приложения
+  // записи в формате сплита: пакет на Android, имя процесса или путь на ПК; пустой список берёт все приложения
   final List<String> apps;
 
   final RouteContent content;
@@ -64,10 +64,10 @@ class TrafficRoute {
 
   final RouteNetwork network;
 
-  // как набрал человек, разбирает routePortRanges
+  // как набрал пользователь, разбирает routePortRanges
   final String ports;
 
-  // место во всех приложениях после перетаскивания. без него маршрут встаёт по цели
+  // место во всех приложениях после перетаскивания; без него маршрут встаёт по цели
   final int? order;
 
   bool get allApps => apps.isEmpty;

@@ -20,8 +20,8 @@ import androidx.core.content.ContextCompat
 class VpnQuickTileService : TileService() {
 
     companion object {
-        // глиф строки состояния: плитка тонирует иконку, цветной логотип там белый кружок, а ic_launcher_monochrome с полями адаптивной иконки мелкий.
-        // тот же ресурс в манифесте для редактора плиток
+        // Глиф строки состояния: плитка тонирует иконку, и цветной логотип становится белым кружком,
+        // а ic_launcher_monochrome с полями адаптивной иконки мелкий. Тот же ресурс в манифесте для редактора плиток
         private val TILE_ICON_RES = R.drawable.ic_notification
     }
 
@@ -122,7 +122,7 @@ class VpnQuickTileService : TileService() {
 
     override fun onClick() {
         super.onClick()
-        // исключение из onClick система гасит молча, плитка просто дёргается. поэтому ни один шаг не падает наружу
+        // исключение из onClick система гасит молча, плитка просто дёргается, поэтому ни один шаг не падает наружу
         runCatching { handleClick() }.onFailure { t ->
             NativeLog.e("KEQDIS_QS", "onClick failed: $t", t)
             toast(R.string.tile_error_start)
@@ -142,7 +142,7 @@ class VpnQuickTileService : TileService() {
                 try {
                     if (Build.VERSION.SDK_INT >= 26) startForegroundService(tap.intent) else startService(tap.intent)
                 } catch (e: Exception) {
-                    // Android 12+: фоновый старт отняли (ограничение фоновой активности, выключенный автозапуск). из окна старт разрешён всегда
+                    // Android 12+ отнял фоновый старт (ограничение фоновой активности, выключенный автозапуск); из окна старт разрешён всегда
                     NativeLog.e("KEQDIS_QS", "onClick: service start refused by system: $e")
                     QuickConnect.rememberDirectStartBlocked(this)
                     openQuickConnect()
@@ -153,7 +153,7 @@ class VpnQuickTileService : TileService() {
         }
     }
 
-    // отказ бывает без исключения: прошивки с Автозапуском старт молча глотают.
+    // отказ бывает и без исключения, прошивки с Автозапуском старт молча глотают;
     // меньше секунды не хватает здоровому старту, больше рискует закрытой шторкой
     private fun verifyStarted(sentAt: Long) {
         android.os.Handler(mainLooper).postDelayed({
@@ -267,8 +267,8 @@ class VpnQuickTileService : TileService() {
 
 internal class TileLook(val active: Boolean, val connecting: Boolean)
 
-// нажатие по STATE_UNAVAILABLE система не доставляет, и умерший посреди коннекта процесс оставлял плитку мёртвой.
-// клик на connecting останавливает
+// нажатие по STATE_UNAVAILABLE система не доставляет, и умерший посреди подключения процесс оставлял плитку
+// мёртвой; нажатие в состоянии connecting останавливает
 internal fun tileLook(status: String): TileLook {
     val connecting = status == "connecting" || status == "starting"
     return TileLook(active = status == "connected" || status == "running" || connecting, connecting = connecting)

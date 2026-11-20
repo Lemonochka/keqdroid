@@ -808,7 +808,7 @@ class _UpdateVersionInfoState extends ConsumerState<_UpdateVersionInfo> {
           );
 
     if (widget.split) {
-      // рядом с лентой места на подписи статуса нет: он в цвете плитки и в подсказке.
+      // рядом с лентой места на подпись статуса нет, он в цвете плитки и в подсказке;
       // сами плитки рисует нижняя панель, здесь только место под них
       final scheme = Theme.of(context).colorScheme;
       final (Color? tile, Color ink) = error

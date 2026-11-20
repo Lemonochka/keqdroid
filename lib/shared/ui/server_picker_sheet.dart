@@ -31,8 +31,8 @@ final class _PickerServer extends _PickerEntry {
   const _PickerServer(this.server);
 }
 
-// по подпискам: одинаковые имена из разных подписок иначе не отличить.
-// подписки и настройки через watch: на несозданном асинхронном провайдере read вернёт пустоту, и группы схлопнутся в ручные
+// По подпискам, иначе одинаковые имена из разных подписок не отличить. Подписки и настройки через watch:
+// на несозданном асинхронном провайдере read вернёт пустоту, и группы схлопнутся в ручные
 class ServerPickerSheet extends ConsumerStatefulWidget {
   final String title;
   final String searchHint;

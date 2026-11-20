@@ -3,7 +3,7 @@ project(keqdroid_tun LANGUAGES CXX)
 
 set(KEQ_CORE_DIR "${CMAKE_SOURCE_DIR}/../assets/bin/windows")
 
-# служба запускает только те ядра, что лежали в сборке: их суммы вшиваются сюда.
+# служба запускает только те ядра, что лежали в сборке, их суммы вшиваются сюда;
 # новые ядра пересобирают конфигурацию сами
 function(keq_core_hash var file)
   set(path "${KEQ_CORE_DIR}/${file}")

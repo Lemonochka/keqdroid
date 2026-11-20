@@ -26,10 +26,9 @@ plugins {
     // при включённом Built-in Kotlin падает на применении com.android.library.
     // Требует Gradle 9.1+, см. gradle-wrapper.properties.
     id("com.android.application") version "9.0.0" apply false
-    // apply false: сам app KGP НЕ применяет (Built-in Kotlin, Flutter 3.44+).
-    // Пин версии нужен, пока живы плагины на легаси-пути (mobile_scanner и
-    // workmanager_android применяют KGP условно, только при AGP < 9 или
-    // выключенном Built-in Kotlin) — иначе они затягивают старый Kotlin.
+    // apply false: сам app KGP не применяет (Built-in Kotlin, Flutter 3.44+). Пин версии нужен, пока живы плагины
+    // на старом пути: mobile_scanner и workmanager_android применяют KGP условно, только при AGP < 9 или
+    // выключенном Built-in Kotlin, и без пина затягивают старый Kotlin
     id("org.jetbrains.kotlin.android") version "2.2.20" apply false
 }
 

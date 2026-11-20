@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 
-// не GlobalKey: на кросс-фейде AnimatedSwitcher в дереве два поддерева, и один ключ в двух местах это исключение
+// не GlobalKey: на кросс-фейде AnimatedSwitcher в дереве два поддерева, и один ключ в двух местах бросает исключение
 class ServerGroupAnchors {
   ServerGroupAnchors._();
 

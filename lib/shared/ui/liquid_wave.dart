@@ -276,7 +276,7 @@ class LiquidWave extends StatefulWidget {
   // фигуры у воды прячутся, когда над ней строка метрик
   final bool lowZoneFree;
 
-  // сдвиг top и side вниз: в легаси над кнопкой ещё статус-бар
+  // сдвиг top и side вниз: в Легаси над кнопкой ещё статус-бар
   final double shapesTop;
 
   // центр кнопки в dp от дальнего края, null: посередине
@@ -719,8 +719,8 @@ class _LiquidPainter extends CustomPainter {
       old.state != state;
 }
 
-// наборы фигур панели, меняются раз в полминуты. top и side живут вокруг кнопки, low у воды.
-// по пять, у воды по две: с метриками остаётся три
+// наборы фигур панели меняются раз в полминуты; top и side живут вокруг кнопки, low у воды,
+// по пять, у воды по две, с метриками остаётся три
 final panelLiquidShapes = [
   [
     LiquidShapeSpot(MaterialShapes.sunny,
@@ -760,7 +760,7 @@ final panelLiquidShapes = [
   ],
 ];
 
-// легаси: по бокам от кнопки в центре, три с одной стороны и две с другой
+// Легаси: по бокам от кнопки в центре, три с одной стороны и две с другой
 final legacyLiquidShapes = [
   LiquidShapeSpot(MaterialShapes.sunny,
       anchor: LiquidShapeAnchor.top, x: 0.14, y: 8, size: 26, degrees: 17),

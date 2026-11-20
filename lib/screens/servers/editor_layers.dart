@@ -12,8 +12,8 @@ class EditorLayer {
   final List<Widget> children;
 }
 
-// слои одной группой: путь от сервера к транспорту читается сверху вниз.
-// внутри нужен Material: SwitchListTile рисует чернила на ближайшем Material-предке, его даёт ExpressiveGroupTile
+// Слои одной группой: путь от сервера к транспорту читается сверху вниз. Внутри нужен Material: SwitchListTile
+// рисует чернила на ближайшем Material-предке, его даёт ExpressiveGroupTile
 class EditorLayers extends StatelessWidget {
   const EditorLayers(this.layers, {super.key});
 

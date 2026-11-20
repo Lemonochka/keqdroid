@@ -192,8 +192,8 @@ class ClashTemplate {
     return null;
   }
 
-  // как ядро (adapter/outboundgroup/parser.go): свои пункты, потом узлы по filter, без exclude-filter.
-  // у ядра regexp2, у нас RegExp: на простых шаблонах совпадают, непонятный фильтр не применяем
+  // как ядро (adapter/outboundgroup/parser.go): свои пункты, потом узлы по filter, без exclude-filter;
+  // у ядра regexp2, у нас RegExp, на простых шаблонах они совпадают, а непонятный фильтр не применяем
   static List<String> _members(Map<String, dynamic> g, List<String> allProxies) {
     List<RegExp>? patterns(Object? raw) {
       final text = raw?.toString() ?? '';
@@ -350,7 +350,7 @@ class ClashTemplate {
     final out = (jsonDecode(config.encode()) as Map).cast<String, dynamic>();
     final proxies = [...(out['proxies'] as List)];
     final at = proxies.indexWhere((p) => p is Map && p['name']?.toString() == node);
-    // первый узел шаблона для генератора это сервер сессии: его адрес идёт напрямую
+    // первый узел шаблона генератор берёт сервером сессии, и его адрес идёт напрямую
     if (at > 0) proxies.insert(0, proxies.removeAt(at));
     out['proxies'] = proxies;
 

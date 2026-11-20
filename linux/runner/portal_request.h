@@ -20,7 +20,7 @@ std::string NextToken();
 
 GVariant* EmptyVardict();
 
-// response 0 успех, 1 отказ человека, 2 прочее; results может быть nullptr
+// response 0 успех, 1 отказ пользователя, 2 прочее; results может быть nullptr
 using Done = std::function<void(guint response, GVariant* results)>;
 
 // handle_token в options вызова обязан совпадать с token

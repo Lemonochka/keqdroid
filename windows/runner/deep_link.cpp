@@ -147,7 +147,7 @@ bool KeqdroidForwardDeepLinkToRunningInstance(HWND target,
   payload.cbData = static_cast<DWORD>(url.size() + 1);
   payload.lpData = const_cast<char*>(url.c_str());
 
-  // SendMessage, не Post: данные на нашем стеке, а процесс сразу выходит. таймаут от зависшего экземпляра
+  // SendMessage, а не Post: данные на нашем стеке, а процесс сразу выходит; таймаут от зависшего экземпляра
   DWORD_PTR unused = 0;
   return ::SendMessageTimeoutW(target, WM_COPYDATA, 0,
                                reinterpret_cast<LPARAM>(&payload),

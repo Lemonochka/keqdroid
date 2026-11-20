@@ -1,4 +1,4 @@
-// по docs/config/transport.md и infra/conf/vless.go ядра: vision на xhttp это отказ, а не хуже работает
+// по docs/config/transport.md и infra/conf/vless.go ядра: vision на xhttp ядро отвергает, а не просто работает хуже
 library;
 
 const kServerTransports = <String>[

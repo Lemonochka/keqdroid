@@ -149,7 +149,7 @@ class ConfigGeneratorV2 {
     return list.isEmpty ? null : list;
   }
 
-  // ws и httpupgrade поднимаются апгрейдом по HTTP/1.1, выбери сервер h2, апгрейда не будет.
+  // ws и httpupgrade поднимаются апгрейдом по HTTP/1.1, и если сервер выберет h2, апгрейда не будет;
   // одиночный alpn=h2 не трогаем, его могли поставить осознанно
   static List<String> _alpnForNetwork(String network, List<String> alpn) =>
       (network == 'ws' || network == 'httpupgrade') &&
@@ -210,7 +210,7 @@ class ConfigGeneratorV2 {
     return utf8.decode(base64.decode(normalized));
   }
 
-  // у vmess два формата: base64 от json и AEAD (#716). различаем как mihomo: не base64 значит ссылка
+  // у vmess два формата, base64 от json и AEAD (#716); различаем как mihomo: что не base64, то ссылка
   static Map<String, dynamic>? _parseVmessPayload(String input) {
     final payload = input.substring('vmess://'.length).trim();
     if (payload.isEmpty) {
@@ -545,7 +545,7 @@ class ConfigGeneratorV2 {
   static const String _fragmentTag = 'fragment';
 
   // только внешний аутбаунд, тот, что открывает сокет наружу: в цепочке у остальных свой dialerProxy,
-  // вторая подмена порвала бы её. пакеты внутренних звеньев DPI и так не разберёт
+  // и вторая подмена порвала бы её; пакеты внутренних звеньев DPI и так не разберёт
   static Map<String, dynamic>? _applyFragment(
     List<Map<String, dynamic>> proxyOutbounds,
     XrayCoreSettings core,
@@ -578,7 +578,7 @@ class ConfigGeneratorV2 {
         'protocol': 'freedom',
         'tag': _fragmentTag,
         'settings': {'fragment': fragment},
-        // домен сервера через DNS-блок конфига: системного резолвера Go на Android нет (нет /etc/resolv.conf).
+        // домен сервера через DNS-блок конфига: системного резолвера Go на Android нет (нет /etc/resolv.conf);
         // место sockopt, из настроек freedom ядро поле переносит сюда же
         'streamSettings': {
           'sockopt': {'domainStrategy': _freedomDomainStrategy(core)},
@@ -885,7 +885,7 @@ class ConfigGeneratorV2 {
 
   static Map<String, dynamic> _udpPerExitMark() => {'protocol': 'blackhole', 'tag': udpPerExitTag};
 
-  // nonIPQuery ядро объявило к удалению, а удалённые поля роняют конфиг. без правил вышел бы пустой ответ вместо REFUSED
+  // nonIPQuery ядро объявило к удалению, а удалённые поля роняют конфиг; без правил вышел бы пустой ответ вместо REFUSED
   static Map<String, dynamic> _dnsOutboundSettings() => {
         'rules': [
           {'action': 'hijack', 'qType': '1,28'},
@@ -920,7 +920,7 @@ class ConfigGeneratorV2 {
     };
   }
 
-  // fakedns первым в общем переборе: всё, что разложено по domains, по-прежнему получает настоящий адрес.
+  // fakedns первым в общем переборе: всё, что разложено по domains, по-прежнему получает настоящий адрес;
   // исключениям своя запись с skipFallback, иначе она отвечала бы раньше подмены
   static Map<String, dynamic> _withFakeDns(Map<String, dynamic> dns) {
     final servers = [...((dns['servers'] as List?) ?? const [])];
@@ -1128,7 +1128,7 @@ class ConfigGeneratorV2 {
     final appendRules = <Map<String, dynamic>>[
       ...dnsRules,
       ...userRules,
-      // как у ссылок. у кого провайдер прислал своё правило на локалку, оно стоит раньше и решает само
+      // как у ссылок; если провайдер прислал своё правило на локалку, оно стоит раньше и решает само
       customRule('direct-private', {
         'ip': [...kBasePrivateRanges],
         'outboundTag': directTag,
@@ -1176,7 +1176,7 @@ class ConfigGeneratorV2 {
     final config = custom.buildSessionConfig(
       inbounds: inbounds,
       logLevel: settings.xrayCore.logLevel,
-      // дефолт dns-аутбаунда localhost на Android не резолвит ничего
+      // адрес по умолчанию у dns-аутбаунда, localhost, на Android не резолвит ничего
       dns: fallbackDns,
       ownDns: ownDns,
       // LAN-правила раньше авторских: иначе запрос снаружи уехал бы в туннель до запрета, и прокси стал бы открытым
@@ -1589,7 +1589,7 @@ class ConfigGeneratorV2 {
     };
   }
 
-  // type в json это заголовок маскировки, транспорт в net, security бывает шифром.
+  // type в json задаёт заголовок маскировки, транспорт лежит в net, а security бывает шифром;
   // имя gRPC-сервиса и seed mKCP v2rayN кладёт в path
   static String Function(String, [String]) _vmessStreamParams(
       Map<String, dynamic>? cfg) {
@@ -1640,7 +1640,7 @@ class ConfigGeneratorV2 {
 
     final email = getParam('email');
 
-    // trojan без TLS не бывает, а security=none ссылки пишут копипастой. слушаем только reality
+    // trojan без TLS не бывает, а security=none ссылки пишут копипастой, поэтому слушаем только reality
     String stream(String key, [String def = '']) {
       if (key != 'security') return getParam(key, def);
       return getParam('security').trim().toLowerCase() == 'reality'
@@ -1965,8 +1965,8 @@ class ConfigGeneratorV2 {
     }
   }
 
-  // xray 26 снял headerType и seed из kcpSettings, прежний провод это маска mkcp-legacy.
-  // заголовок последним, ближе к сети; сочетание проверено трафиком против xray 25.12.8
+  // xray 26 снял headerType и seed из kcpSettings, и прежний протокол на проводе описывает маска mkcp-legacy;
+  // заголовок последним, ближе к сети, сочетание проверено трафиком против xray 25.12.8
   static List<Map<String, dynamic>>? _legacyKcpMasks(
     String header,
     String seed,
@@ -2189,8 +2189,8 @@ class ConfigGeneratorV2 {
         'outboundTag': 'block',
       }));
     }
-    // DNS устройства отвечает ядро: иначе каждый запрос шёл отдельным TCP до сервера, и пачка с Android
-    // выбивала лимит новых соединений. после lan-правил, иначе вышел бы открытый резолвер наружу
+    // DNS устройства отвечает ядро, иначе каждый запрос шёл отдельным TCP до сервера, и пачка с Android выбивала
+    // лимит новых соединений; после lan-правил, иначе вышел бы открытый резолвер наружу
     rules.add(rule('dns-out', {
       'port': '53',
       'network': 'tcp,udp',
@@ -2271,8 +2271,8 @@ class ConfigGeneratorV2 {
     rules
       ..addAll(protocol(RouteTarget.server))
       ..addAll(_routeServerRules(routes, rule));
-    // vision отвергает UDP/443 только после полного TCP+TLS до сервера, и каждый QUIC-ретрай стоил рукопожатия.
-    // только при глобал-прокси, вариант -udp443 не трогаем
+    // vision отвергает UDP/443 только после полного TCP+TLS до сервера, и каждый повтор QUIC стоил рукопожатия;
+    // только при глобальном прокси, вариант -udp443 не трогаем
     if (quicBlocked) {
       rules.add(rule('block-quic', {
         'network': 'udp',
@@ -2303,8 +2303,8 @@ class ConfigGeneratorV2 {
             AppSettings.finalOutboundBlock => 'block',
             _ => 'proxy',
           };
-    // второй проход с резолвом для правил по адресу xray делает, только если в первом не совпало ничего (pickRouteInternal),
-    // и ловушка любая сеть его отменяла. домен, который не отрезолвился, уходит в первый выход
+    // второй проход с резолвом для правил по адресу xray делает, только если в первом не совпало ничего
+    // (pickRouteInternal), и ловушка на любую сеть его отменяла; домен, который не отрезолвился, уходит в первый выход
     final resolvesForIpRules =
         !isPingMode && effectiveDomainStrategy == 'IPIfNonMatch';
     if (desktopTun != null) {
@@ -2392,7 +2392,7 @@ class ConfigGeneratorV2 {
     return flow.startsWith('xtls-rprx-vision') && !flow.endsWith('-udp443');
   }
 
-  // на Linux /0 держится на патче xray-desktop-linux-rules: своя таблица за правилами.
+  // на Linux /0 держится на патче xray-desktop-linux-rules, своей таблице за правилами;
   // без него маршрут ляжет в main с метрикой 1 и проиграет default с метрикой 0
   static Map<String, dynamic> _desktopTunSettings(DesktopTunOptions tun) {
     final v6 = tun.captureIpv6;
@@ -2463,7 +2463,7 @@ class ConfigGeneratorV2 {
           ],
           'outboundTag': directTag,
         }),
-      // !имя это патч tool/patches/xray-desktop-process.patch: невыбранные мимо туннеля целиком, как на Android
+      // !имя работает по патчу tool/patches/xray-desktop-process.patch: невыбранные идут мимо туннеля целиком, как на Android
       if (selected.isNotEmpty)
         ?switch (tun.routingMode) {
           AppRoutingMode.onlySelected => fromTun('tun-unselected', {
@@ -2506,8 +2506,8 @@ class ConfigGeneratorV2 {
     ];
   }
 
-  // UDP из TUN идёт уровнем 1, tool/patches/xray-desktop-tun-udp-level.patch. уровень с одним connIdle
-  // обнулил бы остальные таймауты (ToCorePolicy), поэтому все четыре, прочие как в SessionDefault
+  // UDP из TUN идёт уровнем 1 (tool/patches/xray-desktop-tun-udp-level.patch); уровень с одним connIdle обнулил бы
+  // остальные таймауты (ToCorePolicy), поэтому заданы все четыре, прочие как в SessionDefault
   static void _applyDesktopTunPolicy(
     Map<String, dynamic> config,
     DesktopTunOptions tun,
@@ -2548,7 +2548,7 @@ class ConfigGeneratorV2 {
     'tun-in',
   ];
 
-  // у готового конфига авторские инбаунды заменяются этими: их порты и креды ждёт нативная часть
+  // у готового конфига авторские инбаунды заменяются этими, их порты и логин с паролем ждёт нативная часть
   static List<Map<String, dynamic>> _buildInbounds(
     AppSettings settings, {
     int? pingSocksPort,
@@ -2562,8 +2562,8 @@ class ConfigGeneratorV2 {
     final socksPort = pingSocksPort ?? settings.localPort;
     final useNoAuthInbound = isPingMode || localInboundsNoAuth;
     return <Map<String, dynamic>>[
-      // дескриптор ядро берёт из XRAY_TUN_FD, mtu обязан совпасть с интерфейсом. port ядро не спрашивает,
-      // но без ключа падает на Listen on AnyIP but no Port(s) set. без снифера доменные правила не работают
+      // Дескриптор ядро берёт из XRAY_TUN_FD, mtu обязан совпасть с интерфейсом. Порт ядро не спрашивает,
+      // но без ключа падает на Listen on AnyIP but no Port(s) set. Без снифера доменные правила не работают
       if (nativeTunInbound && !isPingMode)
         {
           'tag': 'tun-in',

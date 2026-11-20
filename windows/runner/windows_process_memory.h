@@ -3,7 +3,7 @@
 
 #include <cstdint>
 
-// private_bytes это commit: его Windows считает занятым и его называет событие 2004.
+// private_bytes показывает commit: его Windows считает занятым, его же называет событие 2004;
 // рабочий набор после сна бывает много меньше, страницы уходят в подкачку
 struct ProcessResources {
   bool ok = false;
@@ -16,7 +16,7 @@ struct ProcessResources {
   uint32_t user_objects = 0;
 };
 
-// pid 0 это сам keqdroid.exe
+// pid 0 указывает на сам keqdroid.exe
 ProcessResources QueryProcessResources(uint32_t pid);
 
 // в трее Windows выгружает нас до 10-35 МБ из 200-300, и страницы возвращались по одной уже под

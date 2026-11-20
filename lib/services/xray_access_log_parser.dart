@@ -3,7 +3,7 @@ import '../models/connection_entry.dart';
 class XrayAccessLogParser {
   XrayAccessLogParser._();
 
-  // -> правило сработало, >> дефолтный аутбаунд, ==> тег навязан платформой
+  // -> правило сработало, >> аутбаунд по умолчанию, ==> тег навязан платформой
   static final _access = RegExp(
     r'from\s+(\S+)\s+(accepted|rejected)\s+([a-z0-9]+):(.+?):(\d+)'
     r'(?:\s+\[([^\]]*)\])?',

@@ -310,8 +310,8 @@ class _EdgeFadeMaskState extends State<EdgeFadeMask> {
           ],
         ).createShader(bounds);
       },
-      // край маски на дробном пикселе Impeller сглаживает, и в половинке строки маска не
-      // действует: со счётчиками под шапкой горела строка карточек. срез на 1 dp внутри
+      // край маски на дробном пикселе Impeller сглаживает, и в половинке строки маска не действует:
+      // со счётчиками под шапкой горела строка карточек; срез на 1 dp внутри
       child: ClipRect(
         clipper: EdgeFadeInset(
           EdgeInsets.fromLTRB(

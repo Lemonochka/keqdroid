@@ -36,8 +36,8 @@ import kotlin.math.min
 
 
 
-// URL-тесты идут параллельно: у каждого свой файл конфига и свой SOCKS-порт от Dart, сколько разом решает PingService.
-// спидтест последовательно: параллельные загрузки делили бы канал и мерили чушь
+// URL-тесты идут параллельно: у каждого свой файл конфига и свой SOCKS-порт от Dart, а сколько разом, решает
+// PingService; замер скорости идёт по одному, параллельные загрузки делили бы канал и мерили чушь
 
 object EphemeralXrayPing {
 
@@ -236,9 +236,9 @@ object EphemeralXrayPing {
         val port: Int,
     )
 
-    // один процесс ядра на весь батч: телефон упирался не во время старта, а в пятьдесят рантаймов Go разом.
-    // не поднялось ядро, значит пустой список: по нему Dart делит батч вплоть до одного сервера.
-    // список отказов он принял бы за ответ, и десяток живых серверов уходил в красные из-за одного
+    // Один процесс ядра на всю пачку: телефон упирался не во время старта, а в пятьдесят рантаймов Go разом.
+    // Если ядро не поднялось, отдаём пустой список, и по нему Dart делит пачку вплоть до одного сервера;
+    // список отказов он принял бы за ответ, и десяток живых серверов краснел бы из-за одного
     fun urlTestMulti(
         nativeLibraryDir: String,
         filesDir: File,
@@ -263,7 +263,7 @@ object EphemeralXrayPing {
         val configFile = File(filesDir, "xray_ping_multi_${UUID.randomUUID()}.json")
         var pid = -1
         var coreStartedAt = System.currentTimeMillis()
-        // первая удачная проба значит, что ядро дочитало конфиг, остальным отказам батча верим сразу
+        // первая удачная проба показывает, что ядро дочитало конфиг, и остальным отказам пачки верим сразу
         val coreAwake = AtomicBoolean(false)
         try {
             configFile.writeText(configJson, Charsets.UTF_8)
@@ -297,7 +297,7 @@ object EphemeralXrayPing {
                                 coreAwake = coreAwake,
                             ),
                         )
-                        // сразу, а не по концу батча: батч держит до таймаута самый медленный
+                        // сразу, а не по концу пачки: пачку до таймаута держит самый медленный
                         onEach?.let { runCatching { it(item) } }
                         item
                     }
@@ -710,10 +710,11 @@ object EphemeralXrayPing {
 
 
     // открытый порт у mihomo ещё не готовность: листенеры поднимаются раньше конца загрузки конфига,
-    // и всё подключившееся до Running закрывается молча. при живом туннеле это 1.3-1.8 с на Pixel 6a
+    // и всё подключившееся до Running закрывается молча; при живом туннеле на Pixel 6a ждать 1.3-1.8 с
     private const val CORE_WAKEUP_GRACE_MS = 3_000L
 
-    // повтор только у mihomo: у xray листенеры поднимаются последними. coreAwake снимает ожидание, как только кто-то в батче ответил
+    // повтор только у mihomo, у xray листенеры поднимаются последними; coreAwake снимает ожидание,
+    // как только кто-то в пачке ответил
     private fun probeAwaitingCore(
         testUrl: String,
         port: Int,
@@ -760,7 +761,7 @@ object EphemeralXrayPing {
             for (attempt in 0 until if (keepAlive) 2 else 1) {
                 val start = System.currentTimeMillis()
                 connection = (URL(safeUrl).openConnection(proxy) as HttpURLConnection).apply {
-                    // всегда GET: на HEAD generate_204 и connecttest.txt у людей не отвечали, а Cloudflare с GET работал
+                    // всегда GET: на HEAD generate_204 и connecttest.txt у пользователей не отвечали, а Cloudflare с GET работал
                     requestMethod = "GET"
                     connectTimeout = connectTimeoutMs
                     readTimeout = readTimeoutMs

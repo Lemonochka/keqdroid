@@ -7,8 +7,8 @@ final ruleListServiceProvider = Provider<RuleListService>((ref) {
   );
 });
 
-// новая ссылка качается сразу при сохранении маршрута, дальше раз в сутки, уже через туннель.
-// до ядра доезжает на следующем подключении
+// новая ссылка качается сразу при сохранении маршрута, дальше раз в сутки, уже через туннель;
+// до ядра список доезжает на следующем подключении
 class RuleListsNotifier extends Notifier<Map<String, RuleListStatus>> {
   final _lastAttempt = <String, DateTime>{};
   Timer? _syncDebounce;

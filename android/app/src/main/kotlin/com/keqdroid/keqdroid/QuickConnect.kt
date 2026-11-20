@@ -29,8 +29,8 @@ internal object QuickConnect {
     // и плитка навсегда уходила в невидимое окно: шторка сворачивалась, приложение под ней открывалось заново
     fun startSwallowed(sentAt: Long, acceptedAt: Long = KeqdisVpnService.startAcceptedAt): Boolean = acceptedAt < sentAt
 
-    // запись в prefs переживает смерть процесса, туннель нет. liveStatus после перезапуска disconnected,
-    // расхождение значит запись протухла
+    // запись в prefs переживает смерть процесса, а туннель нет; liveStatus после перезапуска disconnected,
+    // и при расхождении запись устарела
     fun isStale(persisted: String, liveActive: Boolean): Boolean = persisted in ACTIVE_STATUSES && !liveActive
 
     fun effectiveStatus(persisted: String, liveActive: Boolean): String =
@@ -103,7 +103,7 @@ internal object QuickConnect {
             action = KeqdisVpnService.ACTION_STOP
         }
 
-    // запомненный отказ ведёт сразу в окно, без 2,5 с ожидания. помним до обновления системы
+    // запомненный отказ ведёт сразу в окно, без 2,5 с ожидания; помним до обновления системы
     fun directStartBlocked(context: Context): Boolean =
         context.getSharedPreferences(KeqdisVpnService.PREFS_QS, Context.MODE_PRIVATE)
             .getString(KeqdisVpnService.KEY_QS_DIRECT_START_BLOCKED_ON, null) == Build.FINGERPRINT

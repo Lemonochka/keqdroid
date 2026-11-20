@@ -1248,7 +1248,7 @@ class _MockWavePainter extends CustomPainter {
       old.color != color || old.track != track;
 }
 
-// ряд выбора одной части главного экрана: значок слева говорит, верх это или низ
+// ряд выбора одной части главного экрана: значок слева показывает, верх или низ
 class _ScreenPartTile extends StatelessWidget {
   const _ScreenPartTile({this.icon, this.label, required this.child});
 

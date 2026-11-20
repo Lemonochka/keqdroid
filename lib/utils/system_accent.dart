@@ -10,7 +10,8 @@ enum SystemAccentSource {
   // пусто при живых обоях: onComputeColors() у них необязателен, а на китайских прошивках такие стоят из коробки
   wallpaper,
 
-  // android.R.color.system_accent1_500. перекрашивает его ThemeOverlayController, где OEM его не включил, остаётся палитра AOSP
+  // android.R.color.system_accent1_500; его перекрашивает ThemeOverlayController, а где OEM его не включил,
+  // остаётся палитра AOSP
   systemResource,
 }
 
@@ -78,8 +79,8 @@ bool looksLikeAospDefault(int argb) {
   return true;
 }
 
-// порядок по тому, насколько источник знает выбор человека: настройка темы, обои, ресурс палитры.
-// ресурс только перекрашенный, константа AOSP в роли цвета системы и есть жалоба у меня всегда один цвет
+// Порядок по тому, насколько источник знает выбор пользователя: настройка темы, обои, ресурс палитры. Ресурс берём
+// только перекрашенный: константа AOSP в роли цвета системы и даёт жалобу у меня всегда один цвет
 SystemAccent? pickSystemAccent(SystemAccentCandidates candidates) {
   final fromSetting = candidates.themeSetting;
   if (fromSetting != null) {

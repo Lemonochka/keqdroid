@@ -40,7 +40,7 @@ enum VpnCoreSkip {
 
   linkMihomoOnly,
 
-  // сейчас недостижимо, mihomo есть везде. оставлено для новой платформы: откатываться молча нельзя
+  // сейчас недостижимо, mihomo есть везде; оставлено для новой платформы, откатываться молча нельзя
   platform,
 }
 
@@ -83,7 +83,7 @@ const _bothCores = {VpnBackend.xray, VpnBackend.mihomo};
 
 const _mihomoOnlySchemes = {'tuic', 'anytls', 'ssr', 'mierus'};
 
-// оба ядра молча пропускают незнакомый ключ: конфиг собирается, ядро поднимается, а трафик идёт не тем транспортом.
+// оба ядра молча пропускают незнакомый ключ: конфиг собирается, ядро поднимается, а трафик идёт не тем транспортом;
 // непрочитанную ссылку считаем за оба, ошибку скажет генератор
 Set<VpnBackend> backendsForLink(String link) {
   final trimmed = link.trim();
@@ -134,7 +134,7 @@ Set<VpnBackend> _vmessBackends(String link) {
     return _transportBackends(
       'vmess',
       decoded['net']?.toString().trim().toLowerCase() ?? '',
-      // type в json vmess это заголовок маскировки, не транспорт
+      // type в json vmess задаёт заголовок маскировки, а не транспорт
       decoded['type']?.toString().trim().toLowerCase() ?? '',
     );
   } catch (_) {
@@ -142,7 +142,8 @@ Set<VpnBackend> _vmessBackends(String link) {
   }
 }
 
-// сверено по adapter/outbound/*.go mihomo 1.19.30 и infra/conf xray 26.7.28. нет поля под транспорт значит молчаливый голый TCP
+// сверено по adapter/outbound/*.go mihomo 1.19.30 и infra/conf xray 26.7.28; если поля под транспорт нет,
+// ядро молча пойдёт голым TCP
 Set<VpnBackend> _transportBackends(
   String scheme,
   String type,

@@ -277,7 +277,7 @@ class StatStrip extends StatelessWidget {
       <(String, TextStyle?, TextScaler, TextDirection), double>{};
   static var _watchingFonts = false;
 
-  // образцы и метки не меняются, а меряются на каждом тике: на A55 это заметная доля кадра
+  // образцы и метки не меняются, а меряются на каждом тике, и на A55 такой замер занимает заметную долю кадра
   static double _measureFixed(BuildContext context, String text, TextStyle? style) {
     if (!_watchingFonts) {
       _watchingFonts = true;

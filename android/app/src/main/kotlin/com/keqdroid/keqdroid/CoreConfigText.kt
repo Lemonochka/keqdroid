@@ -3,7 +3,7 @@ package com.keqdroid.keqdroid
 import org.json.JSONObject
 
 // JSONStringer экранирует слэш, а такого escape go-yaml не знает (scannerc.go): yaml: found unknown escape character.
-// слэши есть в любом конфиге, поэтому ломался любой. \\ копируем парой, чтобы следующий слэш не сошёл за экранированный
+// Слэши есть в любом конфиге, поэтому ломался любой. \\ копируем парой, чтобы следующий слэш не сошёл за экранированный
 internal fun yamlSafeJson(json: String): String {
     if (!json.contains("\\/")) return json
     val out = StringBuilder(json.length)
@@ -24,7 +24,8 @@ internal fun yamlSafeJson(json: String): String {
 
 internal class SessionLogLevel(val config: String, val floor: Int)
 
-// mihomo строку TUN поднялся пишет на info, и при warning подключение ждало её четыре секунды. без поля он и так на info
+// строку о поднятом TUN mihomo пишет на info, и при warning подключение ждало её четыре секунды;
+// без поля он и так пишет на info
 internal fun mihomoSessionLogLevel(text: String): SessionLogLevel? {
     val levels = listOf("debug", "info", "warning", "error", "silent")
     val value = (Regex(""""log-level"\s*:\s*"(\w+)"""").find(text)
@@ -60,7 +61,7 @@ internal fun xrayHasTunInbound(text: String): Boolean {
     return false
 }
 
-// MTU fd-устройства ядру спросить неоткуда, а расхождение с интерфейсом это пакеты, которые ядро ОС отбросит при записи в tun
+// MTU fd-устройства ядру спросить неоткуда, а при расхождении с интерфейсом ядро ОС отбросит пакеты при записи в tun
 internal fun xrayConfigWithTunMtu(text: String): String {
     val root = JSONObject(text)
     val inbounds = root.optJSONArray("inbounds")
@@ -76,8 +77,8 @@ internal fun xrayConfigWithTunMtu(text: String): String {
     throw IllegalStateException("xray config has no tun inbound")
 }
 
-// IPv6 у интерфейса только если Dart пустил его через VPN: адрес лежит в конфиге, чтобы плитка и перезапуск
-// подняли интерфейс тем же. без адреса Android сам закрывает IPv6 (VpnService.Builder.allowFamily)
+// IPv6 у интерфейса только если Dart пустил его через VPN; адрес лежит в конфиге, чтобы плитка и перезапуск
+// подняли интерфейс так же, а без адреса Android сам закрывает IPv6 (VpnService.Builder.allowFamily)
 internal fun tunIpv6Of(text: String, mihomo: Boolean): Pair<String, Int>? {
     val root = JSONObject(text)
     val addresses = if (mihomo) {

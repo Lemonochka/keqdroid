@@ -154,8 +154,8 @@ bool _verify(Uint8List der, String host) {
           ..checks = 0
           ..serverName = host.toNativeUtf16(allocator: arena);
         if (passes(_policySsl, 0, ssl.cast())) return true;
-        // Dart отдаёт не лист, а сертификат, на котором оборвалась цепочка: тогда это центр, и от него
-        // нужна только цепочка до доверенного корня. имя Dart проверяет сам и при несовпадении пришлёт лист
+        // Dart отдаёт не лист, а сертификат, на котором оборвалась цепочка; тогда перед нами центр сертификации,
+        // и от него нужна только цепочка до доверенного корня. Имя Dart проверяет сам и при несовпадении пришлёт лист
         return passes(_policyBase, 0, nullptr) &&
             passes(_policyBasicConstraints, _basicConstraintsCa, nullptr);
       } finally {

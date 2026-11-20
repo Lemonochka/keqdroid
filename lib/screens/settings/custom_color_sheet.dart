@@ -25,7 +25,7 @@ class _CustomColorSheet extends StatefulWidget {
 }
 
 class _CustomColorSheetState extends State<_CustomColorSheet> {
-  // у серого нет оттенка, HCT отдаёт 0° (розовый). ниже этих порогов выбранный оттенок теряется
+  // у серого нет оттенка, HCT отдаёт 0° (розовый); ниже этих порогов выбранный оттенок теряется
   static const double _minSaturation = 0.10;
   static const double _minValue = 0.15;
 

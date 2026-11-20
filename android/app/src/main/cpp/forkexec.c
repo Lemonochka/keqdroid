@@ -57,7 +57,8 @@ Java_com_keqdroid_keqdroid_NativeHelper_nativeDialFailures(JNIEnv *env, jclass c
     return (jlong)__atomic_load_n(&g_dial_failures, __ATOMIC_RELAXED);
 }
 
-/* уровень, который выбрал человек: сессию подняли до info ради счётчиков, а лог остаётся заказанным. 0 пропускает всё */
+/* уровень, выбранный пользователем: сессию подняли до info ради счётчиков, а в лог идёт только заказанное;
+ * 0 пропускает всё */
 static int g_log_threshold = 0;
 
 JNIEXPORT void JNICALL
@@ -67,8 +68,8 @@ Java_com_keqdroid_keqdroid_NativeHelper_nativeSetCoreLogLevel(
     __atomic_store_n(&g_log_threshold, (int)level, __ATOMIC_RELAXED);
 }
 
-/* mihomo пишет это на info, и при warning строка в лог не попадает, поэтому ждём её до порога.
- * без этого каждое подключение стояло четыре секунды до таймаута */
+/* строку о готовности TUN mihomo пишет на info, и при warning она в лог не попадает, поэтому ловим её
+ * до порога; без этого каждое подключение стояло четыре секунды до таймаута */
 static long g_tun_ready = 0;
 
 JNIEXPORT jlong JNICALL
@@ -188,8 +189,8 @@ Java_com_keqdroid_keqdroid_NativeHelper_nativeStartCore(
                         "startCore: kind=%s bin=%s config=%s dir=%s tunFd=%d",
                         coreKind[0] ? coreKind : "xray", binPath, configPath, assetDir, (int)jTunFd);
 
-    /* снимаем FD_CLOEXEC, иначе execv закроет дескриптор и ядро получит bad file descriptor.
-     * владеет им ParcelFileDescriptor сервиса, close() у ребёнка нашего не трогает */
+    /* снимаем FD_CLOEXEC, иначе execv закроет дескриптор и ядро получит bad file descriptor;
+     * владеет им ParcelFileDescriptor сервиса, и close() у ребёнка его не трогает */
     const int tunFd = (int)jTunFd;
     if (tunFd >= 0) {
         fcntl(tunFd, F_SETFD, fcntl(tunFd, F_GETFD) & ~FD_CLOEXEC);
@@ -214,8 +215,8 @@ Java_com_keqdroid_keqdroid_NativeHelper_nativeStartCore(
         return -3;
     }
 
-    /* двойной fork: ядро усыновляет init. от лимита дочерних процессов Android 12+ это не прячет, система ищет по cgroup,
-     * поэтому смерть ядра сервис переживает сам (reviveCore) */
+    /* двойной fork отдаёт ядро init, но от лимита дочерних процессов Android 12+ это не прячет: система ищет
+     * по cgroup, поэтому смерть ядра сервис переживает сам (reviveCore) */
     pid_t pid1 = fork();
     if (pid1 < 0) {
         __android_log_print(ANDROID_LOG_ERROR, TAG, "startCore: first fork failed errno=%d", errno);
@@ -267,8 +268,8 @@ Java_com_keqdroid_keqdroid_NativeHelper_nativeStartCore(
                 execv(binPath, argv);
             } else {
                 setenv("XRAY_LOCATION_ASSET", assetDir, 1);
-                /* номер дескриптора xray читает только из окружения (proxy/tun/tun_android.go).
-                 * без номера не ставим, иначе ядро взяло бы ноль, то есть stdin */
+                /* номер дескриптора xray читает только из окружения (proxy/tun/tun_android.go); без номера переменную
+                 * не ставим, иначе ядро взяло бы ноль, то есть stdin */
                 if (tunFd >= 0) {
                     char fdEnv[16];
                     snprintf(fdEnv, sizeof(fdEnv), "%d", tunFd);
@@ -314,9 +315,9 @@ Java_com_keqdroid_keqdroid_NativeHelper_nativeStartCore(
         char buf[4096], line[512];
         int linepos = 0, died = 0;
 
-        /* ловим ядро, умершее сразу, по закрытой трубе. waitpid не годится: после двойного fork ядро нам внук.
-         * окно добавляется к каждому подключению, а плохой конфиг роняет mihomo за 60-100 мс, четверти секунды хватает.
-         * убрать нельзя: у ядер замера нет проверки по /proc, без окна батч ждал бы порт все восемь секунд */
+        /* Ядро, умершее сразу, ловим по закрытой трубе: после двойного fork оно нам внук, и waitpid не годится.
+         * Окно добавляется к каждому подключению, но плохой конфиг роняет mihomo за 60-100 мс, и четверти секунды
+         * хватает. Убрать окно нельзя: у ядер замера нет проверки по /proc, и без него пачка ждала бы порт все восемь секунд */
         struct timespec t0, now;
         clock_gettime(CLOCK_MONOTONIC, &t0);
         for (;;) {

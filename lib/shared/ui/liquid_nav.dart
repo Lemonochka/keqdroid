@@ -11,9 +11,8 @@ import 'package:keqdroid/shared/ui/haptics.dart';
 
 part 'liquid_rail.dart';
 
-// навигация Модерна: лента вкладок, кнопка действия, стрелка прокрутки и нижний край
-// рисуются одной жидкостью. кнопка и стрелка отпочковываются от концов ленты, при прокрутке
-// вниз лента каплей уходит в край
+// навигация Модерна: лента вкладок, кнопка действия, стрелка прокрутки и нижний край рисуются одной жидкостью;
+// кнопка и стрелка отпочковываются от концов ленты, при прокрутке вниз лента каплей уходит в край
 class LiquidBottomNav extends StatefulWidget {
   const LiquidBottomNav({
     super.key,
@@ -108,8 +107,8 @@ class _Look {
 
 double _lerp(double a, double b, double t) => a + (b - a) * t;
 
-// лужа у края сливается с лентой ближе poolGoo, а в покое лента стоит на restGap от края. без
-// системного отступа (окно кончается над панелью задач планшета) кнопки стекали в лужу
+// лужа у края сливается с лентой ближе poolGoo, а в покое лента стоит на restGap от края; без системного
+// отступа (окно кончается над панелью задач планшета) кнопки стекали в лужу
 @visibleForTesting
 double liquidPoolGoo({required double restGap, required double sink}) => _lerp(
       math.min(_LiquidBarPainter.poolGoo, restGap),
@@ -128,7 +127,7 @@ class _LiquidBottomNavState extends State<LiquidBottomNav>
     with TickerProviderStateMixin {
   // сначала кнопка втягивается в ленту, потом лента уходит в край
   static const double _absorbShare = 0.4;
-  // мягче системных: лента проходит около 150 dp, и за spatialDefault (0,25 с) это рывок.
+  // мягче системных: лента проходит около 150 dp, и за spatialDefault (0,25 с) движение выходит рывком;
   // без перелёта, оседает примерно за 0,6 с
   static const _sinkSpring =
       SpringDescription(mass: 1, stiffness: 60, damping: 2 * 7.75);
@@ -264,8 +263,8 @@ class _LiquidBottomNavState extends State<LiquidBottomNav>
     super.dispose();
   }
 
-  // в кадре листания и прятанья у вкладки меняется только место: тот же виджет не собирает
-  // заново её ~30 элементов. запас подписи роли не играет, пока подпись в него влезает
+  // в кадре листания и прятанья у вкладки меняется только место, и тот же виджет не собирает заново её
+  // ~30 элементов; запас подписи роли не играет, пока подпись в него влезает
   final _tabs = List<_Tab?>.filled(_count, null);
 
   _Tab _tab(
@@ -483,8 +482,8 @@ class _LiquidBottomNavState extends State<LiquidBottomNav>
                 FloatingBar.bottomMargin -
                 inset -
                 FloatingBar.height / 2;
-            // за краем на полсклейки: край ещё тянется к ленте, и от спрятанной
-            // панели остаётся бугорок в 1-2 dp. так задумано, на всю склейку он пропадает
+            // за краем на полсклейки: край ещё тянется к ленте, и от спрятанной панели остаётся бугорок в 1-2 dp;
+            // так задумано, на всю склейку он пропадает
             final centerY = restY +
                 sink *
                     (FloatingBar.bottomMargin +

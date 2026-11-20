@@ -33,7 +33,7 @@ class ServerItem {
   final DateTime? lastTestedAt;
   final String? lastPingType;
   final List<PingSample> pingSamples;
-  // null: ещё не проверяли. проверка идёт в замере, только когда IPv6 пускают через VPN
+  // null: ещё не проверяли; проверка идёт в замере, только когда IPv6 пускают через VPN
   final bool? ipv6Exit;
   final DateTime? ipv6CheckedAt;
 

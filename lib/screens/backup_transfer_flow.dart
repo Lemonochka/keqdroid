@@ -134,7 +134,7 @@ Future<Set<BackupSection>?> showBackupRestorePicker(
   );
 }
 
-// null, если человек передумал в выборе разделов
+// null, если пользователь передумал в выборе разделов
 Future<int?> restoreBackupInteractive(
   BuildContext context,
   WidgetRef ref,

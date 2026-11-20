@@ -8,7 +8,7 @@ import 'package:path/path.dart' as p;
 import '../core/app_logger.dart';
 import '../core/exceptions.dart';
 
-// портал без backend'а отвечает отменой мгновенно, рукой за 400 мс диалог не закрыть,
+// портал без бэкенда отвечает отменой мгновенно, а рукой за 400 мс диалог не закрыть,
 // поэтому быстрый null считаем поломкой и идём в zenity/qarma/kdialog
 abstract final class AppFileDialogs {
   static const _nativeChannel = MethodChannel('keqdroid_vpn_channel');
@@ -58,7 +58,7 @@ abstract final class AppFileDialogs {
     String mimeType = 'application/octet-stream',
   }) async {
     if (Platform.isAndroid) {
-      // пишет натив: file_picker не обрезает файл при перезаписи
+      // пишет нативная часть: file_picker не обрезает файл при перезаписи
       return _nativeChannel.invokeMethod<String>('saveDocument', {
         'fileName': fileName,
         'mimeType': mimeType,
@@ -126,7 +126,7 @@ abstract final class AppFileDialogs {
       } on ProcessException {
         continue;
       }
-      // 1 значит отмена, остальное ненулевое это поломка утилиты
+      // утилита отвечает кодом 1 на отмену и любым другим ненулевым при поломке
       if (res.exitCode == 1) return (ran: true, path: null);
       if (res.exitCode != 0) {
         AppLogger.instance.warn(

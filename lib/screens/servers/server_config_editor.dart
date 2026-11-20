@@ -1177,7 +1177,7 @@ class _ServerConfigEditorScreenState
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: DropdownButtonFormField<String>(
-        // ключ от значения: initialValue сам не обновляется после ре-парса
+        // ключ от значения: initialValue сам не обновляется после повторного разбора
         key: ValueKey('dd-$id-$current'),
         initialValue: current,
         isExpanded: true,

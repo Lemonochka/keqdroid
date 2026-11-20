@@ -27,7 +27,7 @@ Map<String, int> homeWidgetColors(ColorScheme s) => {
       'onErrorContainer': s.onErrorContainer.toARGB32(),
     };
 
-// key это сырое имя: по нему натив узнаёт, тот ли это сервер, что в последней сессии
+// в key лежит сырое имя, по нему нативная часть узнаёт сервер последней сессии
 typedef HomeWidgetServer = ({
   String key,
   String name,
