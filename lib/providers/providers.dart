@@ -87,6 +87,7 @@ import 'ui_state_providers.dart';
 
 export 'ui_state_providers.dart';
 
+part 'auto_select_monitor.dart';
 part 'routes_provider.dart';
 part 'rule_lists_provider.dart';
 part 'servers_provider.dart';
