@@ -51,6 +51,20 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
   int? _autoSelectNetworkMark;
   AppLifecycleListener? _androidLifecycle;
 
+  @visibleForTesting
+  static DateTime Function()? debugAutoSelectClock;
+
+  DateTime _autoSelectNow() => (debugAutoSelectClock ?? DateTime.now)();
+
+  @visibleForTesting
+  Future<void> debugAutoSelectListen() => _autoSelectListenOnce();
+
+  @visibleForTesting
+  Future<void> debugAutoSelectProbe() => _autoSelectTick();
+
+  @visibleForTesting
+  Future<void> debugAutoSelectRecheck() => _autoSelectRecheckTick();
+
   void _applyNativeState(VpnState s) {
     if (s.status == VpnStatus.connected) {
       unawaited(syncSocksCredentialsFromService());
@@ -1094,7 +1108,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       AutoServerSelect.switchScore(
         ref.read(serversProvider).servers.where((s) => s.id == id).firstOrNull,
         latencyMs,
-        DateTime.now(),
+        _autoSelectNow(),
       );
 
   // Android знает, есть ли под туннелем сеть вообще: без неё замер только жжёт батарею
@@ -1111,7 +1125,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
   void _autoSelectRest(int? networkMark) {
     _autoSelectDeadRounds++;
     _autoSelectNetworkMark = networkMark;
-    _autoSelectQuietUntil = DateTime.now().add(
+    _autoSelectQuietUntil = _autoSelectNow().add(
       AutoSelectWatchdog.quietAfterRound(deadRounds: _autoSelectDeadRounds),
     );
   }
@@ -1119,7 +1133,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
   // паузу мёртвой зоны кончает и новая сеть, а не только таймер
   Future<bool> _autoSelectQuiet() async {
     final until = _autoSelectQuietUntil;
-    if (until == null || !DateTime.now().isBefore(until)) return false;
+    if (until == null || !_autoSelectNow().isBefore(until)) return false;
     final mark = _autoSelectNetworkMark;
     if (_autoSelectDeadRounds == 0 || mark == null) return true;
     final net = await VpnNativeBridge.physicalNetworks();
@@ -1235,7 +1249,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     final deadZone = _autoSelectDeadRounds > 0;
     if (!deadZone &&
         quietUntil != null &&
-        DateTime.now().isBefore(quietUntil)) {
+        _autoSelectNow().isBefore(quietUntil)) {
       return;
     }
 
@@ -1387,7 +1401,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       if (state.value?.status != VpnStatus.connected) return;
       if (ref.read(serversProvider).activeServer?.id != server.id) return;
 
-      final now = DateTime.now();
+      final now = _autoSelectNow();
       _autoSelectSwitches.removeWhere(
         (t) => now.difference(t) >= AutoSelectWatchdog.switchWindow,
       );
@@ -1447,7 +1461,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
         _autoSelectDeadRounds = 0;
         // подписка под подозрением, а сеть жива: второй раунд нужен скоро, пользователь сидит без связи
         final soon = switched || _autoSelectOutage.suspects(target.subId);
-        _autoSelectQuietUntil = DateTime.now().add(
+        _autoSelectQuietUntil = _autoSelectNow().add(
           soon
               ? AutoSelectWatchdog.quietAfterSwitch
               : AutoSelectWatchdog.quietAfterCheck,
@@ -1492,7 +1506,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       subscriptionId: target.subId,
       ownAnswered: false,
       othersAnswered: answered,
-      now: DateTime.now(),
+      now: _autoSelectNow(),
     );
     if (!answered) {
       AppLogger.instance.info(
@@ -1529,7 +1543,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
 
   // один таймер на обе: два одновременных накладывали бы замеры каждые 5 минут
   Future<void> _autoSelectRecheckTick() {
-    final now = DateTime.now();
+    final now = _autoSelectNow();
     final last = _autoSelectRecheckAt ??= now;
     final scheduled =
         now.difference(last) >=
@@ -1567,7 +1581,9 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     }
     final away = home != null && target.subId != target.ownerId;
     if (!away) _autoSelectHomePace = const NeighbourHomePace();
-    if (homeOnly && (!away || !_autoSelectHomePace.due(DateTime.now()))) return;
+    if (homeOnly && (!away || !_autoSelectHomePace.due(_autoSelectNow()))) {
+      return;
+    }
 
     final bytes = await _autoSelectTotalBytes();
     final seen = _autoSelectRecheckSeenBytes;
@@ -1575,7 +1591,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     if (bytes != null && (seen == null || bytes <= seen)) return;
 
     final quietUntil = _autoSelectQuietUntil;
-    if (quietUntil != null && DateTime.now().isBefore(quietUntil)) return;
+    if (quietUntil != null && _autoSelectNow().isBefore(quietUntil)) return;
 
     final homeId = home?.homeId;
     final measure = _autoSelectStartMeasure(
@@ -1604,7 +1620,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       if (homeOnly) {
         _autoSelectHomePace = _autoSelectHomePace.afterCheck(
           homeAnswered: homeAnswered,
-          now: DateTime.now(),
+          now: _autoSelectNow(),
         );
         if (_autoSelectHomePace.pausedUntil != null) {
           AppLogger.instance.info(
@@ -1638,7 +1654,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       await AutoSelectHomeStore.save(null);
       return;
     }
-    final now = DateTime.now();
+    final now = _autoSelectNow();
     _autoSelectSwitches.removeWhere(
       (t) => now.difference(t) >= AutoSelectWatchdog.switchWindow,
     );
@@ -1666,7 +1682,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       _autoSelectSeenFailures = null;
       _autoSelectSilence = const SilenceStreak();
       _autoSelectCounters = null;
-      _autoSelectQuietUntil = DateTime.now().add(
+      _autoSelectQuietUntil = _autoSelectNow().add(
         AutoSelectWatchdog.quietAfterSwitch,
       );
       _autoSelectBusy = false;
