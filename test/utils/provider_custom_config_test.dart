@@ -100,14 +100,14 @@ void main() {
       expect(server.displayName, contains('WHITE BOSS MOUSER'));
     });
 
-    test("the author's dns and domainStrategy survive untouched", () {
+    test("the author's resolvers and domainStrategy survive", () {
       final config = build();
 
-      // Авторские резолверы первые и нетронутые; за ними наш резерв на случай,
+      // Авторские резолверы первые, те же адреса, только по TCP; за ними наш резерв на случай,
       // когда до авторских не достучаться (см. CustomXrayConfig.mergeDns).
       expect(((config['dns'] as Map)['servers'] as List).take(2), [
-        '1.1.1.1',
-        '1.0.0.1',
+        'tcp://1.1.1.1:53',
+        'tcp://1.0.0.1:53',
       ]);
       expect(_routing(config)['domainStrategy'], 'IPIfNonMatch');
     });

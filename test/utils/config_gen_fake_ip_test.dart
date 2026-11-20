@@ -136,10 +136,10 @@ void main() {
           const AppSettings(fakeIp: true),
         ),
       );
-      expect(_address(servers[0]), '1.1.1.1');
+      expect(_address(servers[0]), 'tcp://1.1.1.1:53');
       expect((servers[0] as Map)['skipFallback'], isTrue);
       expect(_address(servers[1]), 'fakedns');
-      expect(servers[2], '1.1.1.1');
+      expect(servers[2], 'tcp://1.1.1.1:53');
     });
 
     test('свой fakedns автора не трогаем', () {

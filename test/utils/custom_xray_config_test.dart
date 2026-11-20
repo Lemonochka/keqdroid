@@ -199,6 +199,65 @@ void main() {
       expect(CustomXrayConfig.extractConfigs(_customConfig).length, 1);
       expect(CustomXrayConfig.extractConfigs('[{"a": 1}]'), isEmpty);
     });
+
+    // узел без UDP молча глотал UDP-53: 4 с на каждый сервер на каждое имя, жалоба 20.11
+    test('public resolvers of the provider go over TCP, the rest stays', () {
+      final custom = CustomXrayConfig.tryParse(
+        jsonEncode({
+          'dns': {
+            'servers': [
+              '1.1.1.1',
+              '8.8.4.4:5353',
+              '2606:4700:4700::1111',
+              '[2001:4860:4860::8888]:53',
+              {
+                'address': '9.9.9.9',
+                'port': 53,
+                'domains': ['domain:example.com'],
+                'skipFallback': true,
+              },
+              '192.168.1.1',
+              '10.0.0.1',
+              {'address': '172.16.0.53'},
+              'fd00::53',
+              'localhost',
+              'fakedns',
+              'https://1.1.1.1/dns-query',
+              'tcp+local://8.8.8.8',
+              'dns.google',
+            ],
+            'queryStrategy': 'UseIP',
+          },
+          'outbounds': [
+            {'protocol': 'freedom'},
+          ],
+        }),
+      )!;
+      final dns = custom.authorDns!;
+      expect(dns['queryStrategy'], 'UseIP');
+      expect(dns['servers'], [
+        'tcp://1.1.1.1:53',
+        'tcp://8.8.4.4:5353',
+        'tcp://[2606:4700:4700::1111]:53',
+        'tcp://[2001:4860:4860::8888]:53',
+        {
+          'address': 'tcp://9.9.9.9:53',
+          'domains': ['domain:example.com'],
+          'skipFallback': true,
+        },
+        '192.168.1.1',
+        '10.0.0.1',
+        {'address': '172.16.0.53'},
+        'fd00::53',
+        'localhost',
+        'fakedns',
+        'https://1.1.1.1/dns-query',
+        'tcp+local://8.8.8.8',
+        'dns.google',
+      ]);
+      // сам конфиг подписки не переписывается
+      expect(((custom.json['dns'] as Map)['servers'] as List).first, '1.1.1.1');
+    });
   });
 
   group('stripUnknownGeoFromConfig', () {
@@ -428,11 +487,11 @@ void main() {
       expect(authorRules.first['ip'], ['185.73.195.0/24']);
       expect(authorRules.last['outboundTag'], 'proxy');
 
-      // Dns и аутбаунды авторские: серверы автора первые и в своём порядке,
+      // Dns и аутбаунды авторские: серверы автора первые и в своём порядке (по TCP),
       // наш резерв лежит после них (см. CustomXrayConfig.mergeDns).
       expect(((config['dns'] as Map)['servers'] as List).take(2), [
-        '1.1.1.1',
-        '1.0.0.1',
+        'tcp://1.1.1.1:53',
+        'tcp://1.0.0.1:53',
       ]);
       expect(((config['outbounds'] as List).first as Map)['streamSettings'], {
         'network': 'tcp',

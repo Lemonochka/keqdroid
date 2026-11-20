@@ -9,7 +9,7 @@
         "skipFallback": true
       },
       {
-        "address": "1.1.1.1",
+        "address": "tcp://1.1.1.1:53",
         "domains": [
           "domain:lan",
           "domain:local",
@@ -28,7 +28,7 @@
       {
         "address": "fakedns"
       },
-      "1.1.1.1",
+      "tcp://1.1.1.1:53",
       {
         "address": "https://1.1.1.1/dns-query",
         "timeoutMs": 2500,

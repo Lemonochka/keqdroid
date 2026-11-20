@@ -271,7 +271,82 @@ class CustomXrayConfig {
     if (raw is! Map) return null;
     final servers = raw['servers'];
     if (servers is! List || servers.isEmpty) return null;
-    return _asStringMap(raw);
+    return {
+      ..._asStringMap(raw),
+      'servers': [for (final server in servers) _overTcp(server)],
+    };
+  }
+
+  // UDP-53 автора едет через его узел, а узел без UDP глотает запрос молча: по 4 с на сервер на каждое имя,
+  // сайт открывался 16-25 с (стенд 20.11). тот же резолвер по TCP так не застревает
+  static Object? _overTcp(Object? server) {
+    final address = switch (server) {
+      String s => s,
+      Map<Object?, Object?> m => m['address']?.toString(),
+      _ => null,
+    };
+    if (address == null) return server;
+    final endpoint = _publicDnsEndpoint(
+      address.trim(),
+      server is Map ? int.tryParse(server['port']?.toString() ?? '') : null,
+    );
+    if (endpoint == null) return server;
+    if (server is! Map) return endpoint;
+    return {..._asStringMap(server), 'address': endpoint}..remove('port');
+  }
+
+  static String? _publicDnsEndpoint(String address, int? port) {
+    var host = address;
+    var p = port ?? 53;
+    if (address.startsWith('[')) {
+      final close = address.indexOf(']');
+      if (close < 0) return null;
+      host = address.substring(1, close);
+      final rest = address.substring(close + 1);
+      if (rest.isNotEmpty) {
+        if (!rest.startsWith(':')) return null;
+        final parsed = int.tryParse(rest.substring(1));
+        if (parsed == null) return null;
+        p = parsed;
+      }
+    } else if (':'.allMatches(address).length == 1) {
+      final colon = address.indexOf(':');
+      host = address.substring(0, colon);
+      final parsed = int.tryParse(address.substring(colon + 1));
+      if (parsed == null) return null;
+      p = parsed;
+    }
+    final ip = _parseIp(host);
+    if (ip == null || _isLocalIp(ip)) return null;
+    return ip.length == 4 ? 'tcp://$host:$p' : 'tcp://[$host]:$p';
+  }
+
+  static List<int>? _parseIp(String host) {
+    try {
+      return host.contains(':')
+          ? Uri.parseIPv6Address(host)
+          : Uri.parseIPv4Address(host);
+    } on FormatException {
+      return null;
+    }
+  }
+
+  // локальный DNS (роутер, сеть оператора) через узел не ходит, его не трогаем
+  static bool _isLocalIp(List<int> ip) {
+    if (ip.length == 4) {
+      final a = ip[0], b = ip[1];
+      return a == 10 ||
+          a == 127 ||
+          a == 0 ||
+          (a == 172 && b >= 16 && b < 32) ||
+          (a == 192 && b == 168) ||
+          (a == 169 && b == 254) ||
+          (a == 100 && b >= 64 && b < 128);
+    }
+    final loopback = ip.take(15).every((b) => b == 0) && ip[15] == 1;
+    return loopback ||
+        (ip[0] & 0xfe) == 0xfc ||
+        (ip[0] == 0xfe && (ip[1] & 0xc0) == 0x80);
   }
 
   // хвост на случай, когда авторский резолвер недостижим: DPI режет udp:1.1.1.1:53 на российском входе,
