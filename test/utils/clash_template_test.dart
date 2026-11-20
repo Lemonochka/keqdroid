@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/models/server_item.dart';
-import 'package:keqdroid/services/subscription_service.dart';
+import 'package:keqdroid/services/subscription_body_parser.dart';
 import 'package:keqdroid/utils/clash_template.dart';
 import 'package:keqdroid/utils/custom_clash_config.dart';
 import 'package:keqdroid/utils/mihomo_config_gen.dart';
@@ -153,7 +153,7 @@ rules:
   group('узел сервера', () {
     test('сервер подписки узнаётся по имени, а правленный руками нет', () {
       final template = ClashTemplate.fromBody(body)!;
-      final configs = SubscriptionService.parseBodyForTest(body);
+      final configs = SubscriptionBodyParser.parseBody(body);
       final servers = [for (final c in configs) ServerItem.fromRaw(c)];
       expect(
         [for (final s in servers) template.nodeFor(s)],
@@ -180,7 +180,7 @@ rules:
 ''';
       final template = ClashTemplate.fromBody(yaml)!;
       final servers = [
-        for (final c in SubscriptionService.parseBodyForTest(yaml))
+        for (final c in SubscriptionBodyParser.parseBody(yaml))
           ServerItem.fromRaw(c),
       ];
       expect([for (final s in servers) s.protocol], everyElement('trojan'));
@@ -194,7 +194,7 @@ rules:
   group('чем подключать сервер', () {
     final template = ClashTemplate.fromBody(body)!.encode();
     final servers = [
-      for (final c in SubscriptionService.parseBodyForTest(body))
+      for (final c in SubscriptionBodyParser.parseBody(body))
         ServerItem.fromRaw(c, subscriptionId: 's1'),
     ];
 

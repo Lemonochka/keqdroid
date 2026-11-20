@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/models/app_settings.dart';
 import 'package:keqdroid/models/server_item.dart';
 import 'package:keqdroid/models/xray_core_settings.dart';
-import 'package:keqdroid/services/subscription_service.dart';
+import 'package:keqdroid/services/subscription_body_parser.dart';
 import 'package:keqdroid/utils/custom_clash_config.dart';
 import 'package:keqdroid/utils/mihomo_config_gen.dart';
 import 'package:keqdroid/utils/socks5_credentials.dart';
@@ -607,7 +607,7 @@ rules:
 ''';
 
     Map<String, dynamic> session() {
-      final node = SubscriptionService.clashNodeConfigs(yaml).single;
+      final node = SubscriptionBodyParser.clashNodeConfigs(yaml).single;
       return MihomoConfigGen.build(
         node,
         const AppSettings(
@@ -644,7 +644,7 @@ rules:
   // 02.11.2026: у провайдера имя узла начиналось или кончалось пробелом (Германия, Россия Москва).
   // Без шаблона такой сервер ядро не запускало: proxy [🇩🇪 ⚡ Германия] not found
   group('пробел по краю имени узла', () {
-    String node(String name) => SubscriptionService.clashNodeConfigs('''
+    String node(String name) => SubscriptionBodyParser.clashNodeConfigs('''
 proxies:
   - name: "$name"
     type: vless

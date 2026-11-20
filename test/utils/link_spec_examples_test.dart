@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/models/app_settings.dart';
 import 'package:keqdroid/models/server_item.dart';
-import 'package:keqdroid/services/subscription_service.dart';
+import 'package:keqdroid/services/subscription_body_parser.dart';
 import 'package:keqdroid/tunnel/vpn_backend.dart';
 import 'package:keqdroid/utils/config_gen.dart';
 import 'package:keqdroid/utils/mihomo_config_gen.dart';
@@ -74,7 +74,7 @@ void main() {
     const link = 'socks://dXNlcjpwYXNz@1.2.3.4:1080#proxy';
 
     test('импортируется из подписки и руками', () {
-      expect(SubscriptionService.parseBodyForTest(link), [link]);
+      expect(SubscriptionBodyParser.parseBody(link), [link]);
       final item = ServerItem.fromRaw(link);
       expect(item.protocol, 'socks');
       expect(item.address, '1.2.3.4');

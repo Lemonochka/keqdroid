@@ -10,7 +10,7 @@ import 'package:keqdroid/models/subscription.dart';
 import 'package:keqdroid/providers/halloween_provider.dart';
 import 'package:keqdroid/providers/providers.dart';
 import 'package:keqdroid/screens/servers_tab.dart';
-import 'package:keqdroid/services/subscription_service.dart';
+import 'package:keqdroid/services/subscription_body_parser.dart';
 import 'package:keqdroid/services/vpn_engine.dart';
 import 'package:keqdroid/tunnel/vpn_backend.dart';
 import 'package:keqdroid/utils/clash_template.dart';
@@ -25,7 +25,7 @@ final _body = File(
 ).readAsStringSync();
 
 final _servers = [
-  for (final c in SubscriptionService.parseBodyForTest(_body))
+  for (final c in SubscriptionBodyParser.parseBody(_body))
     ServerItem.fromRaw(c, subscriptionId: 's1'),
 ];
 

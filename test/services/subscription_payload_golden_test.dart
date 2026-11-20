@@ -2,19 +2,19 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:keqdroid/services/subscription_service.dart';
+import 'package:keqdroid/services/subscription_body_parser.dart';
 
 // Корпус форм payload'а: вход → список конфигов, побайтово.
 //
-// Предохранитель под Q-D4 (вынос ~1080 строк парсера тела в свой модуль).
-// Существующие тесты в subscription_service_test.dart проверяют свойства
-// (имя с пробелами уцелело, заглушка провайдера отвергнута); здесь
-// фиксируется весь список на выходе целиком, включая порядок: при переносе
-// парсера меняться не должно ничто.
+// Предохранитель subscription_body_parser.dart. Существующие тесты в
+// subscription_service_test.dart проверяют свойства (имя с пробелами
+// уцелело, заглушка провайдера отвергнута); здесь фиксируется весь список на
+// выходе целиком, включая порядок: при перестановке кода парсера меняться не
+// должно ничто.
 //
-// Вместе с разбором тела фиксируется и то, что живёт рядом с ним: разбор
-// HTML-страницы, ссылки на подписку в HTML, трафик и срок из имён серверов,
-// раскладка Clash по узлам и сводка пропущенных узлов.
+// Вместе с разбором тела фиксируется и остальное, что парсер отдаёт сервису:
+// разбор HTML-страницы, ссылки на подписку в HTML, трафик и срок из имён
+// серверов, раскладка Clash по узлам и сводка пропущенных узлов.
 //
 // Панели отдают подписку в дюжине несовместимых форм, и порядок кандидатов в
 // разборе отражает реальный опыт, а не стройность. Корпус нужен, чтобы этот
@@ -289,7 +289,7 @@ void _golden(String name) => _goldenOf(name, _read(name));
 // Кейс с входом, собранным в тесте.
 void _goldenOf(String name, String input) {
   test(name, () {
-    final result = SubscriptionService.parseBodyForTest(input);
+    final result = SubscriptionBodyParser.parseBody(input);
     _compare('$_dir/$name.expected.txt', result.join('\n'));
   });
 }
@@ -301,7 +301,7 @@ void _goldenErrorOf(String name, String input) {
   test(name, () {
     String message;
     try {
-      final result = SubscriptionService.parseBodyForTest(input);
+      final result = SubscriptionBodyParser.parseBody(input);
       fail(
         'ожидался FormatException, а разбор вернул ${result.length} конфигов',
       );
@@ -316,14 +316,14 @@ void _goldenHtml(String name) => _goldenHtmlOf(name, _read(name));
 
 void _goldenHtmlOf(String name, String input) {
   test('$name как страница', () {
-    final result = SubscriptionService.extractConfigsFromHtmlForTest(input);
+    final result = SubscriptionBodyParser.extractConfigsFromHtml(input);
     _compare('$_dir/$name.html.expected.txt', result?.join('\n') ?? 'null');
   });
 }
 
 void _goldenLinks(String name) {
   test('$name, ссылки', () {
-    final result = SubscriptionService.extractSubscriptionUrlsFromHtmlForTest(
+    final result = SubscriptionBodyParser.extractSubscriptionUrlsFromHtml(
       _read(name),
       baseUrl: 'https://panel.example/page/',
     );
@@ -335,7 +335,7 @@ void _goldenMeta(String name) => _goldenMetaOf(name, _read(name));
 
 void _goldenMetaOf(String name, String input) {
   test('$name, трафик и срок', () {
-    final meta = SubscriptionService.extractMetaFromBodyForTest(input);
+    final meta = SubscriptionBodyParser.extractMetaFromBody(input);
     _compare(
       '$_dir/$name.meta.expected.txt',
       'used: ${meta.usedBytes}\n'
@@ -347,15 +347,15 @@ void _goldenMetaOf(String name, String input) {
 
 void _goldenNodes(String name) {
   test('$name по узлам', () {
-    final result = SubscriptionService.clashNodeConfigs(_read(name));
+    final result = SubscriptionBodyParser.clashNodeConfigs(_read(name));
     _compare('$_dir/$name.nodes.expected.txt', result.join('\n'));
   });
 }
 
 void _goldenSkipped(String name) {
   test('$name, пропущенные', () {
-    final counts = SubscriptionService.unsupportedClashNodes(_read(name));
-    final summary = SubscriptionService.skippedNodesSummaryForTest(counts);
+    final counts = SubscriptionBodyParser.unsupportedClashNodes(_read(name));
+    final summary = SubscriptionBodyParser.skippedNodesSummary(counts);
     _compare('$_dir/$name.skipped.expected.txt', '$counts\n$summary');
   });
 }

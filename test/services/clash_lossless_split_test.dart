@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/models/app_settings.dart';
-import 'package:keqdroid/services/subscription_service.dart';
+import 'package:keqdroid/services/subscription_body_parser.dart';
 import 'package:keqdroid/utils/custom_clash_config.dart';
 import 'package:keqdroid/utils/mihomo_config_gen.dart';
 import 'package:keqdroid/utils/socks5_credentials.dart';
@@ -77,7 +77,7 @@ void main() {
   }
 
   test('узел, который ссылка повторяет целиком, остаётся ссылкой', () {
-    final entries = SubscriptionService.parseBodyForTest(_profile);
+    final entries = SubscriptionBodyParser.parseBody(_profile);
     expect(entries.where((e) => e.startsWith('vless://')), hasLength(2));
     expect(entries.where((e) => e.startsWith('tuic://')), hasLength(1));
     expect(
@@ -91,7 +91,7 @@ void main() {
   });
 
   test('ss-opts, звено цепочки и smux доезжают до ядра', () {
-    final entries = SubscriptionService.parseBodyForTest(_profile);
+    final entries = SubscriptionBodyParser.parseBody(_profile);
     expect(entries, hasLength(7));
     final whole = entries.where((e) => e.startsWith('{')).toList();
     expect(whole, hasLength(3));
@@ -107,7 +107,7 @@ void main() {
   });
 
   test('одноузловой конфиг ведёт трафик в свой узел и проходит генератор', () {
-    final entries = SubscriptionService.parseBodyForTest(_profile);
+    final entries = SubscriptionBodyParser.parseBody(_profile);
     final trojanGo = entries.firstWhere((e) => e.contains('"TrojanGo"'));
     final clash = CustomClashConfig.tryParse(trojanGo)!;
     expect(clash.remarks, 'TrojanGo');
@@ -146,13 +146,13 @@ rules:
 ''';
 
     CustomClashConfig entryOf(String name) => CustomClashConfig.tryParse(
-      SubscriptionService.parseBodyForTest(
+      SubscriptionBodyParser.parseBody(
         yaml,
       ).firstWhere((e) => e.contains('"name":"$name"')),
     )!;
 
     test('узел едет с группой-звеном и её составом', () {
-      expect(SubscriptionService.unsupportedClashNodes(yaml), isEmpty);
+      expect(SubscriptionBodyParser.unsupportedClashNodes(yaml), isEmpty);
       for (final name in ['WG', 'DE']) {
         final clash = entryOf(name);
         expect(
@@ -202,7 +202,7 @@ rules:
         'dialer-proxy: Entry}',
         'dialer-proxy: Missing}',
       );
-      final entries = SubscriptionService.parseBodyForTest(broken);
+      final entries = SubscriptionBodyParser.parseBody(broken);
       expect(entries.where((e) => e.contains('"name":"DE"')), isEmpty);
       expect(
         entries.where(
@@ -233,7 +233,7 @@ proxies:
     network: http
     http-opts: {path: [/m]}
 ''';
-    final entries = SubscriptionService.parseBodyForTest(yaml);
+    final entries = SubscriptionBodyParser.parseBody(yaml);
     expect(entries.where((e) => e.startsWith('vmess://')), hasLength(1));
     expect(
       ((nodeOf(

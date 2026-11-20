@@ -6,6 +6,7 @@ import 'package:keqdroid/models/app_settings.dart';
 import 'package:keqdroid/models/server_item.dart';
 import 'package:keqdroid/models/subscription.dart';
 import 'package:keqdroid/services/storage_service.dart';
+import 'package:keqdroid/services/subscription_body_parser.dart';
 import 'package:keqdroid/services/subscription_service.dart';
 import 'package:keqdroid/utils/mieru_uri.dart';
 import 'package:keqdroid/utils/mihomo_config_gen.dart';
@@ -356,7 +357,7 @@ void main() {
     );
   });
 
-  group('SubscriptionService._parseBody name extraction', () {
+  group('SubscriptionBodyParser.parseBody name extraction', () {
     test('keeps fragment names that contain spaces (and an inner #)', () {
       // Regression: a plain subscription where the #name has raw spaces, an emoji
       // flag and a second '#'. The old extractor regex stopped at the first space,
@@ -367,7 +368,7 @@ void main() {
           '?encryption=none&type=tcp&security=reality&sni=gp.x5.ru&fp=chrome'
           '#🇷🇺 Белый интернет #1 | Все операторы';
 
-      final configs = SubscriptionService.parseBodyForTest(body);
+      final configs = SubscriptionBodyParser.parseBody(body);
       expect(configs.length, 1);
 
       final server = ServerItem.fromRaw(configs.first);
@@ -410,7 +411,7 @@ void main() {
             'hysteria://pwd@5.6.7.8:443?sni=node.example&obfs=salamander'
             '&obfs-password=abc#v2';
 
-        final configs = SubscriptionService.parseBodyForTest(body);
+        final configs = SubscriptionBodyParser.parseBody(body);
         expect(configs.length, 1);
         expect(configs.single, contains('obfs=salamander'));
       },
@@ -456,9 +457,9 @@ void main() {
         expect(small.length, lessThan(1024 * 1024));
         expect(large.length, greaterThan(1024 * 1024));
 
-        final expected = SubscriptionService.parseBodyForTest(small);
+        final expected = SubscriptionBodyParser.parseBody(small);
         expect(expected, hasLength(100));
-        expect(SubscriptionService.parseBodyForTest(large), expected);
+        expect(SubscriptionBodyParser.parseBody(large), expected);
       },
     );
 
@@ -483,9 +484,9 @@ void main() {
         final large = yaml.toString();
         expect(large.length, greaterThan(1024 * 1024));
 
-        final expected = SubscriptionService.parseBodyForTest(small);
+        final expected = SubscriptionBodyParser.parseBody(small);
         expect(expected, hasLength(50));
-        expect(SubscriptionService.parseBodyForTest(large), expected);
+        expect(SubscriptionBodyParser.parseBody(large), expected);
       },
     );
 
@@ -494,7 +495,7 @@ void main() {
           'vless://aaaaaaaa-1111-2222-3333-444444444444@1.2.3.4:443?type=tcp#name one '
           'vmess://bbbbbbbb-1111-2222-3333-444444444444@5.6.7.8:80#name two';
 
-      final configs = SubscriptionService.parseBodyForTest(body);
+      final configs = SubscriptionBodyParser.parseBody(body);
       expect(configs.length, 2);
       final names = configs
           .map((c) => ServerItem.fromRaw(c).displayName)
@@ -503,7 +504,7 @@ void main() {
     });
   });
 
-  group('SubscriptionService._parseBody with Clash payloads', () {
+  group('SubscriptionBodyParser.parseBody with Clash payloads', () {
     // Панель отдаёт такое, когда у подписки выставлена идентичность
     // clash-клиента. Узлы важнее профиля: их видно списком, между ними
     // переключаются, каждый пингуется, и они работают на любом ядре.
@@ -534,7 +535,7 @@ rules:
       // Ключ REALITY и отпечаток лежат вложенными картами. Построчный сканер
       // их не видел, и ссылка собиралась успешно, но без pbk, то есть
       // молча неподключаемая.
-      final configs = SubscriptionService.parseBodyForTest(reality);
+      final configs = SubscriptionBodyParser.parseBody(reality);
       expect(configs, hasLength(1));
 
       final uri = Uri.parse(configs.single);
@@ -579,7 +580,7 @@ proxy-groups:
 rules:
   - MATCH,Proxy
 ''';
-        final configs = SubscriptionService.parseBodyForTest(mixed);
+        final configs = SubscriptionBodyParser.parseBody(mixed);
         expect(configs, hasLength(2));
         final old = ServerItem.fromRaw(configs[0]);
         expect(old.protocol, 'clash');
@@ -632,7 +633,7 @@ proxy-groups:
 rules:
   - MATCH,Proxy
 ''';
-      final configs = SubscriptionService.parseBodyForTest(profile);
+      final configs = SubscriptionBodyParser.parseBody(profile);
       expect(configs, hasLength(4));
 
       final tuic = Uri.parse(configs[0]);
@@ -720,7 +721,7 @@ proxy-groups:
 rules:
   - MATCH,Proxy
 ''';
-      final configs = SubscriptionService.parseBodyForTest(profile);
+      final configs = SubscriptionBodyParser.parseBody(profile);
       expect(configs, hasLength(4));
 
       final ws = Uri.parse(configs[0]);
@@ -801,7 +802,7 @@ proxy-groups:
 rules:
   - MATCH,Proxy
 ''';
-      final configs = SubscriptionService.parseBodyForTest(profile);
+      final configs = SubscriptionBodyParser.parseBody(profile);
       expect(configs, hasLength(2));
       Map<String, dynamic> json(String link) =>
           jsonDecode(
@@ -860,7 +861,9 @@ proxy-groups:
 rules:
   - MATCH,Proxy
 ''';
-      expect(SubscriptionService.unsupportedClashNodes(profile), {'vmess': 1});
+      expect(SubscriptionBodyParser.unsupportedClashNodes(profile), {
+        'vmess': 1,
+      });
     });
 
     // spx у REALITY задаёт spiderX, а у Clash такого поля нет вовсе. Туда
@@ -885,9 +888,7 @@ proxy-groups:
 rules:
   - MATCH,Proxy
 ''';
-      final uri = Uri.parse(
-        SubscriptionService.parseBodyForTest(profile).single,
-      );
+      final uri = Uri.parse(SubscriptionBodyParser.parseBody(profile).single);
       expect(uri.queryParameters['pbk'], isNotEmpty);
       expect(uri.queryParameters.containsKey('spx'), isFalse);
     });
@@ -927,8 +928,8 @@ proxy-groups:
 rules:
   - MATCH,Proxy
 ''';
-      expect(SubscriptionService.parseBodyForTest(profile), hasLength(1));
-      expect(SubscriptionService.unsupportedClashNodes(profile), {
+      expect(SubscriptionBodyParser.parseBody(profile), hasLength(1));
+      expect(SubscriptionBodyParser.unsupportedClashNodes(profile), {
         'tailscale': 2,
         'brook': 1,
         'direct': 1,
@@ -968,7 +969,7 @@ proxy-groups:
 rules:
   - MATCH,Proxy
 ''';
-      final configs = SubscriptionService.parseBodyForTest(profile);
+      final configs = SubscriptionBodyParser.parseBody(profile);
       expect(configs, hasLength(4));
       expect(configs.first, startsWith('vless://'));
       for (final (i, name, type) in [
@@ -986,7 +987,7 @@ rules:
         ServerItem.fromRaw(configs[3]).clashConfig!.proxies.single['network'],
         'h2',
       );
-      expect(SubscriptionService.unsupportedClashNodes(profile), isEmpty);
+      expect(SubscriptionBodyParser.unsupportedClashNodes(profile), isEmpty);
     });
 
     test('строчный разбор битого YAML не отдаёт ядру узел без ссылки', () {
@@ -1003,10 +1004,10 @@ rules:
           '\t\ttype: wireguard\n'
           '\t\tserver: w.example\n'
           '\t\tport: 51820\n';
-      final configs = SubscriptionService.parseBodyForTest(broken);
+      final configs = SubscriptionBodyParser.parseBody(broken);
       expect(configs, hasLength(1));
       expect(configs.single, startsWith('vless://'));
-      expect(SubscriptionService.unsupportedClashNodes(broken), {
+      expect(SubscriptionBodyParser.unsupportedClashNodes(broken), {
         'wireguard': 1,
       });
     });
@@ -1026,7 +1027,7 @@ proxy-groups:
 rules:
   - MATCH,Proxy
 ''';
-      expect(SubscriptionService.unsupportedClashNodes(profile), isEmpty);
+      expect(SubscriptionBodyParser.unsupportedClashNodes(profile), isEmpty);
     });
 
     test('профиль без разбираемых узлов остаётся конфигом целиком', () {
@@ -1050,7 +1051,7 @@ proxy-providers:
 rules:
   - MATCH,Proxy
 ''';
-      final configs = SubscriptionService.parseBodyForTest(providerProfile);
+      final configs = SubscriptionBodyParser.parseBody(providerProfile);
       expect(configs, hasLength(1));
 
       final server = ServerItem.fromRaw(configs.single);
@@ -1081,7 +1082,7 @@ rules:
 ''';
 
     test('профиль целиком из proxy-providers принимается сервером', () {
-      final configs = SubscriptionService.parseBodyForTest(providersOnly);
+      final configs = SubscriptionBodyParser.parseBody(providersOnly);
       expect(configs, hasLength(1));
 
       final server = ServerItem.fromRaw(configs.single);
@@ -1102,7 +1103,7 @@ proxy-providers:
     url: "https://example.invalid/nodes.yaml"
 ''';
       expect(
-        () => SubscriptionService.parseBodyForTest(noGroups),
+        () => SubscriptionBodyParser.parseBody(noGroups),
         throwsA(
           isA<FormatException>().having(
             (e) => e.message,
@@ -1120,7 +1121,7 @@ proxies:
     type: vless
 ''';
       expect(
-        () => SubscriptionService.parseBodyForTest(broken),
+        () => SubscriptionBodyParser.parseBody(broken),
         throwsA(
           isA<FormatException>().having(
             (e) => e.message,
@@ -1132,7 +1133,7 @@ proxies:
     });
   });
 
-  group('SubscriptionService._parseBody with ready-made core configs', () {
+  group('SubscriptionBodyParser.parseBody with ready-made core configs', () {
     // Провайдеры отдают не только списки ссылок, но и сервера с готовым
     // роутингом: конфиг xray целиком, имя в корневом remarks (v2rayNG).
     const custom =
@@ -1143,7 +1144,7 @@ proxies:
         '{"vnext": [{"address": "nl1.example.com", "port": 443}]}}]}';
 
     test('takes a whole json config as one server', () {
-      final configs = SubscriptionService.parseBodyForTest(custom);
+      final configs = SubscriptionBodyParser.parseBody(custom);
       expect(configs.length, 1);
 
       final server = ServerItem.fromRaw(configs.single);
@@ -1155,13 +1156,13 @@ proxies:
     });
 
     test('takes a json array as several servers', () {
-      final configs = SubscriptionService.parseBodyForTest('[$custom,$custom]');
+      final configs = SubscriptionBodyParser.parseBody('[$custom,$custom]');
       expect(configs.length, 2);
     });
 
     test('unwraps a base64 payload with a json config', () {
       final body = base64.encode(utf8.encode(custom));
-      final configs = SubscriptionService.parseBodyForTest(body);
+      final configs = SubscriptionBodyParser.parseBody(body);
       expect(configs.length, 1);
       expect(ServerItem.fromRaw(configs.single).protocol, 'custom');
     });
@@ -1172,7 +1173,7 @@ proxies:
         base64.encode(utf8.encode(custom)),
       ].join('\n');
 
-      final configs = SubscriptionService.parseBodyForTest(body);
+      final configs = SubscriptionBodyParser.parseBody(body);
       expect(configs.length, 2);
       final protocols = configs
           .map((c) => ServerItem.fromRaw(c).protocol)
@@ -1188,7 +1189,7 @@ proxies:
           '{"remarks": "Subscription", "outbounds": '
           '[{"tag": "direct", "protocol": "freedom"}]}';
       expect(
-        () => SubscriptionService.parseBodyForTest(stub),
+        () => SubscriptionBodyParser.parseBody(stub),
         throwsA(
           isA<FormatException>().having(
             (e) => e.message,
@@ -1204,7 +1205,7 @@ proxies:
           '{"outbounds": [{"tag": "proxy", "protocol": "vless", '
           '"settings": {"vnext": []}}]}';
       expect(
-        () => SubscriptionService.parseBodyForTest(stub),
+        () => SubscriptionBodyParser.parseBody(stub),
         throwsA(isA<FormatException>()),
       );
     });
@@ -1215,7 +1216,7 @@ proxies:
           '{"type": "vless", "tag": "nl", "server": "nl1.example.com", '
           '"server_port": 443, "uuid": "00000000-0000-4000-8000-000000000000"}, '
           '{"type": "direct", "tag": "direct"}]}';
-      expect(SubscriptionService.parseBodyForTest(singbox), [
+      expect(SubscriptionBodyParser.parseBody(singbox), [
         'vless://00000000-0000-4000-8000-000000000000@nl1.example.com:443#nl',
       ]);
     });
@@ -1229,7 +1230,7 @@ proxies:
           '{"type": "ssh", "tag": "s", "server": "nl2.example.com", '
           '"server_port": 22}]}';
       expect(
-        () => SubscriptionService.parseBodyForTest(singbox),
+        () => SubscriptionBodyParser.parseBody(singbox),
         throwsA(
           isA<FormatException>().having(
             (e) => e.message,
