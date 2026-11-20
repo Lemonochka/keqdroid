@@ -4,6 +4,9 @@
 #ifdef GDK_WINDOWING_X11
 #include <gdk/gdkx.h>
 #endif
+#ifdef GDK_WINDOWING_WAYLAND
+#include <gdk/gdkwayland.h>
+#endif
 
 #include "flutter/generated_plugin_registrant.h"
 #include "global_hotkeys.h"
@@ -129,6 +132,15 @@ static void my_application_activate(GApplication* application) {
     if (g_strcmp0(wm_name, "GNOME Shell") != 0) {
       use_header_bar = FALSE;
     }
+  }
+#endif
+#ifdef GDK_WINDOWING_WAYLAND
+  // KWin рисует рамку сам (org_kde_kwin_server_decoration), а шапка GTK включает CSD принудительно,
+  // и на KDE вместо родной рамки была адвайтовская (gtk_window_should_use_csd, GTK 3.24)
+  GdkDisplay* display = gtk_widget_get_display(GTK_WIDGET(window));
+  if (GDK_IS_WAYLAND_DISPLAY(display) &&
+      gdk_wayland_display_prefers_ssd(display)) {
+    use_header_bar = FALSE;
   }
 #endif
   if (is_tiling_desktop()) {
