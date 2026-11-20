@@ -127,7 +127,9 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
       await File(path).writeAsString(exportSessionLogs(maxLines: 2000));
       if (!private) await Process.run('chmod', ['600', path]);
       AppLogger.instance.info('Core logs written to $path');
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.instance.debug('Core logs not written', error: e);
+    }
   }
 
   static const coresLogName = 'keqdroid_cores.log';
@@ -991,7 +993,9 @@ $run''';
       );
       try {
         await stopSession();
-      } catch (_) {}
+      } catch (e) {
+        AppLogger.instance.warn('Teardown after core exit failed', error: e);
+      }
       emit(VpnState(
         status: VpnStatus.error,
         errorMessage:
@@ -1076,7 +1080,9 @@ $run''';
     if (dir != null && dir.existsSync()) {
       try {
         await dir.delete(recursive: true);
-      } catch (_) {}
+      } catch (e) {
+        AppLogger.instance.debug('Session dir not deleted', error: e);
+      }
     }
 
     _activeMode = null;
@@ -1296,7 +1302,9 @@ $run''';
     try {
       final sentinel = _rootSentinel;
       if (sentinel != null && sentinel.existsSync()) sentinel.deleteSync();
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.instance.warn('Root core sentinel not removed', error: e);
+    }
     _rootSentinel = null;
     try {
       await proc.exitCode.timeout(const Duration(seconds: 8));

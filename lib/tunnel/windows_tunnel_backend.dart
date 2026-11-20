@@ -557,7 +557,9 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
       );
       try {
         await stopSession();
-      } catch (_) {}
+      } catch (e) {
+        AppLogger.instance.warn('Teardown after core exit failed', error: e);
+      }
       emit(VpnState(
         status: VpnStatus.error,
         errorMessage:
@@ -624,7 +626,9 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
     if (_systemProxyApplied) {
       try {
         await _method.invokeMethod<void>('setSystemProxy', {'enabled': false});
-      } catch (_) {}
+      } catch (e) {
+        AppLogger.instance.warn('System proxy not turned off', error: e);
+      }
       _systemProxyApplied = false;
     }
 
@@ -648,7 +652,9 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
     if (dir != null && dir.existsSync()) {
       try {
         await dir.delete(recursive: true);
-      } catch (_) {}
+      } catch (e) {
+        AppLogger.instance.debug('Session dir not deleted', error: e);
+      }
     }
 
     _activeMode = null;

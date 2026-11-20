@@ -577,7 +577,9 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
   static Future<void> _reconnect(WidgetRef ref) async {
     try {
       await ref.read(vpnStateProvider.notifier).reconnectToActiveServer();
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.instance.warn('Reconnect after routing change failed', error: e);
+    }
   }
 
   static void _openRouteEditor(

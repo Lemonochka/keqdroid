@@ -469,7 +469,9 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       if (_cancelRequested) {
         try {
           await engine.stopVpn();
-        } catch (_) {}
+        } catch (e) {
+          AppLogger.instance.debug('stopVpn after cancel failed', error: e);
+        }
         state = const AsyncData(VpnState(status: VpnStatus.disconnected));
         return;
       }
@@ -1703,7 +1705,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       try {
         await waiter.future.timeout(const Duration(seconds: 4));
       } on TimeoutException {
-        // не дождались disconnected, переподключаемся всё равно
+        AppLogger.instance.info('No disconnected state within 4 s, reconnecting anyway');
       } finally {
         if (identical(_disconnectWaiter, waiter)) _disconnectWaiter = null;
       }

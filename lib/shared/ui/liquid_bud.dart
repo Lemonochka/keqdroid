@@ -2,6 +2,8 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
+import '../../core/app_logger.dart';
+
 // капля, которая вытекает из одной плашки и раздувается в другую
 class LiquidBud {
   static ui.FragmentProgram? _program;
@@ -12,7 +14,9 @@ class LiquidBud {
   static Future<void> _load() async {
     try {
       _program = await ui.FragmentProgram.fromAsset('shaders/liquid_bud.frag');
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.instance.warn('Liquid bud shader not loaded', error: e);
+    }
   }
 
   static ui.FragmentShader? newShader() => _program?.fragmentShader();

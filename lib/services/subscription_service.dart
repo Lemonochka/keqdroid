@@ -824,8 +824,8 @@ class SubscriptionService {
       } else if (data.length >= 2 && data[0] == 0x1f && data[1] == 0x8b) {
         data = gzip.decode(data);
       }
-    } on Object {
-      // оставляем payload как есть
+    } on Object catch (e) {
+      AppLogger.instance.debug('Subscription body not decompressed', error: e);
     }
     try {
       return utf8.decode(data, allowMalformed: true);
@@ -1182,8 +1182,8 @@ class SubscriptionService {
             body.startsWith('<!doctype html') ||
             body.startsWith('<html');
         if (!isHtml) return resp;
-      } on Object {
-        // следующий UA
+      } on Object catch (e) {
+        AppLogger.instance.debug('Subscription fetch with UA $ua failed', error: e);
       }
     }
     return null;
@@ -2425,8 +2425,8 @@ class SubscriptionService {
             if (extracted != null && extracted.isNotEmpty) return extracted;
             next.addAll(_extractSubscriptionUrlsFromHtml(body, baseUrl: u));
           }
-        } on Object {
-          // неудачный запасной запрос не страшен
+        } on Object catch (e) {
+          AppLogger.instance.debug('Subscription fallback address failed', error: e);
         }
       }
       frontier = next;

@@ -16,6 +16,7 @@ import 'package:keqdroid/shared/ui/shape_loading_indicator.dart';
 import 'package:keqdroid/shared/ui/smooth_scroll.dart';
 import 'package:keqdroid/shared/ui/tv_focus.dart';
 
+import '../core/app_logger.dart';
 import '../models/app_info.dart';
 import '../providers/providers.dart';
 import '../platform/platform_bootstrap.dart';
@@ -263,7 +264,9 @@ class _SplitTunnelingScreenState extends ConsumerState<SplitTunnelingScreen>
   Future<void> _reconnect() async {
     try {
       await ref.read(vpnStateProvider.notifier).reconnectToActiveServer();
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.instance.warn('Reconnect after split tunneling change failed', error: e);
+    }
   }
 
   void _toggle(AppInfo app) {

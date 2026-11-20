@@ -634,7 +634,9 @@ class _UpdateVersionInfoState extends ConsumerState<_UpdateVersionInfo> {
     try {
       final info = await PackageInfo.fromPlatform();
       if (mounted) setState(() => _version = info.version);
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.instance.debug('Package info unavailable', error: e);
+    }
   }
 
   Future<void> _forceCheck() async {

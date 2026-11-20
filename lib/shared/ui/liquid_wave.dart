@@ -6,6 +6,7 @@ import 'package:androidx_graphics_shapes/material_shapes.dart';
 import 'package:androidx_graphics_shapes/shapes.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/app_logger.dart';
 import 'paced_clock.dart';
 import 'smooth_fade.dart';
 
@@ -296,7 +297,9 @@ class LiquidWave extends StatefulWidget {
     try {
       _reflection =
           await ui.FragmentProgram.fromAsset('shaders/reflection.frag');
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.instance.warn('Reflection shader not loaded', error: e);
+    }
   }
 
   static const presetEvery = Duration(seconds: 30);

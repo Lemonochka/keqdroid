@@ -23,7 +23,9 @@ class LinuxAutostart {
   static Future<void> Function() reloadUserUnits = () async {
     try {
       await Process.run('systemctl', ['--user', 'daemon-reload']);
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.instance.debug('systemctl --user daemon-reload failed', error: e);
+    }
   };
 
   // Hyprland без uwsm (так у caelestia) ~/.config/autostart не читает и поднимает только hyprland-session.target.
@@ -269,7 +271,9 @@ class LinuxAutostart {
       if (await _syncHyprlandDropIn(enabled)) changed = true;
       if (changed) await reloadUserUnits();
       await _syncCompositorStart(enabled: enabled);
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.instance.warn('Linux autostart not synced', error: e);
+    }
   }
 
   // раннер аргументы в Dart не передаёт, читаем /proc/self/cmdline

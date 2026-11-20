@@ -68,7 +68,9 @@ class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
           }
         }
       }
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.instance.debug('Local address for LAN sharing not found', error: e);
+    }
   }
 
   Future<void> _saveSettings(

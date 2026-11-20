@@ -47,7 +47,9 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
       try {
         final id = await CardImageService.migrateGif(sub.cardThemeId, sub.id);
         if (id != null) await editMeta(sub.id, cardThemeId: id);
-      } catch (_) {}
+      } catch (e) {
+        AppLogger.instance.warn('Card GIF not migrated', error: e);
+      }
     }
   }
 

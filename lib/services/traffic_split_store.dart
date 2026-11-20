@@ -5,6 +5,7 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:path_provider/path_provider.dart';
 
+import '../core/app_logger.dart';
 import '../models/traffic_split.dart';
 
 // файлом: prefs переписывают весь блоб со списками серверов на каждый такт
@@ -58,6 +59,8 @@ class TrafficSplitStore {
       final tmp = File('${file.path}.tmp');
       await tmp.writeAsString(jsonEncode(state.toJson()), flush: true);
       await tmp.rename(file.path);
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.instance.warn('Traffic split state not saved', error: e);
+    }
   }
 }

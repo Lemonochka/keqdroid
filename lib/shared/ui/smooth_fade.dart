@@ -2,6 +2,8 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
+import '../../core/app_logger.dart';
+
 // кривая прозрачности из двух отрезков Эрмита: значения и наклоны в точках 0, mid и 1
 class FadeCurve {
   FadeCurve._(this.alphas, this.mid, this.slopes);
@@ -90,7 +92,9 @@ abstract final class SmoothFade {
     try {
       _fade = await ui.FragmentProgram.fromAsset('shaders/smooth_fade.frag');
       _edge = await ui.FragmentProgram.fromAsset('shaders/edge_fade.frag');
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.instance.warn('Fade shaders not loaded', error: e);
+    }
   }
 
   static ui.FragmentShader? newFadeShader() => _fade?.fragmentShader();

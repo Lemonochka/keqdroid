@@ -8,6 +8,7 @@ import 'package:flutter/painting.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import '../core/app_logger.dart';
 import '../models/subscription_card_theme.dart';
 import 'card_video.dart';
 import 'file_dialog_service.dart';
@@ -52,7 +53,9 @@ class CardImageService {
   static Future<void> warmUp() async {
     try {
       await rescan();
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.instance.debug('Card images not rescanned', error: e);
+    }
   }
 
   static Future<void> rescan() async {
@@ -179,7 +182,9 @@ class CardImageService {
     if (video == null) {
       try {
         await tried.create(recursive: true);
-      } catch (_) {}
+      } catch (e) {
+        AppLogger.instance.debug('Card video conversion marker not created', error: e);
+      }
     }
     return video?.id;
   }
@@ -247,7 +252,9 @@ class CardImageService {
                 base64.encode(await poster.readAsBytes());
           }
         }
-      } catch (_) {}
+      } catch (e) {
+        AppLogger.instance.warn('Card image not added to backup: $name', error: e);
+      }
     }
     return out;
   }
@@ -268,7 +275,9 @@ class CardImageService {
       try {
         await File(p.join(dir.path, entry.key)).writeAsBytes(bytes, flush: true);
         SubscriptionCardTheme.customFiles?.add(entry.key);
-      } catch (_) {}
+      } catch (e) {
+        AppLogger.instance.warn('Card image not restored: ${entry.key}', error: e);
+      }
     }
   }
 
@@ -299,7 +308,9 @@ class CardImageService {
       try {
         await entry.delete();
         SubscriptionCardTheme.customFiles?.remove(name);
-      } catch (_) {}
+      } catch (e) {
+        AppLogger.instance.debug('Card image not deleted: $name', error: e);
+      }
     }
   }
 

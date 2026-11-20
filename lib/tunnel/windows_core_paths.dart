@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 
+import '../core/app_logger.dart';
+
 class WindowsCorePaths {
   WindowsCorePaths._();
 
@@ -72,7 +74,9 @@ class WindowsCorePaths {
         if (dst.existsSync() && dst.lengthSync() == src.lengthSync()) continue;
         try {
           await src.copy(dst.path);
-        } catch (_) {}
+        } catch (e) {
+          AppLogger.instance.warn('Geo file not copied: $name', error: e);
+        }
       }
     }
     return dir.path;
@@ -123,7 +127,9 @@ class WindowsCorePaths {
             await outFile.writeAsBytes(bytes, flush: true);
           }
           extracted = true;
-        } catch (_) {}
+        } catch (e) {
+          AppLogger.instance.warn('Geo file not extracted: ${entry.value}', error: e);
+        }
       }
       return extracted ? outDir.path : null;
     } catch (_) {

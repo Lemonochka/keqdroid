@@ -1298,7 +1298,9 @@ class KeqdisVpnService : VpnService() {
                         // без stopSelf(): сервис в ERROR переиспользуется следующим стартом из плитки
                     }
                 }
-            } catch (_: Exception) {}
+            } catch (e: Exception) {
+                if (e !is CancellationException) NativeLog.w("KEQDIS", "[xray] exit monitor failed", e)
+            }
         }
         return pid
     }

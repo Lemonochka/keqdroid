@@ -910,7 +910,9 @@ Future<void> _autoSelectNow(WidgetRef ref, String subscriptionId) async {
   if (status != VpnStatus.connected && status != VpnStatus.connecting) return;
   try {
     await ref.read(vpnStateProvider.notifier).reconnectToActiveServer();
-  } catch (_) {}
+  } catch (e) {
+    AppLogger.instance.warn('Reconnect after server pick failed', error: e);
+  }
 }
 
 class _AutoSkipPickRow extends ConsumerWidget {

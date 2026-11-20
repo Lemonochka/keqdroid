@@ -99,7 +99,9 @@ Future<String?> _resolveFirstAddress(String host) async {
     final addresses =
         await InternetAddress.lookup(host).timeout(const Duration(seconds: 5));
     if (addresses.isNotEmpty) return addresses.first.address;
-  } catch (_) {}
+  } catch (e) {
+    AppLogger.instance.debug('Server address not resolved', error: e);
+  }
   return null;
 }
 

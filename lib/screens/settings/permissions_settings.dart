@@ -56,7 +56,9 @@ class _PermissionsScreenState extends ConsumerState<_PermissionsScreen>
   Future<void> _requestNotif() async {
     try {
       await _androidNotif?.requestNotificationsPermission();
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.instance.debug('Notification permission request failed', error: e);
+    }
     await _refreshNotifStatus();
   }
 
@@ -75,13 +77,17 @@ class _PermissionsScreenState extends ConsumerState<_PermissionsScreen>
   Future<void> _requestBattery() async {
     try {
       await _channel.invokeMethod<void>('requestIgnoreBatteryOptimizations');
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.instance.debug('Battery optimization request failed', error: e);
+    }
   }
 
   Future<void> _openAppSettings() async {
     try {
       await _channel.invokeMethod<void>('openAppSettings');
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.instance.debug('App settings not opened', error: e);
+    }
   }
 
   Future<void> _loadAutostart() async {
@@ -89,7 +95,9 @@ class _PermissionsScreenState extends ConsumerState<_PermissionsScreen>
     try {
       final kind = await _channel.invokeMethod<String>('getOemAutostart');
       if (mounted) setState(() => _autostart = kind == 'none' ? null : kind);
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.instance.debug('OEM autostart kind not read', error: e);
+    }
   }
 
   Future<void> _openAutostart() async {
@@ -117,7 +125,9 @@ class _PermissionsScreenState extends ConsumerState<_PermissionsScreen>
     }
     try {
       await _channel.invokeMethod<void>('openOemAutostart');
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.instance.debug('OEM autostart settings not opened', error: e);
+    }
   }
 
   @override

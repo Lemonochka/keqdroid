@@ -400,7 +400,9 @@ class WindowsTrayMenu with TrayListener {
     // сначала рвём туннель, иначе системный прокси после выхода смотрит в мёртвый порт
     try {
       await _ref.read(vpnStateProvider.notifier).disconnect();
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.instance.warn('Disconnect before exit failed', error: e);
+    }
     await WindowsDesktopService.exitApp();
   }
 

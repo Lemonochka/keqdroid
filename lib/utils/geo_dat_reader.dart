@@ -2,6 +2,8 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
+import '../core/app_logger.dart';
+
 class GeoDatReader {
   GeoDatReader._();
 
@@ -42,7 +44,9 @@ class GeoDatReader {
         }
         pos = nextPos;
       }
-    } catch (_) {} finally {
+    } catch (e) {
+      AppLogger.instance.warn('Geo file index not read', error: e);
+    } finally {
       await raf?.close();
     }
     return out;

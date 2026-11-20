@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
+import '../../core/app_logger.dart';
 import '../../platform/platform_bootstrap.dart';
 import '../../ui/responsive/window_breakpoints.dart';
 
@@ -114,7 +115,9 @@ abstract final class FloatingBar {
     try {
       _bar = await ui.FragmentProgram.fromAsset('shaders/liquid_bar.frag');
       _drop = await ui.FragmentProgram.fromAsset('shaders/liquid_drop.frag');
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.instance.warn('Liquid bar shaders not loaded', error: e);
+    }
   }
 
   static ui.FragmentShader? newBarShader() => _bar?.fragmentShader();

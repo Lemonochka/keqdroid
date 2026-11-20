@@ -169,7 +169,9 @@ class LinuxBackgroundService with WindowListener, TrayListener {
         id: _trayId,
         title: 'keqdroid',
       );
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.instance.debug('Tray icon not updated', error: e);
+    }
   }
 
   Future<void> setTrayLabels({
@@ -181,7 +183,9 @@ class LinuxBackgroundService with WindowListener, TrayListener {
     _quitLabel = quit;
     try {
       await _applyTrayMenu();
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.instance.debug('Tray menu not updated', error: e);
+    }
   }
 
   void unawaitedShow() {
@@ -357,7 +361,9 @@ class LinuxBackgroundService with WindowListener, TrayListener {
     _quitting = true;
     try {
       await onQuit?.call();
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.instance.warn('Quit hook failed', error: e);
+    }
     _boundsSaveDebounce?.cancel();
     await _saveWindowBounds();
     try {

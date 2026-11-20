@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path/path.dart' as p;
 
+import '../core/app_logger.dart';
 import '../models/app_internals.dart';
 import '../models/app_settings.dart';
 import '../platform/vpn_native_bridge.dart';
@@ -233,7 +234,9 @@ class AppInternalsService {
       version = info.version;
       buildNumber = info.buildNumber;
       packageName = info.packageName;
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.instance.debug('Package info unavailable', error: e);
+    }
     return BuildInfo(
       appVersion: version,
       buildNumber: buildNumber,

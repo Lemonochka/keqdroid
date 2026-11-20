@@ -78,8 +78,9 @@ class ServersNotifier extends Notifier<ServersState> {
     if (ref.read(pingingScopesProvider).contains(subscriptionId)) return;
     try {
       await pingSubscription(subscriptionId);
-    } catch (_) {
+    } catch (e) {
       // все замеры упали; при ручном пинге показали бы сообщение, а тут его показать некому
+      AppLogger.instance.debug('Auto ping failed', error: e);
     }
   }
 

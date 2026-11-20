@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 
+import '../core/app_logger.dart';
 import '../services/hotkey_service.dart';
 import '../services/linux_deep_links.dart';
 import '../utils/system_accent.dart';
@@ -39,8 +40,8 @@ class VpnNativeBridge {
       await channel.invokeMethod<void>('setWindowBackgroundColor', {
         'color': argb,
       });
-    } on PlatformException {
-      // окно просто останется прежнего цвета
+    } on PlatformException catch (e) {
+      AppLogger.instance.debug('Window background color not set', error: e);
     }
   }
 
@@ -54,8 +55,8 @@ class VpnNativeBridge {
         'colors': ?colors,
         'server': ?server,
       });
-    } on PlatformException {
-      // виджет останется с прежними цветами и сервером
+    } on PlatformException catch (e) {
+      AppLogger.instance.debug('Home widget not updated', error: e);
     }
   }
 

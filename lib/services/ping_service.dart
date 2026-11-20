@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 
+import '../core/app_logger.dart';
 import '../models/app_settings.dart';
 import '../platform/platform_bootstrap.dart';
 import '../models/ping_test_config.dart';
@@ -761,7 +762,9 @@ class PingService {
           break;
         }
       }
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.instance.debug('Network interfaces not listed for TUN ping', error: e);
+    }
     if (tunIndex == null) return null;
     return WindowsDesktopService.tunBypassInterface(
       tunIndex: tunIndex,

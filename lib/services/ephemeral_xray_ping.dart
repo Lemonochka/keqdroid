@@ -314,7 +314,9 @@ class EphemeralXrayPing {
       await _killProcess(process);
       try {
         await sessionDir.delete(recursive: true);
-      } catch (_) {}
+      } catch (e) {
+        AppLogger.instance.debug('Ping session dir not deleted', error: e);
+      }
     }
   }
 
@@ -482,7 +484,9 @@ class EphemeralXrayPing {
       await _killProcess(process);
       try {
         await sessionDir.delete(recursive: true);
-      } catch (_) {}
+      } catch (e) {
+        AppLogger.instance.debug('Ping session dir not deleted', error: e);
+      }
     }
   }
 
@@ -551,7 +555,9 @@ class EphemeralXrayPing {
       await _killProcess(process);
       try {
         await sessionDir.delete(recursive: true);
-      } catch (_) {}
+      } catch (e) {
+        AppLogger.instance.debug('Ping session dir not deleted', error: e);
+      }
     }
   }
 

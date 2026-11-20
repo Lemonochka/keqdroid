@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 
+import '../core/app_logger.dart';
+
 class LinuxCorePaths {
   LinuxCorePaths._();
 
@@ -52,7 +54,9 @@ class LinuxCorePaths {
         if (dst.existsSync() && dst.lengthSync() == src.lengthSync()) continue;
         try {
           await replaceAtomically(dst.path, (tmp) => src.copy(tmp));
-        } catch (_) {}
+        } catch (e) {
+          AppLogger.instance.warn('Geo file not copied: $name', error: e);
+        }
       }
     }
     return dir.path;
@@ -115,7 +119,9 @@ class LinuxCorePaths {
             await outFile.writeAsBytes(bytes, flush: true);
           }
           extracted = true;
-        } catch (_) {}
+        } catch (e) {
+          AppLogger.instance.warn('Geo file not extracted: ${entry.value}', error: e);
+        }
       }
       return extracted ? outDir.path : null;
     } catch (_) {
@@ -255,7 +261,9 @@ class LinuxCorePaths {
       final stat = await FileStat.stat(path);
       if (stat.mode & 0x40 != 0) return;
       await Process.run('chmod', ['+x', path]);
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.instance.warn('Core binary not made executable', error: e);
+    }
   }
 
   static String? _which(String name) {

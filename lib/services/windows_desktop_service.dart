@@ -123,8 +123,8 @@ class WindowsDesktopService {
     if (!Platform.isWindows) return;
     try {
       await _channel.invokeMethod<void>('initCoreProcessGuard');
-    } on PlatformException {
-      // не смертельно, порты могут быть свободны
+    } on PlatformException catch (e) {
+      AppLogger.instance.debug('initCoreProcessGuard failed', error: e);
     }
   }
 
@@ -132,8 +132,8 @@ class WindowsDesktopService {
     if (!Platform.isWindows || pid <= 0) return;
     try {
       await _channel.invokeMethod<void>('attachCoreProcess', {'pid': pid});
-    } on PlatformException {
-      // не вышло, не страшно
+    } on PlatformException catch (e) {
+      AppLogger.instance.debug('attachCoreProcess failed', error: e);
     }
   }
 
@@ -147,8 +147,8 @@ class WindowsDesktopService {
         'xrayPid': xrayPid,
         'singboxPid': singboxPid,
       });
-    } on PlatformException {
-      // не вышло, не страшно
+    } on PlatformException catch (e) {
+      AppLogger.instance.debug('registerSessionCoreProcesses failed', error: e);
     }
   }
 
@@ -171,8 +171,8 @@ class WindowsDesktopService {
     if (!Platform.isWindows) return;
     try {
       await _channel.invokeMethod<void>('clearSessionCoreProcesses');
-    } on PlatformException {
-      // не вышло, не страшно
+    } on PlatformException catch (e) {
+      AppLogger.instance.debug('clearSessionCoreProcesses failed', error: e);
     }
   }
 
