@@ -115,6 +115,46 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
 
   String exportConnectionLines() => _connectionLines.text;
 
+  @visibleForTesting
+  void debugAdoptCore(
+    Process process, {
+    bool mihomo = false,
+    bool root = false,
+    int logThreshold = 0,
+  }) {
+    final String label;
+    if (mihomo) {
+      _mihomoProcess = process;
+      label = 'mihomo';
+    } else if (root) {
+      _rootXrayProcess = process;
+      label = 'xray TUN';
+    } else {
+      _xrayProcess = process;
+      label = 'xray';
+    }
+    _xrayLogThreshold = logThreshold;
+    _pipeProcessOutput(process, root ? _rootLog : _xrayLog);
+    _watchProcessExit(process, label);
+  }
+
+  @visibleForTesting
+  bool get debugXrayStarted => _xrayStarted;
+
+  @visibleForTesting
+  Future<bool> debugWaitForPort(
+    int port, {
+    Process? process,
+    StringBuffer? log,
+    String processLabel = 'Process',
+  }) => _waitForPort(
+    '127.0.0.1',
+    port,
+    process: process,
+    log: log,
+    processLabel: processLabel,
+  );
+
   // не в общий /tmp: там адреса серверов и посещённые сайты
   Future<void> _dumpLogsToFile() async {
     try {

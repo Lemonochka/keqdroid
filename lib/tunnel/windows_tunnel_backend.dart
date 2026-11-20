@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 
@@ -103,6 +104,40 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
   }
 
   String exportConnectionLines() => _connectionLines.text;
+
+  @visibleForTesting
+  void debugAdoptCore(
+    Process process, {
+    bool mihomo = false,
+    int logThreshold = 0,
+  }) {
+    final label = mihomo ? 'mihomo' : 'xray';
+    if (mihomo) {
+      _mihomoProcess = process;
+    } else {
+      _xrayProcess = process;
+    }
+    _xrayLogThreshold = logThreshold;
+    _coreOutputDone = _pipeProcessOutput(process, _xrayLog, label);
+    _watchProcessExit(process, label);
+  }
+
+  @visibleForTesting
+  bool get debugXrayStarted => _xrayStarted;
+
+  @visibleForTesting
+  Future<bool> debugWaitForPort(
+    int port, {
+    Process? process,
+    StringBuffer? log,
+    String processLabel = 'Process',
+  }) => _waitForPort(
+    '127.0.0.1',
+    port,
+    process: process,
+    log: log,
+    processLabel: processLabel,
+  );
 
   // на null попытку не блокируем, пусть ядро скажет своё
   Future<bool?> _isElevated() async {
