@@ -53,7 +53,7 @@ Each release includes `SHA256SUMS` with the hash of every file and `SHA256SUMS.s
 
 - Light and dark themes, color presets and Material You on Android
 - Interface scale from 70% to 140%; adaptive layout for tablets and landscape
-- Backup and restore of settings, servers and subscriptions
+- Encrypted backups of settings, servers and subscriptions, and transfer to another device by QR code
 - Local proxy sharing over LAN
 - Hotkeys for the main actions
 - Signed updates from GitHub Releases
@@ -124,9 +124,10 @@ Detailed documentation is available at [kequinq.art/docs/keqdroid](https://kequi
 
 keqdroid has no servers of its own and collects no usage statistics. It connects to:
 
-- **the subscriptions, servers and rule lists you add.** A subscription request carries a device ID, the OS name and version and the device model, which subscription panels use to limit devices. Turn it off in Settings → *Share device HWID*;
+- **the subscriptions, servers and rule lists you add.** A subscription request carries a device ID, the OS name and version and the device model, which subscription panels use to limit devices. Turn it off in Settings → Advanced → *Share device HWID*;
 - **GitHub** (`api.github.com`, `github.com`): update checks when the app starts or comes back to the foreground, update downloads, and the full geo database on Android when you ask for it;
 - **`www.cloudflare.com/cdn-cgi/trace`**, through the connected server, to show the country of the exit;
+- **`ipv6.google.com`**, through each server after a latency test and at most once a day, to find servers with IPv6, when IPv6 is set to *Through the VPN* in the TUN settings;
 - **the latency test address** when servers are tested: `connectivitycheck.gstatic.com` by default, changeable in the settings; **`speed.cloudflare.com`** when you run a speed test.
 
 Crash reports are not sent anywhere: errors are written only to the app log on the device.
@@ -138,7 +139,7 @@ Free code signing provided by [SignPath.io](https://signpath.io), certificate by
 - Committers and reviewers: [Lemonochka](https://github.com/Lemonochka)
 - Approvers: [Lemonochka](https://github.com/Lemonochka)
 
-Releases after 0.35.0 are built from this repository by [GitHub Actions](.github/workflows/release.yml). `gh attestation verify <file> --repo Lemonochka/keqdroid` confirms that a file came from that build. Signing covers `keqdroid.exe`; the bundled `xray.exe` and `mihomo.exe` are builds of the upstream Xray-core and mihomo.
+Releases after 0.35.0 are built from this repository by [GitHub Actions](.github/workflows/release.yml). `gh attestation verify <file> --repo Lemonochka/keqdroid` confirms that a file came from that build. Signing covers `keqdroid.exe` and the installer; the bundled `xray.exe` and `mihomo.exe` are builds of the upstream Xray-core and mihomo.
 
 ## Security
 
