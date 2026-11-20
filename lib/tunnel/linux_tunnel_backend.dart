@@ -8,20 +8,16 @@ import 'package:path_provider/path_provider.dart';
 
 import '../core/app_logger.dart';
 import '../core/exceptions.dart';
-import '../models/probe_results.dart';
-import '../services/core_dial_failures.dart';
-import '../services/xray_connection_lines.dart';
 import '../services/xray_route_decisions.dart';
 import '../utils/xray_session_log.dart';
-import '../services/ephemeral_xray_ping.dart';
 import '../utils/mihomo_api_session.dart';
 import 'mihomo_hot_reload.dart';
 import 'connection_mode.dart';
+import 'desktop_core_session.dart';
 import 'desktop_traffic_stats.dart';
 import 'linux_core_paths.dart';
 import 'linux_elevation.dart';
 import 'linux_system_proxy.dart';
-import 'local_port_plan.dart';
 import 'local_proxy_probe.dart';
 import 'socks_credential_generator.dart';
 import 'tun_failure_hints.dart';
@@ -31,7 +27,9 @@ import 'tunnel_state.dart';
 import 'vpn_backend.dart';
 import 'xray_desktop_config.dart';
 
-class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
+class LinuxTunnelBackend
+    with DesktopTrafficStats, DesktopCoreSession
+    implements TunnelBackend {
   static const tunInterfaceName = 'tun-keqdis';
 
   // pkexec не держит наш pipe, причину падения ядра видно только из файла.
@@ -56,20 +54,14 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
   @override
   ConnectionMode? get activeMode => _activeMode;
   final StringBuffer _xrayLog = StringBuffer();
-  final _connectionLines = XrayConnectionLines();
   final StringBuffer _rootLog = StringBuffer();
 
   int? _xrayMetricsPort;
-
-  // до фильтра уровня: при loglevel error строка Warning в буфер не попадает
-  bool _xrayStarted = false;
 
   Timer? _rootLogTimer;
   int _rootLogOffset = 0;
   String _rootLogPending = '';
   bool _rootLogReading = false;
-
-  int _xrayLogThreshold = 0;
 
   Process? _mihomoProcess;
 
@@ -87,9 +79,6 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
 
   // root-процессу обычный пользователь сигнал не пошлёт, останавливаем удалением сентинела
   bool _mihomoRunsAsRoot = false;
-
-  // пока идёт штатный стоп, сторож не должен принять наш kill за смерть ядра
-  bool _stoppingSession = false;
 
   @override
   Stream<VpnState> get stateStream => _stateCtrl.stream;
@@ -110,10 +99,8 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
       ..writeln(_xrayLog)
       ..writeln('=== root ===')
       ..writeln(_rootLog);
-    return _tail(combined, maxLines: maxLines);
+    return coreLogTail(combined, maxLines: maxLines);
   }
-
-  String exportConnectionLines() => _connectionLines.text;
 
   @visibleForTesting
   void debugAdoptCore(
@@ -133,13 +120,13 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
       _xrayProcess = process;
       label = 'xray';
     }
-    _xrayLogThreshold = logThreshold;
-    _pipeProcessOutput(process, root ? _rootLog : _xrayLog);
-    _watchProcessExit(process, label);
+    xrayLogThreshold = logThreshold;
+    listenCoreOutput(process, root ? _rootLog : _xrayLog);
+    watchCoreExit(process, label);
   }
 
   @visibleForTesting
-  bool get debugXrayStarted => _xrayStarted;
+  bool get debugXrayStarted => xrayStarted;
 
   @visibleForTesting
   Future<bool> debugWaitForPort(
@@ -147,8 +134,7 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
     Process? process,
     StringBuffer? log,
     String processLabel = 'Process',
-  }) => _waitForPort(
-    '127.0.0.1',
+  }) => waitForLocalPort(
     port,
     process: process,
     log: log,
@@ -189,13 +175,13 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
     _activeMode = request.mode;
     _xrayLog.clear();
     _rootLog.clear();
-    _connectionLines.clear();
+    connectionLines.clear();
     XrayRouteDecisions.reset();
 
     try {
-      await _cleanupForRestart();
+      await cleanupForRestart();
       activeInstance = this;
-      // _cleanupForRestart обнуляет режим, без возврата опрос счётчиков после трея не перезапустится
+      // cleanupForRestart обнуляет режим, без возврата опрос счётчиков после трея не перезапустится
       _activeMode = request.mode;
       _sessionDir = await LinuxCorePaths.sessionDir();
 
@@ -214,10 +200,9 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
 
       unawaited(_verifyChainReachable(request));
 
-      // без сторожа смерть ядра оставляла интерфейс в Connected, а системный прокси на мёртвом порту
-      _watchProcessExit(_xrayProcess, 'xray');
-      _watchProcessExit(_mihomoProcess, 'mihomo');
-      _watchProcessExit(_rootXrayProcess, 'xray TUN');
+      watchCoreExit(_xrayProcess, 'xray');
+      watchCoreExit(_mihomoProcess, 'mihomo');
+      watchCoreExit(_rootXrayProcess, 'xray TUN');
     } catch (e, st) {
       AppLogger.instance.error(
         'Linux tunnel start failed',
@@ -225,7 +210,7 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
         stackTrace: st,
       );
       await _dumpLogsToFile();
-      await _cleanupForRestart();
+      await cleanupForRestart();
       emit(
         VpnState(
           status: VpnStatus.error,
@@ -244,9 +229,9 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
       throw VpnStartException('xray not found. ${LinuxCorePaths.binariesHint}');
     }
 
-    final metricsPort = await _freePort();
+    final metricsPort = await freeLoopbackPort();
     final xrayLog = XraySessionLog.raise(request.xrayConfig);
-    _xrayLogThreshold = xrayLog.threshold;
+    xrayLogThreshold = xrayLog.threshold;
     final configFile = File(p.join(_sessionDir!.path, 'xray.json'));
     await configFile.writeAsString(
       withXrayDesktopSession(
@@ -257,8 +242,7 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
     );
     _xrayMetricsPort = metricsPort;
 
-    // HTTP-инбаунд ядро поднимает всегда (через него ходит апдейтер), занятый порт роняет всё
-    await _ensurePortsAvailable(request, needsHttp: true);
+    await ensureLocalPortsFree(request);
 
     final geoDir = await LinuxCorePaths.geoAssetDir();
     _xrayProcess = await Process.start(
@@ -268,10 +252,9 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
       environment: {'XRAY_LOCATION_ASSET': ?geoDir},
       mode: ProcessStartMode.normal,
     );
-    _pipeProcessOutput(_xrayProcess!, _xrayLog);
+    listenCoreOutput(_xrayProcess!, _xrayLog);
 
-    final socksReady = await _waitForPort(
-      '127.0.0.1',
+    final socksReady = await waitForLocalPort(
       request.socksPort,
       process: _xrayProcess,
       log: _xrayLog,
@@ -279,13 +262,12 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
     );
     if (!socksReady) {
       throw VpnStartException(
-        'xray SOCKS port ${request.socksPort} did not open.\n${_tail(_xrayLog)}',
+        'xray SOCKS port ${request.socksPort} did not open.\n${coreLogTail(_xrayLog)}',
       );
     }
 
     if (request.systemProxy) {
-      final httpReady = await _waitForPort(
-        '127.0.0.1',
+      final httpReady = await waitForLocalPort(
         request.httpPort,
         process: _xrayProcess,
         log: _xrayLog,
@@ -294,7 +276,7 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
       if (!httpReady) {
         throw VpnStartException(
           'xray HTTP port ${request.httpPort} did not open. '
-          'System proxy needs the HTTP inbound.\n${_tail(_xrayLog)}',
+          'System proxy needs the HTTP inbound.\n${coreLogTail(_xrayLog)}',
         );
       }
       await _applySystemProxy(request);
@@ -302,11 +284,11 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
   }
 
   Future<void> _startXrayTunSession(TunnelSessionRequest request) async {
-    await _ensurePortsAvailable(request, needsHttp: true);
+    await ensureLocalPortsFree(request);
 
-    final metricsPort = await _freePort();
+    final metricsPort = await freeLoopbackPort();
     final xrayLog = XraySessionLog.raise(request.xrayConfig);
-    _xrayLogThreshold = xrayLog.threshold;
+    xrayLogThreshold = xrayLog.threshold;
     _xrayMetricsPort = metricsPort;
     await _runXrayAsRoot(
       withXrayDesktopSession(xrayLog.config, metricsPort: metricsPort),
@@ -326,7 +308,7 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
     }
 
     final isTun = request.mode == ConnectionMode.tun;
-    await _ensurePortsAvailable(request, needsHttp: true);
+    await ensureLocalPortsFree(request);
 
     // ядро ждёт .yaml, а JSON для YAML 1.2 подмножество
     final configFile = File(p.join(_sessionDir!.path, 'mihomo.yaml'));
@@ -360,8 +342,8 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
       }
       if (!ready) {
         final tail = coreLog.trim().isEmpty
-            ? _tail(_rootLog)
-            : _tail(StringBuffer(coreLog));
+            ? coreLogTail(_rootLog)
+            : coreLogTail(StringBuffer(coreLog));
         throw VpnStartException(
           tunStartFailureMessage(
             fallback: 'The mihomo TUN tunnel did not start.',
@@ -381,10 +363,9 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
       workingDirectory: _sessionDir!.path,
       mode: ProcessStartMode.normal,
     );
-    _pipeProcessOutput(_mihomoProcess!, _xrayLog);
+    listenCoreOutput(_mihomoProcess!, _xrayLog);
 
-    final socksReady = await _waitForPort(
-      '127.0.0.1',
+    final socksReady = await waitForLocalPort(
       request.socksPort,
       process: _mihomoProcess,
       log: _xrayLog,
@@ -393,13 +374,12 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
     if (!socksReady) {
       throw VpnStartException(
         'mihomo SOCKS port ${request.socksPort} did not open.\n'
-        '${_tail(_xrayLog)}',
+        '${coreLogTail(_xrayLog)}',
       );
     }
 
     if (request.systemProxy) {
-      final httpReady = await _waitForPort(
-        '127.0.0.1',
+      final httpReady = await waitForLocalPort(
         request.httpPort,
         process: _mihomoProcess,
         log: _xrayLog,
@@ -408,7 +388,7 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
       if (!httpReady) {
         throw VpnStartException(
           'mihomo HTTP port ${request.httpPort} did not open. '
-          'System proxy needs the HTTP inbound.\n${_tail(_xrayLog)}',
+          'System proxy needs the HTTP inbound.\n${coreLogTail(_xrayLog)}',
         );
       }
       await _applySystemProxy(request);
@@ -662,7 +642,7 @@ $run''';
     final rootGeoDir = await _stageGeoAssetsForRoot();
     final rootBin = await _stageBinaryForRoot(bin, _rootXrayName);
 
-    _xrayStarted = false;
+    xrayStarted = false;
     _rootXrayProcess = await _startElevatedCore(
       binPath: rootBin,
       configPath: configFile.path,
@@ -677,14 +657,14 @@ $run''';
     final ready = await _waitForTunCore(
       process: _rootXrayProcess!,
       log: _rootLog,
-      started: () => _xrayStarted,
+      started: () => xrayStarted,
     );
 
     if (!ready) {
       final coreLog = await _readRootCoreLog();
       final tail = coreLog.trim().isEmpty
-          ? _tail(_rootLog)
-          : _tail(StringBuffer(coreLog));
+          ? coreLogTail(_rootLog)
+          : coreLogTail(StringBuffer(coreLog));
       throw VpnStartException(
         tunStartFailureMessage(
           fallback: 'The TUN tunnel did not start.',
@@ -734,7 +714,7 @@ $run''';
               .split('\n');
       _rootLogPending = lines.removeLast();
       for (final line in lines) {
-        _appendCoreLine(_xrayLog, line.trimRight());
+        appendCoreLine(_xrayLog, line.trimRight());
       }
     } catch (_) {
     } finally {
@@ -830,7 +810,7 @@ $run''';
       );
     }
     onStarted(process);
-    _pipeProcessOutput(process, log);
+    listenCoreOutput(process, log);
 
     // сначала ждём polkit, иначе бюджет готовности TUN тикал, пока пользователь вводил пароль
     final authorized = await _waitForElevation(
@@ -884,7 +864,7 @@ $run''';
     const maxWait = Duration(minutes: 2);
     final sw = Stopwatch()..start();
     while (sw.elapsed < maxWait) {
-      final code = await _exitCodeOrNull(process);
+      final code = await exitCodeOrNull(process);
       if (code != null) {
         if (code == untrustedCoreExit) return false;
         throw VpnStartException(_elevationError(code, log));
@@ -911,7 +891,7 @@ $run''';
   }) async {
     var waited = 0;
     while (waited < 20000) {
-      final code = await _exitCodeOrNull(process);
+      final code = await exitCodeOrNull(process);
       if (code != null) {
         throw VpnStartException(_elevationError(code, log));
       }
@@ -934,7 +914,7 @@ $run''';
       }
     } catch (_) {}
 
-    final stillRunning = await _exitCodeOrNull(process);
+    final stillRunning = await exitCodeOrNull(process);
     if (stillRunning != null) {
       throw VpnStartException(_elevationError(stillRunning, log));
     }
@@ -962,8 +942,8 @@ $run''';
           }
         } catch (_) {}
         final detail = coreTail.isNotEmpty
-            ? _tail(StringBuffer(coreTail))
-            : _tail(log);
+            ? coreLogTail(StringBuffer(coreTail))
+            : coreLogTail(log);
         final hint = tunFailureHint(
           coreTail.isNotEmpty ? coreTail : log.toString(),
           windows: false,
@@ -1035,34 +1015,12 @@ $run''';
 
   static Future<void> cleanupStaleState() => _restoreSystemProxy();
 
-  void _watchProcessExit(Process? process, String label) {
-    if (process == null) return;
-    unawaited(
-      process.exitCode.then((code) async {
-        if (_stoppingSession) return;
-        if (!identical(process, _xrayProcess) &&
-            !identical(process, _rootXrayProcess) &&
-            !identical(process, _mihomoProcess)) {
-          return;
-        }
-        AppLogger.instance.error(
-          '$label exited unexpectedly with code $code; tearing the session down',
-        );
-        try {
-          await stopSession();
-        } catch (e) {
-          AppLogger.instance.warn('Teardown after core exit failed', error: e);
-        }
-        emit(
-          VpnState(
-            status: VpnStatus.error,
-            errorMessage:
-                '$label stopped unexpectedly (exit code $code). Disconnected.',
-          ),
-        );
-      }),
-    );
-  }
+  @override
+  Iterable<Process?> get sessionCores => [
+    _xrayProcess,
+    _rootXrayProcess,
+    _mihomoProcess,
+  ];
 
   @override
   Future<bool> reloadMihomoConfig(TunnelSessionRequest request) async {
@@ -1071,7 +1029,7 @@ $run''';
     final api = MihomoApiSession();
     final port = api.port;
     if (_mihomoProcess == null ||
-        _stoppingSession ||
+        stoppingSession ||
         dir == null ||
         port == null ||
         config == null ||
@@ -1092,26 +1050,7 @@ $run''';
   }
 
   @override
-  Future<void> stopSession() async {
-    _stoppingSession = true;
-    try {
-      await _stopSessionInner();
-    } finally {
-      _stoppingSession = false;
-    }
-  }
-
-  // без эмитов: disconnected из стрима проходит в UI и при connect-in-flight, кнопка проваливалась в серое
-  Future<void> _cleanupForRestart() async {
-    _stoppingSession = true;
-    try {
-      await _stopSessionInner(emitStates: false);
-    } finally {
-      _stoppingSession = false;
-    }
-  }
-
-  Future<void> _stopSessionInner({bool emitStates = true}) async {
+  Future<void> stopSessionInner({bool emitStates = true}) async {
     stopStatsLoop();
     if (emitStates) emit(const VpnState(status: VpnStatus.disconnecting));
 
@@ -1130,9 +1069,9 @@ $run''';
     if (_mihomoRunsAsRoot) {
       await _stopRootCore(_mihomoProcess, 'mihomo');
     } else {
-      await _killProcess(_mihomoProcess);
+      await stopCoreProcess(_mihomoProcess);
     }
-    await _killProcess(_xrayProcess);
+    await stopCoreProcess(_xrayProcess);
     _rootXrayProcess = null;
     _mihomoProcess = null;
     _mihomoRunsAsRoot = false;
@@ -1141,13 +1080,7 @@ $run''';
 
     final dir = _sessionDir;
     _sessionDir = null;
-    if (dir != null && dir.existsSync()) {
-      try {
-        await dir.delete(recursive: true);
-      } catch (e) {
-        AppLogger.instance.debug('Session dir not deleted', error: e);
-      }
-    }
+    await deleteSessionDir(dir);
 
     _activeMode = null;
     if (identical(activeInstance, this)) activeInstance = null;
@@ -1165,23 +1098,6 @@ $run''';
       return buildConnectedState(_activeMode);
     }
     return VpnState.disconnected;
-  }
-
-  @override
-  Future<int?> getPing(String address, int port) async {
-    final sw = Stopwatch()..start();
-    try {
-      final s = await Socket.connect(
-        address,
-        port,
-        timeout: const Duration(seconds: 5),
-      );
-      sw.stop();
-      await s.close();
-      return sw.elapsedMilliseconds;
-    } catch (_) {
-      return null;
-    }
   }
 
   @override
@@ -1241,114 +1157,6 @@ $run''';
   @override
   Future<String?> getAppIcon(String path) async => null;
 
-  @override
-  Future<List<ServerUrlTestResult>?> xrayUrlTestMulti({
-    required String config,
-    required List<(String id, int port)> probes,
-    VpnBackend core = VpnBackend.xray,
-    String testUrl = 'https://connectivitycheck.gstatic.com/generate_204',
-    int timeoutMs = 15000,
-    bool keepAlive = true,
-    int concurrency = 16,
-    UrlTestProgress? onEach,
-  }) => EphemeralXrayPing.urlTestMulti(
-    configJson: config,
-    probes: probes,
-    core: core,
-    testUrl: testUrl,
-    timeoutMs: timeoutMs,
-    keepAlive: keepAlive,
-    concurrency: concurrency,
-    onEach: onEach,
-  );
-
-  @override
-  Future<List<ServerUrlTestResult>> xrayUrlTestBatch({
-    required List<(String id, String xrayConfig)> items,
-    required int socksPort,
-    VpnBackend core = VpnBackend.xray,
-    String testUrl = 'https://connectivitycheck.gstatic.com/generate_204',
-    int timeoutMs = 15000,
-    bool keepAlive = true,
-  }) async {
-    if (items.isEmpty) return [];
-    final raw = await EphemeralXrayPing.urlTestBatch(
-      items: items.map((e) => (id: e.$1, xrayConfigJson: e.$2)).toList(),
-      socksPort: socksPort,
-      core: core,
-      testUrl: testUrl,
-      timeoutMs: timeoutMs,
-      keepAlive: keepAlive,
-    );
-    return raw
-        .map(
-          (r) => (
-            id: r.id,
-            success: r.success,
-            latencyMs: r.latencyMs,
-            error: r.error,
-            httpStatus: r.httpStatus,
-          ),
-        )
-        .toList();
-  }
-
-  @override
-  Future<List<ServerSpeedTestResult>> xraySpeedTestBatch({
-    required List<(String id, String xrayConfig)> items,
-    required int socksPort,
-    VpnBackend core = VpnBackend.xray,
-    String downloadUrl = kDefaultSpeedTestUrl,
-    int timeoutMs = 20000,
-  }) async {
-    if (items.isEmpty) return [];
-    return EphemeralXrayPing.speedTestBatch(
-      items: items.map((e) => (id: e.$1, xrayConfigJson: e.$2)).toList(),
-      socksPort: socksPort,
-      core: core,
-      downloadUrl: downloadUrl,
-      timeoutMs: timeoutMs,
-    );
-  }
-
-  static final _xrayStartedLine = RegExp(r'\bXray \S+ started\b');
-
-  void _appendCoreLine(StringBuffer buffer, String line) {
-    if (!_xrayStarted && _xrayStartedLine.hasMatch(line)) _xrayStarted = true;
-    CoreDialFailures.observe(line);
-    XrayRouteDecisions.observe(line);
-    _connectionLines.add(line);
-    if (!XraySessionLog.keep(line, _xrayLogThreshold)) return;
-    buffer.writeln(line);
-    if (buffer.length > 64 * 1024) {
-      final trimmed = _tail(buffer, maxLines: 200);
-      buffer
-        ..clear()
-        ..writeln(trimmed);
-    }
-  }
-
-  void _pipeProcessOutput(Process process, StringBuffer buffer) {
-    void append(String line) => _appendCoreLine(buffer, line);
-
-    // allowMalformed: строка ядра не в UTF-8 иначе роняет весь поток лога
-    const decoder = Utf8Decoder(allowMalformed: true);
-    // строки режем по всему потоку: кусок из трубы обрывается где попало
-    process.stderr
-        .transform(decoder)
-        .transform(const LineSplitter())
-        .listen(append);
-    process.stdout
-        .transform(decoder)
-        .transform(const LineSplitter())
-        .listen(append);
-  }
-
-  // убитый сигналом процесс на Linux даёт отрицательный код, поэтому выход проверяем по null
-  static Future<int?> _exitCodeOrNull(Process process) => process.exitCode
-      .then<int?>((c) => c)
-      .timeout(const Duration(milliseconds: 1), onTimeout: () => null);
-
   Future<void> _stopRootCore(Process? proc, String coreName) async {
     if (proc == null) return;
     try {
@@ -1383,108 +1191,6 @@ $run''';
         '${budgetMs ~/ 1000}s after the core was stopped.',
       );
     }
-  }
-
-  Future<void> _killProcess(Process? process) async {
-    if (process == null) return;
-    try {
-      process.kill(ProcessSignal.sigterm);
-      await process.exitCode.timeout(
-        const Duration(seconds: 3),
-        onTimeout: () {
-          process.kill(ProcessSignal.sigkill);
-          return -1;
-        },
-      );
-    } catch (_) {}
-  }
-
-  Future<bool> _waitForPort(
-    String host,
-    int port, {
-    Process? process,
-    StringBuffer? log,
-    String processLabel = 'Process',
-  }) async {
-    var waited = 0;
-    while (waited < 20000) {
-      if (process != null) {
-        final code = await _exitCodeOrNull(process);
-        if (code != null) {
-          if (code != 0) {
-            throw VpnStartException(
-              '$processLabel exited with code $code.\n${_tail(log ?? StringBuffer())}',
-            );
-          }
-          return false;
-        }
-      }
-      try {
-        final s = await Socket.connect(
-          host,
-          port,
-          timeout: const Duration(milliseconds: 400),
-        );
-        await s.close();
-        return true;
-      } catch (_) {
-        await Future<void>.delayed(const Duration(milliseconds: 300));
-        waited += 300;
-      }
-    }
-    return false;
-  }
-
-  Future<int> _freePort() async {
-    final s = await ServerSocket.bind('127.0.0.1', 0);
-    final port = s.port;
-    await s.close();
-    return port;
-  }
-
-  Future<void> _ensurePortsAvailable(
-    TunnelSessionRequest request, {
-    required bool needsHttp,
-  }) async {
-    final socksIssue = await LocalPortResolver.probe(
-      '127.0.0.1',
-      request.socksPort,
-    );
-    if (socksIssue != null) {
-      throw VpnStartException(
-        localPortBlockedMessage(
-          label: 'SOCKS',
-          port: request.socksPort,
-          issue: socksIssue,
-        ),
-      );
-    }
-    if (!needsHttp) return;
-    final httpIssue = await LocalPortResolver.probe(
-      '127.0.0.1',
-      request.httpPort,
-    );
-    if (httpIssue != null) {
-      throw VpnStartException(
-        localPortBlockedMessage(
-          label: 'HTTP',
-          port: request.httpPort,
-          issue: httpIssue,
-        ),
-      );
-    }
-  }
-
-  String _tail(StringBuffer buffer, {int maxLines = 12}) {
-    final lines = buffer
-        .toString()
-        .split('\n')
-        .where((l) => l.trim().isNotEmpty);
-    final tail = lines.length > maxLines
-        ? lines.skip(lines.length - maxLines)
-        : lines;
-    final text = tail.join('\n');
-    return text.isEmpty ? '(no process output)' : text;
   }
 
   @override

@@ -32,7 +32,7 @@ final class _Session {
   final connectionLines = XrayConnectionLines();
 }
 
-// как _appendCoreLine в бэкендах Windows и Linux
+// как appendCoreLine в DesktopCoreSession
 _Session _run(String level, [String output = _coreOutput]) {
   final threshold = XraySessionLog.raise(
     '{"log":{"loglevel":"$level"}}',
