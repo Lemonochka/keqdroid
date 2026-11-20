@@ -8,6 +8,7 @@ import 'package:keqdroid/core/exceptions.dart';
 import 'package:keqdroid/services/xray_route_decisions.dart';
 import 'package:keqdroid/tunnel/linux_tunnel_backend.dart';
 import 'package:keqdroid/tunnel/tun_failure_hints.dart';
+import 'package:keqdroid/tunnel/tunnel_backend.dart';
 import 'package:keqdroid/tunnel/tunnel_state.dart';
 import 'package:keqdroid/tunnel/windows_tunnel_backend.dart';
 
@@ -20,6 +21,7 @@ import '../helpers/fake_core_process.dart';
 // просят выйти закрытым stdin.
 
 abstract class _Backend {
+  TunnelBackend get backend;
   String get name;
   bool get windows;
   Stream<VpnState> get states;
@@ -43,7 +45,8 @@ abstract class _Backend {
 }
 
 class _Windows implements _Backend {
-  final backend = WindowsTunnelBackend();
+  @override
+  final WindowsTunnelBackend backend = WindowsTunnelBackend();
 
   @override
   String get name => 'Windows';
@@ -88,7 +91,8 @@ class _Windows implements _Backend {
 }
 
 class _Linux implements _Backend {
-  final backend = LinuxTunnelBackend();
+  @override
+  final LinuxTunnelBackend backend = LinuxTunnelBackend();
 
   @override
   String get name => 'Linux';
@@ -470,6 +474,25 @@ void main() {
           expect(clock.elapsed, lessThan(const Duration(seconds: 7)));
         });
       }
+    });
+
+    group('${probe.name}: пинг', () {
+      test('до открытого порта время, до закрытого null', () async {
+        final b = make().backend;
+        final server = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
+        server.listen((s) => s.destroy());
+        addTearDown(server.close);
+
+        expect(await b.getPing('127.0.0.1', server.port), isNonNegative);
+        expect(await b.getPing('127.0.0.1', await _closedPort()), isNull);
+      });
+
+      test('пустая пачка не запускает ядро', () async {
+        final b = make().backend;
+
+        expect(await b.xrayUrlTestBatch(items: [], socksPort: 1), isEmpty);
+        expect(await b.xraySpeedTestBatch(items: [], socksPort: 1), isEmpty);
+      });
     });
 
     group('${probe.name}: ожидание порта', () {
