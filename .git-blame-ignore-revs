@@ -1,0 +1,3 @@
+# GitHub и git blame --ignore-revs-file пропускают эти коммиты: в них менялась только раскладка кода
+# dart format по всему коду
+4f15ae564ee780eb2c9c85201401f649b90535f3
