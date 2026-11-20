@@ -1,1 +1,11 @@
 blank_issues_enabled: true
+contact_links:
+  - name: Question or help
+    url: https://t.me/keqdroid
+    about: How to connect, set up routing or use a subscription. Ask in the Telegram chat.
+  - name: Security vulnerability
+    url: https://github.com/Lemonochka/keqdroid/security/advisories/new
+    about: Report it privately, not in a public issue.
+  - name: Documentation
+    url: https://kequinq.art/docs/keqdroid/
+    about: Routing, DNS, connection modes, cores and subscription formats.
