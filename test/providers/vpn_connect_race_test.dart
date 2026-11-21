@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:keqdroid/core/exceptions.dart';
 import 'package:keqdroid/models/app_settings.dart';
 import 'package:keqdroid/models/server_item.dart';
 import 'package:keqdroid/providers/providers.dart';
@@ -18,7 +19,12 @@ class _GatedBackend extends FakeTunnelBackend {
   final _states = StreamController<VpnState>.broadcast();
   VpnState current = VpnState.disconnected;
   String? running;
+  ConnectionMode? runningMode;
   bool? reloads;
+  int _stops = 0;
+
+  // как Windows в режиме прокси: стоп посреди старта выключает системный прокси, и старт падает на его проверке
+  bool failIfStoppedDuringStart = false;
 
   // следующий старт или подмена конфига ждёт, пока тест не отпустит
   Completer<void>? gate;
@@ -60,9 +66,19 @@ class _GatedBackend extends FakeTunnelBackend {
 
   @override
   Future<void> startSession(TunnelSessionRequest request) async {
+    final stopsBefore = _stops;
     await _pass();
+    if (failIfStoppedDuringStart && _stops != stopsBefore) {
+      const message = 'System proxy was not applied (enabled=false, server="")';
+      // настоящий бэкенд сперва шлёт ошибку в поток состояний, потом бросает
+      _states.add(
+        const VpnState(status: VpnStatus.error, errorMessage: message),
+      );
+      throw const VpnStartException(message);
+    }
     calls.add('start ${request.serverName}');
     running = request.serverName;
+    runningMode = request.mode;
     current = const VpnState(status: VpnStatus.connected);
   }
 
@@ -82,8 +98,10 @@ class _GatedBackend extends FakeTunnelBackend {
       stopEntered.complete();
       await g.future;
     }
+    _stops++;
     calls.add('stop');
     running = null;
+    runningMode = null;
     current = VpnState.disconnected;
     _states.add(VpnState.disconnected);
   }
@@ -323,6 +341,91 @@ void main() {
     expect(backend.running, isNull);
     expect(backend.calls, isNot(contains('start b')));
     expect(_status(container), isNot(VpnStatus.connected));
+  });
+
+  // видео 22.11 с Windows: TUN выбрали, пока Proxy подключался. Попытка Proxy падала на проверке прокси,
+  // который выключил стоп смены режима, а подключение в TUN выкидывалось как уже идущее
+  test('режим сменили посреди подключения: без ошибки, туннель в новом режиме', () async {
+    final backend = _GatedBackend()..failIfStoppedDuringStart = true;
+    final container = await _ready(backend);
+    final vpn = container.read(vpnStateProvider.notifier);
+    final settings = container.read(settingsNotifierProvider.notifier);
+    await settings.save(
+      (await container.read(settingsNotifierProvider.future)).copyWith(
+        connectionMode: ConnectionMode.proxy.storageValue,
+      ),
+    );
+
+    final seen = <VpnStatus?>[];
+    container.listen(
+      vpnStateProvider,
+      (_, next) => seen.add(next.value?.status),
+    );
+
+    final release = backend.hold();
+    Object? failure;
+    final first = vpn.connect().catchError((Object e) => failure = e);
+    await backend.entered.future;
+
+    // по шагам applyDesktopConnectionMode: отключить, сохранить режим, подключить
+    await vpn.disconnect();
+    await settings.save(
+      (await container.read(settingsNotifierProvider.future)).copyWith(
+        connectionMode: ConnectionMode.tun.storageValue,
+      ),
+    );
+    final second = vpn.connect();
+    release.complete();
+    await first;
+    await second;
+
+    expect(failure, isNull, reason: 'отменённая попытка не показывает ошибку');
+    expect(seen, isNot(contains(VpnStatus.error)));
+    expect(backend.running, 'a');
+    expect(backend.runningMode, ConnectionMode.tun);
+    expect(_status(container), VpnStatus.connected);
+  });
+
+  // горячая клавиша и трей отключают и посреди подключения
+  test('отключили посреди подключения, старт упал на стопе: на экране выключено', () async {
+    final backend = _GatedBackend()..failIfStoppedDuringStart = true;
+    final container = await _ready(backend);
+    final vpn = container.read(vpnStateProvider.notifier);
+    final seen = <VpnStatus?>[];
+    container.listen(
+      vpnStateProvider,
+      (_, next) => seen.add(next.value?.status),
+    );
+
+    final release = backend.hold();
+    Object? failure;
+    final first = vpn.connect().catchError((Object e) => failure = e);
+    await backend.entered.future;
+    await vpn.disconnect();
+    release.complete();
+    await first;
+    await pumpEventQueue();
+
+    expect(failure, isNull);
+    expect(seen, isNot(contains(VpnStatus.error)));
+    expect(_status(container), VpnStatus.disconnected);
+  });
+
+  test('отключили посреди подключения: ядро, поднятое после стопа, гасится', () async {
+    final backend = _GatedBackend();
+    final container = await _ready(backend);
+    final vpn = container.read(vpnStateProvider.notifier);
+
+    final release = backend.hold();
+    final first = vpn.connect().catchError((Object _) {});
+    await backend.entered.future;
+    await vpn.disconnect();
+    release.complete();
+    await first;
+    await pumpEventQueue();
+
+    expect(backend.running, isNull);
+    expect(_status(container), VpnStatus.disconnected);
   });
 
   test('повторное нажатие подключить во время подключения ничего не дублирует', () async {

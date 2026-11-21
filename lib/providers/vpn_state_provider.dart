@@ -76,6 +76,12 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
   Future<void> debugNamesFallbackCheck() => _namesFallback.check();
 
   void _applyNativeState(VpnState s) {
+    // отменённая попытка ещё доделывается, и её ошибка или подключение мигали на экране поверх отмены
+    if (_cancelRequested &&
+        _attempt != null &&
+        (s.status == VpnStatus.error || s.status == VpnStatus.connected)) {
+      return;
+    }
     if (s.status == VpnStatus.connected) {
       unawaited(syncSocksCredentialsFromService());
     }
@@ -443,7 +449,9 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       }
       if (intent != _intent || _attempt != null) return;
     }
-    final attempt = _connectOnce(autostartTunFallback: autostartTunFallback);
+    final attempt = _connectOnce(
+      autostartTunFallback: autostartTunFallback,
+    ).whenComplete(_drainCancelledAttempt);
     _attempt = attempt;
     try {
       await attempt;
@@ -451,6 +459,11 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       if (identical(_attempt, attempt)) _attempt = null;
     }
     await _followSelectionIfMoved();
+  }
+
+  // ошибку старта бэкенд шлёт в поток перед тем, как бросить, и у отменённой попытки она доходила уже после её конца
+  Future<void> _drainCancelledAttempt() async {
+    if (_cancelRequested) await Future<void>.delayed(Duration.zero);
   }
 
   Future<void> _followSelectionIfMoved() async {
@@ -1123,6 +1136,12 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     _intent++;
     _followSelection = false;
     _live = null;
+    // посреди подключения это отмена: смена режима на ПК гасила прокси под попыткой, та падала с ошибкой,
+    // а connect в новом режиме выкидывался как уже идущий
+    if (_connectInFlight || _attempt != null) {
+      _cancelRequested = true;
+      _awaitingSessionStart = false;
+    }
     state = const AsyncData(VpnState(status: VpnStatus.disconnecting));
     ActiveLocalPorts().clear();
     _persistActiveLocalHttpPort(VpnStatus.disconnecting);
