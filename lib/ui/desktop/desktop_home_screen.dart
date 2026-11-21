@@ -178,6 +178,7 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
     if (!await ensureTunReadyToConnect(
       context,
       ref.read(settingsNotifierProvider).value,
+      showWindow: true,
     )) {
       return;
     }
@@ -361,9 +362,14 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
     }
 
     AppLogger.instance.info('$reason: connecting to ${active.displayName}');
-    await ref
-        .read(vpnStateProvider.notifier)
-        .connect(autostartTunFallback: true);
+    final settings = await ref.read(settingsNotifierProvider.future);
+    if (!mounted) return;
+    await connectOnStartup(
+      context,
+      settings: settings,
+      vpn: ref.read(vpnStateProvider.notifier),
+      status: () => ref.read(vpnStateProvider).value?.status,
+    );
   }
 
   Future<void> _disconnectForQuit() async {

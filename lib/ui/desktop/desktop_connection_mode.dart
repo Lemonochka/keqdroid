@@ -88,12 +88,17 @@ Future<void> applyDesktopConnectionMode(
   }
 }
 
-// true: можно подключаться в TUN. без прав и без службы спрашивает и ставит её, Windows покажет окно UAC
-Future<bool> ensureWindowsTunService(BuildContext context) async {
+// true: можно подключаться в TUN. без прав и без службы спрашивает и ставит её, Windows покажет окно UAC.
+// showWindow: окно может лежать в трее, и вопрос в нём никто бы не увидел
+Future<bool> ensureWindowsTunService(
+  BuildContext context, {
+  bool showWindow = false,
+}) async {
   if (!Platform.isWindows) return true;
   if (await WindowsDesktopService.isProcessElevated()) return true;
   final state = await WindowsTunService.state();
   if (state == TunServiceState.ready) return true;
+  if (showWindow) await WindowsDesktopService.restoreMainWindow();
   if (!context.mounted) return false;
   final install = await showDesktopTunServiceDialog(
     context,
@@ -117,13 +122,29 @@ Future<bool> ensureWindowsTunService(BuildContext context) async {
 // автозапуск с правами оставляет выбранным TUN, а запуск руками идёт без них: перед подключением ставим службу
 Future<bool> ensureTunReadyToConnect(
   BuildContext context,
-  AppSettings? settings,
-) async {
+  AppSettings? settings, {
+  bool showWindow = false,
+}) async {
   if (!Platform.isWindows ||
       settings?.connectionModeEnum != ConnectionMode.tun) {
     return true;
   }
-  return ensureWindowsTunService(context);
+  return ensureWindowsTunService(context, showWindow: showWindow);
+}
+
+// без службы connect на старте молча уходил в Proxy и запоминал его, а про службу так и не спрашивал.
+// отказ в окне ведёт туда же, в Proxy
+Future<void> connectOnStartup(
+  BuildContext context, {
+  required AppSettings? settings,
+  required VpnStateNotifier vpn,
+  required VpnStatus? Function() status,
+}) async {
+  await ensureTunReadyToConnect(context, settings, showWindow: true);
+  if (!context.mounted) return;
+  final now = status();
+  if (now == VpnStatus.connected || now == VpnStatus.connecting) return;
+  await vpn.connect(autostartTunFallback: true);
 }
 
 Future<bool?> showDesktopTunServiceDialog(

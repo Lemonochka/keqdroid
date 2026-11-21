@@ -352,6 +352,16 @@ class WindowsTrayMenu with TrayListener {
     } else if (status == VpnStatus.connecting) {
       await notifier.cancelConnect();
     } else if (_ref.read(serversProvider).activeServer != null) {
+      final context = rootNavigatorKey.currentContext;
+      if (context != null &&
+          context.mounted &&
+          !await ensureTunReadyToConnect(
+            context,
+            _ref.read(settingsNotifierProvider).value,
+            showWindow: true,
+          )) {
+        return;
+      }
       await notifier.connect();
     }
   }, 'VPN toggle');
