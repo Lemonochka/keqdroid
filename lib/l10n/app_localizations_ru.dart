@@ -2890,6 +2890,12 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsInternalsSubtitle => 'Версия, ядра, geo-базы и текущая сессия';
 
   @override
+  String get aboutTelegramChat => 'Чат в Telegram';
+
+  @override
+  String get aboutDocs => 'Документация';
+
+  @override
   String get settingsCoreXraySubtitle => 'Ядро по умолчанию. Исполняет ссылки, цепочки и готовые конфиги Xray.';
 
   @override

@@ -2870,6 +2870,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsInternalsSubtitle => 'Version, Kerne, Geo-Datenbanken und aktuelle Sitzung';
 
   @override
+  String get aboutTelegramChat => 'Telegram-Chat';
+
+  @override
+  String get aboutDocs => 'Dokumentation';
+
+  @override
   String get settingsCoreXraySubtitle => 'Standard-Kern. Führt Links, Ketten und fertige Xray-Konfigurationen aus.';
 
   @override

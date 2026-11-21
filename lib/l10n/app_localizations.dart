@@ -5321,6 +5321,18 @@ abstract class AppLocalizations {
   /// **'Version, cores, geo databases and current session'**
   String get settingsInternalsSubtitle;
 
+  /// No description provided for @aboutTelegramChat.
+  ///
+  /// In en, this message translates to:
+  /// **'Telegram chat'**
+  String get aboutTelegramChat;
+
+  /// No description provided for @aboutDocs.
+  ///
+  /// In en, this message translates to:
+  /// **'Documentation'**
+  String get aboutDocs;
+
   /// No description provided for @settingsCoreXraySubtitle.
   ///
   /// In en, this message translates to:

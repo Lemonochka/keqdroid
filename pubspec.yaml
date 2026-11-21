@@ -108,6 +108,7 @@ flutter:
     # Иконка трея: .ico, а не .png — Windows берёт из него кадр нужного размера.
     - assets/tray_icon.ico
     - assets/tray_icon_connected.ico
+    - assets/author.jpg
     # icon_foreground.png и icon_windows_launcher.png сюда не входят: их с
     # диска читают только генераторы значков (flutter_launcher_icons,
     # tool/prepare_windows_icon.dart, tool/make_desktop_icons.dart), а в пакете

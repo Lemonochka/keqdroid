@@ -1554,6 +1554,8 @@
   },
   "settingsInternalsTitle": "About",
   "settingsInternalsSubtitle": "Version, cores, geo databases and current session",
+  "aboutTelegramChat": "Telegram chat",
+  "aboutDocs": "Documentation",
   "settingsCoreXraySubtitle": "Default core. Runs links, chains and ready-made Xray configs.",
   "settingsCoreMihomoSubtitle": "Clash-compatible core. Ready-made xray configs stay on Xray.",
   "settingsCoreHint": "Applies on the next connection, the running session is not restarted.",

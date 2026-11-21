@@ -1421,6 +1421,8 @@
   },
   "settingsInternalsTitle": "Über die App",
   "settingsInternalsSubtitle": "Version, Kerne, Geo-Datenbanken und aktuelle Sitzung",
+  "aboutTelegramChat": "Telegram-Chat",
+  "aboutDocs": "Dokumentation",
   "settingsCoreXraySubtitle": "Standard-Kern. Führt Links, Ketten und fertige Xray-Konfigurationen aus.",
   "settingsCoreMihomoSubtitle": "Clash-kompatibler Kern. Fertige Xray-Konfigurationen bleiben bei Xray.",
   "settingsCoreHint": "Gilt ab der nächsten Verbindung – die laufende Sitzung wird nicht neu gestartet.",

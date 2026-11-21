@@ -76,6 +76,7 @@ import 'package:keqdroid/shared/ui/update_dialog.dart';
 import 'package:keqdroid/utils/app_locale.dart';
 import 'package:keqdroid/utils/app_routes.dart';
 import 'package:keqdroid/utils/error_messages.dart';
+import 'package:keqdroid/utils/external_link.dart';
 import 'package:keqdroid/utils/bidi.dart';
 import 'package:keqdroid/utils/byte_format.dart';
 import 'package:keqdroid/utils/geo_asset_index.dart';

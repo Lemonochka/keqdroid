@@ -66,6 +66,8 @@ class _AppInternalsScreen extends ConsumerWidget {
     AppInternals data,
   ) {
     return [
+      const _AuthorGroup(),
+
       ExpressiveSectionHeader(l10n.settingsInternalsBuild),
       ExpressiveGroup(children: _buildRows(l10n, data.build)),
 
@@ -669,6 +671,121 @@ String _coreMismatchText(AppLocalizations l10n, VpnCoreSkip skip) =>
       VpnCoreSkip.linkMihomoOnly => l10n.settingsCoreSkipLinkMihomoOnly,
       VpnCoreSkip.platform => l10n.settingsCoreSkipPlatform,
     };
+
+const _author = 'Alice';
+const _authorLogin = 'Lemonochka';
+const _repoUrl = 'https://github.com/Lemonochka/keqdroid';
+const _chatUrl = 'https://t.me/keqdroid';
+const _docsUrl = 'https://kequinq.art/docs/keqdroid/';
+const _licenseUrl = '$_repoUrl/blob/master/LICENSE';
+
+@visibleForTesting
+const authorLinksForTest = [_repoUrl, _chatUrl, _docsUrl, _licenseUrl];
+
+class _AuthorGroup extends StatelessWidget {
+  const _AuthorGroup();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    const avatar = 56.0;
+    return ExpressiveGroup(
+      children: [
+        ExpressiveGroupTile(
+          padding: const EdgeInsets.all(16),
+          onTap: () => _AuthorLink._openLink(context, _repoUrl),
+          child: Row(
+            children: [
+              DecoratedBox(
+                decoration: ShapeDecoration(
+                  image: const DecorationImage(
+                    image: AssetImage('assets/author.jpg'),
+                    fit: BoxFit.cover,
+                  ),
+                  shape: ExpressiveIconShapeTheme.of(context).border(avatar),
+                ),
+                child: const SizedBox.square(dimension: avatar),
+              ),
+              const SizedBox(width: ExpressiveSpacing.large),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _author,
+                      style: theme.textTheme
+                          .emphasized(theme.textTheme.titleLarge)
+                          ?.copyWith(color: AppTheme.text(context)),
+                    ),
+                    Text(
+                      _authorLogin,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: AppTheme.textLight(context),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        _AuthorLink(
+          icon: Icons.forum_rounded,
+          title: l10n.aboutTelegramChat,
+          url: _chatUrl,
+        ),
+        _AuthorLink(
+          icon: Icons.menu_book_rounded,
+          title: l10n.aboutDocs,
+          url: _docsUrl,
+        ),
+        const _AuthorLink(
+          icon: Icons.balance_rounded,
+          title: 'GNU AGPL 3.0',
+          url: _licenseUrl,
+          showUrl: false,
+        ),
+      ],
+    );
+  }
+}
+
+class _AuthorLink extends StatelessWidget {
+  const _AuthorLink({
+    required this.icon,
+    required this.title,
+    required this.url,
+    this.showUrl = true,
+  });
+
+  final IconData icon;
+  final String title;
+  final String url;
+  final bool showUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    final shown = url
+        .replaceFirst(RegExp('^https://'), '')
+        .replaceFirst(RegExp(r'/$'), '');
+    return ExpressiveActionTile(
+      icon: icon,
+      title: title,
+      subtitle: showUrl ? ltrIsolate(shown) : null,
+      onTap: () => _openLink(context, url),
+    );
+  }
+
+  static Future<void> _openLink(BuildContext context, String url) async {
+    final messenger = AppSnack.of(context);
+    final l10n = AppLocalizations.of(context)!;
+    if (await openExternalLink(url)) return;
+    messenger.showSnackBar(
+      SnackBar(content: Text(l10n.subscriptionsLinkOpenFailed)),
+    );
+  }
+}
 
 @visibleForTesting
 Widget tunnelModeGroupForTest() => const _TunnelModeGroup();

@@ -2861,6 +2861,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsInternalsSubtitle => '版本、内核、地理数据库与当前会话';
 
   @override
+  String get aboutTelegramChat => 'Telegram 群聊';
+
+  @override
+  String get aboutDocs => '文档';
+
+  @override
   String get settingsCoreXraySubtitle => '默认内核。运行链接、链式代理和现成的 Xray 配置。';
 
   @override

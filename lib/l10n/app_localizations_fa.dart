@@ -2863,6 +2863,12 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsInternalsSubtitle => 'نسخه، هسته‌ها، پایگاه‌های جغرافیایی و نشست جاری';
 
   @override
+  String get aboutTelegramChat => 'گفتگو در تلگرام';
+
+  @override
+  String get aboutDocs => 'مستندات';
+
+  @override
   String get settingsCoreXraySubtitle => 'هستهٔ پیش‌فرض. لینک‌ها، زنجیره‌ها و کانفیگ‌های آمادهٔ Xray را اجرا می‌کند.';
 
   @override

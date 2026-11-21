@@ -1421,6 +1421,8 @@
   },
   "settingsInternalsTitle": "关于",
   "settingsInternalsSubtitle": "版本、内核、地理数据库与当前会话",
+  "aboutTelegramChat": "Telegram 群聊",
+  "aboutDocs": "文档",
   "settingsCoreXraySubtitle": "默认内核。运行链接、链式代理和现成的 Xray 配置。",
   "settingsCoreMihomoSubtitle": "兼容 Clash 的内核。现成的 xray 配置仍由 Xray 处理。",
   "settingsCoreHint": "下次连接时生效，当前会话不会重启。",

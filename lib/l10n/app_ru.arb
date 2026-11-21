@@ -1423,6 +1423,8 @@
   },
   "settingsInternalsTitle": "О приложении",
   "settingsInternalsSubtitle": "Версия, ядра, geo-базы и текущая сессия",
+  "aboutTelegramChat": "Чат в Telegram",
+  "aboutDocs": "Документация",
   "settingsCoreXraySubtitle": "Ядро по умолчанию. Исполняет ссылки, цепочки и готовые конфиги Xray.",
   "settingsCoreMihomoSubtitle": "Ядро, совместимое с Clash. Готовые конфиги xray остаются на Xray.",
   "settingsCoreHint": "Применится на следующем подключении, текущая сессия не перезапускается.",

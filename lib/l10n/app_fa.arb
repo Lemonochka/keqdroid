@@ -899,6 +899,8 @@
   "chainNodesCount": "{count, plural, =0{بدون گره} =1{1 گره} other{{count} گره}}",
   "settingsInternalsTitle": "درباره",
   "settingsInternalsSubtitle": "نسخه، هسته‌ها، پایگاه‌های جغرافیایی و نشست جاری",
+  "aboutTelegramChat": "گفتگو در تلگرام",
+  "aboutDocs": "مستندات",
   "settingsCoreXraySubtitle": "هستهٔ پیش‌فرض. لینک‌ها، زنجیره‌ها و کانفیگ‌های آمادهٔ Xray را اجرا می‌کند.",
   "settingsCoreMihomoSubtitle": "هستهٔ سازگار با Clash. کانفیگ‌های آمادهٔ xray روی Xray می‌مانند.",
   "settingsCoreHint": "از اتصال بعدی اعمال می‌شود — نشست فعلی راه‌اندازی مجدد نمی‌شود.",
