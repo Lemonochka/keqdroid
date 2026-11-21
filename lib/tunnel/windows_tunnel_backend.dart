@@ -49,6 +49,9 @@ class WindowsTunnelBackend
   // а остатки после падения снимает нативная уборка до старта Dart
   bool _systemProxyApplied = false;
 
+  // раннер включает прокси в своём потоке, и выключение от стопа писало в реестр посреди включения
+  Future<void>? _systemProxyEnabling;
+
   Process? _mihomoProcess;
 
   int? get clashApiPort =>
@@ -111,6 +114,10 @@ class WindowsTunnelBackend
 
   @visibleForTesting
   bool get debugXrayStarted => xrayStarted;
+
+  @visibleForTesting
+  Future<void> debugApplySystemProxy(TunnelSessionRequest request) =>
+      _applySystemProxy(request);
 
   @visibleForTesting
   Future<bool> debugWaitForPort(
@@ -487,15 +494,19 @@ class WindowsTunnelBackend
     );
     // до вызова: наполовину применённый прокси тоже надо снять
     _systemProxyApplied = true;
+    final enabling = _method.invokeMethod<Map<Object?, Object?>>(
+      'setSystemProxy',
+      {
+        'enabled': true,
+        'host': '127.0.0.1',
+        'socksPort': request.socksPort,
+        'httpPort': request.httpPort,
+        'probe': false,
+      },
+    );
+    _systemProxyEnabling = enabling.then<void>((_) {}, onError: (Object _) {});
     try {
-      final proxyResult = await _method
-          .invokeMethod<Map<Object?, Object?>>('setSystemProxy', {
-            'enabled': true,
-            'host': '127.0.0.1',
-            'socksPort': request.socksPort,
-            'httpPort': request.httpPort,
-            'probe': false,
-          });
+      final proxyResult = await enabling;
       final registryEnabled = proxyResult?['registryEnabled'] == true;
       final registryServer = proxyResult?['registryServer']?.toString() ?? '';
       final logFile = proxyResult?['logFile']?.toString() ?? '';
@@ -592,6 +603,8 @@ class WindowsTunnelBackend
     if (emitStates) emit(const VpnState(status: VpnStatus.disconnecting));
 
     if (_systemProxyApplied) {
+      await _systemProxyEnabling;
+      _systemProxyEnabling = null;
       try {
         await _method.invokeMethod<void>('setSystemProxy', {'enabled': false});
       } catch (e) {
