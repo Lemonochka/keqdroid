@@ -81,6 +81,8 @@ class _NamesFallbackMonitor {
       await ref
           .read(serversProvider.notifier)
           .setNamesFallback(server.id, _now());
+      // пока пишется пометка, могли нажать Отключить: reconnectToActiveServer подключил бы заново
+      if (!identical(_readLive(), live)) return;
       AppLogger.instance.warn(
         'Server "${server.displayName}" opens sites by address but not by '
         'name: its exit does not look names up. For a day the core finds '

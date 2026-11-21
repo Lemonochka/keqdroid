@@ -6,7 +6,9 @@ import 'package:keqdroid/models/app_settings.dart';
 import 'package:keqdroid/models/server_item.dart';
 import 'package:keqdroid/providers/providers.dart';
 import 'package:keqdroid/services/names_fallback.dart';
+import 'package:keqdroid/services/storage_service.dart';
 import 'package:keqdroid/services/vpn_engine.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/fake_tunnel_backend.dart';
 import '../helpers/test_storage.dart';
@@ -54,6 +56,21 @@ class _Backend extends FakeTunnelBackend {
   }
 }
 
+class _SlowSaveStorage extends StorageService {
+  _SlowSaveStorage(super.prefs);
+
+  Future<void> Function()? beforeSave;
+
+  @override
+  Future<List<ServerItem>> applyNamesFallback(
+    String serverId,
+    DateTime? at,
+  ) async {
+    await beforeSave?.call();
+    return super.applyNamesFallback(serverId, at);
+  }
+}
+
 late DateTime _now;
 final _verdicts = <NamesVerdict>[];
 var _probes = 0;
@@ -61,8 +78,9 @@ var _probes = 0;
 Future<({ProviderContainer container, _Backend backend})> _connected({
   ServerItem? server,
   AppSettings settings = const AppSettings(),
+  StorageService? storageOverride,
 }) async {
-  final storage = await buildStorageService();
+  final storage = storageOverride ?? await buildStorageService();
   await storage.saveSettings(settings);
   await storage.saveServers([server ?? _item()]);
   await storage.setActiveServerId(_server);
@@ -130,6 +148,26 @@ void main() {
       expect(_probes, 2);
     },
   );
+
+  test('Disconnect pressed while the switch is saved is not undone', () async {
+    SharedPreferences.setMockInitialValues({});
+    final storage = _SlowSaveStorage(await SharedPreferences.getInstance());
+    final rig = await _connected(storageOverride: storage);
+    storage.beforeSave = () =>
+        rig.container.read(vpnStateProvider.notifier).disconnect();
+
+    _verdicts.addAll([NamesVerdict.namesBroken, NamesVerdict.namesBroken]);
+    await _check(rig.container);
+    await _check(rig.container);
+
+    expect(rig.backend.configs, hasLength(1));
+    expect(
+      rig.container.read(vpnStateProvider).value?.status,
+      isNot(anyOf(VpnStatus.connected, VpnStatus.connecting)),
+    );
+    // пометка остаётся: при следующем подключении адрес ищет ядро
+    expect(_stored(rig.container).namesFallbackAt, _now);
+  });
 
   test('a single miss followed by a fine check changes nothing', () async {
     final rig = await _connected();
