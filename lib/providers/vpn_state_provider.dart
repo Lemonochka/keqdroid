@@ -24,6 +24,14 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
   bool _awaitingSessionStart = false;
   bool _serverSwitchInProgress = false;
   bool _cancelRequested = false;
+  // сервер выбрали посреди подключения или смены: раньше просьбу теряли, и на экране был новый, а туннель на старом
+  bool _followSelection = false;
+  // тело connect до возврата. _connectInFlight снимает уже событие ядра, и новая попытка шла поверх отменённой
+  Future<void>? _attempt;
+  // нажатия подключить, отменить, отключить: ждущий очереди connect уступает более позднему
+  int _intent = 0;
+  // стоп от отмены или отключения: доделываясь поверх нового старта, он выключал прокси и терял новое ядро
+  Future<void>? _stopping;
   // сессия, которую поднял этот connect: смена сервера на mihomo берёт из неё порты, логин и пароль и API
   _LiveSession? _live;
   Completer<void>? _disconnectWaiter;
@@ -419,6 +427,55 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
   }
 
   Future<void> connect({bool autostartTunFallback = false}) async {
+    final previous = _attempt;
+    if (previous != null && !_cancelRequested) {
+      AppLogger.instance.debug(
+        'VPN connect() ignored: connect already in progress',
+      );
+      return;
+    }
+    final intent = ++_intent;
+    if (previous != null || _stopping != null) {
+      // отменённая попытка ещё не вернулась и после своего старта подняла бы прежний сервер поверх нового
+      await previous?.catchError((Object _) {});
+      for (var stop = _stopping; stop != null; stop = _stopping) {
+        await stop;
+      }
+      if (intent != _intent || _attempt != null) return;
+    }
+    final attempt = _connectOnce(autostartTunFallback: autostartTunFallback);
+    _attempt = attempt;
+    try {
+      await attempt;
+    } finally {
+      if (identical(_attempt, attempt)) _attempt = null;
+    }
+    await _followSelectionIfMoved();
+  }
+
+  Future<void> _followSelectionIfMoved() async {
+    if (!_followSelection || _serverSwitchInProgress || _attempt != null) {
+      return;
+    }
+    _followSelection = false;
+    if (state.value?.status != VpnStatus.connected) return;
+    final picked = ref.read(serversProvider).activeServerId;
+    if (picked == null || picked == _live?.serverId) return;
+    AppLogger.instance.info(
+      'A server was picked while connecting, moving the tunnel to it',
+    );
+    try {
+      await reconnectToActiveServer();
+    } catch (e, st) {
+      AppLogger.instance.warn(
+        'Moving to the server picked while connecting failed',
+        error: e,
+        stackTrace: st,
+      );
+    }
+  }
+
+  Future<void> _connectOnce({required bool autostartTunFallback}) async {
     if (_connectInFlight) {
       AppLogger.instance.debug(
         'VPN connect() ignored: connect already in progress',
@@ -471,6 +528,11 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
         engine,
         autostartTunFallback: autostartTunFallback,
       ))!;
+      // отменили, пока собирался конфиг: запущенное ядро вернуло бы экран в подключение
+      if (_cancelRequested) {
+        state = const AsyncData(VpnState(status: VpnStatus.disconnected));
+        return;
+      }
       final session = built.request;
       await engine.startSession(session);
       _awaitingSessionStart = false;
@@ -1037,6 +1099,8 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
   }
 
   Future<void> cancelConnect() async {
+    _intent++;
+    _followSelection = false;
     if (!_connectInFlight) {
       await disconnect();
       return;
@@ -1045,7 +1109,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     _awaitingSessionStart = false;
     state = const AsyncData(VpnState(status: VpnStatus.disconnecting));
     try {
-      await ref.read(vpnEngineProvider).stopVpn();
+      await _stopWatched();
     } catch (e, st) {
       AppLogger.instance.warn(
         'cancelConnect: stopVpn failed',
@@ -1056,12 +1120,14 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
   }
 
   Future<void> disconnect() async {
+    _intent++;
+    _followSelection = false;
     _live = null;
     state = const AsyncData(VpnState(status: VpnStatus.disconnecting));
     ActiveLocalPorts().clear();
     _persistActiveLocalHttpPort(VpnStatus.disconnecting);
     try {
-      await ref.read(vpnEngineProvider).stopVpn();
+      await _stopWatched();
     } catch (e, st) {
       AppLogger.instance.error(
         'VPN disconnect failed in VpnStateNotifier.disconnect()',
@@ -1075,8 +1141,27 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     }
   }
 
+  Future<void> _stopWatched() {
+    final stop = ref.read(vpnEngineProvider).stopVpn();
+    final settled = stop.then<void>((_) {}, onError: (Object _) {});
+    final before = _stopping;
+    final all = before == null
+        ? settled
+        : Future.wait([before, settled]).then<void>((_) {});
+    _stopping = all;
+    unawaited(
+      all.whenComplete(() {
+        if (identical(_stopping, all)) _stopping = null;
+      }),
+    );
+    return stop;
+  }
+
   Future<void> reconnectToActiveServer() async {
-    if (_serverSwitchInProgress || _connectInFlight) return;
+    if (_serverSwitchInProgress || _connectInFlight || _attempt != null) {
+      _followSelection = true;
+      return;
+    }
 
     final status = state.value?.status;
     if (status != VpnStatus.connected && status != VpnStatus.connecting) {
@@ -1087,15 +1172,17 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     _serverSwitchInProgress = true;
     ref.read(vpnServerSwitchInProgressProvider.notifier).set(true);
     try {
-      if (status == VpnStatus.connected && await _switchInPlace()) return;
-      state = const AsyncData(VpnState(status: VpnStatus.disconnecting));
-      await ref.read(vpnEngineProvider).stopVpn();
-      await _waitForDisconnected();
-      await connect();
+      if (status != VpnStatus.connected || !await _switchInPlace()) {
+        state = const AsyncData(VpnState(status: VpnStatus.disconnecting));
+        await ref.read(vpnEngineProvider).stopVpn();
+        await _waitForDisconnected();
+        await connect();
+      }
     } finally {
       _serverSwitchInProgress = false;
       ref.read(vpnServerSwitchInProgressProvider.notifier).set(false);
     }
+    await _followSelectionIfMoved();
   }
 
   // туннель не снимается, и на время смены трафику некуда уйти мимо него; всё, что задаёт сам туннель
