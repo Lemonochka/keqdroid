@@ -16,8 +16,10 @@ class SteadyBaseline extends StatefulWidget {
   State<SteadyBaseline> createState() => _SteadyBaselineState();
 }
 
+// не Single: карусель убирает обложку под мышью в кэш и возвращает, тикер создаётся на каждый attach,
+// и в debug второй ронял раскладку карусели, большой оставалась не та обложка
 class _SteadyBaselineState extends State<SteadyBaseline>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) => _SteadyBaselineBox(
     vsync: this,
@@ -108,13 +110,16 @@ class RenderSteadyBaseline extends RenderProxyBox {
     }
   }
 
-  double _baselineOnScreen(RenderBox child) {
+  // null у строки в кэше списка: там Flutter даёт нулевую матрицу, и деление давало NaN
+  double? _baselineOnScreen(RenderBox child) {
     final toRoot = getTransformTo(null);
+    final scale = toRoot.getMaxScaleOnAxis();
+    if (scale == 0) return null;
     final base = child.getDistanceToBaseline(TextBaseline.alphabetic) ?? 0;
     // корень может уже умножать на масштаб экрана, может и нет
     return MatrixUtils.transformPoint(toRoot, Offset(0, base)).dy *
         devicePixelRatio /
-        toRoot.getMaxScaleOnAxis();
+        scale;
   }
 
   @override
@@ -122,6 +127,10 @@ class RenderSteadyBaseline extends RenderProxyBox {
     final child = this.child;
     if (child == null) return;
     final y = _baselineOnScreen(child);
+    if (y == null) {
+      context.paintChild(child, offset);
+      return;
+    }
     final now = SchedulerBinding.instance.currentFrameTimeStamp;
     final last = _last ?? y;
     if (_last == null) {

@@ -670,6 +670,40 @@ void main() {
   });
 
   testWidgets(
+    'щелчок колеса и сразу тяга назад: список там, где осела карусель, и следующий щелчок от неё',
+    (tester) async {
+      final opened = await _pumpNav(tester, withList: true);
+      final center = tester.getCenter(find.byType(CarouselView));
+      final mouse = TestPointer(1, PointerDeviceKind.mouse);
+      await tester.sendEventToBinding(mouse.hover(center));
+      await tester.sendEventToBinding(mouse.scroll(const Offset(0, 100)));
+      await tester.pump(const Duration(milliseconds: 16));
+      // тяга упирается в первую обложку и кончается раньше, чем колесо отправило бы список (260 мс)
+      final gesture = await tester.startGesture(
+        center,
+        kind: PointerDeviceKind.mouse,
+      );
+      for (var i = 0; i < 6; i++) {
+        await gesture.moveBy(const Offset(0, 80));
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+      await gesture.up();
+      await tester.pump(const Duration(milliseconds: 16));
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pumpAndSettle();
+      expect(_big(tester), 'sub-a');
+      expect(ServerGroupAnchors.instance.currentGroup.value, 'sub-a');
+      expect(opened, isEmpty);
+
+      await tester.sendEventToBinding(mouse.scroll(const Offset(0, 100)));
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pumpAndSettle();
+      expect(_big(tester), 'sub-b');
+      expect(ServerGroupAnchors.instance.currentGroup.value, 'sub-b');
+    },
+  );
+
+  testWidgets(
     'с последней группы к первой назад по одной, через край не перескакивает',
     (tester) async {
       await _pumpNav(tester);

@@ -130,6 +130,11 @@ class _SidebarGroupNavState extends ConsumerState<SidebarGroupNav> {
       if (_wheel.sign != dy.sign) _wheel = 0;
       _wheel += dy;
       if (_wheel.abs() < 40) return;
+      // после тяги прежняя цель колеса устарела: шаг от той обложки, где карусель сейчас
+      if (_dragging && _carousel.hasClients) {
+        final position = _carousel.position;
+        _target = (position.pixels / _unit(position)).round();
+      }
       final next = (_target + (_wheel > 0 ? 1 : -1)).clamp(
         0,
         _groups.length - 1,
@@ -199,7 +204,13 @@ class _SidebarGroupNavState extends ConsumerState<SidebarGroupNav> {
   // мышкой карусель тянут как пальцем: где осела, туда и список
   bool _onCarouselScroll(ScrollNotification n) {
     if (n.depth != 0) return false;
-    if (n is ScrollStartNotification && n.dragDetails != null) _dragging = true;
+    if (n is ScrollStartNotification && n.dragDetails != null) {
+      _dragging = true;
+      // иначе щелчок колеса перед тягой уводил список к своей цели, а карусель оставалась, где её бросили
+      _settle?.cancel();
+      _settle = null;
+      _wheel = 0;
+    }
     if (n is ScrollEndNotification && _dragging) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted || !_dragging || !_carousel.hasClients) return;
@@ -210,6 +221,7 @@ class _SidebarGroupNavState extends ConsumerState<SidebarGroupNav> {
           0,
           _groups.length - 1,
         );
+        _target = i;
         if (i != _shown) _open(i, moveCarousel: false);
       });
     }
