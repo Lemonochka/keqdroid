@@ -2872,10 +2872,10 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsCoreHint => 'از اتصال بعدی اعمال می‌شود — نشست فعلی راه‌اندازی مجدد نمی‌شود.';
 
   @override
-  String get settingsProxyAuthTitle => 'رمز عبور پروکسی محلی';
+  String get settingsProxyAuthTitle => 'رمز پروکسی';
 
   @override
-  String get settingsProxyAuthSubtitle => 'جایی که جای وارد کردن آن نیست خاموش کنید — مثلاً فیلد پروکسی وای‌فای';
+  String get settingsProxyAuthSubtitle => 'هر برنامه‌ای روی دستگاه می‌تواند از پروکسی استفاده کند';
 
   @override
   String get settingsProxyAuthUser => 'نام کاربری';
@@ -2897,9 +2897,6 @@ class AppLocalizationsFa extends AppLocalizations {
 
   @override
   String get settingsTunnelModeProxySubtitle => 'فقط پروکسی محلی، بدون VPN سیستمی';
-
-  @override
-  String get settingsTunnelModeHint => 'حالت پروکسی، SOCKS و HTTP را روی 127.0.0.1 راه‌اندازی می‌کند؛ برنامه یا وای‌فای را روی آن‌ها تنظیم کنید. بدون رمز، این پروکسی برای همهٔ برنامه‌های دستگاه باز است. مسیریابی به تفکیک برنامه و رهگیری DNS فقط در حالت VPN کار می‌کنند.';
 
   @override
   String get settingsCoreSkipClash => 'سرور فعال یک کانفیگ آمادهٔ Clash است — صرف‌نظر از هستهٔ انتخاب‌شده تنها mihomo آن را اجرا می‌کند.';

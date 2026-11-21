@@ -5342,13 +5342,13 @@ abstract class AppLocalizations {
   /// No description provided for @settingsProxyAuthTitle.
   ///
   /// In en, this message translates to:
-  /// **'Password for the local proxy'**
+  /// **'Proxy password'**
   String get settingsProxyAuthTitle;
 
   /// No description provided for @settingsProxyAuthSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Turn off where there is nowhere to enter it, like the Wi-Fi proxy field'**
+  /// **'Any app on the device can use the proxy'**
   String get settingsProxyAuthSubtitle;
 
   /// No description provided for @settingsProxyAuthUser.
@@ -5378,7 +5378,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsTunnelModeVpnSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'All of the device\'s traffic goes through the tunnel'**
+  /// **'All device traffic goes through the tunnel'**
   String get settingsTunnelModeVpnSubtitle;
 
   /// No description provided for @settingsTunnelModeProxy.
@@ -5392,12 +5392,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Local proxy only, no system VPN'**
   String get settingsTunnelModeProxySubtitle;
-
-  /// No description provided for @settingsTunnelModeHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Proxy mode runs SOCKS and HTTP on 127.0.0.1, so point an app or Wi-Fi at them. Without a password the proxy is open to every app on the device. Per-app routing and DNS interception need VPN mode.'**
-  String get settingsTunnelModeHint;
 
   /// No description provided for @settingsCoreSkipClash.
   ///

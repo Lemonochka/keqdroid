@@ -2899,10 +2899,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsCoreHint => 'Применится на следующем подключении, текущая сессия не перезапускается.';
 
   @override
-  String get settingsProxyAuthTitle => 'Пароль для локального прокси';
+  String get settingsProxyAuthTitle => 'Пароль для прокси';
 
   @override
-  String get settingsProxyAuthSubtitle => 'Выключите там, где пароль вписать некуда, например в поле прокси у Wi-Fi';
+  String get settingsProxyAuthSubtitle => 'Прокси открыт любому приложению на устройстве';
 
   @override
   String get settingsProxyAuthUser => 'Логин';
@@ -2917,16 +2917,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsTunnelModeVpn => 'VPN';
 
   @override
-  String get settingsTunnelModeVpnSubtitle => 'Весь трафик устройства идёт через туннель';
+  String get settingsTunnelModeVpnSubtitle => 'Весь трафик устройства через туннель';
 
   @override
   String get settingsTunnelModeProxy => 'Прокси';
 
   @override
-  String get settingsTunnelModeProxySubtitle => 'Только локальный прокси, системный VPN не включается';
-
-  @override
-  String get settingsTunnelModeHint => '«Прокси» поднимает SOCKS и HTTP на 127.0.0.1, направьте на них приложение или Wi-Fi. Без пароля прокси открыт любому приложению на устройстве. Маршрутизация по приложениям и перехват DNS работают только в VPN.';
+  String get settingsTunnelModeProxySubtitle => 'Только локальный прокси, без VPN';
 
   @override
   String get settingsCoreSkipClash => 'У активного сервера готовый конфиг Clash: его исполняет только mihomo, при любом выборе ядра.';

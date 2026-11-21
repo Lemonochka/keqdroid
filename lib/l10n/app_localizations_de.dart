@@ -2879,10 +2879,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsCoreHint => 'Gilt ab der nächsten Verbindung – die laufende Sitzung wird nicht neu gestartet.';
 
   @override
-  String get settingsProxyAuthTitle => 'Passwort für den lokalen Proxy';
+  String get settingsProxyAuthTitle => 'Proxy-Passwort';
 
   @override
-  String get settingsProxyAuthSubtitle => 'Ausschalten, wo es kein Feld dafür gibt – etwa beim WLAN-Proxy';
+  String get settingsProxyAuthSubtitle => 'Jede App auf dem Gerät kann den Proxy nutzen';
 
   @override
   String get settingsProxyAuthUser => 'Benutzername';
@@ -2897,16 +2897,13 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsTunnelModeVpn => 'VPN';
 
   @override
-  String get settingsTunnelModeVpnSubtitle => 'Der gesamte Geräteverkehr läuft durch den Tunnel';
+  String get settingsTunnelModeVpnSubtitle => 'Gesamter Geräteverkehr durch den Tunnel';
 
   @override
   String get settingsTunnelModeProxy => 'Proxy';
 
   @override
   String get settingsTunnelModeProxySubtitle => 'Nur lokaler Proxy, kein System-VPN';
-
-  @override
-  String get settingsTunnelModeHint => 'Der Proxy-Modus startet SOCKS und HTTP auf 127.0.0.1, richte eine App oder das WLAN darauf. Ohne Passwort steht der Proxy jeder App auf dem Gerät offen. Routing pro App und das Abfangen von DNS gibt es nur im VPN-Modus.';
 
   @override
   String get settingsCoreSkipClash => 'Der aktive Server ist eine fertige Clash-Konfiguration – sie läuft unabhängig von der Kernauswahl nur auf mihomo.';

@@ -2870,10 +2870,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsCoreHint => '下次连接时生效，当前会话不会重启。';
 
   @override
-  String get settingsProxyAuthTitle => '本地代理的密码';
+  String get settingsProxyAuthTitle => '代理密码';
 
   @override
-  String get settingsProxyAuthSubtitle => '在没有地方填写密码时关闭，例如 Wi-Fi 的代理设置';
+  String get settingsProxyAuthSubtitle => '设备上的任何应用都能使用该代理';
 
   @override
   String get settingsProxyAuthUser => '用户名';
@@ -2895,9 +2895,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settingsTunnelModeProxySubtitle => '仅本地代理，不启用系统 VPN';
-
-  @override
-  String get settingsTunnelModeHint => '代理模式在 127.0.0.1 上启动 SOCKS 和 HTTP，把应用或 Wi-Fi 指过去即可。不设密码时，该代理对设备上任何应用开放。分应用路由和 DNS 拦截仅在 VPN 模式下可用。';
 
   @override
   String get settingsCoreSkipClash => '当前服务器是现成的 Clash 配置，无论选择哪个内核，都只能由 mihomo 运行。';

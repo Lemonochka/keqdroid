@@ -71,22 +71,7 @@ class _AppInternalsScreen extends ConsumerWidget {
 
       if (Platform.isAndroid) ...[
         ExpressiveSectionHeader(l10n.settingsTunnelModeSection),
-        const ExpressiveGroup(
-          children: [
-            _TunnelModeTile(mode: ConnectionMode.tun),
-            _TunnelModeTile(mode: ConnectionMode.proxy),
-            _ProxyAuthTile(),
-          ],
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(4, 8, 4, 0),
-          child: Text(
-            l10n.settingsTunnelModeHint,
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
-          ),
-        ),
+        const _TunnelModeGroup(),
       ],
 
       ExpressiveSectionHeader(l10n.settingsInternalsCores),
@@ -685,6 +670,41 @@ String _coreMismatchText(AppLocalizations l10n, VpnCoreSkip skip) =>
       VpnCoreSkip.platform => l10n.settingsCoreSkipPlatform,
     };
 
+@visibleForTesting
+Widget tunnelModeGroupForTest() => const _TunnelModeGroup();
+
+class _TunnelModeGroup extends ConsumerWidget {
+  const _TunnelModeGroup();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final proxy = ref.watch(
+      settingsNotifierProvider.select((a) {
+        final s = a.value;
+        return (s?.connectionModeChosen ?? false) &&
+            ConnectionMode.fromStorage(s?.connectionMode) ==
+                ConnectionMode.proxy;
+      }),
+    );
+    // пустая строка пароля оставалась последней в группе и срезала нижние углы плитке Прокси
+    return AnimatedSize(
+      duration: ExpressiveMotion.durationDefault,
+      curve: const SpringCurve(
+        ExpressiveMotion.spatialDefault,
+        ExpressiveMotion.durationDefault,
+      ),
+      alignment: Alignment.topCenter,
+      child: ExpressiveGroup(
+        children: [
+          const _TunnelModeTile(mode: ConnectionMode.tun),
+          const _TunnelModeTile(mode: ConnectionMode.proxy),
+          if (proxy) const _ProxyAuthTile(),
+        ],
+      ),
+    );
+  }
+}
+
 class _ProxyAuthTile extends ConsumerWidget {
   const _ProxyAuthTile();
 
@@ -693,11 +713,6 @@ class _ProxyAuthTile extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final settings = ref.watch(settingsNotifierProvider.select((a) => a.value));
-    final chosen = settings?.connectionModeChosen ?? false;
-    final mode = chosen
-        ? ConnectionMode.fromStorage(settings?.connectionMode)
-        : ConnectionMode.tun;
-    if (mode != ConnectionMode.proxy) return const SizedBox.shrink();
 
     final on = settings?.proxyModeAuth ?? true;
     final user = settings?.proxyModeUser ?? '';
@@ -733,12 +748,13 @@ class _ProxyAuthTile extends ConsumerWidget {
                         color: AppTheme.text(context),
                       ),
                     ),
-                    Text(
-                      l10n.settingsProxyAuthSubtitle,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: AppTheme.textLight(context),
+                    if (!on)
+                      Text(
+                        l10n.settingsProxyAuthSubtitle,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: AppTheme.textLight(context),
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ),
