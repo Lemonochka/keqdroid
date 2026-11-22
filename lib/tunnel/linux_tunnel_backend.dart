@@ -413,7 +413,18 @@ class LinuxTunnelBackend
   // v5 и старше обнуляли от root любой файл из аргумента, поэтому такой хелпер считается неустановленным
   static const _helperVersionMark = '[wrap v6';
 
+  // pkexec даёт root PATH=/usr/sbin:/usr/bin:/sbin:/bin, а на NixOS утилиты лежат только в /run/current-system/sw/bin;
+  // дописано в конец, поэтому на других дистрибутивах команды находятся ровно как раньше
+  static const _rootPathLine =
+      r'PATH="$PATH:/run/current-system/sw/bin"; export PATH';
+
   static const _untrustedCoreExit = 4;
+
+  @visibleForTesting
+  static const rootPathLineForTest = _rootPathLine;
+
+  @visibleForTesting
+  static String get removeScriptForTest => _removeScript;
 
   @visibleForTesting
   static String get tunWrapperBodyForTest => _tunWrapperBody;
@@ -431,7 +442,9 @@ class LinuxTunnelBackend
   // его правами, а root пишет только в свой /run/keqdroid/<uid>. Журнал отдан владельцу 0600, в нём адреса серверов.
   // Ядро без пароля запускается только доверенной копией и под systemd с ProtectSystem=strict, так подсунутый
   // конфиг не допишет файлы мимо RUN
-  static const _tunWrapperBody = r'''umask 022
+  static const _tunWrapperBody =
+      r'''PATH="$PATH:/run/current-system/sw/bin"; export PATH
+umask 022
 SB="$1"; CFG="$2"; GEO="$3"; SENT="$4"; APPPID="$5"; KIND="$6"
 HELPER=/usr/local/lib/keqdroid/core-tun-root
 CORES=/usr/local/lib/keqdroid/cores
@@ -551,6 +564,7 @@ polkit.addRule(function(action, subject) {
     final run = runAfter ? "set +e\nexec '$_polkitHelperPath' \"\$@\"\n" : '';
     // <<'EOF' в кавычках: $1 и $(...) пишутся в файл буквально
     return '''
+$_rootPathLine
 set -e
 mkdir -p /usr/local/lib/keqdroid '$_trustedCoresDir'
 rm -f '$_legacyPolkitHelperPath'
@@ -601,13 +615,15 @@ $run''';
     }
   }
 
+  static String get _removeScript =>
+      "$_rootPathLine; "
+      "rm -f '$_polkitHelperPath' '$_legacyPolkitHelperPath' '$_polkitRulePath'; "
+      "rm -rf '$_trustedCoresDir'";
+
   static Future<bool> removePasswordlessTun() async {
     if (!Platform.isLinux) return false;
-    final script =
-        "rm -f '$_polkitHelperPath' '$_legacyPolkitHelperPath' '$_polkitRulePath'; "
-        "rm -rf '$_trustedCoresDir'";
     try {
-      final res = await Process.run('pkexec', ['sh', '-c', script]);
+      final res = await Process.run('pkexec', ['sh', '-c', _removeScript]);
       if (res.exitCode != 0) return false;
       final marker = await _passwordlessOffMarker();
       await marker.parent.create(recursive: true);

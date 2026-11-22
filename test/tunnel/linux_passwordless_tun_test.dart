@@ -90,4 +90,36 @@ void main() {
       expect(script, isNot(contains('exec ')));
     });
   });
+
+  // pkexec оставляет root PATH без /run/current-system/sw/bin, поэтому каждый корневой скрипт начинается с одной и той же строки
+  group('root scripts find their tools on NixOS', () {
+    const pathLine = LinuxTunnelBackend.rootPathLineForTest;
+
+    test('the wrapper body starts with the PATH line', () {
+      expect(body, startsWith(pathLine));
+    });
+
+    test(
+      'the installed helper is the shebang followed by the PATH line',
+      () async {
+        final script = await LinuxTunnelBackend.installScriptForTest(
+          runAfter: true,
+        );
+        expect(script, contains('#!/bin/sh\n$pathLine'));
+      },
+    );
+
+    test('the install script sets PATH before set -e', () async {
+      for (final runAfter in [true, false]) {
+        final script = await LinuxTunnelBackend.installScriptForTest(
+          runAfter: runAfter,
+        );
+        expect(script, startsWith('$pathLine\nset -e'));
+      }
+    });
+
+    test('the remove script starts with the PATH line', () {
+      expect(LinuxTunnelBackend.removeScriptForTest, startsWith(pathLine));
+    });
+  });
 }
