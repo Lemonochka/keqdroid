@@ -24,10 +24,14 @@ class ScreenQrCapture {
   @visibleForTesting
   static const linuxChannel = MethodChannel('keqdroid/linux_screen');
 
+  // macos/Runner/MacosPlatformBridge.swift
+  @visibleForTesting
+  static const macosChannel = MethodChannel('keqdroid/macos_screen');
+
   static bool? _linuxAvailable;
 
   static Future<bool> available() async {
-    if (Platform.isWindows) return true;
+    if (Platform.isWindows || Platform.isMacOS) return true;
     if (!Platform.isLinux) return false;
     final known = _linuxAvailable;
     if (known != null) return known;
@@ -48,6 +52,8 @@ class ScreenQrCapture {
     try {
       frame = Platform.isWindows
           ? await _captureWindows()
+          : Platform.isMacOS
+          ? await _captureMacos()
           : await _captureLinux();
     } on PlatformException catch (e) {
       AppLogger.instance.warn('Screen capture for QR failed', error: e);
@@ -80,7 +86,28 @@ class ScreenQrCapture {
         'capture',
       );
       final path = map?['path'];
-      if (path is String) return _readPortalShot(path);
+      if (path is String) return await _readPortalShot(path);
+      return frameFromMap(map);
+    } finally {
+      if (wasVisible) {
+        await windowManager.show();
+        await windowManager.focus();
+      }
+    }
+  }
+
+  static Future<GrayImage?> _captureMacos() async {
+    final wasVisible = await _windowVisible();
+    if (wasVisible) {
+      await windowManager.hide();
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+    }
+    try {
+      final map = await macosChannel.invokeMapMethod<String, Object?>(
+        'capture',
+      );
+      final path = map?['path'];
+      if (path is String) return await _readPortalShot(path);
       return frameFromMap(map);
     } finally {
       if (wasVisible) {

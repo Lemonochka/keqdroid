@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter/services.dart';
 
@@ -67,9 +69,9 @@ class HotkeyBinding {
 
   String get label => [
     if (ctrl) 'Ctrl',
-    if (alt) 'Alt',
+    if (alt) Platform.isMacOS ? 'Opt' : 'Alt',
     if (shift) 'Shift',
-    if (meta) 'Win',
+    if (meta) Platform.isMacOS ? 'Cmd' : 'Win',
     HotkeyKeys.labelFor(key),
   ].join(' + ');
 
@@ -80,6 +82,8 @@ class HotkeyBinding {
   int? get windowsKeyCode => HotkeyKeys.vkFor(key);
 
   int? get linuxEvdevCode => HotkeyKeys.evdevFor(key);
+
+  int? get macosKeyCode => HotkeyKeys.macosFor(key);
 
   // формат shortcuts-spec: модификаторы и имя keysym из xkbcommon через +
   String? get portalTrigger {
@@ -298,7 +302,83 @@ class HotkeyKeys {
     'backslash': 'backslash',
   };
 
+  // Carbon HIToolbox/Events.h virtual keycodes (layout-independent ANSI positions).
+  static const Map<String, int> _macosKeyCodes = {
+    'keyA': 0x00,
+    'keyS': 0x01,
+    'keyD': 0x02,
+    'keyF': 0x03,
+    'keyH': 0x04,
+    'keyG': 0x05,
+    'keyZ': 0x06,
+    'keyX': 0x07,
+    'keyC': 0x08,
+    'keyV': 0x09,
+    'keyB': 0x0B,
+    'keyQ': 0x0C,
+    'keyW': 0x0D,
+    'keyE': 0x0E,
+    'keyR': 0x0F,
+    'keyY': 0x10,
+    'keyT': 0x11,
+    'digit1': 0x12,
+    'digit2': 0x13,
+    'digit3': 0x14,
+    'digit4': 0x15,
+    'digit6': 0x16,
+    'digit5': 0x17,
+    'equal': 0x18,
+    'digit9': 0x19,
+    'digit7': 0x1A,
+    'minus': 0x1B,
+    'digit8': 0x1C,
+    'digit0': 0x1D,
+    'bracketRight': 0x1E,
+    'keyO': 0x1F,
+    'keyU': 0x20,
+    'bracketLeft': 0x21,
+    'keyI': 0x22,
+    'keyP': 0x23,
+    'keyL': 0x25,
+    'keyJ': 0x26,
+    'quote': 0x27,
+    'keyK': 0x28,
+    'semicolon': 0x29,
+    'backslash': 0x2A,
+    'comma': 0x2B,
+    'slash': 0x2C,
+    'keyN': 0x2D,
+    'keyM': 0x2E,
+    'period': 0x2F,
+    'space': 0x31,
+    'backquote': 0x32,
+    'f5': 0x60,
+    'f6': 0x61,
+    'f7': 0x62,
+    'f3': 0x63,
+    'f8': 0x64,
+    'f9': 0x65,
+    'f11': 0x67,
+    'f10': 0x6D,
+    'f12': 0x6F,
+    'insert': 0x72,
+    'home': 0x73,
+    'pageUp': 0x74,
+    'delete': 0x75,
+    'f4': 0x76,
+    'end': 0x77,
+    'f2': 0x78,
+    'pageDown': 0x79,
+    'f1': 0x7A,
+    'arrowLeft': 0x7B,
+    'arrowRight': 0x7C,
+    'arrowDown': 0x7D,
+    'arrowUp': 0x7E,
+  };
+
   static int? evdevFor(String token) => _evdev[token];
+
+  static int? macosFor(String token) => _macosKeyCodes[token];
 
   static String? keysymFor(String token) {
     final named = _keysyms[token];

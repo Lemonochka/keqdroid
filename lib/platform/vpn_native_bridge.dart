@@ -15,7 +15,10 @@ class VpnNativeBridge {
 
   static bool get supportsNotificationLaunch => Platform.isAndroid;
   static bool get supportsDeepLinks =>
-      Platform.isAndroid || Platform.isWindows || Platform.isLinux;
+      Platform.isAndroid ||
+      Platform.isWindows ||
+      Platform.isLinux ||
+      Platform.isMacOS;
   static bool get supportsAutostartNotification => Platform.isWindows;
   static bool get supportsWindowVisibilityEvents => Platform.isWindows;
   static bool get supportsGlobalHotkeys => Platform.isWindows;
