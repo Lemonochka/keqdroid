@@ -1,0 +1,321 @@
+# Updates the Nix flake on the nix branch whenever a release is published,
+# reading the tarball hash from the release's signed SHA256SUMS.
+name: nix
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag (empty = latest published release)
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nix-flake
+  cancel-in-progress: false
+
+jobs:
+  flake:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      INPUT_TAG: ${{ inputs.tag }}
+    steps:
+      - uses: actions/github-script@v9
+        with:
+          script: |
+            const crypto = require('node:crypto');
+            const BRANCH = 'nix';
+            const PUBLIC_KEYS = [
+              'pPWpQvbW0WGwkEr/YcOsnEIeZ2CZTsOh/d/4Y+g6Q9k=',
+              'pMuHfej/dlfiszKhI7UCgfX3Ljch5YiCSv9TzIRRzpw=',
+            ];
+            const SPKI_ED25519 = Buffer.from('302a300506032b6570032100', 'hex');
+            const { owner, repo } = context.repo;
+
+            let release;
+            if (context.eventName === 'release') {
+              release = context.payload.release;
+            } else {
+              const wanted = (process.env.INPUT_TAG || '').trim();
+              release = wanted
+                ? (await github.rest.repos.getReleaseByTag({ owner, repo, tag: wanted })).data
+                : (await github.rest.repos.getLatestRelease({ owner, repo })).data;
+            }
+
+            if (release.draft || release.prerelease) {
+              core.notice(`Skipping ${release.tag_name}: draft or pre-release`);
+              return;
+            }
+
+            const tagMatch = /^v([0-9]+\.[0-9]+(?:\.[0-9]+)?)$/.exec(release.tag_name || '');
+            if (!tagMatch) {
+              core.setFailed(`Unexpected release tag: ${release.tag_name}`);
+              return;
+            }
+            const version = tagMatch[1];
+            const tarballName = `keqdroid-${version}-linux-x64.tar.gz`;
+            const byName = (name) =>
+              (release.assets || []).find((a) => (a.name || '').toLowerCase() === name.toLowerCase());
+
+            const sumsAsset = byName('SHA256SUMS');
+            const sigAsset = byName('SHA256SUMS.sig');
+            const tarAsset = byName(tarballName);
+            if (!sumsAsset || !sigAsset || !tarAsset) {
+              core.setFailed(`Release ${release.tag_name} is missing SHA256SUMS, SHA256SUMS.sig or ${tarballName}`);
+              return;
+            }
+
+            const fetchBytes = async (url) => {
+              const res = await fetch(url);
+              if (!res.ok) throw new Error(`GET ${url} failed: HTTP ${res.status}`);
+              return Buffer.from(await res.arrayBuffer());
+            };
+
+            const sumsBytes = await fetchBytes(sumsAsset.browser_download_url);
+            const sigText = (await fetchBytes(sigAsset.browser_download_url)).toString('utf8').trim();
+            const sigBytes = Buffer.from(sigText, 'base64');
+            const verified = sigBytes.length === 64 && PUBLIC_KEYS.some((key) => {
+              const pub = crypto.createPublicKey({
+                key: Buffer.concat([SPKI_ED25519, Buffer.from(key, 'base64')]),
+                format: 'der',
+                type: 'spki',
+              });
+              return crypto.verify(null, sumsBytes, pub, sigBytes);
+            });
+            if (!verified) {
+              core.setFailed(`SHA256SUMS of ${release.tag_name} failed Ed25519 verification`);
+              return;
+            }
+
+            const sumsText = sumsBytes.toString('utf8');
+            let hex = null;
+            for (const raw of sumsText.split(/\r?\n/)) {
+              const m = /^([0-9a-fA-F]{64})\s+\*?(.+)$/.exec(raw.trim());
+              if (m && m[2].trim() === tarballName) {
+                hex = m[1].toLowerCase();
+                break;
+              }
+            }
+            if (!hex) {
+              core.setFailed(`${tarballName} not found in SHA256SUMS`);
+              return;
+            }
+            const sri = 'sha256-' + Buffer.from(hex, 'hex').toString('base64');
+
+            const flakeNix = [
+              '{',
+              '  description = "keqdroid proxy and VPN client";',
+              '',
+              '  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";',
+              '',
+              '  outputs =',
+              '    { nixpkgs, ... }:',
+              '    let',
+              '      pkgs = nixpkgs.legacyPackages.x86_64-linux;',
+              '      keqdroid = pkgs.callPackage ./nix/package.nix { };',
+              '    in',
+              '    {',
+              '      packages.x86_64-linux = {',
+              '        inherit keqdroid;',
+              '        default = keqdroid;',
+              '      };',
+              '      overlays.default = final: prev: {',
+              '        keqdroid = final.callPackage ./nix/package.nix { };',
+              '      };',
+              '    };',
+              '}',
+              '',
+            ].join('\n');
+
+            const flakeLock = JSON.stringify({
+              nodes: {
+                nixpkgs: {
+                  locked: {
+                    lastModified: 1795234589,
+                    narHash: 'sha256-f/VVvxf5RsQgWVhUtefoca5ktVg0DA2bnkMOcmSnozo=',
+                    owner: 'NixOS',
+                    repo: 'nixpkgs',
+                    rev: '2786a2a72088ecf32aea5b3ec52099e6a7cff78f',
+                    type: 'github',
+                  },
+                  original: {
+                    owner: 'NixOS',
+                    ref: 'nixos-unstable',
+                    repo: 'nixpkgs',
+                    type: 'github',
+                  },
+                },
+                root: {
+                  inputs: {
+                    nixpkgs: 'nixpkgs',
+                  },
+                },
+              },
+              root: 'root',
+              version: 7,
+            }, null, 2) + '\n';
+
+            const packageNix = [
+              '{',
+              '  lib,',
+              '  stdenv,',
+              '  fetchurl,',
+              '  autoPatchelfHook,',
+              '  copyDesktopItems,',
+              '  makeDesktopItem,',
+              '  wrapGAppsHook3,',
+              '  gsettings-desktop-schemas,',
+              '  gtk3,',
+              '  libepoxy,',
+              '  libx11,',
+              '}:',
+              'stdenv.mkDerivation (finalAttrs: {',
+              '  pname = "keqdroid";',
+              `  version = "${version}";`,
+              '',
+              '  src = fetchurl {',
+              `    url = "https://github.com/${owner}/${repo}/releases/download/v\${finalAttrs.version}/keqdroid-\${finalAttrs.version}-linux-x64.tar.gz";`,
+              `    hash = "${sri}";`,
+              '  };',
+              '',
+              '  nativeBuildInputs = [',
+              '    autoPatchelfHook',
+              '    copyDesktopItems',
+              '    wrapGAppsHook3',
+              '  ];',
+              '  buildInputs = [',
+              '    gsettings-desktop-schemas',
+              '    gtk3',
+              '    libepoxy',
+              '    libx11',
+              '    stdenv.cc.cc.lib',
+              '  ];',
+              '',
+              '  dontBuild = true;',
+              '  dontStrip = true;',
+              '',
+              "  installPhase = ''",
+              '    runHook preInstall',
+              '    mkdir -p $out/lib/keqdroid $out/bin',
+              '    cp -r . $out/lib/keqdroid',
+              '    ln -s $out/lib/keqdroid/keqdroid $out/bin/keqdroid',
+              '    for name in keqdroid com.keqdroid.keqdroid; do',
+              '      install -Dm644 data/flutter_assets/assets/icon.png $out/share/icons/hicolor/256x256/apps/$name.png',
+              '    done',
+              '    runHook postInstall',
+              "  '';",
+              '',
+              '  desktopItems = [',
+              '    (makeDesktopItem {',
+              '      name = "keqdroid";',
+              '      desktopName = "KeqDroid";',
+              '      comment = "keqdroid proxy/VPN client";',
+              '      exec = "keqdroid %u";',
+              '      icon = "keqdroid";',
+              '      categories = [ "Network" ];',
+              '      mimeTypes = [',
+              '        "x-scheme-handler/keqdroid"',
+              '        "x-scheme-handler/keqdis"',
+              '      ];',
+              '      startupWMClass = "com.keqdroid.keqdroid";',
+              '    })',
+              '    (makeDesktopItem {',
+              '      name = "com.keqdroid.keqdroid";',
+              '      desktopName = "KeqDroid";',
+              '      exec = "keqdroid %u";',
+              '      icon = "keqdroid";',
+              '      noDisplay = true;',
+              '    })',
+              '  ];',
+              '',
+              '  meta = {',
+              '    description = "Proxy/VPN client on Xray-core and mihomo";',
+              `    homepage = "https://github.com/${owner}/${repo}";`,
+              '    license = with lib.licenses; [',
+              '      agpl3Only',
+              '      gpl3Only',
+              '      mpl20',
+              '    ];',
+              '    sourceProvenance = [ lib.sourceTypes.binaryNativeCode ];',
+              '    mainProgram = "keqdroid";',
+              '    platforms = [ "x86_64-linux" ];',
+              '  };',
+              '})',
+              '',
+            ].join('\n');
+
+            const files = [
+              ['flake.nix', flakeNix],
+              ['flake.lock', flakeLock],
+              ['nix/package.nix', packageNix],
+            ];
+
+            const treeEntries = [];
+            for (const [path, content] of files) {
+              const { data: blob } = await github.rest.git.createBlob({
+                owner,
+                repo,
+                content,
+                encoding: 'utf-8',
+              });
+              treeEntries.push({ path, mode: '100644', type: 'blob', sha: blob.sha });
+            }
+            const { data: tree } = await github.rest.git.createTree({
+              owner,
+              repo,
+              tree: treeEntries,
+            });
+
+            let parentSha = null;
+            try {
+              const { data: ref } = await github.rest.git.getRef({
+                owner,
+                repo,
+                ref: `heads/${BRANCH}`,
+              });
+              parentSha = ref.object.sha;
+              const { data: current } = await github.rest.git.getCommit({
+                owner,
+                repo,
+                commit_sha: parentSha,
+              });
+              if (current.tree.sha === tree.sha) {
+                core.notice(`${BRANCH} branch is already at keqdroid ${version}`);
+                return;
+              }
+            } catch (e) {
+              if (e.status !== 404) throw e;
+            }
+
+            const { data: commit } = await github.rest.git.createCommit({
+              owner,
+              repo,
+              tree: tree.sha,
+              parents: parentSha ? [parentSha] : [],
+              message: `keqdroid ${version}`,
+            });
+
+            if (parentSha) {
+              await github.rest.git.updateRef({
+                owner,
+                repo,
+                ref: `heads/${BRANCH}`,
+                sha: commit.sha,
+              });
+            } else {
+              await github.rest.git.createRef({
+                owner,
+                repo,
+                ref: `refs/heads/${BRANCH}`,
+                sha: commit.sha,
+              });
+            }
+            core.notice(`Updated ${BRANCH} branch to keqdroid ${version} (${sri})`);
