@@ -5,6 +5,7 @@ import 'package:path_provider/path_provider.dart';
 import '../core/app_logger.dart';
 import '../models/app_settings.dart';
 import '../tunnel/linux_core_paths.dart';
+import '../tunnel/macos_core_paths.dart';
 import '../tunnel/windows_core_paths.dart';
 import '../utils/geo_asset_index.dart';
 import '../utils/geo_rule_sanitizer.dart';
@@ -44,6 +45,7 @@ class GeoAssetService {
     }
     if (Platform.isWindows) return WindowsCorePaths.geoAssetDir();
     if (Platform.isLinux) return LinuxCorePaths.geoAssetDir();
+    if (Platform.isMacOS) return MacosCorePaths.geoAssetDir();
     return null;
   }
 

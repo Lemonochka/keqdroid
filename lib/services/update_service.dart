@@ -384,6 +384,9 @@ class UpdateService {
     if (Platform.isWindows) {
       return _findWindowsAsset(assets, installed: windowsInstalled);
     }
+    if (Platform.isMacOS) {
+      return _findMacosAsset(assets, arm64: Abi.current() == Abi.macosArm64);
+    }
     return _findApkAsset(assets, arm32: Abi.current() == Abi.androidArm);
   }
 
@@ -396,11 +399,41 @@ class UpdateService {
       'windows' => _findWindowsAsset(assets),
       'windows-installed' => _findWindowsAsset(assets, installed: true),
       'linux' => _findLinuxAsset(assets, linuxKind),
+      'macos' => _findMacosAsset(assets, arm64: false),
+      'macos-arm64' => _findMacosAsset(assets, arm64: true),
       'android' => _findApkAsset(assets, arm32: false),
       'android-arm' => _findApkAsset(assets, arm32: true),
       _ => null,
     };
     return asset?['name']?.toString();
+  }
+
+  static Map<String, dynamic>? _findMacosAsset(
+    List<Object?>? assets, {
+    required bool arm64,
+  }) {
+    if (assets == null) return null;
+    final maps = assets.cast<Map<String, dynamic>>();
+    final archHints = arm64
+        ? const ['arm64', 'aarch64']
+        : const ['x86_64', 'x64', 'amd64', 'intel'];
+    for (final ext in const ['.dmg', '.zip']) {
+      for (final asset in maps) {
+        final name = (asset['name'] ?? '').toString().toLowerCase();
+        if (!name.endsWith(ext) || !name.contains('macos')) continue;
+        if (archHints.any(name.contains)) return asset;
+      }
+      for (final asset in maps) {
+        final name = (asset['name'] ?? '').toString().toLowerCase();
+        if (!name.endsWith(ext) || !name.contains('macos')) continue;
+        if (name.contains('universal')) return asset;
+      }
+      for (final asset in maps) {
+        final name = (asset['name'] ?? '').toString().toLowerCase();
+        if (name.endsWith(ext) && name.contains('macos')) return asset;
+      }
+    }
+    return null;
   }
 
   // без установщика в релизе установленная копия возьмёт zip: обновится, хоть версия в «Приложениях» и отстанет
@@ -681,6 +714,10 @@ class UpdateService {
     }
 
     await beforeInstaller?.call();
+    if (Platform.isMacOS) {
+      await Process.start('open', [file.path]);
+      return false;
+    }
     await OpenFilex.open(file.path);
     return false;
   }

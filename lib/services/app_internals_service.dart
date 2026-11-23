@@ -11,6 +11,8 @@ import '../models/app_settings.dart';
 import '../platform/vpn_native_bridge.dart';
 import '../tunnel/linux_core_paths.dart';
 import '../tunnel/linux_tunnel_backend.dart';
+import '../tunnel/macos_core_paths.dart';
+import '../tunnel/macos_tunnel_backend.dart';
 import '../tunnel/tunnel_state.dart';
 import '../tunnel/windows_core_paths.dart';
 import '../tunnel/windows_tunnel_backend.dart';
@@ -94,6 +96,20 @@ class AppInternalsService {
         ),
         await _core(
           await LinuxCorePaths.mihomoExecutable(),
+          'mihomo',
+          CoreRole.core,
+        ),
+      ];
+    }
+    if (Platform.isMacOS) {
+      return [
+        await _core(
+          await MacosCorePaths.xrayExecutable(),
+          'xray',
+          CoreRole.core,
+        ),
+        await _core(
+          await MacosCorePaths.mihomoExecutable(),
           'mihomo',
           CoreRole.core,
         ),
@@ -212,6 +228,8 @@ class AppInternalsService {
           ? MihomoApiSession().port
           : Platform.isLinux
           ? LinuxTunnelBackend.activeInstance?.clashApiPort
+          : Platform.isMacOS
+          ? MacosTunnelBackend.activeInstance?.clashApiPort
           : null,
     );
   }
@@ -219,6 +237,8 @@ class AppInternalsService {
   static String _desktopEngine() {
     final pids = Platform.isWindows
         ? WindowsTunnelBackend.activeInstance?.activeCorePids
+        : Platform.isMacOS
+        ? MacosTunnelBackend.activeInstance?.activeCorePids
         : LinuxTunnelBackend.activeInstance?.activeCorePids;
     if (pids != null && pids.keys.any((k) => k.startsWith('mihomo'))) {
       return 'mihomo';
@@ -239,6 +259,9 @@ class AppInternalsService {
     }
     if (Platform.isLinux) {
       return LinuxTunnelBackend.activeInstance?.activeCorePids ?? const {};
+    }
+    if (Platform.isMacOS) {
+      return MacosTunnelBackend.activeInstance?.activeCorePids ?? const {};
     }
     return const {};
   }

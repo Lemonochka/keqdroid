@@ -1023,6 +1023,10 @@ class SubscriptionService {
     }
     _cachedDeviceModel = Platform.isAndroid
         ? 'Android Device'
+        : Platform.isMacOS
+        ? (Platform.localHostname.trim().isNotEmpty
+              ? Platform.localHostname.trim()
+              : 'Mac')
         : 'Unknown Device';
     return _cachedDeviceModel!;
   }

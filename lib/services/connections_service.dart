@@ -7,6 +7,7 @@ import '../core/connections_poll_stats.dart';
 import '../models/connection_entry.dart';
 import '../platform/vpn_native_bridge.dart';
 import '../tunnel/linux_tunnel_backend.dart';
+import '../tunnel/macos_tunnel_backend.dart';
 import '../tunnel/windows_tunnel_backend.dart';
 import '../utils/mihomo_api_session.dart';
 import '../utils/mihomo_config_gen.dart';
@@ -33,7 +34,7 @@ class ConnectionsService {
   }
 
   static Future<ConnectionsSnapshot> _rawSnapshot() async {
-    if (Platform.isWindows || Platform.isLinux) {
+    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
       final api = await _fromClashApi();
       if (api.source == ConnectionsSource.coreApi) return api;
       final log = await _fromAccessLog();
@@ -60,7 +61,10 @@ class ConnectionsService {
       '${snapshot.source.name}:${activeClashPort() ?? ''}';
 
   static bool get supportsProcessNames =>
-      Platform.isWindows || Platform.isLinux || Platform.isAndroid;
+      Platform.isWindows ||
+      Platform.isLinux ||
+      Platform.isMacOS ||
+      Platform.isAndroid;
 
   static int? activeClashPort() {
     if (Platform.isWindows) {
@@ -69,12 +73,17 @@ class ConnectionsService {
     if (Platform.isLinux) {
       return LinuxTunnelBackend.activeInstance?.clashApiPort;
     }
+    if (Platform.isMacOS) {
+      return MacosTunnelBackend.activeInstance?.clashApiPort;
+    }
     if (Platform.isAndroid) return MihomoApiSession().port;
     return null;
   }
 
   static String activeClashSecret() => Platform.isLinux
       ? LinuxTunnelBackend.activeInstance?.clashApiSecret ?? ''
+      : Platform.isMacOS
+      ? MacosTunnelBackend.activeInstance?.clashApiSecret ?? ''
       : MihomoApiSession().secret;
 
   static Future<ConnectionsSnapshot> _fromClashApi() async {
@@ -293,6 +302,9 @@ class ConnectionsService {
     }
     if (Platform.isLinux) {
       return LinuxTunnelBackend.activeInstance?.exportConnectionLines();
+    }
+    if (Platform.isMacOS) {
+      return MacosTunnelBackend.activeInstance?.exportConnectionLines();
     }
     return null;
   }

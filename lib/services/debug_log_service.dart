@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 
 import '../tunnel/linux_tunnel_backend.dart';
+import '../tunnel/macos_tunnel_backend.dart';
 import '../tunnel/windows_tunnel_backend.dart';
 
 class DebugLogService {
@@ -32,6 +33,16 @@ class DebugLogService {
       return 'No core session logs yet. Connect first. '
           '(Also dumped to \$XDG_RUNTIME_DIR/'
           '${LinuxTunnelBackend.coresLogName} on disconnect.)';
+    }
+    if (Platform.isMacOS) {
+      final backend = MacosTunnelBackend.activeInstance;
+      if (backend != null) {
+        final text = backend.exportSessionLogs(maxLines: maxLines);
+        if (text.trim().isNotEmpty) return text;
+      }
+      return 'No core session logs yet. Connect first. '
+          '(Also dumped to Application Support/'
+          '${MacosTunnelBackend.coresLogName} on disconnect.)';
     }
     final text = await _channel.invokeMethod<String>('getXrayLogs', {
       'maxLines': maxLines,
