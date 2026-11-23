@@ -173,7 +173,7 @@ class _DesktopRailState extends ConsumerState<DesktopRail>
     _sync(_menu, _roomy, roomy);
     _expanded = expanded;
     _roomy = roomy;
-    final hasMode = Platform.isWindows || Platform.isLinux;
+    final hasMode = Platform.isWindows || Platform.isLinux || Platform.isMacOS;
     final destinations = [
       (Icons.dns_outlined, Icons.dns_rounded, l10n.navServers),
       (

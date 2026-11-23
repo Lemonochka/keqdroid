@@ -143,7 +143,7 @@ class _PermissionsScreenState extends ConsumerState<_PermissionsScreen>
       physics: const ClampingScrollPhysics(),
       children: [
         if (Platform.isAndroid) ..._androidPermissions(l10n),
-        if (Platform.isLinux) ..._linuxPermissions(l10n),
+        if (Platform.isLinux || Platform.isMacOS) ..._unixTunPermissions(l10n),
       ],
     );
   }
@@ -219,12 +219,16 @@ class _PermissionsScreenState extends ConsumerState<_PermissionsScreen>
     ];
   }
 
-  List<Widget> _linuxPermissions(AppLocalizations l10n) {
+  List<Widget> _unixTunPermissions(AppLocalizations l10n) {
     return [
-      _sectionHeader(l10n.settingsPermTunHeader),
+      _sectionHeader(
+        Platform.isMacOS
+            ? l10n.settingsPermTunHeaderMacos
+            : l10n.settingsPermTunHeader,
+      ),
       const ExpressiveCard(
         padding: EdgeInsets.zero,
-        child: _LinuxTunPasswordlessTile(),
+        child: _UnixTunPasswordlessTile(),
       ),
     ];
   }
@@ -287,29 +291,39 @@ class _PermissionInfoTile extends StatelessWidget {
   }
 }
 
-class _LinuxTunPasswordlessTile extends ConsumerStatefulWidget {
-  const _LinuxTunPasswordlessTile();
+class _UnixTunPasswordlessTile extends ConsumerStatefulWidget {
+  const _UnixTunPasswordlessTile();
 
   @override
-  ConsumerState<_LinuxTunPasswordlessTile> createState() =>
-      _LinuxTunPasswordlessTileState();
+  ConsumerState<_UnixTunPasswordlessTile> createState() =>
+      _UnixTunPasswordlessTileState();
 }
 
-class _LinuxTunPasswordlessTileState
-    extends ConsumerState<_LinuxTunPasswordlessTile> {
-  late bool _installed = LinuxTunnelBackend.isPasswordlessTunInstalled();
+class _UnixTunPasswordlessTileState
+    extends ConsumerState<_UnixTunPasswordlessTile> {
+  static bool _isInstalled() => Platform.isMacOS
+      ? MacosTunnelBackend.isPasswordlessTunInstalled()
+      : LinuxTunnelBackend.isPasswordlessTunInstalled();
+
+  static Future<bool> _install() => Platform.isMacOS
+      ? MacosTunnelBackend.installPasswordlessTun()
+      : LinuxTunnelBackend.installPasswordlessTun();
+
+  static Future<bool> _remove() => Platform.isMacOS
+      ? MacosTunnelBackend.removePasswordlessTun()
+      : LinuxTunnelBackend.removePasswordlessTun();
+
+  late bool _installed = _isInstalled();
   bool _busy = false;
 
   Future<void> _toggle(bool enable) async {
     if (_busy) return;
     setState(() => _busy = true);
     final l10n = AppLocalizations.of(context)!;
-    final ok = enable
-        ? await LinuxTunnelBackend.installPasswordlessTun()
-        : await LinuxTunnelBackend.removePasswordlessTun();
+    final ok = enable ? await _install() : await _remove();
     if (!mounted) return;
     setState(() {
-      _installed = LinuxTunnelBackend.isPasswordlessTunInstalled();
+      _installed = _isInstalled();
       _busy = false;
     });
     AppSnack.of(context).showSnackBar(

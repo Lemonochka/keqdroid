@@ -32,7 +32,7 @@ Future<String?> showAddProcessDialog(BuildContext context) async {
               controller: ctrl,
               textDirection: technicalInputDirection,
               decoration: InputDecoration(
-                hintText: Platform.isLinux
+                hintText: Platform.isLinux || Platform.isMacOS
                     ? l10n.splitAddAppHintLinux
                     : l10n.splitAddAppHint,
               ),
@@ -45,13 +45,12 @@ Future<String?> showAddProcessDialog(BuildContext context) async {
                 child: TextButton.icon(
                   onPressed: () async {
                     try {
-                      // у программ Linux расширения нет, фильтр по .exe не дал бы выбрать ни одну
+                      // Unix executables have no .exe extension.
+                      final unix = Platform.isLinux || Platform.isMacOS;
                       final r = await AppFileDialogs.pickFile(
                         dialogTitle: l10n.splitAddAppPickFile,
-                        type: Platform.isLinux ? FileType.any : FileType.custom,
-                        allowedExtensions: Platform.isLinux
-                            ? null
-                            : const ['exe'],
+                        type: unix ? FileType.any : FileType.custom,
+                        allowedExtensions: unix ? null : const ['exe'],
                       );
                       if (r?.path != null) {
                         pickedPath = r!.path!;

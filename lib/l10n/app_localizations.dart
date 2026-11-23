@@ -3107,6 +3107,12 @@ abstract class AppLocalizations {
   /// **'Linux'**
   String get settingsDesktopTitleLinux;
 
+  /// No description provided for @settingsDesktopTitleMacos.
+  ///
+  /// In en, this message translates to:
+  /// **'macOS'**
+  String get settingsDesktopTitleMacos;
+
   /// No description provided for @settingsDesktopSubtitle.
   ///
   /// In en, this message translates to:
@@ -4732,6 +4738,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'TUN mode (Linux)'**
   String get settingsPermTunHeader;
+
+  /// No description provided for @settingsPermTunHeaderMacos.
+  ///
+  /// In en, this message translates to:
+  /// **'TUN mode (macOS)'**
+  String get settingsPermTunHeaderMacos;
 
   /// No description provided for @settingsPermTunPasswordlessTitle.
   ///

@@ -24,12 +24,16 @@ class _DesktopSettingsScreenState
     await WindowsDesktopService.applySettings(next);
     if (Platform.isLinux) {
       await LinuxAutostart.setStartInTray(next.autostartInTray);
+    } else if (Platform.isMacOS) {
+      await MacosAutostart.setStartInTray(next.autostartInTray);
     }
   }
 
   Future<void> _syncWithSystem() async {
-    if (Platform.isLinux) {
-      final enabled = LinuxAutostart.isEnabled();
+    if (Platform.isLinux || Platform.isMacOS) {
+      final enabled = Platform.isLinux
+          ? LinuxAutostart.isEnabled()
+          : MacosAutostart.isEnabled();
       final settings = ref.read(settingsNotifierProvider).value;
       if (!mounted || settings == null) return;
       if (settings.launchAtStartup == enabled) return;
@@ -61,6 +65,14 @@ class _DesktopSettingsScreenState
       await ref
           .read(settingsNotifierProvider.notifier)
           .save(next.copyWith(launchAtStartup: LinuxAutostart.isEnabled()));
+      return;
+    }
+    if (Platform.isMacOS) {
+      await MacosAutostart.setEnabled(next.launchAtStartup);
+      if (!mounted) return;
+      await ref
+          .read(settingsNotifierProvider.notifier)
+          .save(next.copyWith(launchAtStartup: MacosAutostart.isEnabled()));
       return;
     }
     // allowElevation нужен выключению: старую задачу с правами без окна UAC не снять
@@ -109,10 +121,14 @@ class _DesktopSettingsScreenState
       ),
     );
 
-    final linux = Platform.isLinux;
+    final unixDesktop = Platform.isLinux || Platform.isMacOS;
     final autostart = settings.launchAtStartup && !_blockedByWindows;
     return ExpressivePage(
-      title: linux ? l10n.settingsDesktopTitleLinux : l10n.settingsDesktopTitle,
+      title: Platform.isLinux
+          ? l10n.settingsDesktopTitleLinux
+          : Platform.isMacOS
+          ? l10n.settingsDesktopTitleMacos
+          : l10n.settingsDesktopTitle,
       physics: const ClampingScrollPhysics(),
       children: [
         ExpressiveGroup(
@@ -125,7 +141,7 @@ class _DesktopSettingsScreenState
             ),
             _AppearanceSwitchTile(
               icon: Icons.power_settings_new_rounded,
-              title: linux
+              title: unixDesktop
                   ? l10n.settingsLaunchAtLogin
                   : l10n.settingsLaunchAtStartup,
               value: autostart,
@@ -153,7 +169,7 @@ class _DesktopSettingsScreenState
         ),
         if (!autostart)
           note(
-            linux
+            unixDesktop
                 ? l10n.settingsAutoConnectRequiresLogin
                 : l10n.settingsAutoConnectRequiresAutostart,
           ),

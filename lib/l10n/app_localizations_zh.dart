@@ -1678,6 +1678,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsDesktopTitleLinux => 'Linux';
 
   @override
+  String get settingsDesktopTitleMacos => 'macOS';
+
+  @override
   String get settingsDesktopSubtitle => '托盘、开机启动、自动连接';
 
   @override
@@ -2525,6 +2528,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settingsPermTunHeader => 'TUN 模式（Linux）';
+
+  @override
+  String get settingsPermTunHeaderMacos => 'TUN 模式（macOS）';
 
   @override
   String get settingsPermTunPasswordlessTitle => '免密码 TUN';

@@ -23,11 +23,14 @@ import 'package:keqdroid/screens/subscriptions_tab.dart';
 import 'package:keqdroid/screens/settings_tab.dart';
 import 'package:keqdroid/services/linux_background_service.dart';
 import 'package:keqdroid/services/linux_deep_links.dart';
+import 'package:keqdroid/services/macos_autostart.dart';
+import 'package:keqdroid/services/macos_background_service.dart';
 import 'package:keqdroid/services/memory_watch.dart';
 import 'package:keqdroid/services/storage_service.dart';
 import 'package:keqdroid/services/update_service.dart';
 import 'package:keqdroid/services/windows_prefs_store.dart';
 import 'package:keqdroid/tunnel/linux_tunnel_backend.dart';
+import 'package:keqdroid/tunnel/macos_tunnel_backend.dart';
 import 'package:keqdroid/shared/ui/app_theme.dart';
 import 'package:keqdroid/shared/ui/bottom_nav.dart';
 import 'package:keqdroid/shared/ui/floating_bar.dart';
@@ -42,10 +45,13 @@ import 'package:keqdroid/shared/ui/update_dialog.dart';
 import 'package:keqdroid/ui/desktop/desktop_home_screen.dart';
 import 'package:keqdroid/ui/responsive/window_breakpoints.dart';
 
-Future<void> main() async {
+Future<void> main(List<String> args) async {
   await runZonedGuarded(
     () async {
       WidgetsFlutterBinding.ensureInitialized();
+      if (Platform.isMacOS) {
+        MacosAutostart.captureLaunchArgs(args);
+      }
       // до всего остального: ошибка до runApp иначе не оставит следа
       await AppLogger.instance.enableFileLog();
       if (Platform.isWindows) {
@@ -77,6 +83,9 @@ Future<void> main() async {
           LinuxDeepLinks.captureLaunchLink();
           await LinuxTunnelBackend.cleanupStaleState();
           await LinuxBackgroundService.instance.initWindowAndTray();
+        } else if (Platform.isMacOS) {
+          await MacosTunnelBackend.cleanupStaleState();
+          await MacosBackgroundService.instance.initWindowAndTray();
         }
       }
 
@@ -110,7 +119,7 @@ Future<void> main() async {
       await LiquidWave.loadShaders();
       await LiquidBud.load();
 
-      final home = Platform.isWindows || Platform.isLinux
+      final home = Platform.isWindows || Platform.isLinux || Platform.isMacOS
           ? const DesktopHomeScreen()
           : const VpnHomeScreen();
 

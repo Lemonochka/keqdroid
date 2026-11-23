@@ -1678,6 +1678,9 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsDesktopTitleLinux => 'Linux';
 
   @override
+  String get settingsDesktopTitleMacos => 'macOS';
+
+  @override
   String get settingsDesktopSubtitle => 'سینی سیستم، اجرای خودکار، اتصال خودکار';
 
   @override
@@ -2525,6 +2528,9 @@ class AppLocalizationsFa extends AppLocalizations {
 
   @override
   String get settingsPermTunHeader => 'حالت TUN (لینوکس)';
+
+  @override
+  String get settingsPermTunHeaderMacos => 'حالت TUN (macOS)';
 
   @override
   String get settingsPermTunPasswordlessTitle => 'TUN بدون رمز';

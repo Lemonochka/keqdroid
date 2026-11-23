@@ -157,7 +157,7 @@ class _SplitTunnelingScreenState extends ConsumerState<SplitTunnelingScreen>
       AppSnack.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            Platform.isLinux
+            Platform.isLinux || Platform.isMacOS
                 ? l10n.splitAddAppInvalidLinux
                 : l10n.splitAddAppInvalid,
           ),
