@@ -232,7 +232,7 @@ class LocalPortResolver {
       };
     }
     return switch (code) {
-      98 => LocalPortIssue.occupied, // EADDRINUSE
+      48 || 98 => LocalPortIssue.occupied, // EADDRINUSE (Darwin 48, Linux 98)
       13 => port1024(e) ? LocalPortIssue.privileged : LocalPortIssue.reserved,
       _ => LocalPortIssue.unknown,
     };
