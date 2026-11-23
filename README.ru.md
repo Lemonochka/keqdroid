@@ -1,6 +1,6 @@
 # keqdroid
 
-Клиент прокси и VPN для Android, Android TV, Windows и Linux на основе Xray-core и mihomo. keqdroid объединяет в одном приложении управление подписками, конфигурациями серверов и маршрутизацией трафика.
+Клиент прокси и VPN для Android, Android TV, Windows, Linux и macOS на основе Xray-core и mihomo. keqdroid объединяет в одном приложении управление подписками, конфигурациями серверов и маршрутизацией трафика.
 
 [![Релиз](https://img.shields.io/github/v/release/Lemonochka/keqdroid?label=release)](https://github.com/Lemonochka/keqdroid/releases)
 [![Сборка](https://img.shields.io/github/actions/workflow/status/Lemonochka/keqdroid/ci.yml?branch=master&label=build)](https://github.com/Lemonochka/keqdroid/actions/workflows/ci.yml)
@@ -93,6 +93,8 @@ https://github.com/user-attachments/assets/e1f899dd-4f2c-4ca2-896c-1da64a3a5645
 | Windows | TUN | Весь трафик идёт через виртуальный адаптер | Администратор один раз, для установки службы keqdroid |
 | Linux | Прокси | Системный прокси в GNOME и KDE, в других средах настраивается вручную | Не требуются |
 | Linux | TUN | Весь трафик идёт через виртуальный адаптер | Root через `pkexec` или «TUN без пароля» в разделе «Настройки → Дополнительно → Разрешения» |
+| macOS | Прокси | Системный прокси через `networksetup` | Не требуются |
+| macOS | TUN | Весь трафик идёт через адаптер `utun` | Запрос администратора или «TUN без пароля» в разделе «Настройки → Дополнительно → Разрешения» |
 
 **Android.** Подключением можно управлять из уведомления, плитки быстрых настроек, виджета на рабочем столе и ярлыков на значке приложения. Маршрутизация по приложениям и перехват DNS работают только в режиме VPN. Активная сессия VPN восстанавливается после обновления приложения и перезагрузки устройства.
 

@@ -8,6 +8,7 @@
 - Android: Android Studio с Android SDK, JDK 17 или новее
 - Windows: Visual Studio 2022 или новее с нагрузкой Desktop development with C++
 - Linux: Ubuntu 22.04, отдельно или в WSL
+- macOS: macOS 13 или новее с Xcode Command Line Tools
 - ядра: Go и git, для ядер Android ещё Android NDK
 - установщик Windows: Inno Setup 7.1.1
 
@@ -55,6 +56,25 @@ wsl -d Ubuntu-22.04 -e bash /mnt/c/<путь>/keqdroid/tool/build_linux_native.s
 ```
 
 `build_linux_native.sh` копирует проект на диск WSL, запускает там оба скрипта и возвращает пакеты в `release/<версия>/`. Так Linux собирает `make_release.ps1`.
+
+## macOS
+
+Поддерживаются Apple Silicon (`arm64`) и Intel (`x86_64`). Собранные ядра для macOS не хранятся в git — их нужно собрать локально перед сборкой приложения:
+
+```bash
+bash tool/build_macos_cores.sh            # под текущую архитектуру (arm64 или x86_64)
+bash tool/build_macos_cores.sh universal  # универсальные бинарники arm64 + x86_64 через lipo
+flutter pub get
+flutter build macos --release
+```
+
+Сборка и упаковка `.dmg` в `release/<версия>/`:
+
+```bash
+bash tool/package_macos.sh universal      # или arm64 / x86_64 / native
+```
+
+Фаза сборки Xcode копирует `assets/bin/macos/{xray,mihomo,geoip.dat,geosite.dat}` в `keqdroid.app/Contents/Resources/bin/`. Для подписи сертификатом Developer ID вместо ad-hoc задайте переменную `MACOS_SIGN_IDENTITY`.
 
 ## Проверки
 

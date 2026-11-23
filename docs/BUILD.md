@@ -8,6 +8,7 @@ English | [Русский](BUILD.ru.md)
 - Android: Android Studio with the Android SDK, JDK 17 or newer
 - Windows: Visual Studio 2022 or newer with the Desktop development with C++ workload
 - Linux: Ubuntu 22.04, on its own or in WSL
+- macOS: macOS 13 or newer with Xcode Command Line Tools
 - Cores: Go and git, plus the Android NDK for the Android cores
 - Windows installer: Inno Setup 7.1.1
 
@@ -55,6 +56,25 @@ wsl -d Ubuntu-22.04 -e bash /mnt/c/<path>/keqdroid/tool/build_linux_native.sh
 ```
 
 `build_linux_native.sh` copies the project to the WSL disk, runs both scripts there and copies the packages back to `release/<version>/`. This is how `make_release.ps1` builds Linux.
+
+## macOS
+
+Both Apple Silicon (`arm64`) and Intel (`x86_64`) are supported. Prebuilt macOS cores are not stored in git; build them locally before building or packaging the app:
+
+```bash
+bash tool/build_macos_cores.sh            # native host arch (arm64 or x86_64)
+bash tool/build_macos_cores.sh universal  # universal arm64 + x86_64 binaries via lipo
+flutter pub get
+flutter build macos --release
+```
+
+To build and package a `.dmg` in `release/<version>/`:
+
+```bash
+bash tool/package_macos.sh universal      # or arm64 / x86_64 / native
+```
+
+The Xcode build embeds `assets/bin/macos/{xray,mihomo,geoip.dat,geosite.dat}` into `keqdroid.app/Contents/Resources/bin/`. Pass `MACOS_SIGN_IDENTITY` to sign with a Developer ID certificate instead of the default ad-hoc signature.
 
 ## Checks
 
