@@ -86,7 +86,124 @@ thin_bundle_to_arch() {
 }
 
 STAGE_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/keqdroid-dmg.XXXXXX")"
-trap 'rm -rf "$STAGE_ROOT"' EXIT
+ATTACHED_DEV=""
+cleanup() {
+  if [ -n "$ATTACHED_DEV" ]; then
+    hdiutil detach "$ATTACHED_DEV" -force >/dev/null 2>&1 || true
+    ATTACHED_DEV=""
+  fi
+  rm -rf "$STAGE_ROOT"
+}
+trap cleanup EXIT
+
+create_styled_dmg() {
+  local stage_dir="$1"
+  local vol_name="$2"
+  local dmg_path="$3"
+  local rw_dmg="$STAGE_ROOT/rw.dmg"
+
+  rm -f "$rw_dmg" "$dmg_path"
+
+  # Leave headroom on the read-write image so Finder can write .DS_Store cleanly.
+  local size_mb
+  size_mb="$(( $(du -sm "$stage_dir" | awk '{print $1}') + 32 ))"
+
+  hdiutil create \
+    -volname "$vol_name" \
+    -srcfolder "$stage_dir" \
+    -fs HFS+ \
+    -fsargs "-c c=64,a=16,e=16" \
+    -format UDRW \
+    -size "${size_mb}m" \
+    -ov \
+    "$rw_dmg"
+
+  local attach_out mount_dir disk_name
+  attach_out="$(hdiutil attach -readwrite -noverify -noautoopen "$rw_dmg")"
+  ATTACHED_DEV="$(printf '%s\n' "$attach_out" | awk '/\/Volumes\// {print $1; exit}')"
+  mount_dir="$(printf '%s\n' "$attach_out" | awk -F '\t' '/\/Volumes\// {print $NF; exit}')"
+  disk_name="$(basename "$mount_dir")"
+
+  if [ -z "$ATTACHED_DEV" ] || [ -z "$mount_dir" ]; then
+    echo "Failed to mount temporary DMG: $rw_dmg" >&2
+    exit 1
+  fi
+
+  if ! osascript - "$disk_name" "$mount_dir" <<'APPLESCRIPT'
+on run argv
+  set diskName to item 1 of argv
+  set mountDir to item 2 of argv
+  set dsStore to quoted form of (mountDir & "/.DS_Store")
+
+  tell application "Finder"
+    tell disk diskName
+      open
+      set theX to 200
+      set theY to 120
+      set theW to 660
+      set theH to 400
+
+      tell container window
+        set current view to icon view
+        set toolbar visible to false
+        set statusbar visible to false
+        set bounds to {theX, theY, theX + theW, theY + theH}
+      end tell
+
+      set opts to the icon view options of container window
+      tell opts
+        set icon size to 128
+        set text size to 14
+        set arrangement to not arranged
+      end tell
+
+      set extension hidden of item "keqdroid.app" to true
+      set position of item "keqdroid.app" to {185, 185}
+      set position of item "Applications" to {475, 185}
+
+      close
+      open
+      delay 1
+      tell container window
+        set statusbar visible to false
+        set bounds to {theX, theY, theX + theW - 10, theY + theH - 10}
+      end tell
+      delay 1
+      tell container window
+        set statusbar visible to false
+        set bounds to {theX, theY, theX + theW, theY + theH}
+      end tell
+      update without registering applications
+      delay 2
+      close
+    end tell
+
+    repeat 15 times
+      if (do shell script "[ -s " & dsStore & " ] && echo 1 || echo 0") is "1" then exit repeat
+      delay 1
+    end repeat
+  end tell
+end run
+APPLESCRIPT
+  then
+    echo "Warning: Finder layout styling skipped (headless or AppleScript denied)" >&2
+  fi
+
+  rm -rf "$mount_dir/.fseventsd" "$mount_dir/.Trashes" 2>/dev/null || true
+  sync
+  sleep 1
+
+  hdiutil detach "$ATTACHED_DEV" >/dev/null || hdiutil detach "$ATTACHED_DEV" -force >/dev/null
+  ATTACHED_DEV=""
+
+  hdiutil convert "$rw_dmg" \
+    -format UDZO \
+    -imagekey zlib-level=9 \
+    -ov \
+    -o "$dmg_path"
+
+  rm -f "$rw_dmg"
+}
 
 mkdir -p "$OUT_DIR"
 
@@ -124,15 +241,9 @@ for arch in "${ARCHS[@]}"; do
 
   ln -s /Applications "$STAGE_DIR/Applications"
   DMG_PATH="$OUT_DIR/keqdroid-${VERSION}-macos-${arch}.dmg"
-  rm -f "$DMG_PATH"
 
   echo "Creating $DMG_PATH ..."
-  hdiutil create \
-    -volname "keqdroid $VERSION ($arch)" \
-    -srcfolder "$STAGE_DIR" \
-    -ov \
-    -format UDZO \
-    "$DMG_PATH"
+  create_styled_dmg "$STAGE_DIR" "keqdroid $VERSION" "$DMG_PATH"
 
   echo "Done: $DMG_PATH ($(wc -c < "$DMG_PATH" | tr -d ' ') bytes)"
   rm -rf "$STAGE_DIR"
