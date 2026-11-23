@@ -97,6 +97,9 @@ void main() {
     var desktopRunsIt = false;
     final realCompositor = LinuxAutostart.compositor;
     final realDesktop = LinuxAutostart.desktopRunsAutostart;
+    final realExecutable = LinuxAutostart.executablePath;
+    final realEnvironment = LinuxAutostart.environment;
+    final realFileExists = LinuxAutostart.fileExists;
 
     File entry() => File(p.join(config.path, 'autostart', 'keqdroid.desktop'));
     File hyprlandDropIn() => File(
@@ -150,6 +153,9 @@ void main() {
       LinuxAutostart.compositor = realCompositor;
       LinuxAutostart.homeOverride = null;
       LinuxAutostart.desktopRunsAutostart = realDesktop;
+      LinuxAutostart.executablePath = realExecutable;
+      LinuxAutostart.environment = realEnvironment;
+      LinuxAutostart.fileExists = realFileExists;
       config.deleteSync(recursive: true);
     });
 
@@ -403,6 +409,81 @@ void main() {
       expect(entry().readAsStringSync(), own);
       expect(hyprlandDropIn().existsSync(), isFalse);
     });
+
+    test(
+      'on NixOS autostart writes the system profile path instead of the store '
+      'path',
+      () async {
+        const storeExe =
+            '/nix/store/9f0a-keqdroid-0.39.1/lib/keqdroid/keqdroid';
+        const profileExe = '/run/current-system/sw/bin/keqdroid';
+        wm = 'hyprland';
+        put(hyprConf(), '');
+        LinuxAutostart.executablePath = () => storeExe;
+        LinuxAutostart.fileExists = (path) => path == profileExe;
+
+        await LinuxAutostart.setEnabled(true);
+
+        expect(
+          entry().readAsStringSync(),
+          LinuxAutostart.contentFor(profileExe),
+        );
+        expect(
+          hyprConf().readAsStringSync(),
+          LinuxAutostart.startLines('hyprland', hyprConf().path, profileExe),
+        );
+      },
+    );
+
+    test('on NixOS a user profile link is picked when the package is not '
+        'system-wide, and refresh replaces an old store path', () async {
+      const oldStoreExe =
+          '/nix/store/0001-keqdroid-0.39.0/lib/keqdroid/keqdroid';
+      const newStoreExe =
+          '/nix/store/0002-keqdroid-0.39.1/lib/keqdroid/keqdroid';
+      const userProfileExe = '/etc/profiles/per-user/alice/bin/keqdroid';
+      wm = 'hyprland';
+      put(entry(), LinuxAutostart.contentFor(oldStoreExe));
+      put(
+        hyprConf(),
+        LinuxAutostart.startLines('hyprland', hyprConf().path, oldStoreExe),
+      );
+      LinuxAutostart.executablePath = () => newStoreExe;
+      LinuxAutostart.environment = () => const {'USER': 'alice'};
+      LinuxAutostart.fileExists = (path) => path == userProfileExe;
+
+      await LinuxAutostart.refresh();
+
+      expect(
+        entry().readAsStringSync(),
+        LinuxAutostart.contentFor(userProfileExe),
+      );
+      expect(
+        hyprConf().readAsStringSync(),
+        LinuxAutostart.startLines('hyprland', hyprConf().path, userProfileExe),
+      );
+    });
+
+    test(
+      'without a Nix profile link autostart falls back to the GTK wrapper in '
+      'the same store package',
+      () async {
+        const storeDir = '/nix/store/9f0a-keqdroid-0.39.1';
+        const storeExe = '$storeDir/lib/keqdroid/keqdroid';
+        const wrappedExe = '$storeDir/bin/keqdroid';
+        LinuxAutostart.homeOverride = '/home/alice';
+        LinuxAutostart.executablePath = () => storeExe;
+        LinuxAutostart.environment = () => const {'USER': 'alice'};
+        LinuxAutostart.fileExists = (path) => path == wrappedExe;
+
+        await LinuxAutostart.setEnabled(true);
+
+        expect(
+          entry().readAsStringSync(),
+          LinuxAutostart.contentFor(wrappedExe),
+        );
+      },
+    );
   });
 
   group('start in the tray', () {
