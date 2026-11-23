@@ -739,7 +739,8 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       includePackages: split.includePackages,
       excludePackages: split.excludePackages,
     );
-    final processNames = (Platform.isWindows || Platform.isLinux)
+    final processNames =
+        (Platform.isWindows || Platform.isLinux || Platform.isMacOS)
         ? processNamesForSplit(
             includePackages: split.includePackages,
             excludePackages: split.excludePackages,
@@ -752,7 +753,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       final permitted = await engine.requestVpnPermission();
       if (!permitted) throw const VpnPermissionDeniedException();
     }
-    if ((Platform.isWindows || Platform.isLinux) &&
+    if ((Platform.isWindows || Platform.isLinux || Platform.isMacOS) &&
         connectionMode == ConnectionMode.proxy &&
         routingMode != AppRoutingMode.allProxy) {
       AppLogger.instance.warn(
@@ -792,7 +793,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     // настроенный порт может держать сосед, а на Windows диапазоны изымают Hyper-V и WSL,
     // поэтому подбираем рабочий и настройки не переписываем
     LocalPortPlan? portPlan;
-    if (Platform.isWindows || Platform.isLinux) {
+    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
       // на ходу порты держит работающее ядро, и подбор принял бы их за чужие
       final plan = reuse?.ports ?? await LocalPortResolver.resolve(settings);
       if (reuse == null) {
@@ -864,7 +865,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       mihomoApi.clear();
     }
 
-    final desktop = Platform.isWindows || Platform.isLinux;
+    final desktop = Platform.isWindows || Platform.isLinux || Platform.isMacOS;
     final tunSession = connectionMode == ConnectionMode.tun;
     final strictRoute = settings.tun.strictRouteEnabled(
       windows: Platform.isWindows,
@@ -876,7 +877,9 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
         tunSession &&
         (settings.tun.ipv6 != TunSettings.ipv6Bypass ||
             (Platform.isLinux && strictRoute)) &&
-        await hostHasGlobalIpv6(excludeInterfaceName: kTunInterfaceName);
+        await hostHasGlobalIpv6(
+          excludeInterfaceName: desktopTunInterfaceName(),
+        );
     final ipv6ViaVpn =
         tunSession &&
         settings.tun.ipv6 == TunSettings.ipv6Vpn &&
@@ -924,7 +927,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
         );
       }
       mihomoTun = MihomoTunOptions(
-        device: kTunInterfaceName,
+        device: desktopTunInterfaceName(),
         stack: picked.stack,
         mtu: settings.tun.mtu,
         autoRoute: settings.tun.autoRoute,
@@ -1066,6 +1069,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
             desktopTun: xrayDesktopTun
                 ? DesktopTunOptions(
                     windows: Platform.isWindows,
+                    macos: Platform.isMacOS,
                     mtu: settings.tun.mtu,
                     autoRoute: settings.tun.autoRoute,
                     strictRoute: strictRoute,

@@ -25,6 +25,7 @@ class DesktopTunOptions {
   const DesktopTunOptions({
     required this.windows,
     required this.mtu,
+    this.macos = false,
     this.autoRoute = true,
     this.strictRoute = false,
     this.captureIpv6 = false,
@@ -36,6 +37,7 @@ class DesktopTunOptions {
   });
 
   final bool windows;
+  final bool macos;
   final int mtu;
   final bool autoRoute;
   final bool strictRoute;

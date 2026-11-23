@@ -34,7 +34,10 @@ enum VpnCoreSkip {
 
 // одно место вместо трёх: раньше только Android было записано в трёх файлах подряд
 bool get mihomoShipsHere =>
-    Platform.isAndroid || Platform.isWindows || Platform.isLinux;
+    Platform.isAndroid ||
+    Platform.isWindows ||
+    Platform.isLinux ||
+    Platform.isMacOS;
 
 ServerFormat detectServerFormat(String config) {
   final trimmed = config.trim();

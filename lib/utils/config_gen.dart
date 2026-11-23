@@ -2635,7 +2635,7 @@ class ConfigGeneratorV2 {
   static Map<String, dynamic> _desktopTunSettings(DesktopTunOptions tun) {
     final v6 = tun.captureIpv6;
     return {
-      'name': kTunInterfaceName,
+      'name': tun.macos ? kMacosTunInterfaceName : kTunInterfaceName,
       'mtu': tun.mtu,
       'gateway': [kTunInterfacePrefix, if (v6) kTunInterfaceIpv6Prefix],
       if (tun.windows) 'dns': [kTunDnsAddress],
