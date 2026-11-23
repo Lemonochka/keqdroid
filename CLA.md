@@ -1,6 +1,6 @@
 # keqdroid Contributor License Agreement
 
-Version 1.0, 19 November 2026
+Version 1.1, 23 November 2026
 
 This agreement is between you and Lemonochka, the owner of the GitHub account
 https://github.com/Lemonochka and of the keqdroid project (the "Maintainer").
@@ -78,7 +78,11 @@ You confirm that:
 2. if You made a Contribution as part of Your job, Your employer has allowed
    You to submit it under this agreement or does not claim rights in it;
 3. if a Contribution includes material written by someone else, You say so in
-   the Contribution and name its author and license.
+   the Contribution and name its author and license;
+4. if You used automated or AI tools in preparing a Contribution, You have
+   reviewed, understood and tested the result Yourself, You have the right to
+   submit it under this agreement, and it does not include third-party
+   material that You cannot license under section 2.
 
 You provide Your Contributions as is, without warranty of any kind, and You
 are not expected to support them.

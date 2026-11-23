@@ -17,3 +17,5 @@ The signature is recorded once and covers all your contributions, earlier and la
 ## Before you open a pull request
 
 `flutter analyze` must print `No issues found!` and `flutter test` must pass. Building, the cores and tests are described in [docs/BUILD.md](docs/BUILD.md).
+
+Do not submit AI-generated code that you have not reviewed and tested in the application yourself. If AI tools were used to prepare the pull request, note that in the description.
