@@ -55,10 +55,19 @@ final class MacosPlatformBridge {
     }
   }
 
+  func notifyAppWillTerminate() {
+    DispatchQueue.main.async { [weak self] in
+      self?.vpnChannel.invokeMethod("onAppWillTerminate", arguments: nil)
+    }
+  }
+
   private func handleVpnCall(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
     switch call.method {
     case "getPendingDeepLink":
       result(appDelegate?.takePendingDeepLink())
+    case "confirmAppTerminate":
+      appDelegate?.confirmTerminate()
+      result(nil)
     case "getDeviceModel":
       result(Self.hardwareModel())
     case "getAppIcon":

@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../core/app_logger.dart';
 import '../services/hotkey_service.dart';
 import '../services/linux_deep_links.dart';
+import '../services/macos_background_service.dart';
 import '../utils/system_accent.dart';
 
 class VpnNativeBridge {
@@ -243,6 +244,10 @@ class VpnNativeBridge {
         HotkeyService.dispatchAction(
           args is Map ? args['action'] as String? : null,
         );
+        return;
+      }
+      if (call.method == 'onAppWillTerminate' && Platform.isMacOS) {
+        await MacosBackgroundService.instance.quit(fromAppTerminate: true);
         return;
       }
       await _launchHandler?.call(call);

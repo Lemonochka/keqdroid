@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io' show exit;
 import 'dart:ui' show Rect, Size;
 
 import 'package:flutter/foundation.dart' show ValueNotifier, visibleForTesting;
@@ -7,6 +8,7 @@ import 'package:tray_manager/tray_manager.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../core/app_logger.dart';
+import '../platform/vpn_native_bridge.dart';
 import '../tunnel/tunnel_state.dart';
 import 'macos_autostart.dart';
 import 'storage_service.dart';
@@ -296,7 +298,10 @@ class MacosBackgroundService with WindowListener, TrayListener {
     }
   }
 
-  Future<void> quit() async {
+  @visibleForTesting
+  static void Function(int code) exitProcess = exit;
+
+  Future<void> quit({bool fromAppTerminate = false}) async {
     if (_quitting) return;
     _quitting = true;
     try {
@@ -310,6 +315,13 @@ class MacosBackgroundService with WindowListener, TrayListener {
       await trayManager.destroy();
     } catch (_) {}
     await windowManager.setPreventClose(false);
+    if (fromAppTerminate) {
+      try {
+        await VpnNativeBridge.channel.invokeMethod<void>('confirmAppTerminate');
+      } catch (_) {}
+      return;
+    }
     await windowManager.destroy();
+    exitProcess(0);
   }
 }
