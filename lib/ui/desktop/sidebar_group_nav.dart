@@ -394,68 +394,108 @@ class _SidebarGroupNavState extends ConsumerState<SidebarGroupNav> {
             ),
           ),
         Expanded(
-          child: NotificationListener<ScrollMetricsNotification>(
-            onNotification: _onMetrics,
-            child: NotificationListener<ScrollNotification>(
-              onNotification: _onCarouselScroll,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  ScrollConfiguration(
-                    behavior: ScrollConfiguration.of(context).copyWith(
-                      // полоса прокрутки, которую Flutter на ПК ставит сам, у карусели елозила сбоку
-                      scrollbars: false,
-                      physics: const ClampingScrollPhysics(),
-                      dragDevices: const {
-                        PointerDeviceKind.touch,
-                        PointerDeviceKind.stylus,
-                        PointerDeviceKind.invertedStylus,
-                        PointerDeviceKind.trackpad,
-                        PointerDeviceKind.mouse,
-                      },
-                    ),
-                    child: _RelayoutAfterRebuild(
-                      child: CarouselView.weighted(
-                        controller: _carousel,
-                        scrollDirection: Axis.vertical,
-                        // при [6, 1] последняя группа во Flutter 3.44 не становится большой, прокрутка упирается в конец;
-                        // по кругу не крутим: список не круговой, и прыжок с последней на первую путал
-                        flexWeights: _weights,
-                        itemSnapping: true,
-                        padding: const EdgeInsets.symmetric(vertical: 4),
-                        backgroundColor: scheme.surfaceContainerHigh,
-                        // картинка и затемнение сглаживались по краю каждое само, и край светился полоской;
-                        // сперва слой, потом скругление, а фон обложки шире её на 1 dp
-                        itemClipBehavior: Clip.antiAliasWithSaveLayer,
-                        onTap: _open,
-                        children: [
-                          for (final group in _groups)
-                            _UnsnappedCover(
-                              motion: _carousel,
-                              child: _GroupCover(
-                                group: group,
-                                title: _titleFor(group, l10n),
-                                labels: labels,
-                                through:
-                                    connected &&
-                                    group.servers.any((s) => s.id == activeId),
-                              ),
-                            ),
-                        ],
+          child: LayoutBuilder(
+            builder: (context, box) {
+              final heroWidth = box.maxWidth;
+              final heroHeight = math.max(
+                0.0,
+                box.maxHeight * _weights[1] / _weights.reduce((a, b) => a + b) -
+                    8,
+              );
+              // в узкой полоске стандартный InkWell брал радиус волны под её высоту, и на выросшей
+              // обложке волна замирала кругом посередине, не доставая до углов
+              final splashRadius =
+                  0.5 *
+                  math.sqrt(heroWidth * heroWidth + heroHeight * heroHeight);
+              final overlayColor = WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.pressed) ||
+                    states.contains(WidgetState.focused)) {
+                  return scheme.onSurface.withValues(alpha: 0.1);
+                }
+                if (states.contains(WidgetState.hovered)) {
+                  return scheme.onSurface.withValues(alpha: 0.08);
+                }
+                return null;
+              });
+              return NotificationListener<ScrollMetricsNotification>(
+                onNotification: _onMetrics,
+                child: NotificationListener<ScrollNotification>(
+                  onNotification: _onCarouselScroll,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      ScrollConfiguration(
+                        behavior: ScrollConfiguration.of(context).copyWith(
+                          // полоса прокрутки, которую Flutter на ПК ставит сам, у карусели елозила сбоку
+                          scrollbars: false,
+                          physics: const ClampingScrollPhysics(),
+                          dragDevices: const {
+                            PointerDeviceKind.touch,
+                            PointerDeviceKind.stylus,
+                            PointerDeviceKind.invertedStylus,
+                            PointerDeviceKind.trackpad,
+                            PointerDeviceKind.mouse,
+                          },
+                        ),
+                        child: _RelayoutAfterRebuild(
+                          child: CarouselView.weighted(
+                            controller: _carousel,
+                            scrollDirection: Axis.vertical,
+                            // при [6, 1] последняя группа во Flutter 3.44 не становится большой, прокрутка упирается в конец;
+                            // по кругу не крутим: список не круговой, и прыжок с последней на первую путал
+                            flexWeights: _weights,
+                            itemSnapping: true,
+                            enableSplash: false,
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            backgroundColor: scheme.surfaceContainerHigh,
+                            // картинка и затемнение сглаживались по краю каждое само, и край светился полоской;
+                            // сперва слой, потом скругление, а фон обложки шире её на 1 dp
+                            itemClipBehavior: Clip.antiAliasWithSaveLayer,
+                            children: [
+                              for (var i = 0; i < _groups.length; i++)
+                                Stack(
+                                  fit: StackFit.expand,
+                                  children: [
+                                    _UnsnappedCover(
+                                      motion: _carousel,
+                                      child: _GroupCover(
+                                        group: _groups[i],
+                                        title: _titleFor(_groups[i], l10n),
+                                        labels: labels,
+                                        through:
+                                            connected &&
+                                            _groups[i].servers.any(
+                                              (s) => s.id == activeId,
+                                            ),
+                                      ),
+                                    ),
+                                    Material(
+                                      type: MaterialType.transparency,
+                                      child: InkWell(
+                                        radius: splashRadius,
+                                        overlayColor: overlayColor,
+                                        onTap: () => _open(i),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
+                      // колесо забираем поверх карусели, раньше её Scrollable: тянуть и нажимать
+                      // сквозь этот слой можно, у Flutter прокрутка колесом и тяга разрешаются вместе
+                      Positioned.fill(
+                        child: Listener(
+                          behavior: HitTestBehavior.translucent,
+                          onPointerSignal: _onWheel,
+                        ),
+                      ),
+                    ],
                   ),
-                  // колесо забираем поверх карусели, раньше её Scrollable: тянуть и нажимать
-                  // сквозь этот слой можно, у Flutter прокрутка колесом и тяга разрешаются вместе
-                  Positioned.fill(
-                    child: Listener(
-                      behavior: HitTestBehavior.translucent,
-                      onPointerSignal: _onWheel,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+                ),
+              );
+            },
           ),
         ),
       ],

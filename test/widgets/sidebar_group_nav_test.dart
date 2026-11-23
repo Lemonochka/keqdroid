@@ -1219,4 +1219,39 @@ void main() {
       expect(_big(tester), kManualServerGroupKey);
     },
   );
+
+  testWidgets(
+    'при клике по узкой обложке волна доходит до углов раскрытой карточки, а не кругом посередине',
+    (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+      addTearDown(() => debugDefaultTargetPlatformOverride = null);
+      await _pumpOnScreen(tester, 1);
+
+      await tester.tapAt(tester.getCenter(_cover('sub-b')));
+      for (var ms = 0; ms < 225; ms += 15) {
+        await tester.pump(const Duration(milliseconds: 15));
+      }
+
+      final cover = tester.getRect(_cover('sub-b'));
+      expect(cover.height, greaterThan(240));
+      final frame = await DesktopSkiaFrame.capture(tester);
+      ({int r, int b}) rgbAt(double dx, double dy) {
+        final i = (dy.floor() * frame.width + dx.floor()) * 4;
+        return (r: frame.rgba[i], b: frame.rgba[i + 2]);
+      }
+
+      // с одной из сторон верхний угол свободен от синей фигуры: там чистый красный фон обложки,
+      // который волна приглушает точно так же, как и в середине карточки
+      final center = rgbAt(cover.center.dx, cover.center.dy);
+      final leftCorner = rgbAt(cover.left + 28, cover.top + 28);
+      final rightCorner = rgbAt(cover.right - 28, cover.top + 28);
+      final redCorner = leftCorner.b < rightCorner.b ? leftCorner : rightCorner;
+      expect(redCorner.b, lessThan(10));
+      expect(center.r, lessThan(245));
+      expect(redCorner.r, closeTo(center.r, 3));
+
+      await tester.pumpAndSettle();
+      debugDefaultTargetPlatformOverride = null;
+    },
+  );
 }
