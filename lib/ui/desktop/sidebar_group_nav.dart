@@ -40,8 +40,19 @@ class SidebarGroupNav extends ConsumerStatefulWidget {
 
 class _SidebarGroupNavState extends ConsumerState<SidebarGroupNav> {
   static const _weights = [1, 6, 1];
+  static final _wheelSpring = SpringDescription.withDampingRatio(
+    mass: 1,
+    stiffness: 160,
+    ratio: 1,
+  );
+  static final _wheelOmega = math.sqrt(
+    _wheelSpring.stiffness / _wheelSpring.mass,
+  );
 
-  final _carousel = _CoverController();
+  static double _unitFor(double viewportDimension) =>
+      viewportDimension * _weights.first / _weights.reduce((a, b) => a + b);
+
+  late final _carousel = _CoverController(onDragEnd: _onDragEnd);
   List<ServerGroupRef> _groups = const [];
   List<ServerItem>? _groupsOf;
   List<Subscription>? _groupsSubs;
@@ -50,22 +61,42 @@ class _SidebarGroupNavState extends ConsumerState<SidebarGroupNav> {
   @override
   void initState() {
     super.initState();
-    ServerGroupAnchors.instance.currentGroup.addListener(_follow);
+    ServerGroupAnchors.instance.currentGroup.addListener(_onGroupChanged);
   }
 
   @override
   void dispose() {
-    ServerGroupAnchors.instance.currentGroup.removeListener(_follow);
+    ServerGroupAnchors.instance.currentGroup.removeListener(_onGroupChanged);
     _settle?.cancel();
     _carousel.dispose();
     super.dispose();
+  }
+
+  bool get _carouselAtShown {
+    if (_target != _shown) return false;
+    if (!_carousel.hasClients) return true;
+    final position = _carousel.position;
+    if (!position.hasPixels || !position.hasViewportDimension) return true;
+    if (position.isScrollingNotifier.value) return true;
+    return (position.pixels - _unit(position) * _shown).abs() < 0.5;
+  }
+
+  void _onGroupChanged() {
+    if (!_dragging && _jumps == 0 && _settlingDrag) {
+      _settlingDrag = false;
+      _carousel.snapTarget = null;
+    }
+    _follow();
   }
 
   void _follow() {
     final key = ServerGroupAnchors.instance.currentGroup.value;
     final i = _groups.indexWhere((g) => g.key == key);
     // пока колесо крутят, список стоит на прежней группе и тянул бы карусель назад
-    if (i < 0 || i == _shown || _settle != null || _jumps > 0) return;
+    if (i < 0 || _settle != null || _dragging || _settlingDrag || _jumps > 0) {
+      return;
+    }
+    if (i == _shown && _carouselAtShown) return;
     _go(i);
   }
 
@@ -73,21 +104,22 @@ class _SidebarGroupNavState extends ConsumerState<SidebarGroupNav> {
   // пролистанная обложка вспухала и сжималась
   int _jumps = 0;
 
-  void _go(int i, {Duration duration = const Duration(milliseconds: 520)}) {
+  void _go(int i) {
     _shown = i;
     _target = i;
-    unawaited(
-      _carousel.animateToItem(
-        i,
-        duration: duration,
-        curve: Curves.easeOutCubic,
-      ),
-    );
+    _springTo(i);
   }
 
   // moveCarousel: false, когда карусель уже едет туда сама (колесо, тяга)
   void _open(int i, {bool moveCarousel = true}) {
     final key = _groups[i].key;
+    _settle?.cancel();
+    _settle = null;
+    _wheel = 0;
+    _dragging = false;
+    _settlingDrag = false;
+    _carousel.fromDrag = false;
+    _carousel.snapTarget = null;
     widget.onOpenServers();
     if (moveCarousel) {
       _go(i);
@@ -100,14 +132,33 @@ class _SidebarGroupNavState extends ConsumerState<SidebarGroupNav> {
     _jumps++;
     // список мог ещё ни разу не строиться, прыгаем после кадра, когда якоря на месте
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      var groupMoved = false;
+      void markMoved() => groupMoved = true;
+      ServerGroupAnchors.instance.currentGroup.addListener(markMoved);
+
+      void finishJump() {
+        ServerGroupAnchors.instance.currentGroup.removeListener(markMoved);
+        _jumps--;
+        // прыжок перебили прокруткой списка: карусель встаёт туда, где он остановился
+        if (mounted &&
+            (groupMoved ||
+                ServerGroupAnchors.instance.currentGroup.value != before ||
+                !_carouselAtShown)) {
+          _follow();
+        }
+      }
+
       try {
         await ServerGroupAnchors.instance.jumpTo(key);
       } finally {
-        _jumps--;
-      }
-      // прыжок перебили прокруткой списка: карусель встаёт туда, где он остановился
-      if (mounted && ServerGroupAnchors.instance.currentGroup.value != before) {
-        _follow();
+        final phase = SchedulerBinding.instance.schedulerPhase;
+        if (phase == SchedulerPhase.transientCallbacks ||
+            phase == SchedulerPhase.midFrameMicrotasks ||
+            phase == SchedulerPhase.persistentCallbacks) {
+          WidgetsBinding.instance.addPostFrameCallback((_) => finishJump());
+        } else {
+          finishJump();
+        }
       }
     });
     // на уже открытой вкладке кадр никто не просит, и после тяги список ждал движения мыши
@@ -118,6 +169,7 @@ class _SidebarGroupNavState extends ConsumerState<SidebarGroupNav> {
   int _target = 0;
   Timer? _settle;
   bool _dragging = false;
+  bool _settlingDrag = false;
 
   // Своя прокрутка карусели после каждого щелчка доводилась до ближайшей обложки и дёргалась туда-обратно.
   // Щелчок (в Windows 100 пикселей при трёх строках) делает шаг сразу, без ожидания анимации,
@@ -131,9 +183,16 @@ class _SidebarGroupNavState extends ConsumerState<SidebarGroupNav> {
       _wheel += dy;
       if (_wheel.abs() < 40) return;
       // после тяги прежняя цель колеса устарела: шаг от той обложки, где карусель сейчас
-      if (_dragging && _carousel.hasClients) {
+      if ((_dragging || _settlingDrag) && _carousel.hasClients) {
         final position = _carousel.position;
-        _target = (position.pixels / _unit(position)).round();
+        _target =
+            (_carousel.snapTarget ??
+                    (position.pixels / _unit(position)).round())
+                .clamp(0, _groups.length - 1);
+        _dragging = false;
+        _settlingDrag = false;
+        _carousel.fromDrag = false;
+        _carousel.snapTarget = null;
       }
       final next = (_target + (_wheel > 0 ? 1 : -1)).clamp(
         0,
@@ -146,43 +205,58 @@ class _SidebarGroupNavState extends ConsumerState<SidebarGroupNav> {
       _settle?.cancel();
       _settle = Timer(const Duration(milliseconds: 260), () {
         _settle = null;
-        if (mounted && _target != _shown) _open(_target, moveCarousel: false);
+        if (!mounted || _groups.length < 2) return;
+        final target = _target.clamp(0, _groups.length - 1);
+        if (target != _shown) {
+          _open(target, moveCarousel: false);
+        } else if (!_carouselAtShown) {
+          _springTo(target);
+        }
       });
     });
   }
 
-  static final _wheelSpring = SpringDescription.withDampingRatio(
-    mass: 1,
-    stiffness: 160,
-    ratio: 1,
-  );
   _SpringActivity? _spring;
 
-  double _unit(ScrollPosition position) =>
-      position.viewportDimension *
-      _weights.first /
-      _weights.reduce((a, b) => a + b);
+  double _unit(ScrollPosition position) => _unitFor(position.viewportDimension);
+
+  void _onDragEnd(int index, double velocity) {
+    _dragging = false;
+    _settlingDrag = true;
+    _target = index;
+    scheduleMicrotask(() {
+      if (!mounted || !_settlingDrag || !_carousel.hasClients) return;
+      final position = _carousel.position;
+      if (!position.hasPixels || !position.hasViewportDimension) return;
+      if ((_unit(position) * index - position.pixels).abs() == 0) return;
+      _springTo(index, velocity: velocity);
+    });
+  }
 
   // с каждым щелчком пружина подхватывает текущую скорость: animateToItem начинал с места,
   // и пролистанная обложка на торможении успевала вспухнуть и сжаться обратно
-  void _springTo(int index) {
-    if (!_carousel.hasClients) return;
+  void _springTo(int index, {double? velocity}) {
+    if (!_carousel.hasClients || _groups.isEmpty) return;
     final position = _carousel.position;
     if (position is! ScrollPositionWithSingleContext) return;
-    final target = (_unit(position) * index).clamp(
-      position.minScrollExtent,
-      position.maxScrollExtent,
-    );
+    final clampedIndex = index.clamp(0, _groups.length - 1);
+    // пока нижние обложки за кадром, maxScrollExtent у карусели занижен и резал бы шаг к последней
+    final target = _unit(position) * clampedIndex;
+    final d = target - position.pixels;
+    final rawV = velocity ?? _spring?.velocity ?? 0;
+    final maxV = _wheelOmega * d;
+    final clampedV = d >= 0 ? math.min(rawV, maxV) : math.max(rawV, maxV);
     final activity = _SpringActivity(
       position,
       ScrollSpringSimulation(
         _wheelSpring,
         position.pixels,
         target,
-        _spring?.velocity ?? 0,
+        clampedV,
+        tolerance: position.physics.toleranceFor(position),
       ),
       position.context.vsync,
-      from: _spring?.frame,
+      from: velocity == null ? _spring?.frame : null,
       onDisposed: (a) {
         if (identical(_spring, a)) _spring = null;
       },
@@ -204,25 +278,48 @@ class _SidebarGroupNavState extends ConsumerState<SidebarGroupNav> {
   // мышкой карусель тянут как пальцем: где осела, туда и список
   bool _onCarouselScroll(ScrollNotification n) {
     if (n.depth != 0) return false;
-    if (n is ScrollStartNotification && n.dragDetails != null) {
+    if ((n is ScrollStartNotification && n.dragDetails != null) ||
+        (n is ScrollUpdateNotification &&
+            !_dragging &&
+            n.dragDetails != null)) {
       _dragging = true;
+      _settlingDrag = false;
+      _carousel.fromDrag = true;
+      _carousel.snapTarget = null;
       // иначе щелчок колеса перед тягой уводил список к своей цели, а карусель оставалась, где её бросили
       _settle?.cancel();
       _settle = null;
       _wheel = 0;
     }
-    if (n is ScrollEndNotification && _dragging) {
+    if (n is ScrollEndNotification &&
+        (_dragging || _settlingDrag || _settle != null)) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted || !_dragging || !_carousel.hasClients) return;
+        if (!mounted || !_carousel.hasClients || _groups.length < 2) return;
         final position = _carousel.position;
         if (position.isScrollingNotifier.value) return;
-        _dragging = false;
         final i = (position.pixels / _unit(position)).round().clamp(
           0,
           _groups.length - 1,
         );
+        if (_dragging || _settlingDrag) {
+          _dragging = false;
+          _settlingDrag = false;
+          _carousel.fromDrag = false;
+          _carousel.snapTarget = null;
+        } else if (_settle != null && _spring == null) {
+          if (i == _target) return;
+          _settle?.cancel();
+          _settle = null;
+          _wheel = 0;
+        } else {
+          return;
+        }
         _target = i;
-        if (i != _shown) _open(i, moveCarousel: false);
+        if (i != _shown) {
+          _open(i, moveCarousel: false);
+        } else {
+          _follow();
+        }
       });
     }
     return false;
@@ -242,7 +339,10 @@ class _SidebarGroupNavState extends ConsumerState<SidebarGroupNav> {
       _groupsOf = servers;
       _groupsSubs = subs;
     }
+    _carousel.count = _groups.length;
     if (_groups.length < 2) return const SizedBox.shrink();
+    if (_shown >= _groups.length) _shown = _groups.length - 1;
+    if (_target >= _groups.length) _target = _groups.length - 1;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _follow();
     });
@@ -371,7 +471,8 @@ class _SidebarGroupNavState extends ConsumerState<SidebarGroupNav> {
           if (_carousel.hasClients && _carousel.position.hasContentDimensions) {
             final position = _carousel.position;
             final unit = _unit(position);
-            final left = (position.maxScrollExtent - position.pixels) / unit;
+            final end = unit * (_groups.length - 1);
+            final left = (end - position.pixels) / unit;
             sink = unit * (1 - left.clamp(0.0, 1.0));
           }
           return Transform.translate(offset: Offset(0, sink), child: child);
@@ -743,28 +844,46 @@ class _DefaultCoverPainter extends CustomPainter {
       old.seed != seed || old.kind != kind || old.colors != colors;
 }
 
-// Смещение карусели на 1/8 высоты уже меняет большую обложку целиком (6 весов против 1): мышь тянула её
-// в шесть раз резвее, чем шла сама, а бросок проскакивал соседнюю обложку. Снаружи CarouselScrollPhysics,
-// иначе до её доводки скорость не доходит поделённой
+// Смещение карусели на 1/8 высоты уже меняет большую обложку целиком (6 весов против 1): тягу и скорость
+// броска делим на шесть, а доводку перехватывает своя пружина без скачка на последнем пикселе
 class _CoverController extends CarouselController {
+  _CoverController({this.onDragEnd});
+
+  final void Function(int index, double velocity)? onDragEnd;
+  int count = 0;
+  bool fromDrag = false;
+  int? snapTarget;
+
   @override
   ScrollPosition createScrollPosition(
     ScrollPhysics physics,
     ScrollContext context,
     ScrollPosition? oldPosition,
   ) => super.createScrollPosition(
-    _CoverDragPhysics(parent: physics),
+    _CoverDragPhysics(controller: this, parent: physics),
     context,
     oldPosition,
   );
 }
 
 class _CoverDragPhysics extends ScrollPhysics {
-  const _CoverDragPhysics({super.parent});
+  const _CoverDragPhysics({required this.controller, super.parent});
+
+  final _CoverController controller;
 
   @override
   _CoverDragPhysics applyTo(ScrollPhysics? ancestor) =>
-      _CoverDragPhysics(parent: buildParent(ancestor));
+      _CoverDragPhysics(controller: controller, parent: buildParent(ancestor));
+
+  @override
+  Tolerance toleranceFor(ScrollMetrics metrics) {
+    final base = super.toleranceFor(metrics);
+    return Tolerance(
+      distance: base.distance / 32,
+      velocity: base.velocity / 6,
+      time: base.time,
+    );
+  }
 
   @override
   double applyPhysicsToUserOffset(ScrollMetrics position, double offset) =>
@@ -774,7 +893,56 @@ class _CoverDragPhysics extends ScrollPhysics {
   Simulation? createBallisticSimulation(
     ScrollMetrics position,
     double velocity,
-  ) => super.createBallisticSimulation(position, velocity / 6);
+  ) {
+    if (controller.count <= 0 ||
+        !position.hasViewportDimension ||
+        position.viewportDimension <= 0) {
+      return null;
+    }
+    final unit = _SidebarGroupNavState._unitFor(position.viewportDimension);
+    final tolerance = toleranceFor(position);
+    final maxIndex = controller.count - 1;
+    var v = velocity;
+    int index;
+    if (controller.fromDrag) {
+      v = velocity / 6;
+      controller.fromDrag = false;
+      final actual = math.max(0.0, position.pixels) / unit;
+      final round = actual.roundToDouble();
+      var item = (actual - round).abs() < 1e-10 ? round : actual;
+      final flingThreshold = super.toleranceFor(position).velocity;
+      if (v < -flingThreshold) {
+        item -= 0.5;
+      } else if (v > flingThreshold) {
+        item += 0.5;
+      }
+      index = item.round().clamp(0, maxIndex);
+      controller.snapTarget = index;
+      controller.onDragEnd?.call(index, v);
+    } else if (controller.snapTarget != null) {
+      index = controller.snapTarget!.clamp(0, maxIndex);
+    } else {
+      index = (math.max(0.0, position.pixels) / unit).round().clamp(
+        0,
+        maxIndex,
+      );
+    }
+    final target = index * unit;
+    if (target == position.pixels) {
+      controller.snapTarget = null;
+      return null;
+    }
+    final d = target - position.pixels;
+    final maxV = _SidebarGroupNavState._wheelOmega * d;
+    final clampedV = d >= 0 ? math.min(v, maxV) : math.max(v, maxV);
+    return ScrollSpringSimulation(
+      _SidebarGroupNavState._wheelSpring,
+      position.pixels,
+      target,
+      clampedV,
+      tolerance: tolerance,
+    );
+  }
 }
 
 // SliverMultiBoxAdaptorElement на каждой пересборке ставит первому элементу смещение 0, а у карусели над
@@ -826,8 +994,10 @@ class _SpringActivity extends ScrollActivity {
     final from = _from ??= now;
     frame = now;
     _time = (now - from).inMicroseconds / Duration.microsecondsPerSecond;
-    delegate.setPixels(_simulation.x(_time));
-    if (_simulation.isDone(_time)) delegate.goBallistic(0);
+    final overscroll = delegate.setPixels(_simulation.x(_time));
+    if (_simulation.isDone(_time) && overscroll.abs() < 0.5) {
+      delegate.goBallistic(0);
+    }
   }
 
   @override

@@ -85,18 +85,24 @@ Future<List<int>> _pumpNav(
   tester.view.physicalSize = const Size(800, 600);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
+  final actualServers = servers ?? _threeGroups;
+  final actualSubs = subs ?? _subs;
+  final groups = buildServerGroups(
+    servers: actualServers,
+    subscriptions: actualSubs,
+  );
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
         serversProvider.overrideWith(
           () => _FakeServers(
             ServersState(
-              servers: servers ?? _threeGroups,
+              servers: actualServers,
               activeServerId: activeServerId,
             ),
           ),
         ),
-        subscriptionsProvider.overrideWith(() => _FakeSubs(subs ?? _subs)),
+        subscriptionsProvider.overrideWith(() => _FakeSubs(actualSubs)),
         settingsNotifierProvider.overrideWith(_FakeSettings.new),
         vpnStateProvider.overrideWith(() => _FakeVpn(status)),
       ],
@@ -122,14 +128,10 @@ Future<List<int>> _pumpNav(
                         child: CustomScrollView(
                           key: const Key('list'),
                           slivers: [
-                            for (final key in [
-                              'sub-a',
-                              'sub-b',
-                              kManualServerGroupKey,
-                            ])
+                            for (final g in groups)
                               SliverToBoxAdapter(
                                 child: ServerGroupAnchor(
-                                  groupKey: key,
+                                  groupKey: g.key,
                                   child: const SizedBox(height: 600),
                                 ),
                               ),
@@ -1000,4 +1002,221 @@ void main() {
       },
     );
   }
+
+  final sixSubs = [for (var i = 1; i <= 5; i++) _sub('sub-$i', 'Sub $i')];
+  final sixGroups = [
+    for (var i = 1; i <= 5; i++) _server('s$i', subscriptionId: 'sub-$i'),
+    _server('m1'),
+  ];
+
+  testWidgets(
+    'листание вверх-вниз на середине и прокрутка до конца делают главной последнюю обложку',
+    (tester) async {
+      await _pumpNav(tester, servers: sixGroups, subs: sixSubs, withList: true);
+      final mouse = TestPointer(1, PointerDeviceKind.mouse);
+      await tester.sendEventToBinding(
+        mouse.hover(tester.getCenter(find.byType(CarouselView))),
+      );
+      Future<void> notch(double dy) =>
+          tester.sendEventToBinding(mouse.scroll(Offset(0, dy)));
+
+      await notch(100);
+      await tester.pump(const Duration(milliseconds: 40));
+      await notch(100);
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pumpAndSettle();
+      expect(_big(tester), 'sub-3');
+
+      await notch(100);
+      await tester.pump(const Duration(milliseconds: 35));
+      await notch(-100);
+      await tester.pump(const Duration(milliseconds: 35));
+      await notch(100);
+      await tester.pump(const Duration(milliseconds: 30));
+      await notch(100);
+      await tester.pump(const Duration(milliseconds: 30));
+      await notch(100);
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pumpAndSettle();
+
+      expect(
+        ServerGroupAnchors.instance.currentGroup.value,
+        kManualServerGroupKey,
+      );
+      expect(_big(tester), kManualServerGroupKey);
+      final panel = tester.getRect(find.byType(SidebarGroupNav));
+      final big = tester.getRect(_cover(kManualServerGroupKey));
+      expect(panel.bottom - big.bottom, lessThan(12));
+    },
+  );
+
+  testWidgets(
+    'после тяги мышью быстрые щелчки колеса шагают дальше по одному без сброса назад',
+    (tester) async {
+      await _pumpNav(tester, servers: sixGroups, subs: sixSubs, withList: true);
+      final center = tester.getCenter(find.byType(CarouselView));
+      final gesture = await tester.startGesture(
+        center,
+        kind: PointerDeviceKind.mouse,
+      );
+      for (var i = 0; i < 6; i++) {
+        await gesture.moveBy(const Offset(0, -40));
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      await gesture.up();
+      await tester.pump(const Duration(milliseconds: 16));
+
+      final mouse = TestPointer(2, PointerDeviceKind.mouse);
+      await tester.sendEventToBinding(mouse.hover(center));
+      for (var i = 0; i < 3; i++) {
+        await tester.sendEventToBinding(mouse.scroll(const Offset(0, 100)));
+        await tester.pump(const Duration(milliseconds: 30));
+      }
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pumpAndSettle();
+
+      expect(_big(tester), 'sub-5');
+      expect(ServerGroupAnchors.instance.currentGroup.value, 'sub-5');
+    },
+  );
+
+  testWidgets(
+    'на доводке после тяги и колеса обложка не скачет в размере в последнем кадре и не отскакивает',
+    (tester) async {
+      await _pumpNav(tester, servers: sixGroups, subs: sixSubs);
+      final position = _carouselPosition(tester);
+      final center = tester.getCenter(find.byType(CarouselView));
+
+      // 1. Доводка после медленной тяги: без скачка высоты в последнем кадре
+      final drag = await tester.startGesture(
+        center,
+        kind: PointerDeviceKind.mouse,
+      );
+      for (var i = 0; i < 6; i++) {
+        await drag.moveBy(const Offset(0, -40));
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      await tester.pump(const Duration(milliseconds: 300));
+      await drag.up();
+
+      final dragHeights = <double>[tester.getRect(_cover('sub-2')).height];
+      for (var i = 0; i < 400 && position.isScrollingNotifier.value; i++) {
+        await tester.pump(frame144);
+        dragHeights.add(tester.getRect(_cover('sub-2')).height);
+      }
+      expect(position.isScrollingNotifier.value, isFalse);
+      await tester.pump(frame144);
+      dragHeights.add(tester.getRect(_cover('sub-2')).height);
+      expect(_big(tester), 'sub-2');
+      for (var i = 1; i < dragHeights.length; i++) {
+        expect(
+          dragHeights[i],
+          greaterThanOrEqualTo(dragHeights[i - 1] - 0.05),
+          reason: 'кадр доводки $i: $dragHeights',
+        );
+      }
+      final tailStart = math.max(1, dragHeights.length - 5);
+      for (var i = tailStart; i < dragHeights.length; i++) {
+        expect(
+          (dragHeights[i] - dragHeights[i - 1]).abs(),
+          lessThan(0.8),
+          reason: 'скачок в конце доводки на кадре $i: $dragHeights',
+        );
+      }
+
+      // 2. Бросок у конца списка: обложка не раздувается выше своей итоговой высоты
+      ServerGroupAnchors.instance.currentGroup.value = 'sub-4';
+      await tester.pumpAndSettle();
+      final fling = await tester.startGesture(
+        center,
+        kind: PointerDeviceKind.mouse,
+      );
+      for (var i = 0; i < 6; i++) {
+        await fling.moveBy(
+          const Offset(0, -35),
+          timeStamp: Duration(milliseconds: 16 * (i + 1)),
+        );
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+      await fling.up(timeStamp: const Duration(milliseconds: 100));
+      final flingHeights = <double>[];
+      for (var i = 0; i < 180 && position.isScrollingNotifier.value; i++) {
+        await tester.pump(frame144);
+        if (_cover('sub-5').evaluate().isNotEmpty) {
+          flingHeights.add(tester.getRect(_cover('sub-5')).height);
+        }
+      }
+      await tester.pumpAndSettle();
+      expect(_big(tester), 'sub-5');
+      expect(
+        flingHeights.reduce(math.max),
+        lessThanOrEqualTo(flingHeights.last + 0.5),
+        reason: 'перелёт высоты при броске: $flingHeights',
+      );
+
+      // 3. Колесо с середины до последней обложки: без двухступенчатой доводки
+      ServerGroupAnchors.instance.currentGroup.value = 'sub-3';
+      await tester.pumpAndSettle();
+      final mouse = TestPointer(3, PointerDeviceKind.mouse);
+      await tester.sendEventToBinding(mouse.hover(center));
+      await tester.sendEventToBinding(mouse.scroll(const Offset(0, 100)));
+      await tester.pump(const Duration(milliseconds: 80));
+      await tester.sendEventToBinding(mouse.scroll(const Offset(0, 100)));
+      await tester.pump(const Duration(milliseconds: 20));
+      await tester.sendEventToBinding(mouse.scroll(const Offset(0, 100)));
+
+      final wheelHeights = <double>[];
+      for (var i = 0; i < 180 && position.isScrollingNotifier.value; i++) {
+        await tester.pump(frame144);
+        if (_cover(kManualServerGroupKey).evaluate().isNotEmpty) {
+          wheelHeights.add(
+            tester.getRect(_cover(kManualServerGroupKey)).height,
+          );
+        }
+      }
+      await tester.pumpAndSettle();
+      expect(_big(tester), kManualServerGroupKey);
+      final wheelTail = math.max(1, wheelHeights.length - 5);
+      for (var i = wheelTail; i < wheelHeights.length; i++) {
+        expect(
+          (wheelHeights[i] - wheelHeights[i - 1]).abs(),
+          lessThan(0.8),
+          reason: 'рывок колеса в конце на кадре $i: $wheelHeights',
+        );
+      }
+    },
+  );
+
+  testWidgets(
+    'короткий сдвиг карусели мышью и сразу прокрутка списка ведут карусель за списком',
+    (tester) async {
+      await _pumpNav(tester, servers: sixGroups, subs: sixSubs, withList: true);
+      final center = tester.getCenter(find.byType(CarouselView));
+      final g = await tester.startGesture(
+        center,
+        kind: PointerDeviceKind.mouse,
+      );
+      await g.moveBy(const Offset(0, -4));
+      await tester.pump(const Duration(milliseconds: 24));
+      await g.up();
+      await tester.pump(const Duration(milliseconds: 6));
+
+      final list = tester
+          .state<ScrollableState>(
+            find.descendant(
+              of: find.byKey(const Key('list')),
+              matching: find.byType(Scrollable),
+            ),
+          )
+          .position;
+      list.jumpTo(list.maxScrollExtent);
+      await tester.pumpAndSettle();
+
+      expect(
+        ServerGroupAnchors.instance.currentGroup.value,
+        kManualServerGroupKey,
+      );
+      expect(_big(tester), kManualServerGroupKey);
+    },
+  );
 }
