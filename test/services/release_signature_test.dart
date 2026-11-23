@@ -157,6 +157,7 @@ void main() {
       'keqdroid-0.36.0-android.apk',
       'keqdroid-0.36.0-armeabi-v7a-android.apk',
       'keqdroid-windows-x64-0.36.0.zip',
+      'keqdroid-0.36.0-macos-universal.dmg',
       'SHA256SUMS',
       'SHA256SUMS.sig',
     ];

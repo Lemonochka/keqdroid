@@ -137,4 +137,14 @@ void main() {
     ports.clear();
     expect(ports.httpPortOr(2081), 2081);
   });
+
+  test('recognizes Darwin EADDRINUSE (48) as occupied', () {
+    if (Platform.isWindows) return;
+    const err = SocketException(
+      'Failed to create server socket',
+      osError: OSError('Address already in use', 48),
+      port: 2080,
+    );
+    expect(LocalPortResolver.classify(err), LocalPortIssue.occupied);
+  });
 }

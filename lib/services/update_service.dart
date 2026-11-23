@@ -800,6 +800,7 @@ class UpdateService {
       '.appimage',
       '.deb',
       '.rpm',
+      '.dmg',
       '.zip',
       '.msix',
       '.msi',
