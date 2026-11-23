@@ -15,6 +15,7 @@ const _traySizes = [16, 20, 24, 28, 32, 40, 48, 64, 256];
 const _appSizes = [
   16, 20, 24, 28, 30, 32, 36, 40, 42, 48, 56, 64, 72, 96, 128, 256, //
 ];
+const _macosAppSizes = [16, 32, 64, 128, 256, 512, 1024];
 const _pngSize = 256;
 
 const _dotDiameter = 0.40;
@@ -31,7 +32,8 @@ void main() {
   }
   final src = _Premultiplied(decoded);
   final frames = {
-    for (final s in {..._traySizes, ..._appSizes}) s: src.shrink(s),
+    for (final s in {..._traySizes, ..._appSizes, ..._macosAppSizes})
+      s: src.shrink(s),
   };
 
   final plain = [for (final s in _traySizes) frames[s]!];
@@ -51,10 +53,21 @@ void main() {
   File('windows/runner/resources/app_icon.ico').writeAsBytesSync(
     img.IcoEncoder().encodeImages([for (final s in _appSizes) frames[s]!]),
   );
+  final macosIconDir = Directory(
+    'macos/Runner/Assets.xcassets/AppIcon.appiconset',
+  );
+  if (macosIconDir.existsSync()) {
+    for (final s in _macosAppSizes) {
+      File('${macosIconDir.path}/app_icon_$s.png').writeAsBytesSync(
+        img.encodePng(frames[s]!),
+      );
+    }
+  }
   stdout.writeln(
     'Wrote icon.png, icon_connected.png, tray_icon.ico, '
     'tray_icon_connected.ico (${_traySizes.join(', ')}), '
-    'app_icon.ico (${_appSizes.join(', ')})',
+    'app_icon.ico (${_appSizes.join(', ')}), '
+    'macOS AppIcon (${_macosAppSizes.join(', ')})',
   );
 }
 

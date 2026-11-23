@@ -65,3 +65,11 @@ lib/firebase_options.dart
 
 # release key for backup files, tool/new_backup_key.dart
 secrets/
+
+# Built macOS cores (generated locally by tool/build_macos_cores.sh)
+/assets/bin/macos/xray
+/assets/bin/macos/mihomo
+/assets/bin/macos/geoip.dat
+/assets/bin/macos/geosite.dat
+/assets/bin/macos/arm64/
+/assets/bin/macos/x86_64/
