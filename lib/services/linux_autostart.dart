@@ -250,9 +250,54 @@ class LinuxAutostart {
     await _syncStartLines(wm, !await desktopRunsAutostart());
   }
 
+  @visibleForTesting
+  static String Function() executablePath = () => Platform.resolvedExecutable;
+
+  @visibleForTesting
+  static Map<String, String> Function() environment = () =>
+      Platform.environment;
+
+  @visibleForTesting
+  static bool Function(String path) fileExists = (path) =>
+      File(path).existsSync();
+
+  // в /nix/store у каждой версии свой каталог, после обновления и очистки он пропадает,
+  // поэтому в автозапуск пишется ссылка из профиля, а без неё обёртка GTK того же пакета
+  static String _nixTarget(String executable) {
+    const store = '/nix/store/';
+    if (!executable.startsWith(store) ||
+        p.posix.basename(executable) != 'keqdroid') {
+      return executable;
+    }
+    final env = environment();
+    final home = _home();
+    final user = env['USER'];
+    final xdgState = env['XDG_STATE_HOME'];
+    final stateHome = xdgState != null && xdgState.isNotEmpty
+        ? xdgState
+        : (home.isNotEmpty ? p.posix.join(home, '.local', 'state') : '');
+    final candidates = <String>[
+      '/run/current-system/sw/bin/keqdroid',
+      if (user != null && user.isNotEmpty)
+        '/etc/profiles/per-user/$user/bin/keqdroid',
+      if (stateHome.isNotEmpty) '$stateHome/nix/profile/bin/keqdroid',
+      if (home.isNotEmpty) p.posix.join(home, '.nix-profile/bin/keqdroid'),
+    ];
+    for (final candidate in candidates) {
+      if (fileExists(candidate)) return candidate;
+    }
+    final slash = executable.indexOf('/', store.length);
+    if (slash > store.length) {
+      final wrapped = '${executable.substring(0, slash)}/bin/keqdroid';
+      if (fileExists(wrapped)) return wrapped;
+    }
+    return executable;
+  }
+
   // сам AppImage: бинарь во временном монте исчезает вместе с процессом
   static String _target() =>
-      LinuxAppImageUpdater.currentAppImagePath() ?? Platform.resolvedExecutable;
+      LinuxAppImageUpdater.currentAppImagePath() ??
+      _nixTarget(executablePath());
 
   static bool isEnabled() {
     try {
