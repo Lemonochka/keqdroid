@@ -88,7 +88,7 @@ Windows cores are not fully stripped (`-w`, not `-s -w`) and must not be started
 
 ## Release
 
-Releases are built on GitHub: Actions → release → Run workflow. `.github/workflows/release.yml` builds every file, writes and signs `SHA256SUMS`, attests the files and leaves a draft release. Write the notes in the draft and publish it. With draft unticked, the run only builds and keeps the files in its `release-files` artifact. The secrets it needs are listed at the top of the workflow.
+Releases are built on GitHub: Actions → release → Run workflow. `.github/workflows/release.yml` builds every file, writes and signs `SHA256SUMS`, attests the files and leaves a draft release. Write the notes in the draft and publish it; publishing runs `.github/workflows/nix.yml`, which updates the Nix flake on the `nix` branch from the signed `SHA256SUMS`. With draft unticked, the run only builds and keeps the files in its `release-files` artifact. The secrets it needs are listed at the top of the workflow.
 
 Locally, the same files go to `release\<version>\`:
 

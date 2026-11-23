@@ -83,6 +83,13 @@ void main() {
     }
   });
 
+  test('workflow ветки nix проверяет подпись теми же ключами', () {
+    final workflow = File('.github/workflows/nix.yml').readAsStringSync();
+    for (final k in productionKeys) {
+      expect(workflow, contains("'$k'"));
+    }
+  });
+
   group('fetchVerifiedSums', () {
     Dio dioWith(Map<String, List<int>> files) =>
         Dio()..httpClientAdapter = _Files(files);

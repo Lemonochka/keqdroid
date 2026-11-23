@@ -100,7 +100,7 @@ A ready-made configuration keeps its own routing, DNS and outbounds. Inbounds an
 
 **Windows.** The installer places the application in Program Files and can remove it together with its data; the portable version runs from any folder. The application can start with the system, connect automatically and stay in the tray. Settings are stored in `%APPDATA%\com.keqdroid\keqdroid\` and are shared by both versions.
 
-**Linux.** The application can start at login and connect automatically. On Arch Linux, install with `makepkg -si` using the `PKGBUILD` from the release.
+**Linux.** The application can start at login and connect automatically. On Arch Linux, install with `makepkg -si` using the `PKGBUILD` from the release. On NixOS, add `github:Lemonochka/keqdroid/nix` to flake inputs and include `inputs.keqdroid.packages.x86_64-linux.default` in `environment.systemPackages`.
 
 ## Getting started
 
