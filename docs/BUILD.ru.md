@@ -59,22 +59,24 @@ wsl -d Ubuntu-22.04 -e bash /mnt/c/<путь>/keqdroid/tool/build_linux_native.s
 
 ## macOS
 
-Поддерживаются Apple Silicon (`arm64`) и Intel (`x86_64`). Собранные ядра для macOS не хранятся в git — их нужно собрать локально перед сборкой приложения:
+Поддерживаются отдельные сборки для Apple Silicon (`arm64`) и Intel (`x86_64`). Собранные ядра для macOS не хранятся в git — их нужно собрать локально перед сборкой приложения:
 
 ```bash
-bash tool/build_macos_cores.sh            # под текущую архитектуру (arm64 или x86_64)
-bash tool/build_macos_cores.sh universal  # универсальные бинарники arm64 + x86_64 через lipo
+bash tool/build_macos_cores.sh          # собирает отдельно ядра для arm64 и x86_64
+bash tool/build_macos_cores.sh native   # только под текущую архитектуру (arm64 или x86_64)
 flutter pub get
 flutter build macos --release
 ```
 
-Сборка и упаковка `.dmg` в `release/<версия>/`:
+Сборка и упаковка отдельных `.dmg` в `release/<версия>/`:
 
 ```bash
-bash tool/package_macos.sh universal      # или arm64 / x86_64 / native
+bash tool/package_macos.sh all          # оба DMG: arm64 и x86_64
+bash tool/package_macos.sh arm64        # только Apple Silicon
+bash tool/package_macos.sh x86_64       # только Intel
 ```
 
-Фаза сборки Xcode копирует `assets/bin/macos/{xray,mihomo,geoip.dat,geosite.dat}` в `keqdroid.app/Contents/Resources/bin/`. Для подписи сертификатом Developer ID вместо ad-hoc задайте переменную `MACOS_SIGN_IDENTITY`.
+Фаза сборки Xcode копирует `assets/bin/macos/<arch>/{xray,mihomo}` и `assets/bin/macos/{geoip.dat,geosite.dat}` в `keqdroid.app/Contents/Resources/bin/`, а `tool/package_macos.sh` вырезает лишний срез из `.app` через `lipo -thin`. Для подписи сертификатом Developer ID вместо ad-hoc задайте переменную `MACOS_SIGN_IDENTITY`.
 
 ## Проверки
 

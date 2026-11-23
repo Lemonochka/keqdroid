@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# Build patched xray and mihomo cores for macOS (arm64, x86_64, or universal).
+# Build patched xray and mihomo cores for macOS (arm64 and/or x86_64).
 #
 # Usage:
-#   bash tool/build_macos_cores.sh            # host architecture
-#   bash tool/build_macos_cores.sh arm64      # Apple Silicon
-#   bash tool/build_macos_cores.sh x86_64     # Intel
-#   bash tool/build_macos_cores.sh universal  # arm64 + x86_64 via lipo
+#   bash tool/build_macos_cores.sh          # build both arm64 and x86_64 separately
+#   bash tool/build_macos_cores.sh native   # build host architecture only
+#   bash tool/build_macos_cores.sh arm64    # Apple Silicon only
+#   bash tool/build_macos_cores.sh x86_64   # Intel only
 #
-# Output goes to assets/bin/macos/ (gitignored) and is embedded into
-# keqdroid.app/Contents/Resources/bin/ during Xcode build.
+# Output goes to assets/bin/macos/<arch>/{xray,mihomo} and
+# assets/bin/macos/{geoip.dat,geosite.dat} (gitignored).
 
 set -euo pipefail
 
@@ -23,20 +23,20 @@ MIHOMO_MODULE="github.com/metacubex/mihomo"
 MIHOMO_VERSION="${MIHOMO_VERSION:-v1.19.34}"
 MIHOMO_TAGS="with_gvisor,no_tailscale,no_zerotier,no_easytier"
 
-TARGET="${1:-native}"
+TARGET="${1:-all}"
 case "$TARGET" in
+  all) ARCHS=(arm64 x86_64) ;;
   native)
     case "$(uname -m)" in
       arm64) ARCHS=(arm64) ;;
-      x86_64) ARCHS=(amd64) ;;
+      x86_64) ARCHS=(x86_64) ;;
       *) echo "Unsupported host architecture: $(uname -m)" >&2; exit 1 ;;
     esac
     ;;
   arm64) ARCHS=(arm64) ;;
-  x86_64|amd64) ARCHS=(amd64) ;;
-  universal) ARCHS=(arm64 amd64) ;;
+  x86_64|amd64) ARCHS=(x86_64) ;;
   *)
-    echo "Usage: $0 [native|arm64|x86_64|universal]" >&2
+    echo "Usage: $0 [all|native|arm64|x86_64]" >&2
     exit 1
     ;;
 esac
@@ -47,15 +47,19 @@ for cmd in go git; do
     exit 1
   fi
 done
-if [ "${#ARCHS[@]}" -gt 1 ] && ! command -v lipo >/dev/null 2>&1; then
-  echo "lipo is required for universal builds (install Xcode Command Line Tools)" >&2
-  exit 1
-fi
 
 WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/keqdroid-macos-cores.XXXXXX")"
 trap 'chmod -R u+w "$WORK_DIR" 2>/dev/null || true; rm -rf "$WORK_DIR"' EXIT
 
 mkdir -p "$OUT_DIR"
+
+goarch_for() {
+  case "$1" in
+    arm64) echo "arm64" ;;
+    x86_64) echo "amd64" ;;
+    *) echo "Unsupported arch: $1" >&2; exit 1 ;;
+  esac
+}
 
 apply_patches() {
   local src_dir="$1"
@@ -95,20 +99,12 @@ download_module() {
   chmod -R u+w "$dst"
 }
 
-finalize_binary() {
-  local name="$1"
-  if [ "${#ARCHS[@]}" -eq 1 ]; then
-    mv "$WORK_DIR/${name}-${ARCHS[0]}" "$OUT_DIR/$name"
-  else
-    lipo -create \
-      "$WORK_DIR/${name}-arm64" \
-      "$WORK_DIR/${name}-amd64" \
-      -output "$OUT_DIR/$name"
-  fi
-  chmod 0755 "$OUT_DIR/$name"
-  echo "  -> $OUT_DIR/$name ($(wc -c < "$OUT_DIR/$name" | tr -d ' ') bytes)"
+report_binary() {
+  local path="$1"
+  chmod 0755 "$path"
+  echo "  -> $path ($(wc -c < "$path" | tr -d ' ') bytes)"
   if command -v lipo >/dev/null 2>&1; then
-    lipo -info "$OUT_DIR/$name"
+    lipo -info "$path"
   fi
 }
 
@@ -118,17 +114,20 @@ download_module "$XRAY_MODULE" "$XRAY_VERSION" "$XRAY_SRC"
 apply_patches "$XRAY_SRC" "xray-*.patch"
 
 for arch in "${ARCHS[@]}"; do
-  echo "Building xray for darwin/$arch ..."
+  goarch="$(goarch_for "$arch")"
+  arch_dir="$OUT_DIR/$arch"
+  mkdir -p "$arch_dir"
+  echo "Building xray for darwin/$goarch ($arch) ..."
   (
     cd "$XRAY_SRC"
-    CGO_ENABLED=0 GOOS=darwin GOARCH="$arch" \
+    CGO_ENABLED=0 GOOS=darwin GOARCH="$goarch" \
       go build -trimpath -buildvcs=false \
       -ldflags "-s -w -checklinkname=0" \
-      -o "$WORK_DIR/xray-$arch" \
+      -o "$arch_dir/xray" \
       ./main
   )
+  report_binary "$arch_dir/xray"
 done
-finalize_binary "xray"
 
 # ---- Build mihomo ----------------------------------------------------------
 MIHOMO_SRC="$WORK_DIR/mihomo-src"
@@ -147,18 +146,21 @@ if [ -n "$SING_TUN_VERSION" ]; then
 fi
 
 for arch in "${ARCHS[@]}"; do
-  echo "Building mihomo for darwin/$arch ..."
+  goarch="$(goarch_for "$arch")"
+  arch_dir="$OUT_DIR/$arch"
+  mkdir -p "$arch_dir"
+  echo "Building mihomo for darwin/$goarch ($arch) ..."
   (
     cd "$MIHOMO_SRC"
-    CGO_ENABLED=0 GOOS=darwin GOARCH="$arch" \
+    CGO_ENABLED=0 GOOS=darwin GOARCH="$goarch" \
       go build -trimpath -buildvcs=false \
       -tags "$MIHOMO_TAGS" \
       -ldflags "-s -w -checklinkname=0 -X github.com/metacubex/mihomo/constant.Version=$MIHOMO_VERSION" \
-      -o "$WORK_DIR/mihomo-$arch" \
+      -o "$arch_dir/mihomo" \
       .
   )
+  report_binary "$arch_dir/mihomo"
 done
-finalize_binary "mihomo"
 
 # ---- Geo databases ---------------------------------------------------------
 for geo in geoip.dat geosite.dat; do

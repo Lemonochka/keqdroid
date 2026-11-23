@@ -59,22 +59,24 @@ wsl -d Ubuntu-22.04 -e bash /mnt/c/<path>/keqdroid/tool/build_linux_native.sh
 
 ## macOS
 
-Both Apple Silicon (`arm64`) and Intel (`x86_64`) are supported. Prebuilt macOS cores are not stored in git; build them locally before building or packaging the app:
+Separate Apple Silicon (`arm64`) and Intel (`x86_64`) builds are supported. Prebuilt macOS cores are not stored in git; build them locally before building or packaging the app:
 
 ```bash
-bash tool/build_macos_cores.sh            # native host arch (arm64 or x86_64)
-bash tool/build_macos_cores.sh universal  # universal arm64 + x86_64 binaries via lipo
+bash tool/build_macos_cores.sh          # builds separate arm64 and x86_64 cores
+bash tool/build_macos_cores.sh native   # host arch only (arm64 or x86_64)
 flutter pub get
 flutter build macos --release
 ```
 
-To build and package a `.dmg` in `release/<version>/`:
+To build and package separate `.dmg` files in `release/<version>/`:
 
 ```bash
-bash tool/package_macos.sh universal      # or arm64 / x86_64 / native
+bash tool/package_macos.sh all          # both arm64 and x86_64 DMGs
+bash tool/package_macos.sh arm64        # Apple Silicon only
+bash tool/package_macos.sh x86_64       # Intel only
 ```
 
-The Xcode build embeds `assets/bin/macos/{xray,mihomo,geoip.dat,geosite.dat}` into `keqdroid.app/Contents/Resources/bin/`. Pass `MACOS_SIGN_IDENTITY` to sign with a Developer ID certificate instead of the default ad-hoc signature.
+The Xcode build embeds `assets/bin/macos/<arch>/{xray,mihomo}` and `assets/bin/macos/{geoip.dat,geosite.dat}` into `keqdroid.app/Contents/Resources/bin/`, and `tool/package_macos.sh` thins each `.app` bundle to its single target architecture. Pass `MACOS_SIGN_IDENTITY` to sign with a Developer ID certificate instead of the default ad-hoc signature.
 
 ## Checks
 
