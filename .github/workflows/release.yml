@@ -173,6 +173,38 @@ jobs:
           path: dist-linux/
           if-no-files-found: error
 
+  macos:
+    runs-on: macos-15
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.27.3'
+          cache: false
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Backup key
+        env:
+          KEQDROID_BACKUP_KEY: ${{ secrets.KEQDROID_BACKUP_KEY }}
+        run: |
+          if [ -z "$KEQDROID_BACKUP_KEY" ]; then echo "secret KEQDROID_BACKUP_KEY is not set" >&2; exit 1; fi
+          mkdir -p secrets
+          printf '%s' "$KEQDROID_BACKUP_KEY" > secrets/backup_key.json
+
+      - name: Build and package Apple Silicon and Intel
+        run: bash tool/package_macos.sh all
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: macos
+          path: release/*/*-macos-*.dmg
+          if-no-files-found: error
+
   sign-windows:
     needs: windows-android
     if: vars.SIGNPATH_ORGANIZATION_ID != ''
@@ -277,12 +309,13 @@ jobs:
           if-no-files-found: error
 
   release:
-    needs: [windows-android, linux, sign-windows, installer, sign-installer]
+    needs: [windows-android, linux, macos, sign-windows, installer, sign-installer]
     # both Windows files signed or neither
     if: >-
       always() &&
       needs.windows-android.result == 'success' &&
       needs.linux.result == 'success' &&
+      needs.macos.result == 'success' &&
       needs.installer.result == 'success' &&
       (needs.sign-installer.result == 'success' || needs.sign-installer.result == 'skipped') &&
       needs.sign-windows.result == needs.sign-installer.result
@@ -310,6 +343,11 @@ jobs:
 
       - uses: actions/download-artifact@v8
         with:
+          name: macos
+          path: dist
+
+      - uses: actions/download-artifact@v8
+        with:
           name: ${{ needs.sign-installer.result == 'success' && 'windows-installer-signed' || 'windows-installer' }}
           path: dist
 
@@ -325,9 +363,13 @@ jobs:
           [ -f signed/keqdroid-windows-x64.zip ] || { echo "SignPath returned no zip"; ls -la signed; exit 1; }
           cp -f signed/keqdroid-windows-x64.zip "dist/keqdroid-windows-x64-$VER.zip"
 
-      - name: Both Windows files are here
+      - name: All Windows and macOS files are here
         run: |
-          for f in "keqdroid-windows-x64-$VER.zip" "keqdroid-windows-x64-$VER-setup.exe"; do
+          for f in \
+            "keqdroid-windows-x64-$VER.zip" \
+            "keqdroid-windows-x64-$VER-setup.exe" \
+            "keqdroid-$VER-macos-arm64.dmg" \
+            "keqdroid-$VER-macos-x86_64.dmg"; do
             [ -f "dist/$f" ] || { echo "no $f"; ls -la dist; exit 1; }
           done
 

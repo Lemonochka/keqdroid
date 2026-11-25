@@ -12,6 +12,9 @@
 
 set -euo pipefail
 
+# Do not let the runner's default Go version select the Xray toolchain.
+export GOTOOLCHAIN=go1.27.3
+
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OUT_DIR="$REPO_ROOT/assets/bin/macos"
 PATCH_DIR="$REPO_ROOT/tool/patches"
@@ -152,7 +155,7 @@ for arch in "${ARCHS[@]}"; do
   echo "Building mihomo for darwin/$goarch ($arch) ..."
   (
     cd "$MIHOMO_SRC"
-    CGO_ENABLED=0 GOOS=darwin GOARCH="$goarch" \
+    GOTOOLCHAIN=go1.26.10 CGO_ENABLED=0 GOOS=darwin GOARCH="$goarch" \
       go build -trimpath -buildvcs=false \
       -tags "$MIHOMO_TAGS" \
       -ldflags "-s -w -checklinkname=0 -X github.com/metacubex/mihomo/constant.Version=$MIHOMO_VERSION" \

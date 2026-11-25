@@ -52,7 +52,14 @@ if [ "$SKIP_FLUTTER" -eq 0 ]; then
   (
     cd "$REPO_ROOT"
     flutter pub get
-    flutter build macos --release
+    # Official backups are readable only when the release key reaches Dart.
+    BACKUP_KEY_DEFINE=()
+    if [ -f secrets/backup_key.json ]; then
+      BACKUP_KEY_DEFINE=(--dart-define-from-file=secrets/backup_key.json)
+    else
+      echo "Warning: secrets/backup_key.json missing; this build uses the public development backup key" >&2
+    fi
+    flutter build macos --release ${BACKUP_KEY_DEFINE[@]+"${BACKUP_KEY_DEFINE[@]}"}
   )
 fi
 

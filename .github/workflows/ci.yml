@@ -45,3 +45,20 @@ jobs:
       - run: flutter build apk --debug --config-only
       - run: ./gradlew :app:testDebugUnitTest
         working-directory: android
+
+  macos-build:
+    runs-on: macos-15
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.27.3'
+          cache: false
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      # A fork PR has no release secrets; the script then uses the public dev key.
+      - run: bash tool/package_macos.sh all

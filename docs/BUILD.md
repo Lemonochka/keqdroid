@@ -139,6 +139,8 @@ keqdroid-<version>-linux-x64.tar.gz
 keqdroid_<version>_amd64.deb
 keqdroid-<version>-1.x86_64.rpm
 keqdroid-<version>-x86_64.AppImage
+keqdroid-<version>-macos-arm64.dmg
+keqdroid-<version>-macos-x86_64.dmg
 geoip.dat
 geoip.dat.sha256
 ```
