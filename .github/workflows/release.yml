@@ -199,10 +199,17 @@ jobs:
       - name: Build and package Apple Silicon and Intel
         run: bash tool/package_macos.sh all
 
+      - name: Collect macOS packages
+        run: |
+          VER="$(grep -E '^version:' pubspec.yaml | sed -E 's/^version:[[:space:]]*([0-9]+\.[0-9]+(\.[0-9]+)?).*/\1/')"
+          mkdir -p dist-macos
+          cp "release/$VER/keqdroid-$VER-macos-arm64.dmg" \
+             "release/$VER/keqdroid-$VER-macos-x86_64.dmg" dist-macos/
+
       - uses: actions/upload-artifact@v7
         with:
           name: macos
-          path: release/*/*-macos-*.dmg
+          path: dist-macos/
           if-no-files-found: error
 
   sign-windows:
