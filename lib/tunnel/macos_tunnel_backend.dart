@@ -11,6 +11,7 @@ import '../core/exceptions.dart';
 import '../platform/vpn_native_bridge.dart';
 import '../services/xray_route_decisions.dart';
 import '../utils/desktop_tun.dart';
+import '../utils/macos_app_bundle.dart';
 import '../utils/mihomo_api_session.dart';
 import '../utils/xray_session_log.dart';
 import 'connection_mode.dart';
@@ -35,11 +36,6 @@ class MacosTunnelBackend
   static const tunInterfaceName = kMacosTunInterfaceName;
 
   static const _runRootDir = '/var/run/keqdroid';
-  static const _helperPath = '/usr/local/libexec/keqdroid/core-tun-root';
-  static const _trustedCoresDir = '/usr/local/libexec/keqdroid/cores';
-  static const _sudoersPath = '/etc/sudoers.d/keqdroid-tun';
-  static const _helperVersionMark = '[wrap mac v1';
-  static const _untrustedCoreExit = 4;
   static const _rootXrayName = 'keqdroid-xray';
   static const coresLogName = 'keqdroid_cores.log';
 
@@ -355,15 +351,13 @@ class MacosTunnelBackend
     }
   }
 
-  // Positional arguments form a versioned contract with the installed sudoers helper.
-  // Caller-supplied paths are read as the invoking user; root writes only under /var/run/keqdroid/<uid>.
+  // Конфиг пользователя исполняет ядро с правами root, поэтому без NOPASSWD-helper:
+  // каждый запуск подтверждает администратор. Root пишет только в /var/run/keqdroid/<uid>.
   static const _tunWrapperBody =
       r'''PATH="/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/bin:/opt/homebrew/bin"; export PATH
-umask 022
+umask 027
 SB="$1"; CFG="$2"; GEO="$3"; SENT="$4"; APPPID="$5"; KIND="$6"; CALLER_UID="$7"
-HELPER=/usr/local/libexec/keqdroid/core-tun-root
-CORES=/usr/local/libexec/keqdroid/cores
-case "$KIND" in xray) NAME=xray; EXT=json ;; mihomo) NAME=mihomo; EXT=yaml ;; *) exit 5 ;; esac
+case "$KIND" in xray) EXT=json ;; mihomo) EXT=yaml ;; *) exit 5 ;; esac
 case "$APPPID" in ''|*[!0-9]*) exit 5 ;; esac
 OWNER="${SUDO_UID:-$CALLER_UID}"
 [ -z "$OWNER" ] && OWNER=$(id -u)
@@ -379,19 +373,13 @@ RUN=/var/run/keqdroid/$OWNER
 mkdir -p /var/run/keqdroid && rm -rf "$RUN" && mkdir -m 0755 "$RUN" "$RUN/home" || exit 5
 LOGF=$RUN/core.log
 : >"$LOGF" && chown "$OWNER" "$LOGF" && chmod 0600 "$LOGF" || exit 5
-if [ "$0" = "$HELPER" ]; then
-  CALLER_HASH=$(as_owner /usr/bin/shasum -a 256 -- "$SB" | /usr/bin/awk '{print $1}')
-  TRUSTED_HASH=$(/usr/bin/shasum -a 256 -- "$CORES/$NAME" | /usr/bin/awk '{print $1}')
-  [ -n "$CALLER_HASH" ] && [ "$CALLER_HASH" = "$TRUSTED_HASH" ] || exit 4
-  SB=$CORES/$NAME
-fi
 CONF=$RUN/config.$EXT
-as_owner /bin/cat -- "$CFG" >"$CONF" || exit 5
+as_owner /bin/cat -- "$CFG" >"$CONF" && chmod 0600 "$CONF" || exit 5
 for f in geoip.dat geosite.dat; do
   [ -n "$GEO" ] && as_owner test -f "$GEO/$f" && as_owner /bin/cat -- "$GEO/$f" >"$RUN/home/$f"
 done
 : >"$RUN/core.auth"
-echo "[wrap mac v1] start KIND=$KIND app=$(kill -0 "$APPPID" 2>/dev/null && echo y || echo n)" >>"$LOGF"
+echo "[wrap mac v2] start KIND=$KIND app=$(kill -0 "$APPPID" 2>/dev/null && echo y || echo n)" >>"$LOGF"
 if [ "$KIND" = mihomo ]; then
   set -- "$SB" -d "$RUN/home" -f "$CONF"
 else
@@ -403,158 +391,13 @@ while [ -e "$SENT" ] && kill -0 "$APPPID" 2>/dev/null; do
   kill -0 "$sb" 2>/dev/null || break
   sleep 1
 done
-echo "[wrap mac v1] stop sent=$([ -e "$SENT" ] && echo y || echo n) app=$(kill -0 "$APPPID" 2>/dev/null && echo y || echo n) core=$(kill -0 "$sb" 2>/dev/null && echo y || echo n)" >>"$LOGF"
+echo "[wrap mac v2] stop sent=$([ -e "$SENT" ] && echo y || echo n) app=$(kill -0 "$APPPID" 2>/dev/null && echo y || echo n) core=$(kill -0 "$sb" 2>/dev/null && echo y || echo n)" >>"$LOGF"
 kill -TERM "$sb" 2>/dev/null
 wait "$sb"
 ''';
 
-  static const _sudoersContent =
-      '# keqdroid: passwordless authorization for TUN mode.\n'
-      '# Removing this file restores the password prompt on every TUN connect.\n'
-      '%admin ALL=(root) NOPASSWD: $_helperPath *\n';
-
   @visibleForTesting
   static String get tunWrapperBodyForTest => _tunWrapperBody;
-
-  @visibleForTesting
-  static String get sudoersRuleForTest => _sudoersContent;
-
-  @visibleForTesting
-  static const helperPathForTest = _helperPath;
-
-  @visibleForTesting
-  static const helperVersionMarkForTest = _helperVersionMark;
-
-  static bool isPasswordlessTunInstalled() {
-    if (!Platform.isMacOS) return false;
-    try {
-      final helper = File(_helperPath);
-      return helper.existsSync() &&
-          helper.readAsStringSync().contains(_helperVersionMark);
-    } catch (_) {
-      return false;
-    }
-  }
-
-  static Future<File> _passwordlessOffMarker() async => File(
-    p.join(
-      (await getApplicationSupportDirectory()).path,
-      'tun_password_always',
-    ),
-  );
-
-  static Future<bool> passwordlessTunDeclined() async {
-    if (!Platform.isMacOS) return false;
-    try {
-      return (await _passwordlessOffMarker()).existsSync();
-    } catch (_) {
-      return false;
-    }
-  }
-
-  static Future<String> _installScript({required bool runAfter}) async {
-    final helper = '#!/bin/sh\n$_tunWrapperBody';
-    final cores = <String, String?>{
-      'xray': await MacosCorePaths.xrayExecutable(),
-      'mihomo': await MacosCorePaths.mihomoExecutable(),
-    };
-    final installCores = [
-      for (final MapEntry(:key, :value) in cores.entries)
-        if (value != null)
-          "/usr/bin/install -m 0755 ${posixShellQuote(value)} '$_trustedCoresDir/$key'",
-    ].join('\n');
-    final run = runAfter ? "set +e\nexec '$_helperPath' \"\$@\"\n" : '';
-    return '''
-set -e
-/bin/mkdir -p /usr/local/libexec/keqdroid '$_trustedCoresDir' /etc/sudoers.d
-$installCores
-/bin/cat > '$_helperPath' <<'KEQDROID_HELPER_EOF'
-$helper
-KEQDROID_HELPER_EOF
-/bin/chmod 0755 '$_helperPath'
-/usr/sbin/chown root:wheel '$_helperPath'
-TMP_SUDOERS=\$(/usr/bin/mktemp /tmp/keqdroid-sudoers.XXXXXX)
-/bin/cat > "\$TMP_SUDOERS" <<'KEQDROID_SUDOERS_EOF'
-$_sudoersContent
-KEQDROID_SUDOERS_EOF
-/bin/chmod 0440 "\$TMP_SUDOERS"
-/usr/sbin/chown root:wheel "\$TMP_SUDOERS"
-/usr/sbin/visudo -cf "\$TMP_SUDOERS"
-/bin/mv -f "\$TMP_SUDOERS" '$_sudoersPath'
-$run''';
-  }
-
-  @visibleForTesting
-  static Future<String> installScriptForTest({required bool runAfter}) =>
-      _installScript(runAfter: runAfter);
-
-  static String get _removeScript =>
-      "/bin/rm -f '$_helperPath' '$_sudoersPath'; /bin/rm -rf '$_trustedCoresDir'";
-
-  @visibleForTesting
-  static String get removeScriptForTest => _removeScript;
-
-  static Future<bool> installPasswordlessTun() async {
-    if (!Platform.isMacOS) return false;
-    Directory? tmp;
-    try {
-      tmp = await Directory.systemTemp.createTemp('keqdroid_tun_install_');
-      final scriptFile = File(p.join(tmp.path, 'install.sh'));
-      await scriptFile.writeAsString(await _installScript(runAfter: false));
-      await Process.run('/bin/chmod', ['0700', scriptFile.path]);
-      final res = await Process.run('/usr/bin/osascript', [
-        '-e',
-        appleScriptAdminCommand(['/bin/sh', scriptFile.path]),
-      ]);
-      if (res.exitCode != 0) {
-        AppLogger.instance.warn(
-          'installPasswordlessTun failed: code=${res.exitCode} err=${res.stderr}',
-        );
-        return false;
-      }
-      final marker = await _passwordlessOffMarker();
-      if (marker.existsSync()) await marker.delete();
-      return true;
-    } catch (e, st) {
-      AppLogger.instance.error(
-        'installPasswordlessTun error',
-        error: e,
-        stackTrace: st,
-      );
-      return false;
-    } finally {
-      await deleteSessionDir(tmp);
-    }
-  }
-
-  static Future<bool> removePasswordlessTun() async {
-    if (!Platform.isMacOS) return false;
-    Directory? tmp;
-    try {
-      tmp = await Directory.systemTemp.createTemp('keqdroid_tun_remove_');
-      final scriptFile = File(p.join(tmp.path, 'remove.sh'));
-      await scriptFile.writeAsString('#!/bin/sh\n$_removeScript\n');
-      await Process.run('/bin/chmod', ['0700', scriptFile.path]);
-      final res = await Process.run('/usr/bin/osascript', [
-        '-e',
-        appleScriptAdminCommand(['/bin/sh', scriptFile.path]),
-      ]);
-      if (res.exitCode != 0) return false;
-      final marker = await _passwordlessOffMarker();
-      await marker.parent.create(recursive: true);
-      await marker.writeAsString('1');
-      return true;
-    } catch (e, st) {
-      AppLogger.instance.error(
-        'removePasswordlessTun error',
-        error: e,
-        stackTrace: st,
-      );
-      return false;
-    } finally {
-      await deleteSessionDir(tmp);
-    }
-  }
 
   Future<void> _runXrayAsRoot(String config) async {
     final bin = await MacosCorePaths.xrayExecutable();
@@ -694,8 +537,15 @@ $run''';
     required String label,
     required StringBuffer log,
     required void Function(Process) onStarted,
-    bool allowPasswordless = true,
   }) async {
+    // Чужой интерфейс с этим именем не должен стать признаком готовности.
+    if (await _tunInterfaceExists()) {
+      throw VpnStartException(
+        'The macOS interface $tunInterfaceName already exists. Disconnect '
+        'the other tunnel or wait for the previous keqdroid core to stop.',
+      );
+    }
+
     final sentinelFile = File(p.join(_sessionDir!.path, 'core.run'));
     await sentinelFile.writeAsString('1');
     _rootSentinel = sentinelFile;
@@ -712,23 +562,15 @@ $run''';
       kind,
       '${macosRealUid()}',
     ];
-    final asRoot = macosRunningAsRoot();
-    final usePasswordless = allowPasswordless && isPasswordlessTunInstalled();
-    final installNow =
-        !asRoot && !usePasswordless && !await passwordlessTunDeclined();
 
     final wrapperFile = File(p.join(_sessionDir!.path, 'tun_wrap.sh'));
-    await wrapperFile.writeAsString(
-      '#!/bin/sh\n${installNow ? await _installScript(runAfter: true) : _tunWrapperBody}',
-    );
+    await wrapperFile.writeAsString('#!/bin/sh\n$_tunWrapperBody');
     await Process.run('/bin/chmod', ['0700', wrapperFile.path]);
 
     final launch = planMacosElevation(
       coreArgs: coreArgs,
       wrapperScriptPath: wrapperFile.path,
-      helperPath: _helperPath,
-      asRoot: asRoot,
-      passwordless: usePasswordless,
+      asRoot: macosRunningAsRoot(),
     );
 
     final Process process;
@@ -748,55 +590,23 @@ $run''';
     onStarted(process);
     listenCoreOutput(process, log);
 
-    final authorized = await _waitForElevation(
-      process: process,
-      authMarker: authMarker,
-      log: log,
-      untrustedCoreExit: usePasswordless ? _untrustedCoreExit : null,
-      viaSudo: launch.viaSudo,
-    );
-    if (!authorized) {
-      AppLogger.instance.info(
-        '$label changed since passwordless TUN was set up; asking for the '
-        'administrator password once to trust the new one',
-      );
-      return _startElevatedCore(
-        binPath: binPath,
-        configPath: configPath,
-        geoOrHomeDir: geoOrHomeDir,
-        kind: kind,
-        label: label,
-        log: log,
-        onStarted: onStarted,
-        allowPasswordless: false,
-      );
-    }
+    await _waitForElevation(process: process, authMarker: authMarker, log: log);
     return process;
   }
 
-  Future<bool> _waitForElevation({
+  Future<void> _waitForElevation({
     required Process process,
     required File authMarker,
     required StringBuffer log,
-    int? untrustedCoreExit,
-    required bool viaSudo,
   }) async {
     const maxWait = Duration(minutes: 2);
     final sw = Stopwatch()..start();
     while (sw.elapsed < maxWait) {
       final code = await exitCodeOrNull(process);
       if (code != null) {
-        if (code == untrustedCoreExit) return false;
-        // sudo -n exits with 1 if sudoers rule was removed externally; fall back to prompt once.
-        if (viaSudo &&
-            code == 1 &&
-            log.toString().toLowerCase().contains('a password is required')) {
-          return false;
-        }
         throw VpnStartException(_elevationError(code, log));
       }
-      if (_freshSince(authMarker, _rootCoreLaunchedAt)) return true;
-      if (await _tunInterfaceExists()) return true;
+      if (_freshSince(authMarker, _rootCoreLaunchedAt)) return;
       await Future<void>.delayed(const Duration(milliseconds: 300));
     }
     try {
@@ -1078,7 +888,8 @@ $run''';
         await for (final entity in dir.list(followLinks: false)) {
           if (!entity.path.endsWith('.app')) continue;
           final displayName = p.basenameWithoutExtension(entity.path);
-          final exeName = await _bundleExecutableName(entity.path) ?? displayName;
+          final exeName =
+              await _bundleExecutableName(entity.path) ?? displayName;
           if (exeName.isEmpty || !seen.add(exeName.toLowerCase())) continue;
           apps.add({
             'packageName': exeName,
@@ -1130,22 +941,8 @@ $run''';
     return apps;
   }
 
-  static Future<String?> _bundleExecutableName(String appBundlePath) async {
-    final plist = p.join(appBundlePath, 'Contents', 'Info.plist');
-    if (!File(plist).existsSync()) return null;
-    try {
-      final r = await Process.run('/usr/bin/defaults', [
-        'read',
-        plist,
-        'CFBundleExecutable',
-      ]);
-      if (r.exitCode == 0) {
-        final name = '${r.stdout}'.trim();
-        if (name.isNotEmpty) return name;
-      }
-    } catch (_) {}
-    return null;
-  }
+  static Future<String?> _bundleExecutableName(String appBundlePath) =>
+      MacosAppBundle.executableName(appBundlePath);
 
   @override
   Future<String?> getAppIcon(String path) async {

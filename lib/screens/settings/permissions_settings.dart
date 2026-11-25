@@ -143,7 +143,7 @@ class _PermissionsScreenState extends ConsumerState<_PermissionsScreen>
       physics: const ClampingScrollPhysics(),
       children: [
         if (Platform.isAndroid) ..._androidPermissions(l10n),
-        if (Platform.isLinux || Platform.isMacOS) ..._unixTunPermissions(l10n),
+        if (Platform.isLinux) ..._unixTunPermissions(l10n),
       ],
     );
   }
@@ -221,11 +221,7 @@ class _PermissionsScreenState extends ConsumerState<_PermissionsScreen>
 
   List<Widget> _unixTunPermissions(AppLocalizations l10n) {
     return [
-      _sectionHeader(
-        Platform.isMacOS
-            ? l10n.settingsPermTunHeaderMacos
-            : l10n.settingsPermTunHeader,
-      ),
+      _sectionHeader(l10n.settingsPermTunHeader),
       const ExpressiveCard(
         padding: EdgeInsets.zero,
         child: _UnixTunPasswordlessTile(),
@@ -301,17 +297,11 @@ class _UnixTunPasswordlessTile extends ConsumerStatefulWidget {
 
 class _UnixTunPasswordlessTileState
     extends ConsumerState<_UnixTunPasswordlessTile> {
-  static bool _isInstalled() => Platform.isMacOS
-      ? MacosTunnelBackend.isPasswordlessTunInstalled()
-      : LinuxTunnelBackend.isPasswordlessTunInstalled();
+  static bool _isInstalled() => LinuxTunnelBackend.isPasswordlessTunInstalled();
 
-  static Future<bool> _install() => Platform.isMacOS
-      ? MacosTunnelBackend.installPasswordlessTun()
-      : LinuxTunnelBackend.installPasswordlessTun();
+  static Future<bool> _install() => LinuxTunnelBackend.installPasswordlessTun();
 
-  static Future<bool> _remove() => Platform.isMacOS
-      ? MacosTunnelBackend.removePasswordlessTun()
-      : LinuxTunnelBackend.removePasswordlessTun();
+  static Future<bool> _remove() => LinuxTunnelBackend.removePasswordlessTun();
 
   late bool _installed = _isInstalled();
   bool _busy = false;

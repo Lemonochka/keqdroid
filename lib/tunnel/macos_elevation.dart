@@ -4,7 +4,6 @@ typedef MacosElevationLaunch = ({
   String executable,
   List<String> args,
   bool viaOsascript,
-  bool viaSudo,
 });
 
 int? _cachedUid;
@@ -25,8 +24,7 @@ int macosRealUid() {
 
 bool macosRunningAsRoot() => Platform.isMacOS && macosRealUid() == 0;
 
-String posixShellQuote(String value) =>
-    "'${value.replaceAll("'", r"'\''")}'";
+String posixShellQuote(String value) => "'${value.replaceAll("'", r"'\''")}'";
 
 String appleScriptEscape(String value) =>
     value.replaceAll(r'\', r'\\').replaceAll('"', r'\"');
@@ -37,29 +35,17 @@ String appleScriptAdminCommand(List<String> argv) {
       'with administrator privileges';
 }
 
-// Three launch paths: already root (direct sh), installed passwordless helper (sudo -n),
-// or interactive macOS admin prompt via osascript running a staged wrapper script.
+// Уже root — напрямую, иначе только после интерактивного подтверждения.
 MacosElevationLaunch planMacosElevation({
   required List<String> coreArgs,
   required String wrapperScriptPath,
-  required String helperPath,
   required bool asRoot,
-  required bool passwordless,
 }) {
   if (asRoot) {
     return (
       executable: '/bin/sh',
       args: <String>[wrapperScriptPath, ...coreArgs],
       viaOsascript: false,
-      viaSudo: false,
-    );
-  }
-  if (passwordless) {
-    return (
-      executable: '/usr/bin/sudo',
-      args: <String>['-n', helperPath, ...coreArgs],
-      viaOsascript: false,
-      viaSudo: true,
     );
   }
   final script = appleScriptAdminCommand([
@@ -71,6 +57,5 @@ MacosElevationLaunch planMacosElevation({
     executable: '/usr/bin/osascript',
     args: <String>['-e', script],
     viaOsascript: true,
-    viaSudo: false,
   );
 }

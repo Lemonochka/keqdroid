@@ -100,7 +100,6 @@ import 'package:keqdroid/utils/vpn_core_support.dart';
 import 'package:keqdroid/platform/platform_bootstrap.dart';
 import 'package:keqdroid/screens/split_tunneling_screen.dart';
 import 'package:keqdroid/tunnel/linux_tunnel_backend.dart';
-import 'package:keqdroid/tunnel/macos_tunnel_backend.dart';
 import 'package:keqdroid/tunnel/vpn_backend.dart';
 import 'package:keqdroid/tunnel/local_port_plan.dart';
 import 'package:keqdroid/ui/responsive/desktop_page_layout.dart';
