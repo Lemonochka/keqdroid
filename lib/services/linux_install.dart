@@ -96,6 +96,14 @@ class LinuxInstall {
     return target;
   }
 
+  @visibleForTesting
+  static List<String> packageInstallCommand(String package) =>
+      package.endsWith('.deb')
+      ? ['apt-get', 'install', '-y', package]
+      // RPM 6 с _pkgverify_level=all требует OpenPGP даже для локальных файлов.
+      // Апдейтер уже проверил SHA-256 по подписанному SHA256SUMS, digest не трогаем
+      : ['rpm', '-U', '--nosignature', package];
+
   // apt-get доставит зависимости, а rpm есть и у dnf, и у zypper с одинаковыми флагами
   static Future<bool> installPackage(
     String package, {
@@ -106,9 +114,7 @@ class LinuxInstall {
       final saved = await saveToDownloads(package, p.basename(package));
       throw StateError('$blocker The new version is saved as $saved');
     }
-    final command = package.endsWith('.deb')
-        ? ['apt-get', 'install', '-y', package]
-        : ['rpm', '-U', package];
+    final command = packageInstallCommand(package);
     final ProcessResult result;
     try {
       result = await Process.run('pkexec', command);

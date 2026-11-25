@@ -51,6 +51,21 @@ void main() {
     },
   );
 
+  test('RPM 6 пропускает только отсутствующую OpenPGP-подпись', () {
+    expect(LinuxInstall.packageInstallCommand('/tmp/k.rpm'), [
+      'rpm',
+      '-U',
+      '--nosignature',
+      '/tmp/k.rpm',
+    ]);
+    expect(LinuxInstall.packageInstallCommand('/tmp/k.deb'), [
+      'apt-get',
+      'install',
+      '-y',
+      '/tmp/k.deb',
+    ]);
+  });
+
   group('пакет на системе из образа', () {
     tearDown(() => LinuxInstall.imageBasedSystem = () => false);
 

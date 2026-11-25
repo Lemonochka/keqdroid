@@ -34,13 +34,15 @@ The full country database on Android is checked the same way: “About” → �
 | Windows, installer | the new version installs over the old one without installer windows, Windows may ask for admin rights; then the app restarts |
 | Windows, portable | files in the app folder are replaced, and the app restarts |
 | Linux, `.deb` | `apt-get install` through `pkexec`, the system asks for your password |
-| Linux, `.rpm` | `rpm -U` through `pkexec`, the system asks for your password |
+| Linux, `.rpm` | `rpm -U --nosignature` through `pkexec`, the system asks for your password |
 | Linux, AppImage | the file is replaced in place; if its folder isn't writable, the new version is saved to Downloads |
 | Linux, `.tar.gz` | files in the app folder are replaced |
 | Linux, Arch | the release page opens, update the package through `PKGBUILD` |
 | Linux, app folder not writable | the release page opens |
 
 The app downloads the same kind of file it was installed from: an AppImage updates to an AppImage, a `.deb` to a `.deb`. On Fedora Silverblue, Kinoite, Bazzite and other atomic systems, packages are installed by `rpm-ostree`, so the `.rpm` is just saved to Downloads.
+
+RPM 6 with `_pkgverify_level=all`, the default policy in Fedora 45, rejects packages without an OpenPGP signature. The app has already verified the file hash against the signed `SHA256SUMS`, so `--nosignature` skips only the duplicate OpenPGP check while RPM integrity verification stays enabled. If an older app version reports “no signature”, download the new `.rpm` and `SHA256SUMS`, check the file with the command below, and update once manually: `sudo rpm -U --nosignature <file.rpm>`.
 
 If the VPN was on, it turns back on after the update: on Android after the APK is installed, on a computer after the restart.
 
