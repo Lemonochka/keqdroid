@@ -8,6 +8,7 @@ import '../../platform/platform_bootstrap.dart';
 import '../../services/file_dialog_service.dart';
 import '../../utils/bidi.dart';
 import '../../utils/error_messages.dart';
+import '../../utils/macos_app_bundle.dart';
 import 'app_theme.dart';
 
 // программы, которая не запущена, в списке процессов нет, и иначе её не выбрать; проверку имени делает вызывающий код
@@ -94,5 +95,6 @@ Future<String?> showAddProcessDialog(BuildContext context) async {
   );
 
   if (ok != true) return null;
-  return pickedPath.isNotEmpty ? pickedPath : ctrl.text;
+  final path = pickedPath.isNotEmpty ? pickedPath : ctrl.text;
+  return Platform.isMacOS ? MacosAppBundle.resolveProcessPath(path) : path;
 }

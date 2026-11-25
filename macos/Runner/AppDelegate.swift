@@ -19,7 +19,9 @@ class AppDelegate: FlutterAppDelegate {
     guard let bridge = platformBridge else { return .terminateNow }
     isTerminating = true
     bridge.notifyAppWillTerminate()
-    DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) { [weak self] in
+    // TUN shutdown waits for the root core and asynchronous utun removal (up to 16 s).
+    // Proxy restoration runs first in Dart; this is only a last-resort upper bound.
+    DispatchQueue.main.asyncAfter(deadline: .now() + 25.0) { [weak self] in
       self?.confirmTerminate()
     }
     return .terminateLater
