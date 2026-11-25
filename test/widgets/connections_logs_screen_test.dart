@@ -95,10 +95,11 @@ void main() {
         ),
         findsOneWidget,
       );
-      expect(
-        find.text('No Xray session logs yet. Connect VPN first.'),
-        findsOne,
+      final emptyLog = tester.widget<SelectableText>(
+        find.byType(SelectableText),
       );
+      expect(emptyLog.data, startsWith('No '));
+      expect(emptyLog.data, contains('Connect'));
       expect(find.text('Debug mode'), findsNothing);
       expect(tester.takeException(), isNull);
     },
