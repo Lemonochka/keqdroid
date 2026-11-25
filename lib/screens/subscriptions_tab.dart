@@ -336,16 +336,19 @@ class SubscriptionsTab extends ConsumerWidget {
                 suffix: PlatformBootstrap.isDesktop
                     ? null
                     : PlatformBootstrap.isTelevision
-                    ? IconButton(
-                        icon: Icon(
-                          Icons.install_mobile_rounded,
-                          color: AppTheme.accent(context),
+                    ? Builder(
+                        builder: (btnCtx) => IconButton(
+                          style: TvFocus.iconButtonStyle(
+                            btnCtx,
+                            color: AppTheme.accent(btnCtx),
+                          ),
+                          icon: const Icon(Icons.install_mobile_rounded),
+                          tooltip: l10n.tvReceiveTitle,
+                          onPressed: () {
+                            Navigator.pop(ctx);
+                            unawaited(TvReceiveScreen.open(context));
+                          },
                         ),
-                        tooltip: l10n.tvReceiveTitle,
-                        onPressed: () {
-                          Navigator.pop(ctx);
-                          unawaited(TvReceiveScreen.open(context));
-                        },
                       )
                     : IconButton(
                         icon: Icon(
@@ -463,41 +466,46 @@ class SubscriptionsTab extends ConsumerWidget {
     Widget? suffix,
     bool technical = false,
   }) {
-    final textColor = AppTheme.text(context);
-    final textLightColor = AppTheme.textLight(context);
-    final cardColor = AppTheme.card(context);
-    final accentColor = AppTheme.accent(context);
-
-    return TextField(
-      controller: ctrl,
-      textDirection: technical ? technicalInputDirection : null,
-      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: textColor),
-      decoration: InputDecoration(
-        labelText: label,
-        hintText: hint,
-        hintTextDirection: technical ? technicalInputDirection : null,
-        suffixIcon: suffix,
-        labelStyle: TextStyle(color: textLightColor),
-        hintStyle: TextStyle(color: textLightColor.withValues(alpha: 0.5)),
-        filled: true,
-        fillColor: cardColor,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 14,
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(ExpressiveShape.large),
-          borderSide: BorderSide.none,
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(ExpressiveShape.large),
-          borderSide: BorderSide.none,
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(ExpressiveShape.large),
-          borderSide: BorderSide(color: accentColor, width: 2),
-        ),
-      ),
+    return TvTextField(
+      radius: BorderRadius.circular(ExpressiveShape.large),
+      builder: (ctx, canRequestFocus) {
+        final textColor = AppTheme.text(ctx);
+        final textLightColor = AppTheme.textLight(ctx);
+        final cardColor = AppTheme.card(ctx);
+        final accentColor = AppTheme.accent(ctx);
+        return TextField(
+          controller: ctrl,
+          canRequestFocus: canRequestFocus,
+          textDirection: technical ? technicalInputDirection : null,
+          style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(color: textColor),
+          decoration: InputDecoration(
+            labelText: label,
+            hintText: hint,
+            hintTextDirection: technical ? technicalInputDirection : null,
+            suffixIcon: suffix,
+            labelStyle: TextStyle(color: textLightColor),
+            hintStyle: TextStyle(color: textLightColor.withValues(alpha: 0.5)),
+            filled: true,
+            fillColor: cardColor,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(ExpressiveShape.large),
+              borderSide: BorderSide.none,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(ExpressiveShape.large),
+              borderSide: BorderSide.none,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(ExpressiveShape.large),
+              borderSide: BorderSide(color: accentColor, width: 2),
+            ),
+          ),
+        );
+      },
     );
   }
 }

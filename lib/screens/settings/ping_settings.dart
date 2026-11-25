@@ -178,25 +178,28 @@ class _PingSettingsScreenState extends ConsumerState<_PingSettingsScreen> {
                       }
                       _save(settings.copyWith(pingTestUrlCustom: v.trim()));
                     },
-                    builder: (focus, commit) => TextField(
-                      controller: _customUrlCtrl,
-                      focusNode: focus,
-                      textDirection: technicalInputDirection,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppTheme.text(context),
-                      ),
-                      decoration: InputDecoration(
-                        labelText: l10n.settingsPingCustomUrl,
-                        hintText: 'https://example.com/generate_204',
-                        hintTextDirection: technicalInputDirection,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(
-                            ExpressiveShape.medium,
+                    builder: (focus, commit) => TvTextField(
+                      builder: (ctx, canRequestFocus) => TextField(
+                        controller: _customUrlCtrl,
+                        focusNode: focus,
+                        canRequestFocus: canRequestFocus,
+                        textDirection: technicalInputDirection,
+                        style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(
+                          color: AppTheme.text(ctx),
+                        ),
+                        decoration: InputDecoration(
+                          labelText: l10n.settingsPingCustomUrl,
+                          hintText: 'https://example.com/generate_204',
+                          hintTextDirection: technicalInputDirection,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(
+                              ExpressiveShape.medium,
+                            ),
                           ),
                         ),
+                        onSubmitted: (_) => commit(),
+                        onEditingComplete: commit,
                       ),
-                      onSubmitted: (_) => commit(),
-                      onEditingComplete: commit,
                     ),
                   ),
                 ),

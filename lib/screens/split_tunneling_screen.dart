@@ -675,47 +675,58 @@ class _SearchField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-
     // крестик по самому полю: делегат прилипшей шапки пересобирается только при смене своих полей
     return ValueListenableBuilder<TextEditingValue>(
       valueListenable: controller,
-      builder: (context, value, _) => SearchBar(
-        controller: controller,
-        hintText: hintText,
-        elevation: const WidgetStatePropertyAll(0),
-        backgroundColor: WidgetStatePropertyAll(scheme.surfaceContainerHigh),
-        overlayColor: WidgetStatePropertyAll(
-          scheme.onSurface.withValues(alpha: 0.08),
-        ),
-        shape: WidgetStatePropertyAll(
-          ExpressiveShape.border(ExpressiveShape.full),
-        ),
-        padding: const WidgetStatePropertyAll(
-          EdgeInsets.symmetric(horizontal: ExpressiveSpacing.large),
-        ),
-        textStyle: WidgetStatePropertyAll(
-          theme.textTheme.bodyLarge?.copyWith(color: scheme.onSurface),
-        ),
-        hintStyle: WidgetStatePropertyAll(
-          theme.textTheme.bodyLarge?.copyWith(color: scheme.onSurfaceVariant),
-        ),
-        leading: Icon(
-          Icons.search_rounded,
-          size: ExpressiveIconSize.large,
-          color: scheme.onSurfaceVariant,
-        ),
-        trailing: [
-          if (value.text.isNotEmpty)
-            IconButton(
-              tooltip: MaterialLocalizations.of(context).deleteButtonTooltip,
-              icon: const Icon(Icons.close_rounded),
-              iconSize: ExpressiveIconSize.medium,
-              color: scheme.onSurfaceVariant,
-              onPressed: controller.clear,
+      builder: (context, value, _) => TvTextField(
+        radius: BorderRadius.circular(ExpressiveShape.full),
+        builder: (ctx, canRequestFocus) {
+          final theme = Theme.of(ctx);
+          final scheme = theme.colorScheme;
+          return ExcludeFocus(
+            excluding: !canRequestFocus,
+            child: SearchBar(
+              controller: controller,
+              hintText: hintText,
+              elevation: const WidgetStatePropertyAll(0),
+              backgroundColor: WidgetStatePropertyAll(
+                scheme.surfaceContainerHigh,
+              ),
+              overlayColor: WidgetStatePropertyAll(
+                scheme.onSurface.withValues(alpha: 0.08),
+              ),
+              shape: WidgetStatePropertyAll(
+                ExpressiveShape.border(ExpressiveShape.full),
+              ),
+              padding: const WidgetStatePropertyAll(
+                EdgeInsets.symmetric(horizontal: ExpressiveSpacing.large),
+              ),
+              textStyle: WidgetStatePropertyAll(
+                theme.textTheme.bodyLarge?.copyWith(color: scheme.onSurface),
+              ),
+              hintStyle: WidgetStatePropertyAll(
+                theme.textTheme.bodyLarge?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+              leading: Icon(
+                Icons.search_rounded,
+                size: ExpressiveIconSize.large,
+                color: scheme.onSurfaceVariant,
+              ),
+              trailing: [
+                if (value.text.isNotEmpty)
+                  IconButton(
+                    tooltip: MaterialLocalizations.of(ctx).deleteButtonTooltip,
+                    icon: const Icon(Icons.close_rounded),
+                    iconSize: ExpressiveIconSize.medium,
+                    color: scheme.onSurfaceVariant,
+                    onPressed: controller.clear,
+                  ),
+              ],
             ),
-        ],
+          );
+        },
       ),
     );
   }

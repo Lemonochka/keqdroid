@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:keqdroid/l10n/app_localizations.dart';
 import 'package:keqdroid/shared/ui/app_theme.dart';
+import 'package:keqdroid/shared/ui/tv_focus.dart';
 
 import '../../utils/bidi.dart';
 
@@ -62,7 +63,12 @@ class XhttpExtraFields extends StatefulWidget {
 
   final String json;
   final ValueChanged<String> onChanged;
-  final InputDecoration Function({String? label, String? hint}) decoration;
+  final InputDecoration Function({
+    String? label,
+    String? hint,
+    BuildContext? context,
+  })
+  decoration;
 
   static Map<String, dynamic>? parse(String json) {
     final text = json.trim();
@@ -206,23 +212,27 @@ class _XhttpExtraFieldsState extends State<XhttpExtraFields> {
     final id = inXmux ? 'xmux.$key' : key;
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
-      child: TextField(
-        controller: _ctrl(id, target[key]),
-        textDirection: technicalInputDirection,
-        keyboardType: TextInputType.text,
-        style: Theme.of(
-          context,
-        ).textTheme.bodyMedium?.copyWith(color: AppTheme.text(context)),
-        decoration: widget.decoration(
-          label: key,
-          hint: kind == _Kind.number ? '100-1000' : null,
+      child: TvTextField(
+        builder: (ctx, canRequestFocus) => TextField(
+          controller: _ctrl(id, target[key]),
+          canRequestFocus: canRequestFocus,
+          textDirection: technicalInputDirection,
+          keyboardType: TextInputType.text,
+          style: Theme.of(
+            ctx,
+          ).textTheme.bodyMedium?.copyWith(color: AppTheme.text(ctx)),
+          decoration: widget.decoration(
+            label: key,
+            hint: kind == _Kind.number ? '100-1000' : null,
+            context: ctx,
+          ),
+          onChanged: (text) {
+            _touched.add(id);
+            _set(target, key, kind, text);
+            if (inXmux) _putXmux(target);
+            _emit();
+          },
         ),
-        onChanged: (text) {
-          _touched.add(id);
-          _set(target, key, kind, text);
-          if (inXmux) _putXmux(target);
-          _emit();
-        },
       ),
     );
   }
@@ -301,23 +311,26 @@ class _XhttpExtraFieldsState extends State<XhttpExtraFields> {
           _group(l10n.serverEditorXhttpRest, [
             Padding(
               padding: const EdgeInsets.only(bottom: 10),
-              child: TextField(
-                controller: _rest,
-                textDirection: technicalInputDirection,
-                minLines: 2,
-                maxLines: 12,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppTheme.text(context),
-                  fontFamily: 'monospace',
+              child: TvTextField(
+                builder: (ctx, canRequestFocus) => TextField(
+                  controller: _rest,
+                  canRequestFocus: canRequestFocus,
+                  textDirection: technicalInputDirection,
+                  minLines: 2,
+                  maxLines: 12,
+                  style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                    color: AppTheme.text(ctx),
+                    fontFamily: 'monospace',
+                  ),
+                  decoration: widget
+                      .decoration(hint: '"headers": { }', context: ctx)
+                      .copyWith(
+                        errorText: _restInvalid
+                            ? l10n.serverEditorXhttpRestInvalid
+                            : null,
+                      ),
+                  onChanged: _onRest,
                 ),
-                decoration: widget
-                    .decoration(hint: '"headers": { }')
-                    .copyWith(
-                      errorText: _restInvalid
-                          ? l10n.serverEditorXhttpRestInvalid
-                          : null,
-                    ),
-                onChanged: _onRest,
               ),
             ),
           ]),

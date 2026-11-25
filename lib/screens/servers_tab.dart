@@ -1224,30 +1224,41 @@ class _ServersTabState extends ConsumerState<ServersTab>
                 ).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(ctx)),
               ),
               const SizedBox(height: 16),
-              TextField(
-                controller: ctrl,
-                textDirection: technicalInputDirection,
+              TvTextField(
+                radius: BorderRadius.circular(ExpressiveShape.large),
                 autofocus: true,
-                maxLines: 4,
-                style: Theme.of(
-                  ctx,
-                ).textTheme.bodyMedium?.copyWith(color: AppTheme.text(ctx)),
-                decoration: InputDecoration(
-                  hintText: l10n.serversPasteHint,
-                  hintStyle: TextStyle(
-                    color: AppTheme.textLight(ctx).withValues(alpha: 0.5),
+                builder: (fieldCtx, canRequestFocus) => TextField(
+                  controller: ctrl,
+                  canRequestFocus: canRequestFocus,
+                  textDirection: technicalInputDirection,
+                  autofocus: !TvFocus.enabled,
+                  maxLines: 4,
+                  style: Theme.of(fieldCtx).textTheme.bodyMedium?.copyWith(
+                    color: AppTheme.text(fieldCtx),
                   ),
-                  filled: true,
-                  fillColor: AppTheme.card(ctx),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(ExpressiveShape.large),
-                    borderSide: BorderSide.none,
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(ExpressiveShape.large),
-                    borderSide: BorderSide(
-                      color: AppTheme.accent(ctx),
-                      width: 2,
+                  decoration: InputDecoration(
+                    hintText: l10n.serversPasteHint,
+                    hintStyle: TextStyle(
+                      color: AppTheme.textLight(
+                        fieldCtx,
+                      ).withValues(alpha: 0.5),
+                    ),
+                    filled: true,
+                    fillColor: AppTheme.card(fieldCtx),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(
+                        ExpressiveShape.large,
+                      ),
+                      borderSide: BorderSide.none,
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(
+                        ExpressiveShape.large,
+                      ),
+                      borderSide: BorderSide(
+                        color: AppTheme.accent(fieldCtx),
+                        width: 2,
+                      ),
                     ),
                   ),
                 ),

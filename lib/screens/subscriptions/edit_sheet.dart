@@ -12,10 +12,7 @@ void _showSubscriptionEditSheet(
   var excludedProtocols = sub.excludedProtocols;
   String? editError;
 
-  final cardColor = AppTheme.card(context);
   final textColor = AppTheme.text(context);
-  final textLightColor = AppTheme.textLight(context);
-  final accentColor = AppTheme.accent(context);
   final accentContainerColor = AppTheme.accentContainer(context);
   final onAccentContainerColor = AppTheme.onAccentContainer(context);
 
@@ -33,40 +30,50 @@ void _showSubscriptionEditSheet(
           Widget? suffix,
           bool technical = false,
         }) {
-          return TextField(
-            controller: ctrl,
-            maxLines: maxLines,
-            textDirection: technical ? technicalInputDirection : null,
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: textColor),
-            decoration: InputDecoration(
-              labelText: label,
-              hintText: hint,
-              suffixIcon: suffix,
-              labelStyle: TextStyle(color: textLightColor),
-              hintStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: textLightColor.withValues(alpha: 0.5),
-              ),
-              filled: true,
-              fillColor: cardColor,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 14,
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(ExpressiveShape.large),
-                borderSide: BorderSide.none,
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(ExpressiveShape.large),
-                borderSide: BorderSide.none,
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(ExpressiveShape.large),
-                borderSide: BorderSide(color: accentColor, width: 2),
-              ),
-            ),
+          return TvTextField(
+            radius: BorderRadius.circular(ExpressiveShape.large),
+            builder: (fieldCtx, canRequestFocus) {
+              final fieldText = AppTheme.text(fieldCtx);
+              final fieldLight = AppTheme.textLight(fieldCtx);
+              final fieldCard = AppTheme.card(fieldCtx);
+              final fieldAccent = AppTheme.accent(fieldCtx);
+              return TextField(
+                controller: ctrl,
+                canRequestFocus: canRequestFocus,
+                maxLines: maxLines,
+                textDirection: technical ? technicalInputDirection : null,
+                style: Theme.of(
+                  fieldCtx,
+                ).textTheme.bodyMedium?.copyWith(color: fieldText),
+                decoration: InputDecoration(
+                  labelText: label,
+                  hintText: hint,
+                  suffixIcon: suffix,
+                  labelStyle: TextStyle(color: fieldLight),
+                  hintStyle: Theme.of(fieldCtx).textTheme.bodySmall?.copyWith(
+                    color: fieldLight.withValues(alpha: 0.5),
+                  ),
+                  filled: true,
+                  fillColor: fieldCard,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(ExpressiveShape.large),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(ExpressiveShape.large),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(ExpressiveShape.large),
+                    borderSide: BorderSide(color: fieldAccent, width: 2),
+                  ),
+                ),
+              );
+            },
           );
         }
 
@@ -100,26 +107,31 @@ void _showSubscriptionEditSheet(
                 sub.url,
                 maxLines: 2,
                 technical: true,
-                suffix: IconButton(
-                  icon: const Icon(Icons.copy_rounded, size: 18),
-                  tooltip: l10n.subscriptionsCopyUrl,
-                  color: textLightColor,
-                  onPressed: () {
-                    Clipboard.setData(ClipboardData(text: urlCtrl.text));
-                    AppSnack.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(l10n.subscriptionsUrlCopied),
-                        backgroundColor: textColor,
-                        behavior: SnackBarBehavior.floating,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(
-                            ExpressiveShape.medium,
+                suffix: Builder(
+                  builder: (btnCtx) => IconButton(
+                    icon: const Icon(Icons.copy_rounded, size: 18),
+                    tooltip: l10n.subscriptionsCopyUrl,
+                    style: TvFocus.iconButtonStyle(
+                      btnCtx,
+                      color: AppTheme.textLight(btnCtx),
+                    ),
+                    onPressed: () {
+                      Clipboard.setData(ClipboardData(text: urlCtrl.text));
+                      AppSnack.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(l10n.subscriptionsUrlCopied),
+                          backgroundColor: textColor,
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(
+                              ExpressiveShape.medium,
+                            ),
                           ),
+                          duration: const Duration(seconds: 2),
                         ),
-                        duration: const Duration(seconds: 2),
-                      ),
-                    );
-                  },
+                      );
+                    },
+                  ),
                 ),
               ),
               const SizedBox(height: 12),

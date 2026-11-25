@@ -623,8 +623,6 @@ class _IdentityOptionPickerState extends State<_IdentityOptionPicker> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
     final l10n = AppLocalizations.of(context)!;
     final typed = _typedValue;
 
@@ -639,17 +637,26 @@ class _IdentityOptionPickerState extends State<_IdentityOptionPicker> {
             _SheetHeader(widget.title),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-              child: SearchBar(
-                controller: _queryCtrl,
-                hintText: l10n.subscriptionIdentitySearchOrEnter,
-                autoFocus: false,
-                leading: Icon(
-                  Icons.search_rounded,
-                  color: scheme.onSurfaceVariant,
-                ),
-                onChanged: (q) => setState(() => _query = q),
-                onSubmitted: (_) {
-                  if (_typedValue != null) _pick(_typedValue);
+              child: TvTextField(
+                radius: BorderRadius.circular(ExpressiveShape.full),
+                builder: (ctx, canRequestFocus) {
+                  final barScheme = Theme.of(ctx).colorScheme;
+                  return ExcludeFocus(
+                    excluding: !canRequestFocus,
+                    child: SearchBar(
+                      controller: _queryCtrl,
+                      hintText: l10n.subscriptionIdentitySearchOrEnter,
+                      autoFocus: false,
+                      leading: Icon(
+                        Icons.search_rounded,
+                        color: barScheme.onSurfaceVariant,
+                      ),
+                      onChanged: (q) => setState(() => _query = q),
+                      onSubmitted: (_) {
+                        if (_typedValue != null) _pick(_typedValue);
+                      },
+                    ),
+                  );
                 },
               ),
             ),

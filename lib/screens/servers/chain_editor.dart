@@ -12,6 +12,7 @@ import 'package:keqdroid/shared/ui/scrolled_under.dart';
 import 'package:keqdroid/shared/ui/server_picker_sheet.dart';
 import 'package:keqdroid/shared/ui/shape_loading_indicator.dart';
 import 'package:keqdroid/shared/ui/smooth_scroll.dart';
+import 'package:keqdroid/shared/ui/tv_focus.dart';
 
 import '../../models/app_settings.dart';
 import '../../models/server_item.dart';
@@ -240,33 +241,34 @@ class _ChainEditorScreenState extends ConsumerState<ChainEditorScreen> {
 
   Widget _nameField(AppLocalizations l10n) {
     final radius = ExpressiveShape.radius(ExpressiveShape.large);
-    return TextField(
-      controller: _name,
-      maxLines: 1,
-      textInputAction: TextInputAction.done,
-      style: Theme.of(
-        context,
-      ).textTheme.bodyLarge?.copyWith(color: AppTheme.text(context)),
-      decoration: InputDecoration(
-        labelText: l10n.chainNameLabel,
-        hintText: l10n.chainNameHint,
-        prefixIcon: Icon(
-          Icons.link_rounded,
-          color: AppTheme.textLight(context),
-        ),
-        filled: true,
-        fillColor: AppTheme.card(context),
-        border: OutlineInputBorder(
-          borderRadius: radius,
-          borderSide: BorderSide(color: AppTheme.divider(context)),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: radius,
-          borderSide: BorderSide(color: AppTheme.divider(context)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: radius,
-          borderSide: BorderSide(color: AppTheme.accent(context), width: 2),
+    return TvTextField(
+      radius: radius,
+      builder: (ctx, canRequestFocus) => TextField(
+        controller: _name,
+        canRequestFocus: canRequestFocus,
+        maxLines: 1,
+        textInputAction: TextInputAction.done,
+        style: Theme.of(
+          ctx,
+        ).textTheme.bodyLarge?.copyWith(color: AppTheme.text(ctx)),
+        decoration: InputDecoration(
+          labelText: l10n.chainNameLabel,
+          hintText: l10n.chainNameHint,
+          prefixIcon: Icon(Icons.link_rounded, color: AppTheme.textLight(ctx)),
+          filled: true,
+          fillColor: AppTheme.card(ctx),
+          border: OutlineInputBorder(
+            borderRadius: radius,
+            borderSide: BorderSide(color: AppTheme.divider(ctx)),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: radius,
+            borderSide: BorderSide(color: AppTheme.divider(ctx)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: radius,
+            borderSide: BorderSide(color: AppTheme.accent(ctx), width: 2),
+          ),
         ),
       ),
     );

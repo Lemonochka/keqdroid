@@ -172,54 +172,57 @@ class _ConnectionsScreenState extends ConsumerState<_ConnectionsScreen> {
                         ),
                       ],
                       const SizedBox(height: 10),
-                      TextField(
-                        controller: _filterCtrl,
-                        textDirection: technicalInputDirection,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppTheme.text(context),
-                        ),
-                        decoration: InputDecoration(
-                          isDense: true,
-                          prefixIcon: const Icon(
-                            Icons.search_rounded,
-                            size: 18,
+                      TvTextField(
+                        builder: (ctx, canRequestFocus) => TextField(
+                          controller: _filterCtrl,
+                          canRequestFocus: canRequestFocus,
+                          textDirection: technicalInputDirection,
+                          style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(
+                            color: AppTheme.text(ctx),
                           ),
-                          hintText: l10n.connectionsFilterHint,
-                          hintStyle: TextStyle(
-                            color: AppTheme.textLight(context),
-                          ),
-                          filled: true,
-                          fillColor: AppTheme.inset(context),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(
-                              ExpressiveShape.medium,
+                          decoration: InputDecoration(
+                            isDense: true,
+                            prefixIcon: const Icon(
+                              Icons.search_rounded,
+                              size: 18,
                             ),
-                            borderSide: BorderSide(
-                              color: AppTheme.divider(context),
+                            hintText: l10n.connectionsFilterHint,
+                            hintStyle: TextStyle(
+                              color: AppTheme.textLight(ctx),
                             ),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(
-                              ExpressiveShape.medium,
+                            filled: true,
+                            fillColor: AppTheme.inset(ctx),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(
+                                ExpressiveShape.medium,
+                              ),
+                              borderSide: BorderSide(
+                                color: AppTheme.divider(ctx),
+                              ),
                             ),
-                            borderSide: BorderSide(
-                              color: AppTheme.divider(context),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(
+                                ExpressiveShape.medium,
+                              ),
+                              borderSide: BorderSide(
+                                color: AppTheme.divider(ctx),
+                              ),
                             ),
-                          ),
-                          suffixIcon: _filter.isEmpty
-                              ? null
-                              : IconButton(
-                                  icon: const Icon(
-                                    Icons.clear_rounded,
-                                    size: 18,
+                            suffixIcon: _filter.isEmpty
+                                ? null
+                                : IconButton(
+                                    icon: const Icon(
+                                      Icons.clear_rounded,
+                                      size: 18,
+                                    ),
+                                    onPressed: () {
+                                      _filterCtrl.clear();
+                                      setState(() => _filter = '');
+                                    },
                                   ),
-                                  onPressed: () {
-                                    _filterCtrl.clear();
-                                    setState(() => _filter = '');
-                                  },
-                                ),
+                          ),
+                          onChanged: (v) => setState(() => _filter = v),
                         ),
-                        onChanged: (v) => setState(() => _filter = v),
                       ),
                     ],
                   ),

@@ -241,14 +241,19 @@ class _RouteEditorScreenState extends ConsumerState<_RouteEditorScreen> {
         child: header,
       );
     }
+    final headerRadius = ExpressiveShape.radius(ExpressiveShape.medium);
     return ExpressiveGroupTile(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          InkWell(
-            borderRadius: ExpressiveShape.radius(ExpressiveShape.medium),
-            onTap: () => unawaited(_pickWhat(l10n)),
-            child: header,
+          TvFocusHighlight(
+            radius: headerRadius,
+            own: true,
+            child: InkWell(
+              borderRadius: headerRadius,
+              onTap: () => unawaited(_pickWhat(l10n)),
+              child: header,
+            ),
           ),
           const SizedBox(height: ExpressiveSpacing.medium),
           ..._sitesEditor(l10n),
@@ -507,56 +512,67 @@ class _RouteEditorScreenState extends ConsumerState<_RouteEditorScreen> {
   }
 
   Widget _sitesField(AppLocalizations l10n, GeoAssetIndex geoIndex) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
     final radius = ExpressiveShape.radius(ExpressiveShape.large);
     final withPicker = !geoIndex.isEmpty;
-    return Stack(
-      children: [
-        TextField(
-          controller: _sites,
-          textDirection: technicalInputDirection,
-          minLines: 2,
-          maxLines: 8,
-          style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onSurface),
-          decoration: InputDecoration(
-            hintText: 'youtube.com, 1.1.1.1, geosite:google',
-            filled: true,
-            fillColor: scheme.surfaceContainerLowest,
-            border: OutlineInputBorder(
-              borderRadius: radius,
-              borderSide: BorderSide.none,
+    return TvTextField(
+      radius: radius,
+      builder: (ctx, canRequestFocus) {
+        final theme = Theme.of(ctx);
+        final scheme = theme.colorScheme;
+        return Stack(
+          children: [
+            TextField(
+              controller: _sites,
+              canRequestFocus: canRequestFocus,
+              textDirection: technicalInputDirection,
+              minLines: 2,
+              maxLines: 8,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: scheme.onSurface,
+              ),
+              decoration: InputDecoration(
+                hintText: 'youtube.com, 1.1.1.1, geosite:google',
+                filled: true,
+                fillColor: scheme.surfaceContainerLowest,
+                border: OutlineInputBorder(
+                  borderRadius: radius,
+                  borderSide: BorderSide.none,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: radius,
+                  borderSide: BorderSide.none,
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: radius,
+                  borderSide: BorderSide(color: scheme.primary, width: 2),
+                ),
+                contentPadding: EdgeInsetsDirectional.fromSTEB(
+                  16,
+                  14,
+                  withPicker ? 48 : 16,
+                  14,
+                ),
+              ),
+              onChanged: (text) =>
+                  _change(_route.copyWith(sites: text), typing: true),
             ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: radius,
-              borderSide: BorderSide.none,
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: radius,
-              borderSide: BorderSide(color: scheme.primary, width: 2),
-            ),
-            contentPadding: EdgeInsetsDirectional.fromSTEB(
-              16,
-              14,
-              withPicker ? 48 : 16,
-              14,
-            ),
-          ),
-          onChanged: (text) =>
-              _change(_route.copyWith(sites: text), typing: true),
-        ),
-        if (withPicker)
-          PositionedDirectional(
-            top: 4,
-            end: 4,
-            child: IconButton(
-              tooltip: l10n.settingsRoutingGeoPickerTooltip,
-              icon: const Icon(Icons.travel_explore_rounded, size: 20),
-              color: scheme.onSurfaceVariant,
-              onPressed: () => unawaited(_pickGeoCode(geoIndex)),
-            ),
-          ),
-      ],
+            if (withPicker)
+              PositionedDirectional(
+                top: 4,
+                end: 4,
+                child: IconButton(
+                  tooltip: l10n.settingsRoutingGeoPickerTooltip,
+                  style: TvFocus.iconButtonStyle(
+                    ctx,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                  icon: const Icon(Icons.travel_explore_rounded, size: 20),
+                  onPressed: () => unawaited(_pickGeoCode(geoIndex)),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 
@@ -709,7 +725,6 @@ class _ProtocolSheetState extends State<_ProtocolSheet> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
     final radius = ExpressiveShape.radius(ExpressiveShape.large);
     final valid = routePortRanges(_ports.text) != null;
     Widget tile(
@@ -774,34 +789,50 @@ class _ProtocolSheetState extends State<_ProtocolSheet> {
                   ],
                 ),
                 ExpressiveSectionHeader(l10n.routePort),
-                TextField(
-                  controller: _ports,
-                  textDirection: technicalInputDirection,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: scheme.onSurface,
-                  ),
-                  decoration: InputDecoration(
-                    hintText: l10n.routePortHint,
-                    errorText: valid ? null : l10n.routePortsInvalid,
-                    filled: true,
-                    fillColor: scheme.surfaceContainerLowest,
-                    border: OutlineInputBorder(
-                      borderRadius: radius,
-                      borderSide: BorderSide.none,
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: radius,
-                      borderSide: BorderSide.none,
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: radius,
-                      borderSide: BorderSide(color: scheme.primary, width: 2),
-                    ),
-                    contentPadding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-                  ),
-                  onChanged: (text) {
-                    setState(() {});
-                    widget.onPorts(text);
+                TvTextField(
+                  radius: radius,
+                  builder: (ctx, canRequestFocus) {
+                    final fieldTheme = Theme.of(ctx);
+                    final fieldScheme = fieldTheme.colorScheme;
+                    return TextField(
+                      controller: _ports,
+                      canRequestFocus: canRequestFocus,
+                      textDirection: technicalInputDirection,
+                      style: fieldTheme.textTheme.bodyMedium?.copyWith(
+                        color: fieldScheme.onSurface,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: l10n.routePortHint,
+                        errorText: valid ? null : l10n.routePortsInvalid,
+                        filled: true,
+                        fillColor: fieldScheme.surfaceContainerLowest,
+                        border: OutlineInputBorder(
+                          borderRadius: radius,
+                          borderSide: BorderSide.none,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: radius,
+                          borderSide: BorderSide.none,
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: radius,
+                          borderSide: BorderSide(
+                            color: fieldScheme.primary,
+                            width: 2,
+                          ),
+                        ),
+                        contentPadding: const EdgeInsets.fromLTRB(
+                          16,
+                          14,
+                          16,
+                          14,
+                        ),
+                      ),
+                      onChanged: (text) {
+                        setState(() {});
+                        widget.onPorts(text);
+                      },
+                    );
                   },
                 ),
                 Padding(

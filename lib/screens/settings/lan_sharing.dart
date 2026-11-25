@@ -374,53 +374,59 @@ class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
     return CommitOnBlur(
       controller: ctrl,
       onCommit: onSubmit,
-      builder: (focus, commit) => TextField(
-        controller: ctrl,
-        textDirection: technicalInputDirection,
-        obscureText: obscurable && !_lanPassVisible,
-        style: Theme.of(
-          context,
-        ).textTheme.bodyMedium?.copyWith(color: AppTheme.text(context)),
-        decoration: InputDecoration(
-          labelText: label,
-          labelStyle: Theme.of(
-            context,
-          ).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 8,
-          ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(ExpressiveShape.medium),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(ExpressiveShape.medium),
-            borderSide: BorderSide(
-              color: AppTheme.textLight(context).withValues(alpha: 0.3),
+      builder: (focus, commit) => TvTextField(
+        builder: (ctx, canRequestFocus) => TextField(
+          controller: ctrl,
+          canRequestFocus: canRequestFocus,
+          textDirection: technicalInputDirection,
+          obscureText: obscurable && !_lanPassVisible,
+          style: Theme.of(
+            ctx,
+          ).textTheme.bodyMedium?.copyWith(color: AppTheme.text(ctx)),
+          decoration: InputDecoration(
+            labelText: label,
+            labelStyle: Theme.of(
+              ctx,
+            ).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(ctx)),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 8,
             ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(ExpressiveShape.medium),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(ExpressiveShape.medium),
+              borderSide: BorderSide(
+                color: AppTheme.textLight(ctx).withValues(alpha: 0.3),
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(ExpressiveShape.medium),
+              borderSide: BorderSide(color: AppTheme.accent(ctx)),
+            ),
+            suffixIcon: obscurable
+                ? IconButton(
+                    style: TvFocus.iconButtonStyle(
+                      ctx,
+                      color: AppTheme.textLight(ctx),
+                    ),
+                    icon: Icon(
+                      _lanPassVisible
+                          ? Icons.visibility_off_rounded
+                          : Icons.visibility_rounded,
+                      size: 18,
+                    ),
+                    onPressed: () =>
+                        setState(() => _lanPassVisible = !_lanPassVisible),
+                  )
+                : null,
+            isDense: true,
           ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(ExpressiveShape.medium),
-            borderSide: BorderSide(color: AppTheme.accent(context)),
-          ),
-          suffixIcon: obscurable
-              ? IconButton(
-                  icon: Icon(
-                    _lanPassVisible
-                        ? Icons.visibility_off_rounded
-                        : Icons.visibility_rounded,
-                    size: 18,
-                    color: AppTheme.textLight(context),
-                  ),
-                  onPressed: () =>
-                      setState(() => _lanPassVisible = !_lanPassVisible),
-                )
-              : null,
-          isDense: true,
+          focusNode: focus,
+          onSubmitted: (_) => commit(),
+          onEditingComplete: commit,
         ),
-        focusNode: focus,
-        onSubmitted: (_) => commit(),
-        onEditingComplete: commit,
       ),
     );
   }
@@ -434,40 +440,43 @@ class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
     return CommitOnBlur(
       controller: ctrl,
       onCommit: onSubmit,
-      builder: (focus, commit) => TextField(
-        controller: ctrl,
-        textDirection: technicalInputDirection,
-        keyboardType: TextInputType.number,
-        style: Theme.of(
-          context,
-        ).textTheme.bodyMedium?.copyWith(color: AppTheme.text(context)),
-        decoration: InputDecoration(
-          labelText: label,
-          labelStyle: Theme.of(
-            context,
-          ).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 8,
-          ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(ExpressiveShape.medium),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(ExpressiveShape.medium),
-            borderSide: BorderSide(
-              color: AppTheme.textLight(context).withValues(alpha: 0.3),
+      builder: (focus, commit) => TvTextField(
+        builder: (ctx, canRequestFocus) => TextField(
+          controller: ctrl,
+          canRequestFocus: canRequestFocus,
+          textDirection: technicalInputDirection,
+          keyboardType: TextInputType.number,
+          style: Theme.of(
+            ctx,
+          ).textTheme.bodyMedium?.copyWith(color: AppTheme.text(ctx)),
+          decoration: InputDecoration(
+            labelText: label,
+            labelStyle: Theme.of(
+              ctx,
+            ).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(ctx)),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 8,
             ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(ExpressiveShape.medium),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(ExpressiveShape.medium),
+              borderSide: BorderSide(
+                color: AppTheme.textLight(ctx).withValues(alpha: 0.3),
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(ExpressiveShape.medium),
+              borderSide: BorderSide(color: AppTheme.accent(ctx)),
+            ),
+            isDense: true,
           ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(ExpressiveShape.medium),
-            borderSide: BorderSide(color: AppTheme.accent(context)),
-          ),
-          isDense: true,
+          focusNode: focus,
+          onSubmitted: (_) => commit(),
+          onEditingComplete: commit,
         ),
-        focusNode: focus,
-        onSubmitted: (_) => commit(),
-        onEditingComplete: commit,
       ),
     );
   }

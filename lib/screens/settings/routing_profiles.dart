@@ -354,11 +354,15 @@ Future<void> _renameProfile(
     context: context,
     builder: (ctx) => AlertDialog(
       title: Text(l10n.routingProfileRenameTitle),
-      content: TextField(
-        controller: controller,
+      content: TvTextField(
         autofocus: true,
-        decoration: InputDecoration(labelText: l10n.routingProfileName),
-        onSubmitted: (v) => Navigator.pop(ctx, v),
+        builder: (ctx, canRequestFocus) => TextField(
+          controller: controller,
+          canRequestFocus: canRequestFocus,
+          autofocus: !TvFocus.enabled,
+          decoration: InputDecoration(labelText: l10n.routingProfileName),
+          onSubmitted: (v) => Navigator.pop(ctx, v),
+        ),
       ),
       actions: [
         TextButton(
@@ -511,12 +515,15 @@ class _ProfileSheetState extends ConsumerState<_ProfileSheet> {
                   ),
                 ),
                 if (_creating) ...[
-                  TextField(
-                    controller: _name,
-                    onChanged: (_) => setState(() {}),
-                    textInputAction: TextInputAction.done,
-                    decoration: InputDecoration(
-                      labelText: l10n.routingProfileName,
+                  TvTextField(
+                    builder: (_, canRequestFocus) => TextField(
+                      controller: _name,
+                      canRequestFocus: canRequestFocus,
+                      onChanged: (_) => setState(() {}),
+                      textInputAction: TextInputAction.done,
+                      decoration: InputDecoration(
+                        labelText: l10n.routingProfileName,
+                      ),
                     ),
                   ),
                   ExpressiveSectionHeader(l10n.routingProfileForSubscriptions),

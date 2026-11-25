@@ -492,12 +492,20 @@ class _ThemedApp extends ConsumerWidget {
         iconPalette: iconPalette,
       ),
       builder: (context, child) {
-        final content = (!flair || child == null)
+        final base = (!flair || child == null)
             ? (child ?? const SizedBox.shrink())
             : KawaiiOverlay(
                 flavor: preset.kawaii ?? KawaiiFlavor.sakura,
                 child: child,
               );
+        final content = TvFocus.enabled
+            ? Actions(
+                actions: <Type, Action<Intent>>{
+                  DirectionalFocusIntent: TvDirectionalFocusAction(),
+                },
+                child: base,
+              )
+            : base;
         final theme = Theme.of(context);
         final icons = theme.brightness == Brightness.dark
             ? Brightness.light

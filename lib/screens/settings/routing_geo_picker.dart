@@ -89,18 +89,22 @@ class _GeoCodePickerSheetState extends State<_GeoCodePickerSheet> {
                 onChanged: (v) => setState(() => _geosite = v),
               ),
               const SizedBox(height: 10),
-              TextField(
-                controller: _search,
-                textDirection: technicalInputDirection,
+              TvTextField(
                 autofocus: true,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(color: AppTheme.text(context)),
-                decoration: InputDecoration(
-                  prefixIcon: const Icon(Icons.search_rounded),
-                  hintText: l10n.settingsRoutingGeoPickerSearchHint,
+                builder: (ctx, canRequestFocus) => TextField(
+                  controller: _search,
+                  canRequestFocus: canRequestFocus,
+                  textDirection: technicalInputDirection,
+                  autofocus: !TvFocus.enabled,
+                  style: Theme.of(
+                    ctx,
+                  ).textTheme.bodyMedium?.copyWith(color: AppTheme.text(ctx)),
+                  decoration: InputDecoration(
+                    prefixIcon: const Icon(Icons.search_rounded),
+                    hintText: l10n.settingsRoutingGeoPickerSearchHint,
+                  ),
+                  onChanged: (v) => setState(() => _query = v),
                 ),
-                onChanged: (v) => setState(() => _query = v),
               ),
               const SizedBox(height: 8),
               Expanded(

@@ -157,21 +157,25 @@ class _WhoPickerSheetState extends ConsumerState<_WhoPickerSheet> {
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                child: TextField(
-                  controller: _query,
-                  onChanged: (_) => setState(() {}),
-                  textInputAction: TextInputAction.search,
-                  decoration: InputDecoration(
-                    hintText: l10n.splitSearchHint,
-                    prefixIcon: const Icon(Icons.search_rounded, size: 20),
-                    isDense: true,
-                    filled: true,
-                    fillColor: AppTheme.inset(context),
-                    border: OutlineInputBorder(
-                      borderRadius: ExpressiveShape.radius(
-                        ExpressiveShape.medium,
+                child: TvTextField(
+                  radius: ExpressiveShape.radius(ExpressiveShape.medium),
+                  builder: (ctx, canRequestFocus) => TextField(
+                    controller: _query,
+                    canRequestFocus: canRequestFocus,
+                    onChanged: (_) => setState(() {}),
+                    textInputAction: TextInputAction.search,
+                    decoration: InputDecoration(
+                      hintText: l10n.splitSearchHint,
+                      prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                      isDense: true,
+                      filled: true,
+                      fillColor: AppTheme.inset(ctx),
+                      border: OutlineInputBorder(
+                        borderRadius: ExpressiveShape.radius(
+                          ExpressiveShape.medium,
+                        ),
+                        borderSide: BorderSide.none,
                       ),
-                      borderSide: BorderSide.none,
                     ),
                   ),
                 ),

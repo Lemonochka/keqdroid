@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:keqdroid/l10n/app_localizations.dart';
 import 'package:keqdroid/shared/ui/app_theme.dart';
+import 'package:keqdroid/shared/ui/tv_focus.dart';
 
 import '../../utils/bidi.dart';
 import 'editor_layers.dart';
@@ -85,7 +86,12 @@ class ClashNodeFields extends StatefulWidget {
 
   final String json;
   final ValueChanged<String> onChanged;
-  final InputDecoration Function({String? label, String? hint}) decoration;
+  final InputDecoration Function({
+    String? label,
+    String? hint,
+    BuildContext? context,
+  })
+  decoration;
 
   @override
   State<ClashNodeFields> createState() => _ClashNodeFieldsState();
@@ -186,35 +192,38 @@ class _ClashNodeFieldsState extends State<ClashNodeFields> {
     );
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
-      child: TextField(
-        controller: ctrl,
-        textDirection: technicalInputDirection,
-        minLines: 2,
-        maxLines: 10,
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: AppTheme.text(context),
-          fontFamily: 'monospace',
+      child: TvTextField(
+        builder: (ctx, canRequestFocus) => TextField(
+          controller: ctrl,
+          canRequestFocus: canRequestFocus,
+          textDirection: technicalInputDirection,
+          minLines: 2,
+          maxLines: 10,
+          style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+            color: AppTheme.text(ctx),
+            fontFamily: 'monospace',
+          ),
+          decoration: widget
+              .decoration(label: label, context: ctx)
+              .copyWith(
+                errorText: _invalid.contains(id)
+                    ? AppLocalizations.of(ctx)!.serverEditorXhttpRestInvalid
+                    : null,
+              ),
+          onChanged: (text) {
+            Object? parsed;
+            var ok = true;
+            try {
+              parsed = jsonDecode(text);
+            } on FormatException {
+              ok = false;
+            }
+            setState(() => ok ? _invalid.remove(id) : _invalid.add(id));
+            if (!ok) return;
+            set(parsed);
+            _emit();
+          },
         ),
-        decoration: widget
-            .decoration(label: label)
-            .copyWith(
-              errorText: _invalid.contains(id)
-                  ? AppLocalizations.of(context)!.serverEditorXhttpRestInvalid
-                  : null,
-            ),
-        onChanged: (text) {
-          Object? parsed;
-          var ok = true;
-          try {
-            parsed = jsonDecode(text);
-          } on FormatException {
-            ok = false;
-          }
-          setState(() => ok ? _invalid.remove(id) : _invalid.add(id));
-          if (!ok) return;
-          set(parsed);
-          _emit();
-        },
       ),
     );
   }
@@ -273,18 +282,23 @@ class _ClashNodeFieldsState extends State<ClashNodeFields> {
     );
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
-      child: TextField(
-        controller: ctrl,
-        textDirection: technicalInputDirection,
-        keyboardType: value is num ? TextInputType.number : TextInputType.text,
-        style: Theme.of(
-          context,
-        ).textTheme.bodyMedium?.copyWith(color: AppTheme.text(context)),
-        decoration: widget.decoration(label: key),
-        onChanged: (text) {
-          target[key] = _typed(value, text);
-          _emit();
-        },
+      child: TvTextField(
+        builder: (ctx, canRequestFocus) => TextField(
+          controller: ctrl,
+          canRequestFocus: canRequestFocus,
+          textDirection: technicalInputDirection,
+          keyboardType: value is num
+              ? TextInputType.number
+              : TextInputType.text,
+          style: Theme.of(
+            ctx,
+          ).textTheme.bodyMedium?.copyWith(color: AppTheme.text(ctx)),
+          decoration: widget.decoration(label: key, context: ctx),
+          onChanged: (text) {
+            target[key] = _typed(value, text);
+            _emit();
+          },
+        ),
       ),
     );
   }
@@ -345,23 +359,26 @@ class _ClashNodeFieldsState extends State<ClashNodeFields> {
       EditorLayer(Icons.data_object_rounded, l10n.serverEditorClashRest, [
         Padding(
           padding: const EdgeInsets.only(bottom: 10),
-          child: TextField(
-            controller: _rest,
-            textDirection: technicalInputDirection,
-            minLines: 2,
-            maxLines: 12,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: AppTheme.text(context),
-              fontFamily: 'monospace',
+          child: TvTextField(
+            builder: (ctx, canRequestFocus) => TextField(
+              controller: _rest,
+              canRequestFocus: canRequestFocus,
+              textDirection: technicalInputDirection,
+              minLines: 2,
+              maxLines: 12,
+              style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                color: AppTheme.text(ctx),
+                fontFamily: 'monospace',
+              ),
+              decoration: widget
+                  .decoration(hint: '{ }', context: ctx)
+                  .copyWith(
+                    errorText: _invalid.contains('rest')
+                        ? l10n.serverEditorXhttpRestInvalid
+                        : null,
+                  ),
+              onChanged: _onRest,
             ),
-            decoration: widget
-                .decoration(hint: '{ }')
-                .copyWith(
-                  errorText: _invalid.contains('rest')
-                      ? l10n.serverEditorXhttpRestInvalid
-                      : null,
-                ),
-            onChanged: _onRest,
           ),
         ),
       ]),

@@ -678,30 +678,37 @@ class _ServerTile extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            TextField(
-              controller: ctrl,
+            TvTextField(
               autofocus: true,
-              maxLines: 1,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: textColor),
-              decoration: InputDecoration(
-                hintText: l10n.serversRenameHint,
-                hintStyle: TextStyle(
-                  color: textLightColor.withValues(alpha: 0.5),
+              builder: (fieldCtx, canRequestFocus) => TextField(
+                controller: ctrl,
+                canRequestFocus: canRequestFocus,
+                autofocus: !TvFocus.enabled,
+                maxLines: 1,
+                style: Theme.of(fieldCtx).textTheme.bodyMedium?.copyWith(
+                  color: AppTheme.text(fieldCtx),
                 ),
-                filled: true,
-                fillColor: AppTheme.bg(ctx),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(ExpressiveShape.medium),
-                  borderSide: BorderSide.none,
+                decoration: InputDecoration(
+                  hintText: l10n.serversRenameHint,
+                  hintStyle: TextStyle(
+                    color: AppTheme.textLight(fieldCtx).withValues(alpha: 0.5),
+                  ),
+                  filled: true,
+                  fillColor: AppTheme.bg(fieldCtx),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(ExpressiveShape.medium),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(ExpressiveShape.medium),
+                    borderSide: BorderSide(
+                      color: AppTheme.accent(fieldCtx),
+                      width: 2,
+                    ),
+                  ),
                 ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(ExpressiveShape.medium),
-                  borderSide: BorderSide(color: accentColor, width: 2),
-                ),
+                onSubmitted: (_) => _applyRename(ctx, ref, ctrl.text),
               ),
-              onSubmitted: (_) => _applyRename(ctx, ref, ctrl.text),
             ),
             if (hasCustomName) ...[
               const SizedBox(height: 8),

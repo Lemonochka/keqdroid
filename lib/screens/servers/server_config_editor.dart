@@ -28,6 +28,7 @@ import 'editor_layers.dart';
 import 'xhttp_extra_fields.dart';
 import 'package:keqdroid/shared/ui/liquid_toast.dart';
 import 'package:keqdroid/shared/ui/smooth_scroll.dart';
+import 'package:keqdroid/shared/ui/tv_focus.dart';
 
 class ServerConfigEditorScreen extends ConsumerStatefulWidget {
   final String serverId;
@@ -479,17 +480,20 @@ class _ServerConfigEditorScreenState
     final red = AppTheme.red(context);
 
     return _section(icon: Icons.code_rounded, l10n.serverEditorRawConfig, [
-      TextField(
-        controller: _rawCtrl,
-        textDirection: technicalInputDirection,
-        maxLines: isJson ? 26 : 10,
-        minLines: isJson ? 14 : 4,
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: AppTheme.text(context),
-          fontFamily: 'monospace',
+      TvTextField(
+        builder: (ctx, canRequestFocus) => TextField(
+          controller: _rawCtrl,
+          canRequestFocus: canRequestFocus,
+          textDirection: technicalInputDirection,
+          maxLines: isJson ? 26 : 10,
+          minLines: isJson ? 14 : 4,
+          style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+            color: AppTheme.text(ctx),
+            fontFamily: 'monospace',
+          ),
+          onChanged: (_) => setState(() {}),
+          decoration: _inputDecoration(context: ctx),
         ),
-        onChanged: (_) => setState(() {}),
-        decoration: _inputDecoration(),
       ),
       if (isJson) ...[
         const SizedBox(height: 10),
@@ -991,16 +995,21 @@ class _ServerConfigEditorScreenState
     required IconData icon,
   }) => EditorLayer(icon, title, children);
 
-  InputDecoration _inputDecoration({String? label, String? hint}) {
-    final scheme = Theme.of(context).colorScheme;
+  InputDecoration _inputDecoration({
+    String? label,
+    String? hint,
+    BuildContext? context,
+  }) {
+    final ctx = context ?? this.context;
+    final scheme = Theme.of(ctx).colorScheme;
     return InputDecoration(
       labelText: label,
       hintText: hint,
       labelStyle: Theme.of(
-        context,
-      ).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
-      hintStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
-        color: AppTheme.textLight(context).withValues(alpha: 0.4),
+        ctx,
+      ).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(ctx)),
+      hintStyle: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+        color: AppTheme.textLight(ctx).withValues(alpha: 0.4),
       ),
       isDense: true,
       filled: true,
@@ -1016,7 +1025,7 @@ class _ServerConfigEditorScreenState
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: ExpressiveShape.radius(ExpressiveShape.medium),
-        borderSide: BorderSide(color: AppTheme.accent(context), width: 2),
+        borderSide: BorderSide(color: AppTheme.accent(ctx), width: 2),
       ),
     );
   }
@@ -1066,17 +1075,20 @@ class _ServerConfigEditorScreenState
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
-      child: TextField(
-        controller: _ctrl(id),
-        textDirection: technicalInputDirection,
-        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-          color: AppTheme.text(context),
-          fontFamily: obscurable ? 'monospace' : null,
+      child: TvTextField(
+        builder: (ctx, canRequestFocus) => TextField(
+          controller: _ctrl(id),
+          canRequestFocus: canRequestFocus,
+          textDirection: technicalInputDirection,
+          style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(
+            color: AppTheme.text(ctx),
+            fontFamily: obscurable ? 'monospace' : null,
+          ),
+          keyboardType: keyboardType,
+          inputFormatters: inputFormatters,
+          onChanged: (_) => setState(() {}),
+          decoration: _inputDecoration(label: label, hint: hint, context: ctx),
         ),
-        keyboardType: keyboardType,
-        inputFormatters: inputFormatters,
-        onChanged: (_) => setState(() {}),
-        decoration: _inputDecoration(label: label, hint: hint),
       ),
     );
   }

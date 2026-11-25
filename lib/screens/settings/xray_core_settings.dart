@@ -1629,27 +1629,30 @@ class _DnsServersFieldState extends State<_DnsServersField> {
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
-      controller: _ctrl,
-      focusNode: _focus,
-      textDirection: technicalInputDirection,
-      maxLines: 4,
-      style: Theme.of(
-        context,
-      ).textTheme.bodyMedium?.copyWith(color: AppTheme.text(context)),
-      decoration: InputDecoration(
-        labelText: widget.label,
-        hintText: widget.hintText,
-        alignLabelWithHint: true,
-        filled: true,
-        fillColor: AppTheme.bg(context).withValues(alpha: 0.55),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(ExpressiveShape.medium),
-          borderSide: BorderSide(color: AppTheme.divider(context)),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(ExpressiveShape.medium),
-          borderSide: BorderSide(color: AppTheme.divider(context)),
+    return TvTextField(
+      builder: (ctx, canRequestFocus) => TextField(
+        controller: _ctrl,
+        focusNode: _focus,
+        canRequestFocus: canRequestFocus,
+        textDirection: technicalInputDirection,
+        maxLines: 4,
+        style: Theme.of(
+          ctx,
+        ).textTheme.bodyMedium?.copyWith(color: AppTheme.text(ctx)),
+        decoration: InputDecoration(
+          labelText: widget.label,
+          hintText: widget.hintText,
+          alignLabelWithHint: true,
+          filled: true,
+          fillColor: AppTheme.bg(ctx).withValues(alpha: 0.55),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(ExpressiveShape.medium),
+            borderSide: BorderSide(color: AppTheme.divider(ctx)),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(ExpressiveShape.medium),
+            borderSide: BorderSide(color: AppTheme.divider(ctx)),
+          ),
         ),
       ),
     );
@@ -1713,39 +1716,43 @@ class _XrayCoreTextFieldState extends State<_XrayCoreTextField> {
       child: CommitOnBlur(
         controller: _ctrl,
         onCommit: widget.onSave,
-        builder: (focus, commit) => TextField(
-          controller: _ctrl,
-          focusNode: focus,
+        builder: (focus, commit) => TvTextField(
           enabled: widget.enabled,
-          keyboardType: widget.keyboardType,
-          textDirection: technicalInputDirection,
-          style: Theme.of(
-            context,
-          ).textTheme.bodyMedium?.copyWith(color: AppTheme.text(context)),
-          decoration: InputDecoration(
-            labelText: widget.label,
-            hintText: widget.hint,
-            helperText: widget.helperText,
-            helperMaxLines: 3,
-            errorText: widget.errorText,
-            errorMaxLines: 3,
-            isDense: true,
-            filled: true,
-            fillColor: AppTheme.card(context),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 10,
+          builder: (ctx, canRequestFocus) => TextField(
+            controller: _ctrl,
+            focusNode: focus,
+            canRequestFocus: canRequestFocus,
+            enabled: widget.enabled,
+            keyboardType: widget.keyboardType,
+            textDirection: technicalInputDirection,
+            style: Theme.of(
+              ctx,
+            ).textTheme.bodyMedium?.copyWith(color: AppTheme.text(ctx)),
+            decoration: InputDecoration(
+              labelText: widget.label,
+              hintText: widget.hint,
+              helperText: widget.helperText,
+              helperMaxLines: 3,
+              errorText: widget.errorText,
+              errorMaxLines: 3,
+              isDense: true,
+              filled: true,
+              fillColor: AppTheme.card(ctx),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 10,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(ExpressiveShape.medium),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(ExpressiveShape.medium),
+                borderSide: BorderSide(color: AppTheme.divider(ctx)),
+              ),
             ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(ExpressiveShape.medium),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(ExpressiveShape.medium),
-              borderSide: BorderSide(color: AppTheme.divider(context)),
-            ),
+            onSubmitted: (_) => commit(),
+            onEditingComplete: commit,
           ),
-          onSubmitted: (_) => commit(),
-          onEditingComplete: commit,
         ),
       ),
     );

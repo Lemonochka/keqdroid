@@ -12,6 +12,7 @@ import '../extensions/build_context_l10n.dart';
 import 'app_theme.dart';
 import 'expressive.dart';
 import 'server_row.dart';
+import 'tv_focus.dart';
 
 // плоский список, чтобы ListView.builder строил строки лениво: их бывают сотни
 sealed class _PickerEntry {
@@ -146,21 +147,25 @@ class _ServerPickerSheetState extends ConsumerState<ServerPickerSheet> {
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                child: TextField(
-                  controller: _query,
-                  onChanged: (_) => setState(() {}),
-                  textInputAction: TextInputAction.search,
-                  decoration: InputDecoration(
-                    hintText: widget.searchHint,
-                    prefixIcon: const Icon(Icons.search_rounded, size: 20),
-                    isDense: true,
-                    filled: true,
-                    fillColor: AppTheme.inset(context),
-                    border: OutlineInputBorder(
-                      borderRadius: ExpressiveShape.radius(
-                        ExpressiveShape.medium,
+                child: TvTextField(
+                  radius: ExpressiveShape.radius(ExpressiveShape.medium),
+                  builder: (ctx, canRequestFocus) => TextField(
+                    controller: _query,
+                    canRequestFocus: canRequestFocus,
+                    onChanged: (_) => setState(() {}),
+                    textInputAction: TextInputAction.search,
+                    decoration: InputDecoration(
+                      hintText: widget.searchHint,
+                      prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                      isDense: true,
+                      filled: true,
+                      fillColor: AppTheme.inset(ctx),
+                      border: OutlineInputBorder(
+                        borderRadius: ExpressiveShape.radius(
+                          ExpressiveShape.medium,
+                        ),
+                        borderSide: BorderSide.none,
                       ),
-                      borderSide: BorderSide.none,
                     ),
                   ),
                 ),

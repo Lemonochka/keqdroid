@@ -200,24 +200,27 @@ class _CustomColorSheetState extends State<_CustomColorSheet> {
                       onChanged: (v) => _setColor(_color.withValue(v)),
                     ),
                     const SizedBox(height: ExpressiveSpacing.small),
-                    TextField(
-                      controller: _hex,
-                      focusNode: _hexFocus,
-                      textDirection: technicalInputDirection,
-                      onChanged: _onHexChanged,
-                      textCapitalization: TextCapitalization.characters,
-                      // фильтр раньше ограничителя: иначе вставленный #FF5722 обрезался до #FF572
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(
-                          RegExp('[0-9a-fA-F]'),
+                    TvTextField(
+                      builder: (_, canRequestFocus) => TextField(
+                        controller: _hex,
+                        focusNode: _hexFocus,
+                        canRequestFocus: canRequestFocus,
+                        textDirection: technicalInputDirection,
+                        onChanged: _onHexChanged,
+                        textCapitalization: TextCapitalization.characters,
+                        // фильтр раньше ограничителя: иначе вставленный #FF5722 обрезался до #FF572
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(
+                            RegExp('[0-9a-fA-F]'),
+                          ),
+                          LengthLimitingTextInputFormatter(6),
+                        ],
+                        decoration: InputDecoration(
+                          labelText: l10n.appearanceCustomColorHex,
+                          prefixText: rtl ? null : '#  ',
+                          suffixText: rtl ? '  #' : null,
+                          helperText: l10n.appearanceCustomColorInvalid,
                         ),
-                        LengthLimitingTextInputFormatter(6),
-                      ],
-                      decoration: InputDecoration(
-                        labelText: l10n.appearanceCustomColorHex,
-                        prefixText: rtl ? null : '#  ',
-                        suffixText: rtl ? '  #' : null,
-                        helperText: l10n.appearanceCustomColorInvalid,
                       ),
                     ),
                   ],

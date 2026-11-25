@@ -109,40 +109,44 @@ class _LocalPortsSectionState extends ConsumerState<_LocalPortsSection> {
     bool enabled,
     VoidCallback onSubmit,
   ) {
-    return TextField(
-      controller: ctrl,
-      textDirection: technicalInputDirection,
-      focusNode: focus,
+    return TvTextField(
       enabled: enabled,
-      keyboardType: TextInputType.number,
-      style: Theme.of(
-        context,
-      ).textTheme.bodyMedium?.copyWith(color: AppTheme.text(context)),
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: Theme.of(
-          context,
-        ).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 10,
+      builder: (ctx, canRequestFocus) => TextField(
+        controller: ctrl,
+        canRequestFocus: canRequestFocus,
+        textDirection: technicalInputDirection,
+        focusNode: focus,
+        enabled: enabled,
+        keyboardType: TextInputType.number,
+        style: Theme.of(
+          ctx,
+        ).textTheme.bodyMedium?.copyWith(color: AppTheme.text(ctx)),
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: Theme.of(
+            ctx,
+          ).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(ctx)),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 10,
+          ),
+          isDense: true,
+          filled: true,
+          fillColor: AppTheme.bg(ctx).withValues(alpha: 0.45),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(ExpressiveShape.medium),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(ExpressiveShape.medium),
+            borderSide: BorderSide(color: AppTheme.divider(ctx)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(ExpressiveShape.medium),
+            borderSide: BorderSide(color: AppTheme.accent(ctx)),
+          ),
         ),
-        isDense: true,
-        filled: true,
-        fillColor: AppTheme.bg(context).withValues(alpha: 0.45),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(ExpressiveShape.medium),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(ExpressiveShape.medium),
-          borderSide: BorderSide(color: AppTheme.divider(context)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(ExpressiveShape.medium),
-          borderSide: BorderSide(color: AppTheme.accent(context)),
-        ),
+        onSubmitted: (_) => onSubmit(),
       ),
-      onSubmitted: (_) => onSubmit(),
     );
   }
 
