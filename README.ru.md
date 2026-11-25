@@ -24,6 +24,8 @@ https://github.com/user-attachments/assets/e1f899dd-4f2c-4ca2-896c-1da64a3a5645
 | Windows x64 | `keqdroid-windows-x64-<версия>-setup.exe` (установщик) |
 | Windows x64 | `keqdroid-windows-x64-<версия>.zip` (portable) |
 | Linux x86_64 | `.AppImage`, `.deb`, `.rpm`, `.tar.gz`, `PKGBUILD` |
+| macOS 13 и новее, Apple Silicon | `keqdroid-<версия>-macos-arm64.dmg` |
+| macOS 13 и новее, Intel | `keqdroid-<версия>-macos-x86_64.dmg` |
 
 В каждом релизе есть файл `SHA256SUMS` с хешами всех файлов и `SHA256SUMS.sig` с его подписью. Встроенный механизм обновления проверяет и то и другое перед установкой.
 
@@ -46,7 +48,7 @@ https://github.com/user-attachments/assets/e1f899dd-4f2c-4ca2-896c-1da64a3a5645
 - Ограничение маршрута выбранными приложениями, TCP или UDP и портами
 - Профили маршрутизации для подписок, в том числе полученные от провайдера
 - Передача профилей ссылкой и QR-кодом, поддержка ссылок маршрутизации Happ и Incy
-- Раздельное туннелирование по приложениям на Android и по программам на Windows и Linux
+- Раздельное туннелирование по приложениям на Android и по программам на Windows, Linux и macOS
 - Список активных соединений с правилом для каждого из них
 
 **Приложение**
@@ -94,7 +96,7 @@ https://github.com/user-attachments/assets/e1f899dd-4f2c-4ca2-896c-1da64a3a5645
 | Linux | Прокси | Системный прокси в GNOME и KDE, в других средах настраивается вручную | Не требуются |
 | Linux | TUN | Весь трафик идёт через виртуальный адаптер | Root через `pkexec` или «TUN без пароля» в разделе «Настройки → Дополнительно → Разрешения» |
 | macOS | Прокси | Системный прокси через `networksetup` | Не требуются |
-| macOS | TUN | Весь трафик идёт через адаптер `utun` | Запрос администратора или «TUN без пароля» в разделе «Настройки → Дополнительно → Разрешения» |
+| macOS | TUN | Весь трафик идёт через адаптер `utun` | Подтверждение администратора при каждом подключении TUN |
 
 **Android.** Подключением можно управлять из уведомления, плитки быстрых настроек, виджета на рабочем столе и ярлыков на значке приложения. Маршрутизация по приложениям и перехват DNS работают только в режиме VPN. Активная сессия VPN восстанавливается после обновления приложения и перезагрузки устройства.
 
@@ -103,6 +105,8 @@ https://github.com/user-attachments/assets/e1f899dd-4f2c-4ca2-896c-1da64a3a5645
 **Windows.** Установщик ставит приложение в Program Files и может удалить его вместе с данными, портабельная версия запускается из любой папки. Приложение может запускаться вместе с системой, подключаться автоматически и работать в трее. Настройки хранятся в `%APPDATA%\com.keqdroid\keqdroid\`, обе версии пользуются ими.
 
 **Linux.** Приложение может запускаться при входе в систему и подключаться автоматически. В Arch Linux установка выполняется командой `makepkg -si` с файлом `PKGBUILD` из релиза. В NixOS добавьте `github:Lemonochka/keqdroid/nix` во входы flake и включите `inputs.keqdroid.packages.x86_64-linux.default` в `environment.systemPackages`.
+
+**macOS.** Есть отдельные сборки для Apple Silicon и Intel. Приложение может запускаться при входе в систему, подключаться автоматически и оставаться в строке меню.
 
 ## Начало работы
 
@@ -138,6 +142,8 @@ https://github.com/user-attachments/assets/e1f899dd-4f2c-4ca2-896c-1da64a3a5645
 
 Бесплатную подпись кода предоставляет [SignPath.io](https://signpath.io), сертификат выдан [SignPath Foundation](https://signpath.org). Подпись сейчас настраивается; пока она не включена, сборки для Windows не подписаны.
 
+Сборки macOS подписаны ad-hoc и не проходят нотаризацию Apple.
+
 - Авторы и ревьюеры: [Lemonochka](https://github.com/Lemonochka)
 - Подтверждает подпись: [Lemonochka](https://github.com/Lemonochka)
 
@@ -153,9 +159,11 @@ https://github.com/user-attachments/assets/e1f899dd-4f2c-4ca2-896c-1da64a3a5645
 flutter pub get
 flutter build apk --debug        # Android
 flutter build windows --release  # Windows
+flutter build linux --release    # Linux
+flutter build macos --release    # macOS; сначала соберите ядра macOS
 ```
 
-Для релизного APK нужен ключ подписи в `android/key.properties`. Собранные ядра входят в репозиторий. Сборка для Linux, пересборка ядер, тесты и процесс выпуска описаны в [docs/BUILD.ru.md](docs/BUILD.ru.md).
+Для релизного APK нужен ключ подписи в `android/key.properties`. Собранные ядра для Android, Windows и Linux входят в репозиторий; ядра macOS собираются командой `bash tool/build_macos_cores.sh`. Сборка для Linux и macOS, пересборка ядер, тесты и процесс выпуска описаны в [docs/BUILD.ru.md](docs/BUILD.ru.md).
 
 ## Сообщество
 

@@ -24,6 +24,8 @@ Builds are published on the [Releases](https://github.com/Lemonochka/keqdroid/re
 | Windows x64 | `keqdroid-windows-x64-<version>-setup.exe` (installer) |
 | Windows x64 | `keqdroid-windows-x64-<version>.zip` (portable) |
 | Linux x86_64 | `.AppImage`, `.deb`, `.rpm`, `.tar.gz`, `PKGBUILD` |
+| macOS 13 and later, Apple Silicon | `keqdroid-<version>-macos-arm64.dmg` |
+| macOS 13 and later, Intel | `keqdroid-<version>-macos-x86_64.dmg` |
 
 Each release includes `SHA256SUMS` with the hash of every file and `SHA256SUMS.sig` with its signature. The built-in updater verifies both before installing an update.
 
@@ -46,7 +48,7 @@ Each release includes `SHA256SUMS` with the hash of every file and `SHA256SUMS.s
 - Routes limited to selected applications, TCP or UDP, and ports
 - Routing profiles per subscription, including profiles supplied by the provider
 - Profiles shared as a link or QR code; Happ and Incy routing links are accepted
-- Split tunneling by application on Android and by program on Windows and Linux
+- Split tunneling by application on Android and by program on Windows, Linux and macOS
 - Live list of connections with the rule applied to each one
 
 **Application**
@@ -94,7 +96,7 @@ A ready-made configuration keeps its own routing, DNS and outbounds. Inbounds an
 | Linux | Proxy | System proxy on GNOME and KDE; manual setup elsewhere | None |
 | Linux | TUN | All traffic goes through a virtual adapter | Root through `pkexec`, or Passwordless TUN in Settings → Advanced → Permissions |
 | macOS | Proxy | System proxy via `networksetup` | None |
-| macOS | TUN | All traffic goes through a `utun` adapter | Administrator prompt, or Passwordless TUN in Settings → Advanced → Permissions |
+| macOS | TUN | All traffic goes through a `utun` adapter | Administrator approval on every TUN connection |
 
 **Android.** The connection can be controlled from the notification, the Quick Settings tile, a home screen widget and launcher shortcuts. Per-application routing and DNS interception require VPN mode. An active VPN session resumes after an application update or a device restart.
 
@@ -103,6 +105,8 @@ A ready-made configuration keeps its own routing, DNS and outbounds. Inbounds an
 **Windows.** The installer places the application in Program Files and can remove it together with its data; the portable version runs from any folder. The application can start with the system, connect automatically and stay in the tray. Settings are stored in `%APPDATA%\com.keqdroid\keqdroid\` and are shared by both versions.
 
 **Linux.** The application can start at login and connect automatically. On Arch Linux, install with `makepkg -si` using the `PKGBUILD` from the release. On NixOS, add `github:Lemonochka/keqdroid/nix` to flake inputs and include `inputs.keqdroid.packages.x86_64-linux.default` in `environment.systemPackages`.
+
+**macOS.** Separate builds are provided for Apple Silicon and Intel. The application can start at login, connect automatically and stay in the menu bar.
 
 ## Getting started
 
@@ -138,6 +142,8 @@ Crash reports are not sent anywhere: errors are written only to the app log on t
 
 Free code signing provided by [SignPath.io](https://signpath.io), certificate by [SignPath Foundation](https://signpath.org). Signing is being set up; until it is enabled, Windows builds are not signed.
 
+macOS builds are ad-hoc signed and are not notarized by Apple.
+
 - Committers and reviewers: [Lemonochka](https://github.com/Lemonochka)
 - Approvers: [Lemonochka](https://github.com/Lemonochka)
 
@@ -153,9 +159,11 @@ Report vulnerabilities as described in [SECURITY.md](SECURITY.md).
 flutter pub get
 flutter build apk --debug        # Android
 flutter build windows --release  # Windows
+flutter build linux --release    # Linux
+flutter build macos --release    # macOS; build macOS cores first
 ```
 
-A release APK needs a signing key in `android/key.properties`. Prebuilt cores are included in the repository. Linux builds, rebuilding the cores, tests and the release process are described in [docs/BUILD.md](docs/BUILD.md).
+A release APK needs a signing key in `android/key.properties`. Prebuilt cores are included for Android, Windows and Linux; build the macOS cores with `tool/build_macos_cores.sh`. Linux and macOS builds, rebuilding the cores, tests and the release process are described in [docs/BUILD.md](docs/BUILD.md).
 
 ## Community
 
