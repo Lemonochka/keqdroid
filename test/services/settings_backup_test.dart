@@ -54,9 +54,6 @@ const _machineLocalKeys = <String>{
   'launchAtStartupElevated',
   'autostartInTray',
   'hotkeys',
-  // Состояние отладки, а не настройка: перевези включённый debug на чистую
-  // машину, и получишь многословные логи и вопрос, почему так.
-  'debugMode',
 };
 
 void main() {

@@ -1,7 +1,9 @@
 part of '../settings_tab.dart';
 
 class _ConnectionsScreen extends ConsumerStatefulWidget {
-  const _ConnectionsScreen();
+  const _ConnectionsScreen({super.key, this.embedded = false});
+
+  final bool embedded;
 
   @override
   ConsumerState<_ConnectionsScreen> createState() => _ConnectionsScreenState();
@@ -87,6 +89,13 @@ class _ConnectionsScreenState extends ConsumerState<_ConnectionsScreen> {
     ).showSnackBar(SnackBar(content: Text(l10n.connectionsRuleHintApplied)));
   }
 
+  void _togglePause() => setState(() => _paused = !_paused);
+
+  void _refreshAndResume() {
+    setState(() => _paused = false);
+    unawaited(_refresh());
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -110,7 +119,7 @@ class _ConnectionsScreenState extends ConsumerState<_ConnectionsScreen> {
         Platform.isAndroid &&
         (split.excludePackages.isNotEmpty || split.includePackages.isNotEmpty);
 
-    return Scaffold(
+    final scaffold = Scaffold(
       backgroundColor: AppTheme.bg(context),
       appBar: ExpressiveScrolledUnderBar(
         builder: (context, background) => AppBar(
@@ -122,15 +131,12 @@ class _ConnectionsScreenState extends ConsumerState<_ConnectionsScreen> {
               icon: Icon(
                 _paused ? Icons.play_arrow_rounded : Icons.pause_rounded,
               ),
-              onPressed: () => setState(() => _paused = !_paused),
+              onPressed: _togglePause,
             ),
             IconButton(
               tooltip: l10n.settingsRefresh,
               icon: const Icon(Icons.refresh_rounded),
-              onPressed: () {
-                setState(() => _paused = false);
-                unawaited(_refresh());
-              },
+              onPressed: _refreshAndResume,
             ),
           ],
         ),
@@ -237,6 +243,13 @@ class _ConnectionsScreenState extends ConsumerState<_ConnectionsScreen> {
               ],
             ),
     );
+    if (widget.embedded) {
+      return ColoredBox(
+        color: AppTheme.bg(context),
+        child: scaffold.body ?? const SizedBox.shrink(),
+      );
+    }
+    return scaffold;
   }
 
   // строка живёт под ключом группы: одиночная, обзаведясь соседом, меняет id на group:

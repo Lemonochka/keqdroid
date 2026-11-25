@@ -1363,7 +1363,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsAdvanced => 'Erweitert';
 
   @override
-  String get settingsAdvancedSubtitle => 'Kerneinstellungen, Ping, Routing, HWID und Debug';
+  String get settingsAdvancedSubtitle => 'Kerneinstellungen, Ping, Routing, Diagnose und HWID';
 
   @override
   String get serverEditorJsonValid => 'Gültige Xray-Konfiguration';
@@ -1500,19 +1500,19 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsShareHwidOff => 'Wird nicht gesendet';
 
   @override
-  String get settingsDebugMode => 'Debug-Modus';
+  String get settingsConnectionsLogsTitle => 'Verbindungen und Protokolle';
 
   @override
-  String get settingsDebugModeOn => 'Erweiterte Diagnose aktiviert';
+  String get settingsConnectionsLogsSubtitle => 'Aktive Verbindungen sowie App- und Kernprotokolle';
 
   @override
-  String get settingsDebugModeOff => 'Aus';
-
-  @override
-  String get settingsOpenXrayLogs => 'Kernprotokoll öffnen';
+  String get settingsLogsTab => 'Protokolle';
 
   @override
   String get settingsXrayCoreLogs => 'Kernprotokoll';
+
+  @override
+  String get settingsXrayCoreLogsDesc => 'Xray- und mihomo-Meldungen aus der aktuellen oder letzten Sitzung';
 
   @override
   String get settingsRefresh => 'Aktualisieren';
@@ -1665,12 +1665,6 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get serversDeleteServer => 'Server löschen';
-
-  @override
-  String get settingsDebugHintDesktop => 'Zeigt das Sitzungsprotokoll des Kerns. Live-Messwerte des VPN stehen unter der Verbinden-Schaltfläche.';
-
-  @override
-  String get settingsDebugHintMobile => 'Zeigt Live-Messwerte des VPN in den Serverkarten und das Kernprotokoll.';
 
   @override
   String get desktopConnectionMode => 'Verbindungsmodus';
@@ -2589,9 +2583,6 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get settingsRoutingGeoPickerGeoip => 'IP-Bereiche (geoip)';
-
-  @override
-  String get settingsOpenConnections => 'Verbindungen';
 
   @override
   String get settingsConnectionsTitle => 'Verbindungen';

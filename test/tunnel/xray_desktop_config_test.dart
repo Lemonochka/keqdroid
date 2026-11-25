@@ -45,7 +45,7 @@ void main() {
     expect(((config['policy'] as Map)['levels'] as Map)['1'], {'connIdle': 60});
   });
 
-  test('метка поиска программы только в отладке и один раз', () {
+  test('метка поиска программы добавляется по processLog один раз', () {
     bool marked(Map<String, dynamic> c) => (c['outbounds'] as List).any(
       (o) => (o as Map)['tag'] == kXrayProcessLogTag,
     );

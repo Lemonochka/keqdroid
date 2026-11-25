@@ -1379,7 +1379,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsAdvanced => 'Дополнительно';
 
   @override
-  String get settingsAdvancedSubtitle => 'Настройки ядра, пинг, маршрутизация, HWID и отладка';
+  String get settingsAdvancedSubtitle => 'Настройки ядра, пинг, маршрутизация, диагностика и HWID';
 
   @override
   String get serverEditorJsonValid => 'Корректный конфиг Xray';
@@ -1516,19 +1516,19 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsShareHwidOff => 'Не передаётся';
 
   @override
-  String get settingsDebugMode => 'Режим отладки';
+  String get settingsConnectionsLogsTitle => 'Соединения и журналы';
 
   @override
-  String get settingsDebugModeOn => 'Расширенная диагностика включена';
+  String get settingsConnectionsLogsSubtitle => 'Активные соединения, журналы приложения и ядра';
 
   @override
-  String get settingsDebugModeOff => 'Выключен';
-
-  @override
-  String get settingsOpenXrayLogs => 'Открыть логи ядра';
+  String get settingsLogsTab => 'Журналы';
 
   @override
   String get settingsXrayCoreLogs => 'Логи ядра';
+
+  @override
+  String get settingsXrayCoreLogsDesc => 'Сообщения Xray и mihomo за текущую или прошлую сессию';
 
   @override
   String get settingsRefresh => 'Обновить';
@@ -1681,12 +1681,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get serversDeleteServer => 'Удалить сервер';
-
-  @override
-  String get settingsDebugHintDesktop => 'Показывает логи сессии ядра. Живые метрики VPN показываются под кнопкой подключения.';
-
-  @override
-  String get settingsDebugHintMobile => 'Показывает живые метрики VPN в карточках серверов и логи ядра.';
 
   @override
   String get desktopConnectionMode => 'Режим подключения';
@@ -2605,9 +2599,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get settingsRoutingGeoPickerGeoip => 'Диапазоны IP (geoip)';
-
-  @override
-  String get settingsOpenConnections => 'Соединения';
 
   @override
   String get settingsConnectionsTitle => 'Соединения';

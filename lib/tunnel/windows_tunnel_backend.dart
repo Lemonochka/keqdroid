@@ -265,7 +265,7 @@ class WindowsTunnelBackend
       withXrayDesktopSession(
         xrayLog.config,
         metricsPort: metricsPort,
-        processLog: !isTun && request.debugMode,
+        processLog: !isTun && request.processLog,
         tunName: isTun ? tunName : null,
       ),
     );

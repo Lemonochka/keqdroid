@@ -1,5 +1,8 @@
 part of '../settings_tab.dart';
 
+@visibleForTesting
+Widget advancedSettingsScreenForTest() => const _AdvancedSettingsScreen();
+
 class _AdvancedSettingsScreen extends ConsumerWidget {
   const _AdvancedSettingsScreen();
 
@@ -92,7 +95,18 @@ class _AdvancedSettingsScreen extends ConsumerWidget {
         ExpressiveSectionHeader(l10n.settingsAdvancedGroupDiagnostics),
         ExpressiveGroup(
           children: [
-            _DebugModeCard(settingsAsync: settingsAsync),
+            _SettingsCard(
+              title: l10n.settingsConnectionsLogsTitle,
+              subtitle: l10n.settingsConnectionsLogsSubtitle,
+              icon: Icons.lan_rounded,
+              accent: ExpressiveAccent.primary,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute<void>(
+                  builder: (_) => const _ConnectionsLogsScreen(),
+                ),
+              ),
+            ),
             _ShareHwidCard(settingsAsync: settingsAsync),
           ],
         ),

@@ -10,12 +10,14 @@ TunnelSessionRequest _session(
   Map<String, dynamic> config, {
   ConnectionMode mode = ConnectionMode.tun,
   List<String> exclude = const [],
+  bool processLog = false,
 }) => TunnelSessionRequest(
   mode: mode,
   vpnBackend: VpnBackend.mihomo,
   xrayConfig: '',
   mihomoConfig: jsonEncode(config),
   excludePackages: exclude,
+  processLog: processLog,
 );
 
 Map<String, dynamic> _config({
@@ -77,6 +79,13 @@ void main() {
       sameTunnelShell(
         _session(_config()),
         _session(_config(), exclude: const ['org.telegram.messenger']),
+      ),
+      isFalse,
+    );
+    expect(
+      sameTunnelShell(
+        _session(_config()),
+        _session(_config(), processLog: true),
       ),
       isFalse,
     );

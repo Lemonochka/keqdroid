@@ -1356,7 +1356,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsAdvanced => '高级';
 
   @override
-  String get settingsAdvancedSubtitle => '内核设置、延迟测试、路由、HWID 和调试';
+  String get settingsAdvancedSubtitle => '内核设置、延迟测试、路由、诊断和 HWID';
 
   @override
   String get serverEditorJsonValid => '有效的 Xray 配置';
@@ -1493,19 +1493,19 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsShareHwidOff => '不发送';
 
   @override
-  String get settingsDebugMode => '调试模式';
+  String get settingsConnectionsLogsTitle => '连接和日志';
 
   @override
-  String get settingsDebugModeOn => '已启用扩展诊断';
+  String get settingsConnectionsLogsSubtitle => '活动连接、应用和内核日志';
 
   @override
-  String get settingsDebugModeOff => '关闭';
-
-  @override
-  String get settingsOpenXrayLogs => '打开内核日志';
+  String get settingsLogsTab => '日志';
 
   @override
   String get settingsXrayCoreLogs => '内核日志';
+
+  @override
+  String get settingsXrayCoreLogsDesc => 'Xray 和 mihomo 在当前或上次会话中的消息';
 
   @override
   String get settingsRefresh => '刷新';
@@ -1658,12 +1658,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get serversDeleteServer => '删除服务器';
-
-  @override
-  String get settingsDebugHintDesktop => '显示内核的会话日志。实时 VPN 指标显示在连接按钮下方。';
-
-  @override
-  String get settingsDebugHintMobile => '在服务器卡片中显示实时 VPN 指标，并显示内核日志。';
 
   @override
   String get desktopConnectionMode => '连接模式';
@@ -2582,9 +2576,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settingsRoutingGeoPickerGeoip => 'IP 段（geoip）';
-
-  @override
-  String get settingsOpenConnections => '连接';
 
   @override
   String get settingsConnectionsTitle => '连接';

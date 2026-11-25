@@ -70,5 +70,25 @@ void main() {
         reason: 'настройки, записанные до появления флага',
       );
     });
+
+    test('режим, ядро, порты и диагностика доезжают в запрос сессии', () {
+      const settings = AppSettings(
+        connectionMode: 'proxy',
+        connectionModeChosen: true,
+        vpnCore: AppSettings.vpnCoreMihomo,
+        localPort: 3080,
+        httpPort: 3081,
+      );
+      final request = TunnelSessionBuilder.build(
+        settings: settings,
+        xrayConfig: '{}',
+      );
+
+      expect(request.mode, ConnectionMode.proxy);
+      expect(settings.vpnCore, AppSettings.vpnCoreMihomo);
+      expect(request.socksPort, 3080);
+      expect(request.httpPort, 3081);
+      expect(request.processLog, isTrue);
+    });
   });
 }

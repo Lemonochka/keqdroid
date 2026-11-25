@@ -189,7 +189,7 @@ class MacosTunnelBackend
       withXrayDesktopSession(
         xrayLog.config,
         metricsPort: metricsPort,
-        processLog: request.debugMode,
+        processLog: request.processLog,
       ),
     );
     _xrayMetricsPort = metricsPort;

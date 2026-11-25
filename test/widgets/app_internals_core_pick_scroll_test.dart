@@ -7,6 +7,8 @@ import 'package:keqdroid/app/app.dart';
 import 'package:keqdroid/l10n/app_localizations.dart';
 import 'package:keqdroid/models/app_internals.dart';
 import 'package:keqdroid/models/app_settings.dart';
+import 'package:keqdroid/models/tun_settings.dart';
+import 'package:keqdroid/models/xray_core_settings.dart';
 import 'package:keqdroid/providers/providers.dart';
 import 'package:keqdroid/screens/settings_tab.dart';
 import 'package:keqdroid/services/storage_service.dart';
@@ -15,9 +17,9 @@ import 'package:keqdroid/services/vpn_engine.dart';
 import '../helpers/fake_tunnel_backend.dart';
 import '../helpers/test_storage.dart';
 
-// Выбор ядра на экране О приложении меняет настройки, и сведения экрана
-// собираются заново. Пока они собираются, страница остаётся на месте: раньше
-// её подменяла крутилка, прокрутка обнулялась, экран прыгал наверх.
+// Выбор ядра меняет настройки, и сведения экрана собираются заново. Пока они
+// собираются, страница остаётся на месте: раньше её подменяла крутилка,
+// прокрутка обнулялась, экран прыгал наверх.
 const _mihomoSubtitle =
     'Clash-compatible core. Ready-made xray configs stay on Xray.';
 
@@ -117,7 +119,7 @@ void main() {
               Brightness.light,
             ),
           ),
-          home: appInternalsScreenForTest(),
+          home: xrayCoreSettingsScreenForTest(),
         ),
       ),
     );
@@ -159,5 +161,108 @@ void main() {
     pending.last.complete(_internals);
     await _frames(tester);
     expect(_page(tester).pixels, before);
+  });
+
+  testWidgets('сброс параметров ядра сохраняет выбранные режим и ядро', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(900, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    const initial = AppSettings(
+      connectionMode: 'tun',
+      connectionModeChosen: true,
+      vpnCore: AppSettings.vpnCoreMihomo,
+      localPort: 3080,
+      httpPort: 3081,
+      fakeIp: true,
+      xrayCore: XrayCoreSettings(logLevel: 'debug'),
+      tun: TunSettings(mtu: 1400),
+    );
+    final StorageService storage = (await tester.runAsync(
+      () => buildStorageService(
+        initialValues: {'keqdis_settings': initial.toJsonString()},
+      ),
+    ))!;
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          storageProvider.overrideWithValue(storage),
+          vpnEngineProvider.overrideWithValue(
+            VpnEngine.withBackend(FakeTunnelBackend()),
+          ),
+          appInternalsProviderForTest.overrideWith((ref) async => _internals),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
+          theme: buildAppTheme(
+            buildPresetScheme(
+              themePresetFor(const AppSettings()),
+              Brightness.light,
+            ),
+          ),
+          home: xrayCoreSettingsScreenForTest(),
+        ),
+      ),
+    );
+    await _frames(tester);
+
+    await tester.tap(find.text('Reset to defaults').first);
+    await _frames(tester);
+    await tester.tap(find.text('Reset'));
+    await _frames(tester);
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(MaterialApp)),
+    );
+    final saved = container.read(settingsNotifierProvider).value!;
+    const defaults = AppSettings();
+    expect(saved.connectionMode, initial.connectionMode);
+    expect(saved.connectionModeChosen, isTrue);
+    expect(saved.vpnCore, initial.vpnCore);
+    expect(saved.localPort, defaults.localPort);
+    expect(saved.httpPort, defaults.httpPort);
+    expect(saved.fakeIp, defaults.fakeIp);
+    expect(saved.xrayCore, const XrayCoreSettings());
+    expect(saved.tun, const TunSettings());
+  });
+
+  testWidgets('повторный вход не собирает сведения о ядрах заново', (
+    tester,
+  ) async {
+    final StorageService storage = (await tester.runAsync(
+      () => buildStorageService(
+        initialValues: {'keqdis_settings': const AppSettings().toJsonString()},
+      ),
+    ))!;
+    var builds = 0;
+    final container = ProviderContainer(
+      overrides: [
+        storageProvider.overrideWithValue(storage),
+        vpnEngineProvider.overrideWithValue(
+          VpnEngine.withBackend(FakeTunnelBackend()),
+        ),
+        appInternalsProviderForTest.overrideWith((ref) async {
+          builds++;
+          await ref.watch(settingsNotifierProvider.future);
+          return _internals;
+        }),
+      ],
+    );
+    addTearDown(container.dispose);
+    final sub = container.listen(appInternalsProviderForTest, (_, _) {});
+    final initial = await tester.runAsync(
+      () => container.read(appInternalsProviderForTest.future),
+    );
+
+    sub.close();
+    await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+
+    expect(container.read(appInternalsProviderForTest).value, same(initial));
+    expect(builds, 1);
   });
 }

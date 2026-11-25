@@ -5,10 +5,11 @@ Widget appLogScreenForTest({bool? shareAsFile}) =>
     _AppLogScreen(shareAsFile: shareAsFile);
 
 class _AppLogScreen extends StatefulWidget {
-  const _AppLogScreen({this.shareAsFile});
+  const _AppLogScreen({super.key, this.shareAsFile, this.embedded = false});
 
   // в буфер на телефоне журнал за месяц не влезал: вставка обрывалась на старых записях, и свежие пропадали
   final bool? shareAsFile;
+  final bool embedded;
 
   @override
   State<_AppLogScreen> createState() => _AppLogScreenState();
@@ -82,6 +83,55 @@ class _AppLogScreenState extends State<_AppLogScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final asFile = widget.shareAsFile ?? Platform.isAndroid;
+    final children = [
+      ExpressiveGroup(
+        children: [
+          for (final source in AppLogService.sources)
+            _AppLogSourceTile(
+              icon: _sourceIcon(source),
+              title: _sourceTitle(l10n, source),
+              subtitle: _sourceDescription(l10n, source),
+              problems: _problems[source],
+              onTap: () => _open(_AppLogSourceScreen(source: source)),
+            ),
+          _AppLogSourceTile(
+            icon: Icons.terminal_rounded,
+            title: l10n.settingsXrayCoreLogs,
+            subtitle: l10n.settingsXrayCoreLogsDesc,
+            onTap: () => _open(const _XrayLogsScreen()),
+          ),
+          if (_exits.isNotEmpty)
+            _AppLogSourceTile(
+              icon: Icons.history_rounded,
+              title: l10n.settingsInternalsExits,
+              subtitle: l10n.appLogSourceExitsDesc,
+              onTap: () => _open(_ProcessExitsScreen(exits: _exits)),
+            ),
+        ],
+      ),
+    ];
+    if (widget.embedded) {
+      return ColoredBox(
+        color: AppTheme.bg(context),
+        child: SmoothScroll(
+          builder: (context, controller) => CustomScrollView(
+            controller: controller,
+            physics: const ClampingScrollPhysics(),
+            slivers: [
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(
+                  ExpressiveSpacing.large,
+                  ExpressiveSpacing.none,
+                  ExpressiveSpacing.large,
+                  ExpressiveSpacing.extraLarge,
+                ),
+                sliver: SliverList.list(children: children),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     return ExpressivePage(
       title: l10n.appLogTitle,
       physics: const ClampingScrollPhysics(),
@@ -99,27 +149,7 @@ class _AppLogScreenState extends State<_AppLogScreen> {
             onPressed: () => _copyAll(l10n),
           ),
       ],
-      children: [
-        ExpressiveGroup(
-          children: [
-            for (final source in AppLogService.sources)
-              _AppLogSourceTile(
-                icon: _sourceIcon(source),
-                title: _sourceTitle(l10n, source),
-                subtitle: _sourceDescription(l10n, source),
-                problems: _problems[source],
-                onTap: () => _open(_AppLogSourceScreen(source: source)),
-              ),
-            if (_exits.isNotEmpty)
-              _AppLogSourceTile(
-                icon: Icons.history_rounded,
-                title: l10n.settingsInternalsExits,
-                subtitle: l10n.appLogSourceExitsDesc,
-                onTap: () => _open(_ProcessExitsScreen(exits: _exits)),
-              ),
-          ],
-        ),
-      ],
+      children: children,
     );
   }
 

@@ -1397,17 +1397,6 @@ class KeqdisVpnService : VpnService() {
     // читаем прямо из FlutterSharedPreferences (JSON AppSettings под flutter.): так работает любой путь старта без extra в Intent
     private data class NotifBodyPrefs(val showUptime: Boolean, val showSpeed: Boolean)
 
-    // подробный лог пишет строку на каждое соединение, держать его всегда незачем
-    private fun readDebugMode(): Boolean {
-        return try {
-            val raw = getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
-                .getString("flutter.keqdis_settings", null) ?: return false
-            org.json.JSONObject(raw).optBoolean("debugMode", false)
-        } catch (e: Exception) {
-            false
-        }
-    }
-
     private fun readNotifBodyPrefs(): NotifBodyPrefs {
         return try {
             val raw = getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)

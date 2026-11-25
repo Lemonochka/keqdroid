@@ -1,9 +1,8 @@
 part of '../settings_tab.dart';
 
 // только статус: в состоянии раз в секунду едет телеметрия, а пересборка перечитывает бинари ядер
-final _appInternalsProvider = FutureProvider.autoDispose<AppInternals>((
-  ref,
-) async {
+final _appInternalsProvider = FutureProvider<AppInternals>((ref) async {
+  ref.keepAlive();
   final settings = await ref.watch(settingsNotifierProvider.future);
   ref.watch(vpnStateProvider.select((state) => state.value?.status));
   return AppInternalsService.collect(
@@ -48,7 +47,7 @@ class _AppInternalsScreen extends ConsumerWidget {
         ],
         // смена настроек пересобирает провайдер в AsyncLoading со старым значением, и крутилка на это время
         // сбрасывала прокрутку наверх
-        AsyncValue(:final value?) => _sections(context, ref, l10n, value),
+        AsyncValue(:final value?) => _sections(context, l10n, value),
         _ => const [
           Padding(
             padding: EdgeInsets.symmetric(vertical: 48),
@@ -61,7 +60,6 @@ class _AppInternalsScreen extends ConsumerWidget {
 
   List<Widget> _sections(
     BuildContext context,
-    WidgetRef ref,
     AppLocalizations l10n,
     AppInternals data,
   ) {
@@ -70,48 +68,6 @@ class _AppInternalsScreen extends ConsumerWidget {
 
       ExpressiveSectionHeader(l10n.settingsInternalsBuild),
       ExpressiveGroup(children: _buildRows(l10n, data.build)),
-
-      if (Platform.isAndroid) ...[
-        ExpressiveSectionHeader(l10n.settingsTunnelModeSection),
-        const _TunnelModeGroup(),
-      ],
-
-      ExpressiveSectionHeader(l10n.settingsInternalsCores),
-      if (data.cores.isEmpty)
-        ExpressiveGroup(
-          children: [
-            _InternalsRow(label: l10n.settingsInternalsNoCores, value: ''),
-          ],
-        )
-      else ...[
-        ExpressiveGroup(
-          children: [
-            for (final core in data.cores)
-              if (_selectableCore(core) case final vpnCore?)
-                _SelectableCoreTile(core: core, value: vpnCore)
-              else
-                _CoreTile(core: core),
-          ],
-        ),
-        if (mihomoShipsHere)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(4, 8, 4, 0),
-            child: Text(
-              l10n.settingsCoreHint,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppTheme.textLight(context),
-              ),
-            ),
-          ),
-        if (_coreMismatch(ref) case final skip?) ...[
-          const SizedBox(height: 8),
-          ExpressiveNotice(
-            color: AppTheme.orange(context),
-            icon: Icons.info_outline_rounded,
-            text: _coreMismatchText(l10n, skip),
-          ),
-        ],
-      ],
 
       ExpressiveSectionHeader(l10n.settingsInternalsGeo),
       ExpressiveGroup(
@@ -124,22 +80,6 @@ class _AppInternalsScreen extends ConsumerWidget {
 
       ExpressiveSectionHeader(l10n.settingsInternalsSession),
       ExpressiveGroup(children: _sessionRows(context, l10n, data.session)),
-
-      ExpressiveSectionHeader(l10n.settingsAdvancedGroupDiagnostics),
-      ExpressiveGroup(
-        children: [
-          _SettingsCard(
-            title: l10n.appLogTitle,
-            subtitle: l10n.appLogSubtitle,
-            icon: Icons.receipt_long_rounded,
-            accent: ExpressiveAccent.tertiary,
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute<void>(builder: (_) => const _AppLogScreen()),
-            ),
-          ),
-        ],
-      ),
     ];
   }
 

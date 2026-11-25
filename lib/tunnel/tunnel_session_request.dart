@@ -18,7 +18,7 @@ class TunnelSessionRequest {
 
   final String coreEngine;
 
-  final bool debugMode;
+  final bool processLog;
 
   const TunnelSessionRequest({
     required this.mode,
@@ -34,7 +34,7 @@ class TunnelSessionRequest {
     this.serverName,
     this.systemProxy = true,
     this.coreEngine = 'chain',
-    this.debugMode = false,
+    this.processLog = false,
   });
 
   Map<String, dynamic> toMethodChannelArgs({

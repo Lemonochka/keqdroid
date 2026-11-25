@@ -116,6 +116,7 @@ part 'settings/app_log.dart';
 part 'settings/backup_restore.dart';
 part 'settings/behaviour_settings.dart';
 part 'settings/connections.dart';
+part 'settings/connections_logs.dart';
 part 'settings/custom_color_sheet.dart';
 part 'settings/debug_and_logs.dart';
 part 'settings/hotkey_settings.dart';

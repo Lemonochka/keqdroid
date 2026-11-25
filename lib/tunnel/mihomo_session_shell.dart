@@ -33,7 +33,7 @@ bool sameTunnelShell(TunnelSessionRequest a, TunnelSessionRequest b) {
       a.httpPort != b.httpPort ||
       a.systemProxy != b.systemProxy ||
       a.coreEngine != b.coreEngine ||
-      a.debugMode != b.debugMode ||
+      a.processLog != b.processLog ||
       !listEquals(a.excludePackages, b.excludePackages) ||
       !listEquals(a.includePackages, b.includePackages) ||
       !listEquals(a.excludeProcesses, b.excludeProcesses) ||

@@ -2498,7 +2498,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsAdvancedSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Core settings, ping, routing, HWID and debug'**
+  /// **'Core settings, ping, routing, diagnostics and HWID'**
   String get settingsAdvancedSubtitle;
 
   /// No description provided for @serverEditorJsonValid.
@@ -2765,35 +2765,35 @@ abstract class AppLocalizations {
   /// **'Not shared'**
   String get settingsShareHwidOff;
 
-  /// No description provided for @settingsDebugMode.
+  /// No description provided for @settingsConnectionsLogsTitle.
   ///
   /// In en, this message translates to:
-  /// **'Debug mode'**
-  String get settingsDebugMode;
+  /// **'Connections and logs'**
+  String get settingsConnectionsLogsTitle;
 
-  /// No description provided for @settingsDebugModeOn.
+  /// No description provided for @settingsConnectionsLogsSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Extended diagnostics enabled'**
-  String get settingsDebugModeOn;
+  /// **'Active connections, app and core logs'**
+  String get settingsConnectionsLogsSubtitle;
 
-  /// No description provided for @settingsDebugModeOff.
+  /// No description provided for @settingsLogsTab.
   ///
   /// In en, this message translates to:
-  /// **'Off'**
-  String get settingsDebugModeOff;
-
-  /// No description provided for @settingsOpenXrayLogs.
-  ///
-  /// In en, this message translates to:
-  /// **'Open core logs'**
-  String get settingsOpenXrayLogs;
+  /// **'Logs'**
+  String get settingsLogsTab;
 
   /// No description provided for @settingsXrayCoreLogs.
   ///
   /// In en, this message translates to:
   /// **'Core logs'**
   String get settingsXrayCoreLogs;
+
+  /// No description provided for @settingsXrayCoreLogsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Xray and mihomo messages from the current or previous session'**
+  String get settingsXrayCoreLogsDesc;
 
   /// No description provided for @settingsRefresh.
   ///
@@ -3070,18 +3070,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Delete server'**
   String get serversDeleteServer;
-
-  /// No description provided for @settingsDebugHintDesktop.
-  ///
-  /// In en, this message translates to:
-  /// **'Shows core session logs. Live VPN metrics are shown under the connect button.'**
-  String get settingsDebugHintDesktop;
-
-  /// No description provided for @settingsDebugHintMobile.
-  ///
-  /// In en, this message translates to:
-  /// **'Shows live VPN metrics in server cards and core logs.'**
-  String get settingsDebugHintMobile;
 
   /// No description provided for @desktopConnectionMode.
   ///
@@ -4846,12 +4834,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'IP ranges (geoip)'**
   String get settingsRoutingGeoPickerGeoip;
-
-  /// No description provided for @settingsOpenConnections.
-  ///
-  /// In en, this message translates to:
-  /// **'Connections'**
-  String get settingsOpenConnections;
 
   /// No description provided for @settingsConnectionsTitle.
   ///

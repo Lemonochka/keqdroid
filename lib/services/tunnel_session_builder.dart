@@ -39,7 +39,7 @@ class TunnelSessionBuilder {
       serverName: serverName,
       systemProxy: settings.systemProxyEnabled,
       coreEngine: settings.coreEngine,
-      debugMode: settings.debugMode,
+      processLog: true,
     );
   }
 }

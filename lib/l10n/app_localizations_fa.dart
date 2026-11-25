@@ -1356,7 +1356,7 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsAdvanced => 'پیشرفته';
 
   @override
-  String get settingsAdvancedSubtitle => 'تنظیمات هسته، پینگ، مسیریابی، HWID و اشکال‌زدایی';
+  String get settingsAdvancedSubtitle => 'تنظیمات هسته، پینگ، مسیریابی، عیب‌یابی و HWID';
 
   @override
   String get serverEditorJsonValid => 'کانفیگ معتبر Xray';
@@ -1493,19 +1493,19 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsShareHwidOff => 'ارسال نمی‌شود';
 
   @override
-  String get settingsDebugMode => 'حالت اشکال‌زدایی';
+  String get settingsConnectionsLogsTitle => 'اتصال‌ها و گزارش‌ها';
 
   @override
-  String get settingsDebugModeOn => 'اطلاعات تشخیصی گسترده فعال است';
+  String get settingsConnectionsLogsSubtitle => 'اتصال‌های فعال و گزارش‌های برنامه و هسته';
 
   @override
-  String get settingsDebugModeOff => 'خاموش';
-
-  @override
-  String get settingsOpenXrayLogs => 'باز کردن گزارش‌های هسته';
+  String get settingsLogsTab => 'گزارش‌ها';
 
   @override
   String get settingsXrayCoreLogs => 'گزارش‌های هسته';
+
+  @override
+  String get settingsXrayCoreLogsDesc => 'پیام‌های Xray و mihomo از نشست فعلی یا قبلی';
 
   @override
   String get settingsRefresh => 'تازه‌سازی';
@@ -1658,12 +1658,6 @@ class AppLocalizationsFa extends AppLocalizations {
 
   @override
   String get serversDeleteServer => 'حذف سرور';
-
-  @override
-  String get settingsDebugHintDesktop => 'گزارش‌های نشست هسته را نشان می‌دهد. آمار زندهٔ VPN زیر دکمهٔ اتصال دیده می‌شود.';
-
-  @override
-  String get settingsDebugHintMobile => 'آمار زندهٔ VPN را روی کارت سرورها و گزارش‌های هسته را نشان می‌دهد.';
 
   @override
   String get desktopConnectionMode => 'حالت اتصال';
@@ -2582,9 +2576,6 @@ class AppLocalizationsFa extends AppLocalizations {
 
   @override
   String get settingsRoutingGeoPickerGeoip => 'بازه‌های آی‌پی (geoip)';
-
-  @override
-  String get settingsOpenConnections => 'اتصال‌ها';
 
   @override
   String get settingsConnectionsTitle => 'اتصال‌ها';

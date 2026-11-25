@@ -73,6 +73,9 @@ Widget _xrayChoiceTile({
   subtitle: subtitle == null ? null : Text(subtitle),
 );
 
+@visibleForTesting
+Widget xrayCoreSettingsScreenForTest() => const _XrayCoreSettingsScreen();
+
 class _XrayCoreSettingsScreen extends ConsumerStatefulWidget {
   const _XrayCoreSettingsScreen();
 
@@ -122,6 +125,7 @@ class _XrayCoreSettingsScreenState
         ref.watch(settingsNotifierProvider).value ?? const AppSettings();
     final accent = AppTheme.accent(context);
     final xray = ref.watch(activeVpnBackendProvider) == VpnBackend.xray;
+    final internals = ref.watch(_appInternalsProvider);
 
     return ExpressivePage(
       title: l10n.settingsXrayCoreTitle,
@@ -144,6 +148,27 @@ class _XrayCoreSettingsScreenState
       ],
       children: [
         const _LocalPortsSection(),
+        if (Platform.isAndroid) ...[
+          ExpressiveSectionHeader(l10n.settingsTunnelModeSection),
+          const _TunnelModeGroup(),
+        ],
+        ExpressiveSectionHeader(l10n.settingsInternalsCores),
+        ...switch (internals) {
+          AsyncError(:final error) => [
+            ExpressiveNotice(
+              color: Theme.of(context).colorScheme.error,
+              icon: Icons.error_outline_rounded,
+              text: friendlyError(error, context),
+            ),
+          ],
+          AsyncValue(:final value?) => _coreSections(context, ref, l10n, value),
+          _ => const [
+            Padding(
+              padding: EdgeInsets.symmetric(vertical: 48),
+              child: Center(child: ShapeLoadingIndicator()),
+            ),
+          ],
+        },
         const _XrayDnsSection(),
         if (xray) ...[
           const _XrayMuxSection(),
@@ -172,6 +197,52 @@ class _XrayCoreSettingsScreenState
       ],
     );
   }
+}
+
+List<Widget> _coreSections(
+  BuildContext context,
+  WidgetRef ref,
+  AppLocalizations l10n,
+  AppInternals data,
+) {
+  if (data.cores.isEmpty) {
+    return [
+      ExpressiveGroup(
+        children: [
+          _InternalsRow(label: l10n.settingsInternalsNoCores, value: ''),
+        ],
+      ),
+    ];
+  }
+  return [
+    ExpressiveGroup(
+      children: [
+        for (final core in data.cores)
+          if (_selectableCore(core) case final vpnCore?)
+            _SelectableCoreTile(core: core, value: vpnCore)
+          else
+            _CoreTile(core: core),
+      ],
+    ),
+    if (mihomoShipsHere)
+      Padding(
+        padding: const EdgeInsets.fromLTRB(4, 8, 4, 0),
+        child: Text(
+          l10n.settingsCoreHint,
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
+        ),
+      ),
+    if (_coreMismatch(ref) case final skip?) ...[
+      const SizedBox(height: 8),
+      ExpressiveNotice(
+        color: AppTheme.orange(context),
+        icon: Icons.info_outline_rounded,
+        text: _coreMismatchText(l10n, skip),
+      ),
+    ],
+  ];
 }
 
 class _XrayDnsSection extends ConsumerWidget {

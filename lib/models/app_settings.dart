@@ -35,7 +35,6 @@ class AppSettings {
   final String iconShapeId;
 
   final String fontId;
-  final bool debugMode;
   final bool lanSharing;
   final int lanSocksPort;
   final int lanHttpPort;
@@ -122,7 +121,6 @@ class AppSettings {
     this.customThemeVariant = 'tonalSpot',
     this.iconShapeId = 'circle',
     this.fontId = 'system',
-    this.debugMode = false,
     this.lanSharing = false,
     this.lanSocksPort = 1080,
     this.lanHttpPort = 8080,
@@ -188,7 +186,6 @@ class AppSettings {
     'customThemeVariant': customThemeVariant,
     'iconShapeId': iconShapeId,
     'fontId': fontId,
-    'debugMode': debugMode,
     'lanSharing': lanSharing,
     'lanSocksPort': lanSocksPort,
     'lanHttpPort': lanHttpPort,
@@ -277,7 +274,6 @@ class AppSettings {
       customThemeVariant: json['customThemeVariant'] as String? ?? 'tonalSpot',
       iconShapeId: json['iconShapeId'] as String? ?? 'circle',
       fontId: json['fontId'] as String? ?? 'system',
-      debugMode: json['debugMode'] as bool? ?? false,
       lanSharing: json['lanSharing'] as bool? ?? false,
       lanSocksPort: port('lanSocksPort', 1080),
       lanHttpPort: port('lanHttpPort', 8080),
@@ -454,7 +450,6 @@ class AppSettings {
     String? customThemeVariant,
     String? iconShapeId,
     String? fontId,
-    bool? debugMode,
     bool? lanSharing,
     int? lanSocksPort,
     int? lanHttpPort,
@@ -518,7 +513,6 @@ class AppSettings {
     customThemeVariant: customThemeVariant ?? this.customThemeVariant,
     iconShapeId: iconShapeId ?? this.iconShapeId,
     fontId: fontId ?? this.fontId,
-    debugMode: debugMode ?? this.debugMode,
     lanSharing: lanSharing ?? this.lanSharing,
     lanSocksPort: lanSocksPort ?? this.lanSocksPort,
     lanHttpPort: lanHttpPort ?? this.lanHttpPort,
@@ -606,7 +600,6 @@ class AppSettings {
           customThemeVariant == other.customThemeVariant &&
           iconShapeId == other.iconShapeId &&
           fontId == other.fontId &&
-          debugMode == other.debugMode &&
           lanSharing == other.lanSharing &&
           lanSocksPort == other.lanSocksPort &&
           lanHttpPort == other.lanHttpPort &&
@@ -681,7 +674,6 @@ class AppSettings {
     customThemeVariant,
     iconShapeId,
     fontId,
-    debugMode,
     lanSharing,
     lanSocksPort,
     lanHttpPort,

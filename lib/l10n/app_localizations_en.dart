@@ -1363,7 +1363,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsAdvanced => 'Advanced';
 
   @override
-  String get settingsAdvancedSubtitle => 'Core settings, ping, routing, HWID and debug';
+  String get settingsAdvancedSubtitle => 'Core settings, ping, routing, diagnostics and HWID';
 
   @override
   String get serverEditorJsonValid => 'Valid Xray config';
@@ -1500,19 +1500,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsShareHwidOff => 'Not shared';
 
   @override
-  String get settingsDebugMode => 'Debug mode';
+  String get settingsConnectionsLogsTitle => 'Connections and logs';
 
   @override
-  String get settingsDebugModeOn => 'Extended diagnostics enabled';
+  String get settingsConnectionsLogsSubtitle => 'Active connections, app and core logs';
 
   @override
-  String get settingsDebugModeOff => 'Off';
-
-  @override
-  String get settingsOpenXrayLogs => 'Open core logs';
+  String get settingsLogsTab => 'Logs';
 
   @override
   String get settingsXrayCoreLogs => 'Core logs';
+
+  @override
+  String get settingsXrayCoreLogsDesc => 'Xray and mihomo messages from the current or previous session';
 
   @override
   String get settingsRefresh => 'Refresh';
@@ -1665,12 +1665,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get serversDeleteServer => 'Delete server';
-
-  @override
-  String get settingsDebugHintDesktop => 'Shows core session logs. Live VPN metrics are shown under the connect button.';
-
-  @override
-  String get settingsDebugHintMobile => 'Shows live VPN metrics in server cards and core logs.';
 
   @override
   String get desktopConnectionMode => 'Connection mode';
@@ -2589,9 +2583,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsRoutingGeoPickerGeoip => 'IP ranges (geoip)';
-
-  @override
-  String get settingsOpenConnections => 'Connections';
 
   @override
   String get settingsConnectionsTitle => 'Connections';
