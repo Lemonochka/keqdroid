@@ -686,6 +686,32 @@ void main() {
       );
     });
 
+    test('does not select an asset built for the other architecture', () {
+      final intelOnly = [
+        {'name': 'keqdroid-0.39.2-macos-x86_64.dmg'},
+      ];
+      final armOnly = [
+        {'name': 'keqdroid-0.39.2-macos-arm64.dmg'},
+      ];
+      expect(
+        UpdateService.findAssetNameForPlatform(intelOnly, 'macos-arm64'),
+        isNull,
+      );
+      expect(UpdateService.findAssetNameForPlatform(armOnly, 'macos'), isNull);
+    });
+
+    test('accepts a macOS asset without an architecture marker', () {
+      final unlabelled = [
+        {'name': 'keqdroid-0.39.2-macos.dmg'},
+      ];
+      for (final platform in ['macos', 'macos-arm64']) {
+        expect(
+          UpdateService.findAssetNameForPlatform(unlabelled, platform),
+          'keqdroid-0.39.2-macos.dmg',
+        );
+      }
+    });
+
     test('recognizes .dmg extension for updates', () {
       expect(
         UpdateService.extensionFromUrl(

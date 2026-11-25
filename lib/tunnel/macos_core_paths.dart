@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:path/path.dart' as p;
 
@@ -52,7 +53,7 @@ class MacosCorePaths {
         final src = File(p.join(geoDir, name));
         if (!src.existsSync()) continue;
         final dst = File(p.join(dir.path, name));
-        if (dst.existsSync() && dst.lengthSync() == src.lengthSync()) continue;
+        if (await _sameContents(src, dst)) continue;
         try {
           await replaceAtomically(dst.path, (tmp) => src.copy(tmp));
         } catch (e) {
@@ -112,12 +113,21 @@ class MacosCorePaths {
         _staging.remove(fileName);
       });
 
+  static Future<bool> _sameContents(File a, File b) async {
+    if (!await b.exists() || await a.length() != await b.length()) return false;
+    final hashes = await Future.wait([
+      sha256.bind(a.openRead()).first,
+      sha256.bind(b.openRead()).first,
+    ]);
+    return hashes[0] == hashes[1];
+  }
+
   static Future<String> _stage(String src, String fileName) async {
     try {
       final dstPath = p.join(await _coresCacheDir(), fileName);
       final dst = File(dstPath);
       final srcFile = File(src);
-      if (!dst.existsSync() || dst.lengthSync() != srcFile.lengthSync()) {
+      if (!await _sameContents(srcFile, dst)) {
         await replaceAtomically(dstPath, (tmp) => srcFile.copy(tmp));
       }
       await _ensureExecutable(dstPath);

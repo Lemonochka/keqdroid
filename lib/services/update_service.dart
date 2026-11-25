@@ -428,9 +428,19 @@ class UpdateService {
         if (!name.endsWith(ext) || !name.contains('macos')) continue;
         if (name.contains('universal')) return asset;
       }
+      // Файл без метки архитектуры ещё допустим, чужую архитектуру не ставим.
+      const otherArchMarkers = [
+        'arm64',
+        'aarch64',
+        'x86_64',
+        'x64',
+        'amd64',
+        'intel',
+      ];
       for (final asset in maps) {
         final name = (asset['name'] ?? '').toString().toLowerCase();
-        if (name.endsWith(ext) && name.contains('macos')) return asset;
+        if (!name.endsWith(ext) || !name.contains('macos')) continue;
+        if (!otherArchMarkers.any(name.contains)) return asset;
       }
     }
     return null;
