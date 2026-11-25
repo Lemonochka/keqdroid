@@ -9,6 +9,7 @@ import '../core/app_logger.dart';
 import '../models/probe_results.dart';
 import '../platform/windows_cert_trust.dart';
 import '../tunnel/linux_core_paths.dart';
+import '../tunnel/macos_core_paths.dart';
 import '../tunnel/windows_core_paths.dart';
 import '../tunnel/vpn_backend.dart';
 import '../utils/pooled.dart';
@@ -49,12 +50,14 @@ class EphemeralXrayPing {
   static Future<String?> _resolveXray() {
     if (Platform.isWindows) return WindowsCorePaths.xrayExecutable();
     if (Platform.isLinux) return LinuxCorePaths.xrayExecutable();
+    if (Platform.isMacOS) return MacosCorePaths.xrayExecutable();
     return Future<String?>.value(null);
   }
 
   static Future<String?> _resolveMihomo() {
     if (Platform.isWindows) return WindowsCorePaths.mihomoExecutable();
     if (Platform.isLinux) return LinuxCorePaths.mihomoExecutable();
+    if (Platform.isMacOS) return MacosCorePaths.mihomoExecutable();
     return Future<String?>.value(null);
   }
 
@@ -103,11 +106,14 @@ class EphemeralXrayPing {
 
   static Future<Directory> _sessionDir() {
     if (Platform.isLinux) return LinuxCorePaths.sessionDir();
+    if (Platform.isMacOS) return MacosCorePaths.sessionDir();
     return WindowsCorePaths.sessionDir();
   }
 
   static String get _binariesHint => Platform.isLinux
       ? LinuxCorePaths.binariesHint
+      : Platform.isMacOS
+      ? MacosCorePaths.binariesHint
       : WindowsCorePaths.binariesHint;
 
   static Future<void> _attachCoreProcess(int pid) async {
@@ -192,7 +198,9 @@ class EphemeralXrayPing {
     void Function(ServerUrlTestResult item)? onEach,
   }) async {
     if (probes.isEmpty) return const [];
-    if (!Platform.isWindows && !Platform.isLinux) return null;
+    if (!Platform.isWindows && !Platform.isLinux && !Platform.isMacOS) {
+      return null;
+    }
 
     final coreBin = await _resolveCore(core);
     if (coreBin == null) {
@@ -369,7 +377,7 @@ class EphemeralXrayPing {
     VpnBackend core = VpnBackend.xray,
     bool keepAlive = true,
   }) async {
-    if (!Platform.isWindows && !Platform.isLinux) {
+    if (!Platform.isWindows && !Platform.isLinux && !Platform.isMacOS) {
       return (
         success: false,
         latencyMs: null,
@@ -474,7 +482,7 @@ class EphemeralXrayPing {
     required int timeoutMs,
     VpnBackend core = VpnBackend.xray,
   }) async {
-    if (!Platform.isWindows && !Platform.isLinux) {
+    if (!Platform.isWindows && !Platform.isLinux && !Platform.isMacOS) {
       return (
         success: false,
         kbps: null,

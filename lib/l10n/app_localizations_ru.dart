@@ -1701,6 +1701,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsDesktopTitleLinux => 'Linux';
 
   @override
+  String get settingsDesktopTitleMacos => 'macOS';
+
+  @override
   String get settingsDesktopSubtitle => 'Трей, автозапуск, автоподключение';
 
   @override
@@ -2548,6 +2551,9 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get settingsPermTunHeader => 'Режим TUN (Linux)';
+
+  @override
+  String get settingsPermTunHeaderMacos => 'Режим TUN (macOS)';
 
   @override
   String get settingsPermTunPasswordlessTitle => 'TUN без пароля';

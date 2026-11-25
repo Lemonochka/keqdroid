@@ -310,7 +310,7 @@ class _UpdateDialogState extends ConsumerState<_UpdateDialog> {
         },
         beforeInstaller: notice?.downloaded,
         // только перед самым выходом: путь через браузер этот колбэк не зовёт
-        beforeRestart: Platform.isWindows || Platform.isLinux
+        beforeRestart: Platform.isWindows || Platform.isLinux || Platform.isMacOS
             ? () async {
                 if (mounted) setState(() => _applying = true);
                 final status = ref.read(vpnStateProvider).value?.status;

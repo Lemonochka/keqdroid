@@ -1685,6 +1685,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsDesktopTitleLinux => 'Linux';
 
   @override
+  String get settingsDesktopTitleMacos => 'macOS';
+
+  @override
   String get settingsDesktopSubtitle => 'Infobereich, Autostart, automatisches Verbinden';
 
   @override
@@ -2532,6 +2535,9 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get settingsPermTunHeader => 'TUN-Modus (Linux)';
+
+  @override
+  String get settingsPermTunHeaderMacos => 'TUN-Modus (macOS)';
 
   @override
   String get settingsPermTunPasswordlessTitle => 'TUN ohne Passwort';

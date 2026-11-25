@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import '../models/tun_settings.dart';
 import '../tunnel/app_routing_mode.dart';
 
@@ -13,10 +15,17 @@ const kTunDnsAddress = '172.19.0.2';
 // wintun считает GUID из имени, у чужого клиента с тем же именем адаптер общий
 const kTunInterfaceName = 'tun-keqdis';
 
+// Darwin kernel requires utun[0-9]+ for user-space TUN interfaces.
+const kMacosTunInterfaceName = 'utun99';
+
+String desktopTunInterfaceName({bool? macos}) =>
+    (macos ?? Platform.isMacOS) ? kMacosTunInterfaceName : kTunInterfaceName;
+
 class DesktopTunOptions {
   const DesktopTunOptions({
     required this.windows,
     required this.mtu,
+    this.macos = false,
     this.autoRoute = true,
     this.strictRoute = false,
     this.captureIpv6 = false,
@@ -28,6 +37,7 @@ class DesktopTunOptions {
   });
 
   final bool windows;
+  final bool macos;
   final int mtu;
   final bool autoRoute;
   final bool strictRoute;

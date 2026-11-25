@@ -18,12 +18,19 @@ class HotkeyService {
   @visibleForTesting
   static const linuxChannel = MethodChannel('keqdroid/linux_hotkeys');
 
-  static bool get isSupported => Platform.isWindows || Platform.isLinux;
+  // macos/Runner/MacosPlatformBridge.swift
+  @visibleForTesting
+  static const macosChannel = MethodChannel('keqdroid/macos_hotkeys');
+
+  static bool get isSupported =>
+      Platform.isWindows || Platform.isLinux || Platform.isMacOS;
 
   static LinuxHotkeyBackend? _linuxBackend;
+  static bool _macosHandlerInstalled = false;
 
   static bool get isGlobal =>
       Platform.isWindows ||
+      Platform.isMacOS ||
       (_linuxBackend != null && _linuxBackend != LinuxHotkeyBackend.none);
 
   // на Wayland сочетание назначает и подтверждает сама система
@@ -119,7 +126,51 @@ class HotkeyService {
     }
 
     if (Platform.isLinux) return _applyLinux(bindings);
+    if (Platform.isMacOS) return _applyMacos(bindings);
     return const [];
+  }
+
+  static Future<List<String>> _applyMacos(
+    Map<HotkeyAction, HotkeyBinding> bindings,
+  ) async {
+    if (!_macosHandlerInstalled) {
+      macosChannel.setMethodCallHandler(_onLinuxCall);
+      _macosHandlerInstalled = true;
+    }
+    final payload = <Map<String, Object>>[];
+    bindings.forEach((action, binding) {
+      final code = binding.macosKeyCode;
+      if (code == null) return;
+      payload.add({
+        'action': action.id,
+        'modifiers': binding.windowsModifiers,
+        'keyCode': code,
+      });
+    });
+    var failed = const <String>[];
+    try {
+      failed =
+          await macosChannel.invokeListMethod<String>(
+            'setGlobalHotkeys',
+            payload,
+          ) ??
+          const [];
+    } on MissingPluginException {
+      failed = [for (final a in bindings.keys) a.id];
+    } on PlatformException catch (e, st) {
+      AppLogger.instance.warn(
+        'Failed to register macOS global hotkeys',
+        error: e,
+        stackTrace: st,
+      );
+      failed = [for (final a in bindings.keys) a.id];
+    }
+    _global = {
+      for (final action in bindings.keys)
+        if (!failed.contains(action.id)) action,
+    };
+    _syncKeyHandler();
+    return failed;
   }
 
   @visibleForTesting
@@ -272,6 +323,7 @@ class HotkeyService {
   @visibleForTesting
   static void resetForTesting() {
     _linuxBackend = null;
+    _macosHandlerInstalled = false;
     _bindings = {};
     _global = {};
     _descriptions = {};

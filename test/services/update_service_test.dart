@@ -652,4 +652,73 @@ void main() {
       );
     });
   });
+
+  group('macOS release assets', () {
+    final assets = [
+      {'name': 'keqdroid-0.39.2-macos-arm64.dmg'},
+      {'name': 'keqdroid-0.39.2-macos-x86_64.dmg'},
+      {'name': 'keqdroid-0.39.2-macos-universal.dmg'},
+      {'name': 'keqdroid-0.39.2-android.apk'},
+    ];
+
+    test('selects matching arm64 and x86_64 dmg assets', () {
+      expect(
+        UpdateService.findAssetNameForPlatform(assets, 'macos-arm64'),
+        'keqdroid-0.39.2-macos-arm64.dmg',
+      );
+      expect(
+        UpdateService.findAssetNameForPlatform(assets, 'macos'),
+        'keqdroid-0.39.2-macos-x86_64.dmg',
+      );
+    });
+
+    test('falls back to universal dmg when arch-specific asset is absent', () {
+      final universalOnly = [
+        {'name': 'keqdroid-0.39.2-macos-universal.dmg'},
+      ];
+      expect(
+        UpdateService.findAssetNameForPlatform(universalOnly, 'macos-arm64'),
+        'keqdroid-0.39.2-macos-universal.dmg',
+      );
+      expect(
+        UpdateService.findAssetNameForPlatform(universalOnly, 'macos'),
+        'keqdroid-0.39.2-macos-universal.dmg',
+      );
+    });
+
+    test('does not select an asset built for the other architecture', () {
+      final intelOnly = [
+        {'name': 'keqdroid-0.39.2-macos-x86_64.dmg'},
+      ];
+      final armOnly = [
+        {'name': 'keqdroid-0.39.2-macos-arm64.dmg'},
+      ];
+      expect(
+        UpdateService.findAssetNameForPlatform(intelOnly, 'macos-arm64'),
+        isNull,
+      );
+      expect(UpdateService.findAssetNameForPlatform(armOnly, 'macos'), isNull);
+    });
+
+    test('accepts a macOS asset without an architecture marker', () {
+      final unlabelled = [
+        {'name': 'keqdroid-0.39.2-macos.dmg'},
+      ];
+      for (final platform in ['macos', 'macos-arm64']) {
+        expect(
+          UpdateService.findAssetNameForPlatform(unlabelled, platform),
+          'keqdroid-0.39.2-macos.dmg',
+        );
+      }
+    });
+
+    test('recognizes .dmg extension for updates', () {
+      expect(
+        UpdateService.extensionFromUrl(
+          'https://example.invalid/keqdroid-0.39.2-macos-universal.dmg',
+        ),
+        '.dmg',
+      );
+    });
+  });
 }

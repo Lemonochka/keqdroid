@@ -37,6 +37,7 @@ import 'package:keqdroid/services/debug_log_service.dart';
 import 'package:keqdroid/services/hotkey_service.dart';
 import 'package:keqdroid/services/linux_autostart.dart';
 import 'package:keqdroid/services/linux_firewall.dart';
+import 'package:keqdroid/services/macos_autostart.dart';
 import 'package:keqdroid/services/settings_backup_service.dart';
 import 'package:keqdroid/services/backup_transfer.dart';
 import 'package:keqdroid/screens/backup_transfer_flow.dart';
@@ -191,10 +192,14 @@ class SettingsTab extends ConsumerWidget {
                           children: [
                             _LanSharingCard(settingsAsync: settingsAsync),
                             const _SplitTunnelingSettingsCard(),
-                            if (Platform.isWindows || Platform.isLinux)
+                            if (Platform.isWindows ||
+                                Platform.isLinux ||
+                                Platform.isMacOS)
                               _SettingsCard(
                                 title: Platform.isLinux
                                     ? l10n.settingsDesktopTitleLinux
+                                    : Platform.isMacOS
+                                    ? l10n.settingsDesktopTitleMacos
                                     : l10n.settingsDesktopTitle,
                                 subtitle: l10n.settingsDesktopSubtitle,
                                 icon: Icons.desktop_windows_rounded,

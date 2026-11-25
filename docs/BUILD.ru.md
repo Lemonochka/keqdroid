@@ -8,6 +8,7 @@
 - Android: Android Studio с Android SDK, JDK 17 или новее
 - Windows: Visual Studio 2022 или новее с нагрузкой Desktop development with C++
 - Linux: Ubuntu 22.04, отдельно или в WSL
+- macOS: macOS 13 или новее с Xcode Command Line Tools
 - ядра: Go и git, для ядер Android ещё Android NDK
 - установщик Windows: Inno Setup 7.1.1
 
@@ -55,6 +56,27 @@ wsl -d Ubuntu-22.04 -e bash /mnt/c/<путь>/keqdroid/tool/build_linux_native.s
 ```
 
 `build_linux_native.sh` копирует проект на диск WSL, запускает там оба скрипта и возвращает пакеты в `release/<версия>/`. Так Linux собирает `make_release.ps1`.
+
+## macOS
+
+Поддерживаются отдельные сборки для Apple Silicon (`arm64`) и Intel (`x86_64`). Собранные ядра для macOS не хранятся в git — их нужно собрать локально перед сборкой приложения:
+
+```bash
+bash tool/build_macos_cores.sh          # собирает отдельно ядра для arm64 и x86_64
+bash tool/build_macos_cores.sh native   # только под текущую архитектуру (arm64 или x86_64)
+flutter pub get
+flutter build macos --release
+```
+
+Сборка и упаковка отдельных `.dmg` в `release/<версия>/`:
+
+```bash
+bash tool/package_macos.sh all          # оба DMG: arm64 и x86_64
+bash tool/package_macos.sh arm64        # только Apple Silicon
+bash tool/package_macos.sh x86_64       # только Intel
+```
+
+Фаза сборки Xcode копирует `assets/bin/macos/<arch>/{xray,mihomo}` и `assets/bin/macos/{geoip.dat,geosite.dat}` в `keqdroid.app/Contents/Resources/bin/`, а `tool/package_macos.sh` вырезает лишний срез из `.app` через `lipo -thin`. Для подписи сертификатом Developer ID вместо ad-hoc задайте переменную `MACOS_SIGN_IDENTITY`.
 
 ## Проверки
 
@@ -116,6 +138,8 @@ keqdroid-<версия>-linux-x64.tar.gz
 keqdroid_<версия>_amd64.deb
 keqdroid-<версия>-1.x86_64.rpm
 keqdroid-<версия>-x86_64.AppImage
+keqdroid-<версия>-macos-arm64.dmg
+keqdroid-<версия>-macos-x86_64.dmg
 geoip.dat
 geoip.dat.sha256
 ```

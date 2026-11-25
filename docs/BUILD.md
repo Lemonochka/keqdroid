@@ -8,6 +8,7 @@ English | [Русский](BUILD.ru.md)
 - Android: Android Studio with the Android SDK, JDK 17 or newer
 - Windows: Visual Studio 2022 or newer with the Desktop development with C++ workload
 - Linux: Ubuntu 22.04, on its own or in WSL
+- macOS: macOS 13 or newer with Xcode Command Line Tools
 - Cores: Go and git, plus the Android NDK for the Android cores
 - Windows installer: Inno Setup 7.1.1
 
@@ -55,6 +56,27 @@ wsl -d Ubuntu-22.04 -e bash /mnt/c/<path>/keqdroid/tool/build_linux_native.sh
 ```
 
 `build_linux_native.sh` copies the project to the WSL disk, runs both scripts there and copies the packages back to `release/<version>/`. This is how `make_release.ps1` builds Linux.
+
+## macOS
+
+Separate Apple Silicon (`arm64`) and Intel (`x86_64`) builds are supported. Prebuilt macOS cores are not stored in git; build them locally before building or packaging the app:
+
+```bash
+bash tool/build_macos_cores.sh          # builds separate arm64 and x86_64 cores
+bash tool/build_macos_cores.sh native   # host arch only (arm64 or x86_64)
+flutter pub get
+flutter build macos --release
+```
+
+To build and package separate `.dmg` files in `release/<version>/`:
+
+```bash
+bash tool/package_macos.sh all          # both arm64 and x86_64 DMGs
+bash tool/package_macos.sh arm64        # Apple Silicon only
+bash tool/package_macos.sh x86_64       # Intel only
+```
+
+The Xcode build embeds `assets/bin/macos/<arch>/{xray,mihomo}` and `assets/bin/macos/{geoip.dat,geosite.dat}` into `keqdroid.app/Contents/Resources/bin/`, and `tool/package_macos.sh` thins each `.app` bundle to its single target architecture. Pass `MACOS_SIGN_IDENTITY` to sign with a Developer ID certificate instead of the default ad-hoc signature.
 
 ## Checks
 
@@ -117,6 +139,8 @@ keqdroid-<version>-linux-x64.tar.gz
 keqdroid_<version>_amd64.deb
 keqdroid-<version>-1.x86_64.rpm
 keqdroid-<version>-x86_64.AppImage
+keqdroid-<version>-macos-arm64.dmg
+keqdroid-<version>-macos-x86_64.dmg
 geoip.dat
 geoip.dat.sha256
 ```

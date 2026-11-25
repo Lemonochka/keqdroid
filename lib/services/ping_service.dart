@@ -152,8 +152,11 @@ class PingService {
           'chcp 65001>nul & ping -n 1 -w $timeoutMs $host',
         ], stdoutEncoding: utf8).timeout(Duration(seconds: timeoutSeconds + 3));
       } else {
+        // On macOS ping -W expects milliseconds, while Linux expects seconds.
         final args = Platform.isWindows
             ? ['-n', '1', '-w', '$timeoutMs', host]
+            : Platform.isMacOS
+            ? ['-c', '1', '-W', '$timeoutMs', host]
             : ['-c', '1', '-W', '$timeoutSeconds', host];
         result = await Process.run(
           'ping',
@@ -558,7 +561,10 @@ class PingService {
 
   static bool get multiPingSupported =>
       debugMultiPingSupported ??
-      (Platform.isAndroid || Platform.isWindows || Platform.isLinux);
+      (Platform.isAndroid ||
+          Platform.isWindows ||
+          Platform.isLinux ||
+          Platform.isMacOS);
 
   static const multiPingChunk = 10;
 

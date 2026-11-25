@@ -401,5 +401,14 @@ void main() {
               as Map<String, dynamic>;
       expect(config, _config(_windows));
     });
+
+    test('macOS TUN uses Darwin utun interface name', () {
+      const macosTun = DesktopTunOptions(
+        windows: false,
+        macos: true,
+        mtu: 9000,
+      );
+      expect(_tunSettings(_config(macosTun))['name'], kMacosTunInterfaceName);
+    });
   });
 }

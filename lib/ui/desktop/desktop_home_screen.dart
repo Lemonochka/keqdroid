@@ -13,6 +13,9 @@ import '../../services/hotkey_service.dart';
 import '../../services/linux_autostart.dart';
 import '../../services/linux_background_service.dart';
 import '../../services/linux_tray_vpn.dart';
+import '../../services/macos_autostart.dart';
+import '../../services/macos_background_service.dart';
+import '../../services/macos_tray_vpn.dart';
 import '../../services/resume_after_update.dart';
 
 import '../../l10n/app_localizations.dart';
@@ -62,6 +65,11 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
       LinuxBackgroundService.instance.uiVisible.addListener(
         _onLinuxWindowVisibility,
       );
+    } else if (Platform.isMacOS) {
+      MacosBackgroundService.instance.onQuit = _disconnectForQuit;
+      MacosBackgroundService.instance.uiVisible.addListener(
+        _onMacosWindowVisibility,
+      );
     }
     VpnNativeBridge.registerAutostartHandler(
       () => _maybeAutostartConnect(force: true),
@@ -80,6 +88,7 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
       if (!mounted) return;
       // при автозапуске в трей окно спрятано ещё до runApp, слушатель этого не застал
       if (Platform.isLinux) _onLinuxWindowVisibility();
+      if (Platform.isMacOS) _onMacosWindowVisibility();
       ref.read(homeTabIndexProvider.notifier).set(_index);
       ref.read(homeTabPageProvider.notifier).set(_index.toDouble());
       ref.read(updateInfoProvider);
@@ -95,6 +104,15 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
     if (Platform.isLinux && l10n != null) {
       unawaited(
         LinuxBackgroundService.instance.setTrayLabels(
+          show: l10n.trayOpenApp,
+          quit: l10n.trayExit,
+          connect: l10n.trayConnect,
+          disconnect: l10n.trayDisconnect,
+        ),
+      );
+    } else if (Platform.isMacOS && l10n != null) {
+      unawaited(
+        MacosBackgroundService.instance.setTrayLabels(
           show: l10n.trayOpenApp,
           quit: l10n.trayExit,
           connect: l10n.trayConnect,
@@ -153,6 +171,8 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
             await WindowsDesktopService.toggleMainWindow();
           } else if (Platform.isLinux) {
             await LinuxBackgroundService.instance.toggleWindowVisibility();
+          } else if (Platform.isMacOS) {
+            await MacosBackgroundService.instance.toggleWindowVisibility();
           }
       }
     } catch (e, st) {
@@ -281,6 +301,7 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
     try {
       await _runWindowsStartupTasks();
       await _runLinuxStartupTasks();
+      await _runMacosStartupTasks();
     } finally {
       // после автостарта: оба подключают один и тот же сервер
       await _maybeResumeAfterUpdate();
@@ -296,8 +317,18 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
     await _maybeAutostartConnect();
   }
 
+  Future<void> _runMacosStartupTasks() async {
+    if (!Platform.isMacOS || _startupTasksDone) return;
+    _startupTasksDone = true;
+    final settings = await ref.read(storageProvider).getSettings();
+    await MacosAutostart.setStartInTray(settings.autostartInTray);
+    await MacosAutostart.refresh();
+    await _maybeAutostartConnect();
+  }
+
   Future<void> _maybeAutostartConnect({bool force = false}) async {
-    if (!(Platform.isWindows || Platform.isLinux) || _startupConnectInFlight) {
+    if (!(Platform.isWindows || Platform.isLinux || Platform.isMacOS) ||
+        _startupConnectInFlight) {
       return;
     }
 
@@ -306,6 +337,8 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
       if (!force) {
         final isAutostart = Platform.isLinux
             ? LinuxAutostart.launchedAtLogin()
+            : Platform.isMacOS
+            ? MacosAutostart.launchedAtLogin()
             : await WindowsDesktopService.isAutostartLaunch();
         if (!isAutostart) return;
       }
@@ -388,6 +421,11 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
       LinuxBackgroundService.instance.uiVisible.removeListener(
         _onLinuxWindowVisibility,
       );
+    } else if (Platform.isMacOS) {
+      MacosBackgroundService.instance.onQuit = null;
+      MacosBackgroundService.instance.uiVisible.removeListener(
+        _onMacosWindowVisibility,
+      );
     }
     HotkeyService.onPressed = null;
     VpnNativeBridge.registerAutostartHandler(null);
@@ -403,6 +441,9 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
 
   void _onLinuxWindowVisibility() =>
       _onWindowVisibility(LinuxBackgroundService.instance.uiVisible.value);
+
+  void _onMacosWindowVisibility() =>
+      _onWindowVisibility(MacosBackgroundService.instance.uiVisible.value);
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
@@ -438,11 +479,18 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
 
     ref.watch(windowsTrayMenuProvider);
     ref.watch(linuxTrayVpnProvider);
+    ref.watch(macosTrayVpnProvider);
     if (Platform.isLinux) {
       ref.listen(
         vpnStateProvider.select((a) => a.value?.status == VpnStatus.connected),
         (_, connected) =>
             unawaited(LinuxBackgroundService.instance.showConnected(connected)),
+      );
+    } else if (Platform.isMacOS) {
+      ref.listen(
+        vpnStateProvider.select((a) => a.value?.status == VpnStatus.connected),
+        (_, connected) =>
+            unawaited(MacosBackgroundService.instance.showConnected(connected)),
       );
     }
     LiquidToast.enabled = true;

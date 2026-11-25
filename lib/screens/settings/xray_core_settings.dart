@@ -152,7 +152,8 @@ class _XrayCoreSettingsScreenState
           const _XrayNoiseSection(),
         ],
         const _XrayGeneralSection(),
-        if (Platform.isWindows || Platform.isLinux) const _XrayTunSection(),
+        if (Platform.isWindows || Platform.isLinux || Platform.isMacOS)
+          const _XrayTunSection(),
         if (Platform.isAndroid) const _VpnModeSection(),
         const SizedBox(height: 8),
         OutlinedButton.icon(
