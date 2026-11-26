@@ -39,8 +39,7 @@ class MacosSystemProxy {
     final services = await listActiveServices();
     if (services.isEmpty) return false;
 
-    // Keep an existing backup from a crashed session so the original user proxy
-    // is preserved, while merging any newly appeared services before mutating them.
+    // после сбоя сохраняем исходный снимок, добавляя только новые сетевые службы
     final existing = _readBackup();
     final snapshot = existing != null
         ? Map<String, Object?>.of(existing)
@@ -64,12 +63,7 @@ class MacosSystemProxy {
 
     var applied = false;
     for (final service in services) {
-      final web = await _ok([
-        '-setwebproxy',
-        service,
-        _host,
-        '$httpPort',
-      ]);
+      final web = await _ok(['-setwebproxy', service, _host, '$httpPort']);
       final secure = await _ok([
         '-setsecurewebproxy',
         service,
@@ -105,14 +99,12 @@ class MacosSystemProxy {
 
     for (final MapEntry(key: service, value: raw) in backup.entries) {
       if (service == _appliedKey || raw is! Map) continue;
-      if (!await _serviceStillOurs(
+      await _restoreService(
         service,
+        raw.cast<String, Object?>(),
         httpPort: appliedHttpPort,
         socksPort: appliedSocksPort,
-      )) {
-        continue;
-      }
-      await _restoreService(service, raw.cast<String, Object?>());
+      );
     }
 
     try {
@@ -147,12 +139,7 @@ class MacosSystemProxy {
     final socks = results[2];
     if (web == null && secure == null && socks == null) return null;
     final bypass = await _readBypassDomains(service);
-    return {
-      'web': ?web,
-      'secure': ?secure,
-      'socks': ?socks,
-      'bypass': ?bypass,
-    };
+    return {'web': ?web, 'secure': ?secure, 'socks': ?socks, 'bypass': ?bypass};
   }
 
   Future<Map<String, Object?>?> _readProxy(String flag, String service) async {
@@ -192,55 +179,58 @@ class MacosSystemProxy {
         .toList();
   }
 
-  Future<bool> _serviceStillOurs(
-    String service, {
-    int? httpPort,
-    int? socksPort,
-  }) async {
-    final results = await Future.wait([
-      _readProxy('-getwebproxy', service),
-      _readProxy('-getsecurewebproxy', service),
-      _readProxy('-getsocksfirewallproxy', service),
-    ]);
-    final web = results[0];
-    final secure = results[1];
-    final socks = results[2];
-    bool isOurs(Map<String, Object?>? p, int? expectedPort) {
-      if (p == null || p['enabled'] != true || p['server'] != _host) {
-        return false;
-      }
-      if (expectedPort == null) return true;
-      return (p['port'] as num?)?.toInt() == expectedPort;
+  static bool _isOurs(Map<String, Object?>? proxy, int? expectedPort) {
+    if (proxy == null || proxy['enabled'] != true || proxy['server'] != _host) {
+      return false;
     }
-
-    return isOurs(web, httpPort) ||
-        isOurs(secure, httpPort) ||
-        isOurs(socks, socksPort);
+    if (expectedPort == null) return true;
+    return (proxy['port'] as num?)?.toInt() == expectedPort;
   }
 
   Future<void> _restoreService(
     String service,
-    Map<String, Object?> saved,
-  ) async {
-    await _restoreSingle(
-      service,
-      saved['web'],
-      setFlag: '-setwebproxy',
-      stateFlag: '-setwebproxystate',
-    );
-    await _restoreSingle(
-      service,
-      saved['secure'],
-      setFlag: '-setsecurewebproxy',
-      stateFlag: '-setsecurewebproxystate',
-    );
-    await _restoreSingle(
-      service,
-      saved['socks'],
-      setFlag: '-setsocksfirewallproxy',
-      stateFlag: '-setsocksfirewallproxystate',
-    );
+    Map<String, Object?> saved, {
+    int? httpPort,
+    int? socksPort,
+  }) async {
+    final current = await Future.wait([
+      _readProxy('-getwebproxy', service),
+      _readProxy('-getsecurewebproxy', service),
+      _readProxy('-getsocksfirewallproxy', service),
+    ]);
+    final webOurs = _isOurs(current[0], httpPort);
+    final secureOurs = _isOurs(current[1], httpPort);
+    final socksOurs = _isOurs(current[2], socksPort);
 
+    if (webOurs) {
+      await _restoreSingle(
+        service,
+        saved['web'],
+        setFlag: '-setwebproxy',
+        stateFlag: '-setwebproxystate',
+      );
+    }
+    if (secureOurs) {
+      await _restoreSingle(
+        service,
+        saved['secure'],
+        setFlag: '-setsecurewebproxy',
+        stateFlag: '-setsecurewebproxystate',
+      );
+    }
+    if (socksOurs) {
+      await _restoreSingle(
+        service,
+        saved['socks'],
+        setFlag: '-setsocksfirewallproxy',
+        stateFlag: '-setsocksfirewallproxystate',
+      );
+    }
+
+    final currentBypass = await _readBypassDomains(service);
+    if (currentBypass == null || !_sameList(currentBypass, bypassDomains)) {
+      return;
+    }
     final bypass = saved['bypass'];
     if (bypass is List) {
       final domains = bypass.whereType<String>().toList();
@@ -273,12 +263,22 @@ class MacosSystemProxy {
   Future<void> _resetUnbackedLeftovers() async {
     final services = await listActiveServices();
     for (final service in services) {
-      if (!await _serviceStillOurs(service)) continue;
+      final current = await Future.wait([
+        _readProxy('-getwebproxy', service),
+        _readProxy('-getsecurewebproxy', service),
+        _readProxy('-getsocksfirewallproxy', service),
+      ]);
+      final webOurs = _isOurs(current[0], null);
+      final secureOurs = _isOurs(current[1], null);
+      final socksOurs = _isOurs(current[2], null);
+      if (!webOurs && !secureOurs && !socksOurs) continue;
       final bypass = await _readBypassDomains(service);
       if (bypass == null || !_sameList(bypass, bypassDomains)) continue;
-      await _ok(['-setwebproxystate', service, 'off']);
-      await _ok(['-setsecurewebproxystate', service, 'off']);
-      await _ok(['-setsocksfirewallproxystate', service, 'off']);
+      if (webOurs) await _ok(['-setwebproxystate', service, 'off']);
+      if (secureOurs) {
+        await _ok(['-setsecurewebproxystate', service, 'off']);
+      }
+      if (socksOurs) await _ok(['-setsocksfirewallproxystate', service, 'off']);
       await _ok(['-setproxybypassdomains', service, 'Empty']);
     }
   }

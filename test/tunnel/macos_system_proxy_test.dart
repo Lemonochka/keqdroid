@@ -22,7 +22,8 @@ class _ServiceProxy {
 
 class _FakeNetworkSetup {
   _FakeNetworkSetup({Map<String, _ServiceProxy>? services})
-    : services = services ?? {'Wi-Fi': _ServiceProxy(), 'Ethernet': _ServiceProxy()};
+    : services =
+          services ?? {'Wi-Fi': _ServiceProxy(), 'Ethernet': _ServiceProxy()};
 
   final Map<String, _ServiceProxy> services;
   final List<String> disabledServices = const ['Thunderbolt Bridge'];
@@ -120,7 +121,10 @@ void main() {
 
   test('points active services at local HTTP and SOCKS ports', () async {
     final fake = _FakeNetworkSetup();
-    expect(await proxyFor(fake).enable(httpPort: 2081, socksPort: 2080), isTrue);
+    expect(
+      await proxyFor(fake).enable(httpPort: 2081, socksPort: 2080),
+      isTrue,
+    );
 
     for (final svc in fake.services.values) {
       expect(svc.webEnabled, isTrue);
@@ -175,93 +179,138 @@ void main() {
     expect(wifi.webPort, 8080);
   });
 
-  test('does not clobber a proxy the user manually changed while connected', () async {
+  test(
+    'does not clobber a proxy the user manually changed while connected',
+    () async {
+      final wifi = _ServiceProxy();
+      final fake = _FakeNetworkSetup(services: {'Wi-Fi': wifi});
+
+      final proxy = proxyFor(fake);
+      await proxy.enable(httpPort: 2081, socksPort: 2080);
+
+      wifi
+        ..webServer = 'manual.corp'
+        ..webPort = 9000
+        ..secureEnabled = false
+        ..socksEnabled = false;
+
+      await proxy.disable();
+
+      expect(wifi.webEnabled, isTrue);
+      expect(wifi.webServer, 'manual.corp');
+      expect(wifi.webPort, 9000);
+      expect(wifi.bypass, ['169.254/16', '*.local']);
+    },
+  );
+
+  test(
+    'clears unbacked leftover matching our loopback proxy and bypass list',
+    () async {
+      final wifi = _ServiceProxy()
+        ..webEnabled = true
+        ..webServer = '127.0.0.1'
+        ..webPort = 2081
+        ..bypass = List<String>.from(MacosSystemProxy.bypassDomains);
+      final fake = _FakeNetworkSetup(services: {'Wi-Fi': wifi});
+
+      await proxyFor(fake).disable();
+
+      expect(wifi.webEnabled, isFalse);
+      expect(wifi.secureEnabled, isFalse);
+      expect(wifi.socksEnabled, isFalse);
+      expect(wifi.bypass, isEmpty);
+    },
+  );
+
+  test(
+    'merges newly appeared network services into an existing backup after crash',
+    () async {
+      final wifi = _ServiceProxy()
+        ..webEnabled = true
+        ..webServer = 'orig.proxy'
+        ..webPort = 8080;
+      final fake = _FakeNetworkSetup(services: {'Wi-Fi': wifi});
+
+      await proxyFor(fake).enable(httpPort: 2081, socksPort: 2080);
+
+      // A new interface appears before reconnect after a crash.
+      final usbLan = _ServiceProxy();
+      fake.services['USB LAN'] = usbLan;
+
+      await proxyFor(fake).enable(httpPort: 3081, socksPort: 3080);
+      expect(usbLan.webEnabled, isTrue);
+      expect(usbLan.webPort, 3081);
+
+      await proxyFor(fake).disable();
+
+      expect(wifi.webEnabled, isTrue);
+      expect(wifi.webServer, 'orig.proxy');
+      expect(wifi.webPort, 8080);
+      expect(usbLan.webEnabled, isFalse);
+      expect(usbLan.secureEnabled, isFalse);
+      expect(usbLan.socksEnabled, isFalse);
+    },
+  );
+
+  test(
+    'does not clobber another local proxy on 127.0.0.1 with different ports',
+    () async {
+      final wifi = _ServiceProxy();
+      final fake = _FakeNetworkSetup(services: {'Wi-Fi': wifi});
+
+      final proxy = proxyFor(fake);
+      await proxy.enable(httpPort: 2081, socksPort: 2080);
+
+      // User switches to Charles/Proxyman on 127.0.0.1:8888 while connected.
+      wifi
+        ..webEnabled = true
+        ..webServer = '127.0.0.1'
+        ..webPort = 8888
+        ..secureEnabled = true
+        ..secureServer = '127.0.0.1'
+        ..securePort = 8888
+        ..socksEnabled = false;
+
+      await proxy.disable();
+
+      expect(wifi.webEnabled, isTrue);
+      expect(wifi.webServer, '127.0.0.1');
+      expect(wifi.webPort, 8888);
+      expect(wifi.secureEnabled, isTrue);
+      expect(wifi.securePort, 8888);
+    },
+  );
+
+  test('restores only proxy channels still owned by the app', () async {
     final wifi = _ServiceProxy();
     final fake = _FakeNetworkSetup(services: {'Wi-Fi': wifi});
 
     final proxy = proxyFor(fake);
     await proxy.enable(httpPort: 2081, socksPort: 2080);
-
     wifi
-      ..webServer = 'manual.corp'
-      ..webPort = 9000
-      ..secureEnabled = false
-      ..socksEnabled = false;
+      ..webEnabled = true
+      ..webServer = '127.0.0.1'
+      ..webPort = 8888;
 
     await proxy.disable();
 
     expect(wifi.webEnabled, isTrue);
-    expect(wifi.webServer, 'manual.corp');
-    expect(wifi.webPort, 9000);
-  });
-
-  test('clears unbacked leftover matching our loopback proxy and bypass list', () async {
-    final wifi = _ServiceProxy()
-      ..webEnabled = true
-      ..webServer = '127.0.0.1'
-      ..webPort = 2081
-      ..bypass = List<String>.from(MacosSystemProxy.bypassDomains);
-    final fake = _FakeNetworkSetup(services: {'Wi-Fi': wifi});
-
-    await proxyFor(fake).disable();
-
-    expect(wifi.webEnabled, isFalse);
+    expect(wifi.webPort, 8888);
     expect(wifi.secureEnabled, isFalse);
     expect(wifi.socksEnabled, isFalse);
-    expect(wifi.bypass, isEmpty);
   });
 
-  test('merges newly appeared network services into an existing backup after crash', () async {
-    final wifi = _ServiceProxy()
-      ..webEnabled = true
-      ..webServer = 'orig.proxy'
-      ..webPort = 8080;
-    final fake = _FakeNetworkSetup(services: {'Wi-Fi': wifi});
-
-    await proxyFor(fake).enable(httpPort: 2081, socksPort: 2080);
-
-    // A new interface appears before reconnect after a crash.
-    final usbLan = _ServiceProxy();
-    fake.services['USB LAN'] = usbLan;
-
-    await proxyFor(fake).enable(httpPort: 3081, socksPort: 3080);
-    expect(usbLan.webEnabled, isTrue);
-    expect(usbLan.webPort, 3081);
-
-    await proxyFor(fake).disable();
-
-    expect(wifi.webEnabled, isTrue);
-    expect(wifi.webServer, 'orig.proxy');
-    expect(wifi.webPort, 8080);
-    expect(usbLan.webEnabled, isFalse);
-    expect(usbLan.secureEnabled, isFalse);
-    expect(usbLan.socksEnabled, isFalse);
-  });
-
-  test('does not clobber another local proxy on 127.0.0.1 with different ports', () async {
-    final wifi = _ServiceProxy();
+  test('keeps bypass domains edited while the app proxy was active', () async {
+    final wifi = _ServiceProxy()..bypass = ['corp.local'];
     final fake = _FakeNetworkSetup(services: {'Wi-Fi': wifi});
 
     final proxy = proxyFor(fake);
     await proxy.enable(httpPort: 2081, socksPort: 2080);
-
-    // User switches to Charles/Proxyman on 127.0.0.1:8888 while connected.
-    wifi
-      ..webEnabled = true
-      ..webServer = '127.0.0.1'
-      ..webPort = 8888
-      ..secureEnabled = true
-      ..secureServer = '127.0.0.1'
-      ..securePort = 8888
-      ..socksEnabled = false;
-
+    wifi.bypass = ['manual.local'];
     await proxy.disable();
 
-    expect(wifi.webEnabled, isTrue);
-    expect(wifi.webServer, '127.0.0.1');
-    expect(wifi.webPort, 8888);
-    expect(wifi.secureEnabled, isTrue);
-    expect(wifi.securePort, 8888);
+    expect(wifi.webEnabled, isFalse);
+    expect(wifi.bypass, ['manual.local']);
   });
 
   test('restores legacy backup JSON without applied port metadata', () async {
