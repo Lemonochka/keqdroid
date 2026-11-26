@@ -12,6 +12,7 @@ import '../models/server_item.dart';
 import '../models/tun_settings.dart';
 import '../services/vpn_engine.dart';
 import '../services/windows_desktop_service.dart';
+import '../tunnel/macos_tunnel_backend.dart';
 import '../tunnel/vpn_backend.dart';
 import '../tunnel/windows_tunnel_backend.dart';
 import '../utils/config_gen.dart';
@@ -770,7 +771,9 @@ class PingService {
   // в TUN туннель нюхает SNI раньше правила своих процессов и подменяет адрес REALITY на маску, и замер сервера
   // с маской store.teamfortress.com уходил к Valve; выходим той сетью, что ядро туннеля
   static Future<String?> _tunBypassInterface(AppSettings settings) async {
-    if (!Platform.isWindows || !settings.tun.autoRoute) return null;
+    if (!settings.tun.autoRoute) return null;
+    if (Platform.isMacOS) return _macosTunBypassInterface();
+    if (!Platform.isWindows) return null;
     final backend = WindowsTunnelBackend.activeInstance;
     if (backend == null || backend.activeMode != ConnectionMode.tun) {
       return null;
@@ -797,6 +800,51 @@ class PingService {
       tunIndex: tunIndex,
       mihomoRule: cores.containsKey('mihomo'),
     );
+  }
+
+  // на macOS ядра ставят маршруты /1..8, а default в таблице остаётся на физическом интерфейсе
+  static Future<String?> _macosTunBypassInterface() async {
+    final backend = MacosTunnelBackend.activeInstance;
+    if (backend == null ||
+        backend.activeMode != ConnectionMode.tun ||
+        backend.activeCorePids.isEmpty) {
+      return null;
+    }
+    try {
+      final res = await Process.run('/sbin/route', const [
+        '-n',
+        'get',
+        'default',
+      ]).timeout(const Duration(seconds: 2));
+      if (res.exitCode != 0) return null;
+      final name = parseDarwinDefaultRouteInterface('${res.stdout}');
+      if (name == null) return null;
+      final interfaces = await NetworkInterface.list();
+      return interfaces.any((i) => i.name == name) ? name : null;
+    } catch (e) {
+      AppLogger.instance.debug('macOS default route lookup failed: $e');
+      return null;
+    }
+  }
+
+  @visibleForTesting
+  static String? parseDarwinDefaultRouteInterface(
+    String routeOutput, {
+    String tunInterface = kMacosTunInterfaceName,
+  }) {
+    for (final raw in routeOutput.split('\n')) {
+      final line = raw.trim();
+      if (!line.startsWith('interface:')) continue;
+      final name = line.substring('interface:'.length).trim();
+      if (name.isEmpty ||
+          name == tunInterface ||
+          name.startsWith('lo') ||
+          name.startsWith('utun')) {
+        return null;
+      }
+      return name;
+    }
+    return null;
   }
 
   static Future<PingResult> _pingUrlSingle(
