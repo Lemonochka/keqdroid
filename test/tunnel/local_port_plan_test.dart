@@ -124,6 +124,13 @@ void main() {
       issue: LocalPortIssue.occupied,
     );
     expect(occupied, contains('another program'));
+
+    final privileged = localPortBlockedMessage(
+      label: 'SOCKS',
+      port: 80,
+      issue: LocalPortIssue.privileged,
+    );
+    expect(privileged, contains(Platform.isMacOS ? 'macOS' : 'Linux'));
   });
 
   test('порты живой сессии видны коду, который знает только настройку', () {

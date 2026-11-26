@@ -12,10 +12,11 @@ Now DarwinTun.Start publishes a temporary catch-all DNS resolver entry
 (SupplementalMatchDomains [""] with SupplementalMatchOrders [1]) in
 SCDynamicStore through CoreFoundation and SystemConfiguration loaded via
 libSystem, switches Go's own process resolver off mDNSResponder onto sockets
-bound to the physical outbound interface while skipping the TUN DNS address,
-and flushes dscacheutil. Because SCDynamicStoreAddTemporaryValue binds the
-entry to the store session file descriptor, configd removes it automatically
-both on normal Close and if the xray process is killed abruptly.
+bound to the physical interface while skipping the TUN DNS address, and
+flushes the Darwin DNS cache via dscacheutil and mDNSResponder. Because
+SCDynamicStoreAddTemporaryValue binds the entry to the store session file
+descriptor, configd removes it automatically both on normal Close and if the
+xray process is killed abruptly.
 diff --git a/proxy/tun/tun_darwin.go b/proxy/tun/tun_darwin.go
 index a005681..0740f0d 100644
 --- a/proxy/tun/tun_darwin.go
@@ -55,10 +56,10 @@ index a005681..0740f0d 100644
  }
 diff --git a/proxy/tun/tun_darwin_dns.go b/proxy/tun/tun_darwin_dns.go
 new file mode 100644
-index 0000000..c6dc4bc
+index 0000000..6c405e3
 --- /dev/null
 +++ b/proxy/tun/tun_darwin_dns.go
-@@ -0,0 +1,419 @@
+@@ -0,0 +1,437 @@
 +//go:build darwin && !ios
 +
 +package tun
@@ -75,6 +76,7 @@ index 0000000..c6dc4bc
 +	"strings"
 +	"sync"
 +	"syscall"
++	"time"
 +	"unsafe"
 +
 +	xerrors "github.com/xtls/xray-core/common/errors"
@@ -100,6 +102,8 @@ index 0000000..c6dc4bc
 +func darwinSyscall6(fn, a1, a2, a3, a4, a5, a6 uintptr) (r1, r2 uintptr, err syscall.Errno)
 +
 +type darwinSCFramework struct {
++	strnlen              uintptr
++	memcpy               uintptr
 +	cfStringCreate       uintptr
 +	cfArrayCreate        uintptr
 +	cfDictionaryCreate   uintptr
@@ -240,9 +244,10 @@ index 0000000..c6dc4bc
 +}
 +
 +func flushDarwinDNSCache() {
-+	go func() {
-+		_ = exec.Command("/usr/bin/dscacheutil", "-flushcache").Run()
-+	}()
++	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
++	defer cancel()
++	_ = exec.CommandContext(ctx, "/usr/bin/dscacheutil", "-flushcache").Run()
++	_ = exec.CommandContext(ctx, "/usr/bin/killall", "-HUP", "mDNSResponder").Run()
 +}
 +
 +func darwinDlopen(path string) (uintptr, error) {
@@ -273,6 +278,11 @@ index 0000000..c6dc4bc
 +
 +func loadDarwinSC() (*darwinSCFramework, error) {
 +	darwinSCOnce.Do(func() {
++		libc, err := darwinDlopen("/usr/lib/libSystem.B.dylib")
++		if err != nil {
++			darwinSCErr = err
++			return
++		}
 +		cf, err := darwinDlopen("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")
 +		if err != nil {
 +			darwinSCErr = err
@@ -288,6 +298,8 @@ index 0000000..c6dc4bc
 +			name string
 +			dst  *uintptr
 +		}{
++			{libc, "strnlen", &darwinSC.strnlen},
++			{libc, "memcpy", &darwinSC.memcpy},
 +			{cf, "CFStringCreateWithCString", &darwinSC.cfStringCreate},
 +			{cf, "CFArrayCreate", &darwinSC.cfArrayCreate},
 +			{cf, "CFDictionaryCreate", &darwinSC.cfDictionaryCreate},
@@ -349,21 +361,28 @@ index 0000000..c6dc4bc
 +	return arr, nil
 +}
 +
++func (f *darwinSCFramework) cString(ptr uintptr, maxLen uintptr) string {
++	if ptr == 0 || maxLen == 0 || f.strnlen == 0 || f.memcpy == 0 {
++		return ""
++	}
++	n, _, _ := darwinSyscall6(f.strnlen, ptr, maxLen, 0, 0, 0, 0)
++	if n == 0 {
++		return ""
++	}
++	buf := make([]byte, n)
++	darwinSyscall6(f.memcpy, uintptr(unsafe.Pointer(&buf[0])), ptr, n, 0, 0, 0)
++	runtime.KeepAlive(buf)
++	return string(buf)
++}
++
 +func (f *darwinSCFramework) lastError(prefix string) error {
 +	code, _, _ := darwinSyscall6(f.scError, 0, 0, 0, 0, 0, 0)
 +	msgPtr, _, _ := darwinSyscall6(f.scErrorString, uintptr(int32(code)), 0, 0, 0, 0, 0)
-+	if msgPtr == 0 {
++	msg := f.cString(msgPtr, 256)
++	if msg == "" {
 +		return fmt.Errorf("%s: SCError %d", prefix, int32(code))
 +	}
-+	var msg []byte
-+	p := *(**[256]byte)(unsafe.Pointer(&msgPtr))
-+	for i := 0; i < len(p); i++ {
-+		if p[i] == 0 {
-+			msg = p[:i]
-+			break
-+		}
-+	}
-+	return fmt.Errorf("%s: %s (%d)", prefix, string(msg), int32(code))
++	return fmt.Errorf("%s: %s (%d)", prefix, msg, int32(code))
 +}
 +
 +// registerDarwinSystemDNS publishes a session-bound catch-all DNS entry in SCDynamicStore.
@@ -499,10 +518,10 @@ index 0000000..37ea080
 +DATA	·libc_dlsym_trampoline_addr(SB)/8, $libc_dlsym_trampoline<>(SB)
 diff --git a/proxy/tun/tun_darwin_dns_test.go b/proxy/tun/tun_darwin_dns_test.go
 new file mode 100644
-index 0000000..cb3da3e
+index 0000000..4006461
 --- /dev/null
 +++ b/proxy/tun/tun_darwin_dns_test.go
-@@ -0,0 +1,51 @@
+@@ -0,0 +1,77 @@
 +//go:build darwin && !ios
 +
 +package tun
@@ -511,6 +530,7 @@ index 0000000..cb3da3e
 +	"context"
 +	"net"
 +	"net/netip"
++	"strings"
 +	"testing"
 +
 +	"github.com/xtls/xray-core/transport/internet"
@@ -552,6 +572,31 @@ index 0000000..cb3da3e
 +	saved.restore()
 +	if net.DefaultResolver.PreferGo != preferGo || (net.DefaultResolver.Dial == nil) != (dial == nil) {
 +		t.Fatal("net.DefaultResolver was not restored")
++	}
++}
++
++func TestLoadDarwinSCAndCStringRead(t *testing.T) {
++	f, err := loadDarwinSC()
++	if err != nil {
++		t.Fatalf("loadDarwinSC failed: %v", err)
++	}
++	if got := f.cString(0, 256); got != "" {
++		t.Fatalf("expected empty string for NULL pointer, got %q", got)
++	}
++	// kSCStatusFailed = 1001; SCErrorString returns a static C string.
++	msgPtr, _, _ := darwinSyscall6(f.scErrorString, 1001, 0, 0, 0, 0, 0)
++	if msgPtr == 0 {
++		t.Fatal("SCErrorString(1001) returned NULL")
++	}
++	msg := f.cString(msgPtr, 256)
++	if msg == "" || strings.ContainsRune(msg, '\x00') {
++		t.Fatalf("unexpected SCErrorString(1001): %q", msg)
++	}
++	if prefix := f.cString(msgPtr, 3); len(prefix) != 3 || !strings.HasPrefix(msg, prefix) {
++		t.Fatalf("expected bounded 3-byte prefix of %q, got %q", msg, prefix)
++	}
++	if err := f.lastError("probe"); err == nil || !strings.HasPrefix(err.Error(), "probe: ") {
++		t.Fatalf("unexpected lastError result: %v", err)
 +	}
 +}
 diff --git a/proxy/tun/tun_ios_dns.go b/proxy/tun/tun_ios_dns.go

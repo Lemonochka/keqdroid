@@ -24,6 +24,9 @@ class MacosBackgroundService with WindowListener, TrayListener {
   static const _trayIconConnected = 'assets/icon_connected.png';
 
   bool _quitting = false;
+  bool _pendingAppTerminate = false;
+  bool _quitFinished = false;
+  bool _boundsRestorePending = false;
   final ValueNotifier<bool> uiVisible = ValueNotifier(true);
 
   String _showLabel = 'Show keqdroid';
@@ -40,11 +43,17 @@ class MacosBackgroundService with WindowListener, TrayListener {
   Timer? _boundsSaveDebounce;
 
   Future<void> initWindowAndTray() async {
-    if (MacosAutostart.startedInTray()) uiVisible.value = false;
+    final inTray = MacosAutostart.startedInTray();
+    if (inTray) {
+      uiVisible.value = false;
+      _boundsRestorePending = true;
+    }
     await windowManager.ensureInitialized();
     windowManager.addListener(this);
     await windowManager.setPreventClose(true);
-    await _restoreWindowBounds();
+    if (!inTray) {
+      await _restoreWindowBounds();
+    }
 
     trayManager.addListener(this);
     try {
@@ -144,6 +153,10 @@ class MacosBackgroundService with WindowListener, TrayListener {
   Future<void> restoreMainWindow() => _showWindow();
 
   Future<void> _showWindow() async {
+    if (_boundsRestorePending) {
+      _boundsRestorePending = false;
+      await _restoreWindowBounds();
+    }
     uiVisible.value = true;
     await windowManager.show();
     await windowManager.focus();
@@ -250,6 +263,12 @@ class MacosBackgroundService with WindowListener, TrayListener {
   void onWindowFocus() => uiVisible.value = true;
 
   @override
+  void onWindowMinimize() => uiVisible.value = false;
+
+  @override
+  void onWindowRestore() => uiVisible.value = true;
+
+  @override
   void onWindowResize() => _scheduleBoundsSave();
 
   @override
@@ -304,8 +323,21 @@ class MacosBackgroundService with WindowListener, TrayListener {
   static void Function(int code) exitProcess = exit;
 
   Future<void> quit({bool fromAppTerminate = false}) async {
-    if (_quitting) return;
+    if (_quitting) {
+      if (fromAppTerminate) {
+        _pendingAppTerminate = true;
+        if (_quitFinished) {
+          try {
+            await VpnNativeBridge.channel.invokeMethod<void>(
+              'confirmAppTerminate',
+            );
+          } catch (_) {}
+        }
+      }
+      return;
+    }
     _quitting = true;
+    _pendingAppTerminate = fromAppTerminate;
     try {
       await onQuit?.call();
     } catch (e) {
@@ -317,12 +349,11 @@ class MacosBackgroundService with WindowListener, TrayListener {
       await trayManager.destroy();
     } catch (_) {}
     await windowManager.setPreventClose(false);
-    if (fromAppTerminate) {
-      try {
-        await VpnNativeBridge.channel.invokeMethod<void>('confirmAppTerminate');
-      } catch (_) {}
-      return;
-    }
+    _quitFinished = true;
+    try {
+      await VpnNativeBridge.channel.invokeMethod<void>('confirmAppTerminate');
+    } catch (_) {}
+    if (_pendingAppTerminate) return;
     await windowManager.destroy();
     exitProcess(0);
   }

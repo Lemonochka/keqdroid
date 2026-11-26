@@ -36,6 +36,7 @@ import '../../shared/ui/app_theme.dart';
 import '../../shared/ui/halloween/halloween_icons.dart';
 import '../../shared/ui/liquid_toast.dart';
 import '../../shared/ui/update_dialog.dart';
+import '../../tunnel/macos_elevation.dart';
 import '../../utils/clipboard_import.dart';
 import 'connect_rehearsal_host.dart';
 import 'desktop_connection_mode.dart';
@@ -71,6 +72,7 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
       MacosBackgroundService.instance.uiVisible.addListener(
         _onMacosWindowVisibility,
       );
+      VpnNativeBridge.registerOpenSettingsHandler(_openSettingsFromMenu);
     }
     VpnNativeBridge.registerAutostartHandler(
       () => _maybeAutostartConnect(force: true),
@@ -221,6 +223,7 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
         // без службы спросим про неё, а окно в трее спрятало бы вопрос
         await WindowsDesktopService.restoreMainWindow();
       } else if (Platform.isMacOS &&
+          !macosRunningAsRoot() &&
           await MacosTunService.state() != TunServiceState.ready) {
         await MacosBackgroundService.instance.restoreMainWindow();
       }
@@ -431,6 +434,7 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
       MacosBackgroundService.instance.uiVisible.removeListener(
         _onMacosWindowVisibility,
       );
+      VpnNativeBridge.registerOpenSettingsHandler(null);
     }
     HotkeyService.onPressed = null;
     VpnNativeBridge.registerAutostartHandler(null);
@@ -455,6 +459,13 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
     if (state == AppLifecycleState.resumed) {
       unawaited(DesktopBackgroundService.onAppResumed());
     }
+  }
+
+  void _openSettingsFromMenu() {
+    if (!mounted) return;
+    Navigator.of(context).popUntil((route) => route.isFirst);
+    _selectTab(2);
+    unawaited(MacosBackgroundService.instance.restoreMainWindow());
   }
 
   void _selectTab(int index) {

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -208,5 +209,80 @@ void main() {
     expect(wifi.secureEnabled, isFalse);
     expect(wifi.socksEnabled, isFalse);
     expect(wifi.bypass, isEmpty);
+  });
+
+  test('merges newly appeared network services into an existing backup after crash', () async {
+    final wifi = _ServiceProxy()
+      ..webEnabled = true
+      ..webServer = 'orig.proxy'
+      ..webPort = 8080;
+    final fake = _FakeNetworkSetup(services: {'Wi-Fi': wifi});
+
+    await proxyFor(fake).enable(httpPort: 2081, socksPort: 2080);
+
+    // A new interface appears before reconnect after a crash.
+    final usbLan = _ServiceProxy();
+    fake.services['USB LAN'] = usbLan;
+
+    await proxyFor(fake).enable(httpPort: 3081, socksPort: 3080);
+    expect(usbLan.webEnabled, isTrue);
+    expect(usbLan.webPort, 3081);
+
+    await proxyFor(fake).disable();
+
+    expect(wifi.webEnabled, isTrue);
+    expect(wifi.webServer, 'orig.proxy');
+    expect(wifi.webPort, 8080);
+    expect(usbLan.webEnabled, isFalse);
+    expect(usbLan.secureEnabled, isFalse);
+    expect(usbLan.socksEnabled, isFalse);
+  });
+
+  test('does not clobber another local proxy on 127.0.0.1 with different ports', () async {
+    final wifi = _ServiceProxy();
+    final fake = _FakeNetworkSetup(services: {'Wi-Fi': wifi});
+
+    final proxy = proxyFor(fake);
+    await proxy.enable(httpPort: 2081, socksPort: 2080);
+
+    // User switches to Charles/Proxyman on 127.0.0.1:8888 while connected.
+    wifi
+      ..webEnabled = true
+      ..webServer = '127.0.0.1'
+      ..webPort = 8888
+      ..secureEnabled = true
+      ..secureServer = '127.0.0.1'
+      ..securePort = 8888
+      ..socksEnabled = false;
+
+    await proxy.disable();
+
+    expect(wifi.webEnabled, isTrue);
+    expect(wifi.webServer, '127.0.0.1');
+    expect(wifi.webPort, 8888);
+    expect(wifi.secureEnabled, isTrue);
+    expect(wifi.securePort, 8888);
+  });
+
+  test('restores legacy backup JSON without applied port metadata', () async {
+    final wifi = _ServiceProxy()
+      ..webEnabled = true
+      ..webServer = '127.0.0.1'
+      ..webPort = 2081;
+    final fake = _FakeNetworkSetup(services: {'Wi-Fi': wifi});
+
+    backup.writeAsStringSync(
+      jsonEncode({
+        'Wi-Fi': {
+          'web': {'enabled': false, 'server': '', 'port': 0},
+          'secure': {'enabled': false, 'server': '', 'port': 0},
+          'socks': {'enabled': false, 'server': '', 'port': 0},
+          'bypass': <String>[],
+        },
+      }),
+    );
+
+    await proxyFor(fake).disable();
+    expect(wifi.webEnabled, isFalse);
   });
 }

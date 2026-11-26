@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/utils/macos_app_bundle.dart';
+import 'package:path/path.dart' as p;
 
 void main() {
   group('macOS app bundle process path', () {
@@ -29,6 +32,30 @@ void main() {
       expect(MacosAppBundle.executablePath(app, '../Foo'), isNull);
       expect(MacosAppBundle.executablePath(app, 'Contents/MacOS/Foo'), isNull);
       expect(MacosAppBundle.executablePath(app, '..'), isNull);
+    });
+
+    test('parses CFBundleExecutable directly from XML Info.plist', () async {
+      const xml = '''<?xml version="1.0" encoding="UTF-8"?>
+<plist version="1.0">
+<dict>
+  <key>CFBundleName</key>
+  <string>Visible</string>
+  <key>CFBundleExecutable</key>
+  <string>Foo &amp; Bar</string>
+</dict>
+</plist>''';
+      expect(MacosAppBundle.parseXmlExecutable(xml), 'Foo & Bar');
+
+      final tmp = Directory.systemTemp.createTempSync('keq_plist_');
+      addTearDown(() => tmp.deleteSync(recursive: true));
+      final contents = Directory(p.join(tmp.path, 'Test.app', 'Contents'))
+        ..createSync(recursive: true);
+      File(p.join(contents.path, 'Info.plist')).writeAsStringSync(xml);
+
+      expect(
+        await MacosAppBundle.executableName(p.join(tmp.path, 'Test.app')),
+        'Foo & Bar',
+      );
     });
   });
 }

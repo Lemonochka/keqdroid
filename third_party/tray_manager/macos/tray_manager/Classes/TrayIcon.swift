@@ -33,52 +33,52 @@ public class TrayIcon: NSView {
         if let button = statusItem?.button {
             button.image = image
             setImagePosition(imagePosition)
+            self.frame = button.frame
         }
-
-
-        self.frame = statusItem!.button!.frame
     }
     
     public func setImagePosition(_ imagePosition: String) {
         if let button = statusItem?.button {
             button.imagePosition = imagePosition == "right" ? NSControl.ImagePosition.imageRight : NSControl.ImagePosition.imageLeft
+            self.frame = button.frame
         }
-        self.frame = statusItem!.button!.frame
     }
     
     public func removeImage() {
-        statusItem?.button?.image = nil
-        self.frame = statusItem!.button!.frame
+        if let button = statusItem?.button {
+            button.image = nil
+            self.frame = button.frame
+        }
     }
     
     public func setTitle(_ title: String) {
         if let button = statusItem?.button {
-            button.title  = title
+            button.title = title
+            self.frame = button.frame
         }
-        self.frame = statusItem!.button!.frame
     }
     
     public func setToolTip(_ toolTip: String) {
         if let button = statusItem?.button {
-            button.toolTip  = toolTip
+            button.toolTip = toolTip
         }
     }
     
     public override func mouseDown(with event: NSEvent) {
         statusItem?.button?.highlight(true)
-        self.onTrayIconMouseDown!()
+        self.onTrayIconMouseDown?()
     }
     
     public override func mouseUp(with event: NSEvent) {
         statusItem?.button?.highlight(false)
-        self.onTrayIconMouseUp!()
+        self.onTrayIconMouseUp?()
     }
     
     public override func rightMouseDown(with event: NSEvent) {
-        self.onTrayIconRightMouseDown!()
+        self.onTrayIconRightMouseDown?()
     }
     
     public override func rightMouseUp(with event: NSEvent) {
-        self.onTrayIconRightMouseUp!()
+        self.onTrayIconRightMouseUp?()
     }
 }

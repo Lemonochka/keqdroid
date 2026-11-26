@@ -156,7 +156,7 @@ Future<bool> ensureMacosTunService(
   );
   if (install != true) return false;
   final result = await MacosTunService.install();
-  if (result.ok && await MacosTunService.state() == TunServiceState.ready) {
+  if (result.ok && await _waitForMacosTunReady()) {
     return true;
   }
   if (!result.cancelled && context.mounted) {
@@ -165,6 +165,16 @@ Future<bool> ensureMacosTunService(
         content: Text(AppLocalizations.of(context)!.desktopTunServiceFailed),
       ),
     );
+  }
+  return false;
+}
+
+Future<bool> _waitForMacosTunReady() async {
+  for (var attempt = 0; attempt < 5; attempt++) {
+    if (await MacosTunService.state() == TunServiceState.ready) return true;
+    if (attempt < 4) {
+      await Future<void>.delayed(const Duration(milliseconds: 150));
+    }
   }
   return false;
 }

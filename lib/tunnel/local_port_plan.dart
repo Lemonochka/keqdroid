@@ -41,7 +41,8 @@ class LocalPortAssignment {
             'Hyper-V/WSL/containers, a program holding it exclusively, or a '
             'security product. Check '
             '`netsh interface ipv4 show excludedportrange protocol=tcp`',
-      LocalPortIssue.privileged => 'ports below 1024 need root on Linux',
+      LocalPortIssue.privileged =>
+        'ports below 1024 need root on ${Platform.isMacOS ? 'macOS' : 'Linux'}',
       LocalPortIssue.unknown => 'the socket could not be bound',
       null => '',
     };
@@ -70,7 +71,8 @@ String localPortBlockedMessage({
         'product blocking local listeners. Pick a different local port in '
         'the app settings.',
   LocalPortIssue.privileged =>
-    '$label port $port is privileged: ports below 1024 need root on Linux. '
+    '$label port $port is privileged: ports below 1024 need root on '
+        '${Platform.isMacOS ? 'macOS' : 'Linux'}. '
         'Pick a port above 1024 in the app settings.',
   LocalPortIssue.unknown =>
     '$label port $port could not be opened. Change the local port in the '

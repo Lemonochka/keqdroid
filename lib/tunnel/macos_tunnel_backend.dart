@@ -555,30 +555,48 @@ class MacosTunnelBackend
     final home = Platform.environment['HOME'];
     final appDirs = <String>[
       '/Applications',
+      '/Applications/Utilities',
       if (home != null && home.isNotEmpty) p.join(home, 'Applications'),
       if (includeSystem) '/System/Applications',
+      if (includeSystem) '/System/Applications/Utilities',
     ];
 
+    final bundleEntries = <({String path, bool isSystem})>[];
     for (final root in appDirs) {
       final dir = Directory(root);
       if (!dir.existsSync()) continue;
+      final isSystem = root.startsWith('/System');
       try {
         await for (final entity in dir.list(followLinks: false)) {
           if (!entity.path.endsWith('.app')) continue;
-          final displayName = p.basenameWithoutExtension(entity.path);
-          final exeName =
-              await MacosAppBundle.executableName(entity.path) ?? displayName;
-          if (exeName.isEmpty || !seen.add(exeName.toLowerCase())) continue;
-          apps.add({
-            'packageName': exeName,
-            'appName': displayName,
-            'isRunning': false,
-            'isSystem': root.startsWith('/System'),
-            'installPath': entity.path,
-          });
+          bundleEntries.add((path: entity.path, isSystem: isSystem));
         }
       } catch (e) {
         AppLogger.instance.debug('Could not scan $root', error: e);
+      }
+    }
+
+    const batchSize = 8;
+    for (var i = 0; i < bundleEntries.length; i += batchSize) {
+      final end = (i + batchSize < bundleEntries.length)
+          ? i + batchSize
+          : bundleEntries.length;
+      final batch = bundleEntries.sublist(i, end);
+      final exeNames = await Future.wait(
+        batch.map((e) => MacosAppBundle.executableName(e.path)),
+      );
+      for (var j = 0; j < batch.length; j++) {
+        final entry = batch[j];
+        final displayName = p.basenameWithoutExtension(entry.path);
+        final exeName = exeNames[j] ?? displayName;
+        if (exeName.isEmpty || !seen.add(exeName.toLowerCase())) continue;
+        apps.add({
+          'packageName': exeName,
+          'appName': displayName,
+          'isRunning': false,
+          'isSystem': entry.isSystem,
+          'installPath': entry.path,
+        });
       }
     }
 

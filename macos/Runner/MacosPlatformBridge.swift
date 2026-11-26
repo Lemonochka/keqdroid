@@ -2,9 +2,15 @@ import Carbon.HIToolbox
 import Cocoa
 import FlutterMacOS
 import Foundation
+import ImageIO
 
 final class MacosPlatformBridge {
   private static let hotKeySignature: OSType = 0x4B455144 // 'KEQD'
+  private static let iconCache: NSCache<NSString, NSString> = {
+    let cache = NSCache<NSString, NSString>()
+    cache.countLimit = 256
+    return cache
+  }()
 
   private let vpnChannel: FlutterMethodChannel
   private let hotkeyChannel: FlutterMethodChannel
@@ -55,9 +61,25 @@ final class MacosPlatformBridge {
     }
   }
 
-  func notifyAppWillTerminate() {
+  func notifyOpenSettings() {
     DispatchQueue.main.async { [weak self] in
-      self?.vpnChannel.invokeMethod("onAppWillTerminate", arguments: nil)
+      self?.vpnChannel.invokeMethod("onOpenSettings", arguments: nil)
+    }
+  }
+
+  func notifyAppWillTerminate(completion: @escaping (Bool) -> Void) {
+    DispatchQueue.main.async { [weak self] in
+      guard let self = self else {
+        completion(false)
+        return
+      }
+      self.vpnChannel.invokeMethod("onAppWillTerminate", arguments: nil) { res in
+        if res is FlutterError || (res as? NSObject) === FlutterMethodNotImplemented {
+          completion(false)
+        } else {
+          completion(true)
+        }
+      }
     }
   }
 
@@ -77,8 +99,21 @@ final class MacosPlatformBridge {
         result(nil)
         return
       }
+      if let cached = Self.iconCache.object(forKey: path as NSString) {
+        result(cached as String)
+        return
+      }
+      // AppKit's NSWorkspace/NSImage must only be touched on the main thread;
+      // extract an immutable CGImage here and encode PNG off the main thread.
+      guard let cgImage = Self.loadAppIconCGImageOnMain(path: path) else {
+        result(nil)
+        return
+      }
       DispatchQueue.global(qos: .utility).async {
-        let pngBase64 = Self.renderAppIconBase64(path: path)
+        let pngBase64 = Self.encodeIconPngBase64(cgImage: cgImage)
+        if let pngBase64 = pngBase64 {
+          Self.iconCache.setObject(pngBase64 as NSString, forKey: path as NSString)
+        }
         DispatchQueue.main.async { result(pngBase64) }
       }
     default:
@@ -221,34 +256,42 @@ final class MacosPlatformBridge {
     return model.isEmpty ? nil : model
   }
 
-  private static func renderAppIconBase64(path: String) -> String? {
+  private static func loadAppIconCGImageOnMain(path: String) -> CGImage? {
     guard FileManager.default.fileExists(atPath: path) else { return nil }
     let icon = NSWorkspace.shared.icon(forFile: path)
+    var rect = NSRect(x: 0, y: 0, width: 48, height: 48)
+    return icon.cgImage(forProposedRect: &rect, context: nil, hints: nil)
+  }
+
+  private static func encodeIconPngBase64(cgImage: CGImage) -> String? {
     let size = 48
-    guard let rep = NSBitmapImageRep(
-      bitmapDataPlanes: nil,
-      pixelsWide: size,
-      pixelsHigh: size,
-      bitsPerSample: 8,
-      samplesPerPixel: 4,
-      hasAlpha: true,
-      isPlanar: false,
-      colorSpaceName: .deviceRGB,
-      bytesPerRow: 0,
-      bitsPerPixel: 0
+    guard let colorSpace = CGColorSpace(name: CGColorSpace.sRGB),
+          let ctx = CGContext(
+            data: nil,
+            width: size,
+            height: size,
+            bitsPerComponent: 8,
+            bytesPerRow: 0,
+            space: colorSpace,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+          ) else {
+      return nil
+    }
+    ctx.interpolationQuality = .high
+    ctx.draw(cgImage, in: CGRect(x: 0, y: 0, width: size, height: size))
+    guard let scaled = ctx.makeImage() else { return nil }
+    let data = NSMutableData()
+    guard let dest = CGImageDestinationCreateWithData(
+      data,
+      "public.png" as CFString,
+      1,
+      nil
     ) else {
       return nil
     }
-    NSGraphicsContext.saveGraphicsState()
-    NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
-    icon.draw(
-      in: NSRect(x: 0, y: 0, width: size, height: size),
-      from: .zero,
-      operation: .copy,
-      fraction: 1.0
-    )
-    NSGraphicsContext.restoreGraphicsState()
-    return rep.representation(using: .png, properties: [:])?.base64EncodedString()
+    CGImageDestinationAddImage(dest, scaled, nil)
+    guard CGImageDestinationFinalize(dest) else { return nil }
+    return (data as Data).base64EncodedString()
   }
 
   private static func captureScreenPng() -> String? {

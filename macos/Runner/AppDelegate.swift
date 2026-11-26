@@ -9,16 +9,21 @@ class AppDelegate: FlutterAppDelegate {
   private var pendingDeepLink: String?
   private var isTerminating = false
   private var terminationReplied = false
+  private var allowImmediateTerminate = false
 
   override func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
     return false
   }
 
   override func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-    if isTerminating { return .terminateNow }
+    if allowImmediateTerminate || isTerminating { return .terminateNow }
     guard let bridge = platformBridge else { return .terminateNow }
     isTerminating = true
-    bridge.notifyAppWillTerminate()
+    bridge.notifyAppWillTerminate { [weak self] handled in
+      if !handled {
+        self?.confirmTerminate()
+      }
+    }
     // TUN shutdown waits for the root core and asynchronous utun removal (up to 16 s).
     // Proxy restoration runs first in Dart; this is only a last-resort upper bound.
     DispatchQueue.main.asyncAfter(deadline: .now() + 25.0) { [weak self] in
@@ -28,9 +33,18 @@ class AppDelegate: FlutterAppDelegate {
   }
 
   func confirmTerminate() {
+    allowImmediateTerminate = true
     guard isTerminating, !terminationReplied else { return }
     terminationReplied = true
     NSApp.reply(toApplicationShouldTerminate: true)
+  }
+
+  @IBAction func openPreferences(_ sender: Any?) {
+    if let window = mainFlutterWindow {
+      window.makeKeyAndOrderFront(nil)
+      NSApp.activate(ignoringOtherApps: true)
+    }
+    platformBridge?.notifyOpenSettings()
   }
 
   override func applicationSupportsSecureRestorableState(_ app: NSApplication) -> Bool {

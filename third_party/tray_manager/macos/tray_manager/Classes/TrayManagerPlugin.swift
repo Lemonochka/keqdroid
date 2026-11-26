@@ -10,12 +10,16 @@ let kEventOnTrayMenuItemClick = "onTrayMenuItemClick"
 extension NSRect {
     var topLeft: CGPoint {
         set {
-            let screenFrameRect = NSScreen.main!.frame
+            guard let screenFrameRect = (NSScreen.main ?? NSScreen.screens.first)?.frame else {
+                return
+            }
             origin.x = newValue.x
             origin.y = screenFrameRect.height - newValue.y - size.height
         }
         get {
-            let screenFrameRect = NSScreen.main!.frame
+            guard let screenFrameRect = (NSScreen.main ?? NSScreen.screens.first)?.frame else {
+                return origin
+            }
             return CGPoint(x: origin.x, y: screenFrameRect.height - origin.y - size.height)
         }
     }
@@ -79,7 +83,7 @@ public class TrayManagerPlugin: NSObject, FlutterPlugin, NSMenuDelegate {
     //    }
     
     @objc func statusItemButtonClicked(sender: NSStatusBarButton) {
-        let event = NSApp.currentEvent!
+        guard let event = NSApp.currentEvent else { return }
         var methodName: String?
         
         switch event.type {
@@ -98,31 +102,29 @@ public class TrayManagerPlugin: NSObject, FlutterPlugin, NSMenuDelegate {
         default:
             break
         }
-        if (methodName != nil) {
-            channel.invokeMethod(methodName!, arguments: nil, result: nil)
+        if let methodName = methodName {
+            channel.invokeMethod(methodName, arguments: nil, result: nil)
         }
     }
     
     public func destroy(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-        if (trayIcon?.statusItem != nil) {
-            NSStatusBar.system.removeStatusItem((trayIcon?.statusItem)!)
+        if let statusItem = trayIcon?.statusItem {
+            NSStatusBar.system.removeStatusItem(statusItem)
         }
-        if (trayIcon != nil) {
-            trayIcon?.removeImage()
+        if let icon = trayIcon {
+            icon.removeImage()
             trayIcon = nil
         }
         result(true)
     }
     
     public func getBounds(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-        let frame = trayIcon?.statusItem?.button?.window?.frame;
-        
-        if (frame != nil) {
+        if let frame = trayIcon?.statusItem?.button?.window?.frame {
             let resultData: NSDictionary = [
-                "x": frame!.topLeft.x,
-                "y": frame!.topLeft.y,
-                "width": frame!.size.width,
-                "height": frame!.size.height,
+                "x": frame.topLeft.x,
+                "y": frame.topLeft.y,
+                "width": frame.size.width,
+                "height": frame.size.height,
             ]
             result(resultData)
         } else {
@@ -131,41 +133,46 @@ public class TrayManagerPlugin: NSObject, FlutterPlugin, NSMenuDelegate {
     }
     
     public func setIcon(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-        let args:[String: Any] = call.arguments as! [String: Any]
-        let base64Icon: String =  args["base64Icon"] as! String;
-        let isTemplate: Bool =  args["isTemplate"] as! Bool;
-        let iconPosition: String =  args["iconPosition"] as! String;
-        let iconSize: Int = args["iconSize"] as! Int;
-        
-        let imageData = Data(base64Encoded: base64Icon, options: .ignoreUnknownCharacters)
-        let image = NSImage(data: imageData!)
-        image!.size = NSSize(width: iconSize, height: iconSize)
-        image!.isTemplate = isTemplate
+        guard let args = call.arguments as? [String: Any],
+              let base64Icon = args["base64Icon"] as? String,
+              let isTemplate = args["isTemplate"] as? Bool,
+              let iconPosition = args["iconPosition"] as? String,
+              let iconSize = args["iconSize"] as? Int,
+              let imageData = Data(base64Encoded: base64Icon, options: .ignoreUnknownCharacters),
+              let image = NSImage(data: imageData) else {
+            result(false)
+            return
+        }
+        image.size = NSSize(width: iconSize, height: iconSize)
+        image.isTemplate = isTemplate
         
         if (trayIcon == nil) {
             trayIcon = TrayIcon()
-            trayIcon?.onTrayIconMouseDown = { () in
-                self.channel.invokeMethod(kEventOnTrayIconMouseDown, arguments: nil, result: nil)
+            trayIcon?.onTrayIconMouseDown = { [weak self] in
+                self?.channel.invokeMethod(kEventOnTrayIconMouseDown, arguments: nil, result: nil)
             }
-            trayIcon?.onTrayIconMouseUp = { () in
-                self.channel.invokeMethod(kEventOnTrayIconMouseUp, arguments: nil, result: nil)
+            trayIcon?.onTrayIconMouseUp = { [weak self] in
+                self?.channel.invokeMethod(kEventOnTrayIconMouseUp, arguments: nil, result: nil)
             }
-            trayIcon?.onTrayIconRightMouseDown = { () in
-                self.channel.invokeMethod(kEventOnTrayIconRightMouseDown, arguments: nil, result: nil)
+            trayIcon?.onTrayIconRightMouseDown = { [weak self] in
+                self?.channel.invokeMethod(kEventOnTrayIconRightMouseDown, arguments: nil, result: nil)
             }
-            trayIcon?.onTrayIconRightMouseUp = { () in
-                self.channel.invokeMethod(kEventOnTrayIconRightMouseUp, arguments: nil, result: nil)
+            trayIcon?.onTrayIconRightMouseUp = { [weak self] in
+                self?.channel.invokeMethod(kEventOnTrayIconRightMouseUp, arguments: nil, result: nil)
             }
         }
         
-        trayIcon?.setImage(image!, iconPosition)
+        trayIcon?.setImage(image, iconPosition)
         
         result(true)
     }
     
     public func setIconPosition(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-        let args:[String: Any] = call.arguments as! [String: Any]
-        let iconPosition: String =  args["iconPosition"] as! String;
+        guard let args = call.arguments as? [String: Any],
+              let iconPosition = args["iconPosition"] as? String else {
+            result(false)
+            return
+        }
         
         trayIcon?.setImagePosition(iconPosition)
         
@@ -173,8 +180,11 @@ public class TrayManagerPlugin: NSObject, FlutterPlugin, NSMenuDelegate {
     }
     
     public func setToolTip(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-        let args:[String: Any] = call.arguments as! [String: Any]
-        let toolTip: String =  args["toolTip"] as! String;
+        guard let args = call.arguments as? [String: Any],
+              let toolTip = args["toolTip"] as? String else {
+            result(false)
+            return
+        }
         
         trayIcon?.setToolTip(toolTip)
         
@@ -182,8 +192,11 @@ public class TrayManagerPlugin: NSObject, FlutterPlugin, NSMenuDelegate {
     }
     
     public func setTitle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-        let args:[String: Any] = call.arguments as! [String: Any]
-        let title: String =  args["title"] as! String;
+        guard let args = call.arguments as? [String: Any],
+              let title = args["title"] as? String else {
+            result(false)
+            return
+        }
         
         trayIcon?.setTitle(title)
         
@@ -191,9 +204,13 @@ public class TrayManagerPlugin: NSObject, FlutterPlugin, NSMenuDelegate {
     }
     
     public func setContextMenu(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-        let args:[String: Any] = call.arguments as! [String: Any]
+        guard let args = call.arguments as? [String: Any],
+              let menuArgs = args["menu"] as? [String: Any] else {
+            result(false)
+            return
+        }
         
-        trayMenu = TrayMenu(args["menu"] as! [String: Any])
+        trayMenu = TrayMenu(menuArgs)
         trayMenu?.onMenuItemClick = { [weak self] (menuItem: NSMenuItem) in
             guard let strongSelf = self else { return }
             let args: NSDictionary = [
@@ -218,5 +235,6 @@ public class TrayManagerPlugin: NSObject, FlutterPlugin, NSMenuDelegate {
     
     public func menuDidClose(_ menu: NSMenu) {
         trayIcon?.statusItem?.menu = nil
+        trayIcon?.statusItem?.button?.highlight(false)
     }
 }

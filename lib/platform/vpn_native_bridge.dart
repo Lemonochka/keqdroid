@@ -27,6 +27,7 @@ class VpnNativeBridge {
   static Future<void> Function(MethodCall call)? _launchHandler;
   static Future<void> Function()? _autostartHandler;
   static void Function(bool visible)? _windowVisibilityHandler;
+  static void Function()? _openSettingsHandler;
 
   static Future<String?> getLaunchAction() async {
     if (!supportsNotificationLaunch) return null;
@@ -207,6 +208,11 @@ class VpnNativeBridge {
     _syncMethodCallHandler();
   }
 
+  static void registerOpenSettingsHandler(void Function()? handler) {
+    _openSettingsHandler = handler;
+    _syncMethodCallHandler();
+  }
+
   static void _syncMethodCallHandler() {
     final needsHandler =
         supportsNotificationLaunch ||
@@ -244,6 +250,10 @@ class VpnNativeBridge {
         HotkeyService.dispatchAction(
           args is Map ? args['action'] as String? : null,
         );
+        return;
+      }
+      if (call.method == 'onOpenSettings' && Platform.isMacOS) {
+        _openSettingsHandler?.call();
         return;
       }
       if (call.method == 'onAppWillTerminate' && Platform.isMacOS) {

@@ -26,6 +26,7 @@ class MacosSystemProxy {
 
   static const _tool = '/usr/sbin/networksetup';
   static const _host = '127.0.0.1';
+  static const _appliedKey = '__keqdroid_applied__';
   static const bypassDomains = [
     'localhost',
     '127.0.0.1',
@@ -38,17 +39,28 @@ class MacosSystemProxy {
     final services = await listActiveServices();
     if (services.isEmpty) return false;
 
-    // Keep an existing backup from a crashed session so the original user proxy is preserved.
-    if (!backupFile.existsSync()) {
-      final snapshot = <String, Map<String, Object?>>{};
-      for (final service in services) {
-        final state = await _readService(service);
-        if (state != null) snapshot[service] = state;
+    // Keep an existing backup from a crashed session so the original user proxy
+    // is preserved, while merging any newly appeared services before mutating them.
+    final existing = _readBackup();
+    final snapshot = existing != null
+        ? Map<String, Object?>.of(existing)
+        : <String, Object?>{};
+    final missing = [
+      for (final service in services)
+        if (!snapshot.containsKey(service)) service,
+    ];
+    if (missing.isNotEmpty) {
+      final read = await Future.wait(missing.map(_readService));
+      for (var i = 0; i < missing.length; i++) {
+        final state = read[i];
+        if (state != null) snapshot[missing[i]] = state;
       }
-      if (snapshot.isEmpty) return false;
-      backupFile.parent.createSync(recursive: true);
-      backupFile.writeAsStringSync(jsonEncode(snapshot));
     }
+    if (!snapshot.keys.any((k) => k != _appliedKey)) return false;
+
+    snapshot[_appliedKey] = {'httpPort': httpPort, 'socksPort': socksPort};
+    backupFile.parent.createSync(recursive: true);
+    backupFile.writeAsStringSync(jsonEncode(snapshot));
 
     var applied = false;
     for (final service in services) {
@@ -83,9 +95,23 @@ class MacosSystemProxy {
       return;
     }
 
+    final appliedMeta = backup[_appliedKey];
+    final appliedHttpPort = appliedMeta is Map
+        ? (appliedMeta['httpPort'] as num?)?.toInt()
+        : null;
+    final appliedSocksPort = appliedMeta is Map
+        ? (appliedMeta['socksPort'] as num?)?.toInt()
+        : null;
+
     for (final MapEntry(key: service, value: raw) in backup.entries) {
-      if (raw is! Map) continue;
-      if (!await _serviceStillOurs(service)) continue;
+      if (service == _appliedKey || raw is! Map) continue;
+      if (!await _serviceStillOurs(
+        service,
+        httpPort: appliedHttpPort,
+        socksPort: appliedSocksPort,
+      )) {
+        continue;
+      }
       await _restoreService(service, raw.cast<String, Object?>());
     }
 
@@ -111,9 +137,14 @@ class MacosSystemProxy {
   }
 
   Future<Map<String, Object?>?> _readService(String service) async {
-    final web = await _readProxy('-getwebproxy', service);
-    final secure = await _readProxy('-getsecurewebproxy', service);
-    final socks = await _readProxy('-getsocksfirewallproxy', service);
+    final results = await Future.wait([
+      _readProxy('-getwebproxy', service),
+      _readProxy('-getsecurewebproxy', service),
+      _readProxy('-getsocksfirewallproxy', service),
+    ]);
+    final web = results[0];
+    final secure = results[1];
+    final socks = results[2];
     if (web == null && secure == null && socks == null) return null;
     final bypass = await _readBypassDomains(service);
     return {
@@ -161,13 +192,30 @@ class MacosSystemProxy {
         .toList();
   }
 
-  Future<bool> _serviceStillOurs(String service) async {
-    final web = await _readProxy('-getwebproxy', service);
-    final secure = await _readProxy('-getsecurewebproxy', service);
-    final socks = await _readProxy('-getsocksfirewallproxy', service);
-    bool isOurs(Map<String, Object?>? p) =>
-        p != null && p['enabled'] == true && p['server'] == _host;
-    return isOurs(web) || isOurs(secure) || isOurs(socks);
+  Future<bool> _serviceStillOurs(
+    String service, {
+    int? httpPort,
+    int? socksPort,
+  }) async {
+    final results = await Future.wait([
+      _readProxy('-getwebproxy', service),
+      _readProxy('-getsecurewebproxy', service),
+      _readProxy('-getsocksfirewallproxy', service),
+    ]);
+    final web = results[0];
+    final secure = results[1];
+    final socks = results[2];
+    bool isOurs(Map<String, Object?>? p, int? expectedPort) {
+      if (p == null || p['enabled'] != true || p['server'] != _host) {
+        return false;
+      }
+      if (expectedPort == null) return true;
+      return (p['port'] as num?)?.toInt() == expectedPort;
+    }
+
+    return isOurs(web, httpPort) ||
+        isOurs(secure, httpPort) ||
+        isOurs(socks, socksPort);
   }
 
   Future<void> _restoreService(
