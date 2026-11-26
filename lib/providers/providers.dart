@@ -41,6 +41,7 @@ import '../services/storage_service.dart';
 import '../services/subscription_service.dart';
 import '../services/update_service.dart';
 import '../services/tunnel_session_builder.dart';
+import '../services/macos_tun_service.dart';
 import '../services/vpn_engine.dart';
 import '../services/windows_tun_service.dart';
 import '../platform/vpn_native_bridge.dart';

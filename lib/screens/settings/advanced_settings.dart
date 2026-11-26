@@ -58,8 +58,7 @@ class _AdvancedSettingsScreen extends ConsumerWidget {
         ),
         if (HotkeyService.isSupported ||
             Platform.isAndroid ||
-            Platform.isLinux ||
-            Platform.isMacOS) ...[
+            Platform.isLinux) ...[
           ExpressiveSectionHeader(l10n.settingsAdvancedGroupSystem),
           ExpressiveGroup(
             children: [
@@ -76,7 +75,7 @@ class _AdvancedSettingsScreen extends ConsumerWidget {
                     ),
                   ),
                 ),
-              if (Platform.isAndroid || Platform.isLinux || Platform.isMacOS)
+              if (Platform.isAndroid || Platform.isLinux)
                 _SettingsCard(
                   title: l10n.settingsPermissionsTitle,
                   subtitle: l10n.settingsPermissionsSubtitle,

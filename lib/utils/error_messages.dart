@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/material.dart';
 import '../core/exceptions.dart';
 import 'package:keqdroid/l10n/app_localizations.dart';
@@ -267,7 +269,9 @@ UiErrorMessage explainErrorLocalized(Object error, AppLocalizations l10n) {
   };
   final (message, action) = switch (base.code) {
     UiErrorCode.tunAdmin => (
-      l10n.errorTunAdminMessage,
+      Platform.isMacOS
+          ? l10n.errorTunAdminMessageMacos
+          : l10n.errorTunAdminMessage,
       l10n.errorTunAdminAction,
     ),
     UiErrorCode.tunAdapterRefused => (

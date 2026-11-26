@@ -141,6 +141,8 @@ class MacosBackgroundService with WindowListener, TrayListener {
     }
   }
 
+  Future<void> restoreMainWindow() => _showWindow();
+
   Future<void> _showWindow() async {
     uiVisible.value = true;
     await windowManager.show();

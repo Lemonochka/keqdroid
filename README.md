@@ -96,7 +96,7 @@ A ready-made configuration keeps its own routing, DNS and outbounds. Inbounds an
 | Linux | Proxy | System proxy on GNOME and KDE; manual setup elsewhere | None |
 | Linux | TUN | All traffic goes through a virtual adapter | Root through `pkexec`, or Passwordless TUN in Settings → Advanced → Permissions |
 | macOS | Proxy | System proxy via `networksetup` | None |
-| macOS | TUN | All traffic goes through a `utun` adapter | Administrator approval on every TUN connection |
+| macOS | TUN | All traffic goes through a `utun` adapter | Administrator once, to install the keqdroid service |
 
 **Android.** The connection can be controlled from the notification, the Quick Settings tile, a home screen widget and launcher shortcuts. Per-application routing and DNS interception require VPN mode. An active VPN session resumes after an application update or a device restart.
 

@@ -994,6 +994,8 @@
   "desktopTunServiceTitle": "Service for TUN",
   "desktopTunServiceMessage": "TUN mode runs through the keqdroid service. It is installed once: Windows asks for permission, and after that TUN turns on without it and without a restart.",
   "desktopTunServiceUpdateMessage": "The app was updated, and the keqdroid service for TUN needs updating too. Windows asks for permission.",
+  "desktopTunServiceMessageMacos": "TUN mode runs through the keqdroid service. It is installed once: macOS asks for an administrator password, and after that TUN turns on without it and without a restart.",
+  "desktopTunServiceUpdateMessageMacos": "The app was updated, and the keqdroid service for TUN needs updating too. macOS asks for an administrator password.",
   "desktopTunServiceInstall": "Install the service",
   "desktopTunServiceUpdate": "Update the service",
   "desktopTunServiceCancel": "Cancel",
@@ -1210,6 +1212,7 @@
     }
   },
   "errorTunAdminMessage": "TUN mode on Windows needs Administrator rights.",
+  "errorTunAdminMessageMacos": "TUN mode on macOS needs administrator rights.",
   "errorTunAdminAction": "Turn TUN on again in the sidebar: the app offers to install its service. Or switch to Proxy mode.",
   "errorTunAdapterRefusedTitle": "Windows Refused the Adapter",
   "errorTunAdapterRefusedMessage": "Windows refused the TUN adapter three times in a row. The server is fine.",

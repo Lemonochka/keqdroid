@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build patched xray and mihomo cores for macOS (arm64 and/or x86_64).
+# Build patched xray, mihomo, and the keqdroid-tun LaunchDaemon for macOS.
 #
 # Usage:
 #   bash tool/build_macos_cores.sh          # build both arm64 and x86_64 separately
@@ -7,23 +7,29 @@
 #   bash tool/build_macos_cores.sh arm64    # Apple Silicon only
 #   bash tool/build_macos_cores.sh x86_64   # Intel only
 #
-# Output goes to assets/bin/macos/<arch>/{xray,mihomo} and
+# Output goes to assets/bin/macos/<arch>/{xray,mihomo,keqdroid-tun} and
 # assets/bin/macos/{geoip.dat,geosite.dat} (gitignored).
 
 set -euo pipefail
 
-# Do not let the runner's default Go version select the Xray toolchain.
 export GOTOOLCHAIN=go1.27.3
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OUT_DIR="$REPO_ROOT/assets/bin/macos"
 PATCH_DIR="$REPO_ROOT/tool/patches"
+DAEMON_DIR="$REPO_ROOT/tool/macos_tun_daemon"
+SIGN_IDENTITY="${MACOS_SIGN_IDENTITY:--}"
 
-# Pinned revisions matching tool/build_xray_cores.ps1 and tool/build_mihomo.ps1.
+DEFAULT_XRAY_VERSION="v1.260327.1-0.20261109052709-676eaf66f8f0"
+if [ -z "${XRAY_VERSION:-}" ] && [ -f "$REPO_ROOT/../keqrnel/go.mod" ]; then
+  XRAY_VERSION="$(awk '/github\.com\/xtls\/xray-core / {print $2; exit}' "$REPO_ROOT/../keqrnel/go.mod")"
+fi
 XRAY_MODULE="github.com/xtls/xray-core"
-XRAY_VERSION="${XRAY_VERSION:-v1.260327.1-0.20261109052709-676eaf66f8f0}"
+XRAY_VERSION="${XRAY_VERSION:-$DEFAULT_XRAY_VERSION}"
+
+DEFAULT_MIHOMO_VERSION="$(awk -F '"' '/\[string\]\$Version = / {print $2; exit}' "$REPO_ROOT/tool/build_mihomo.ps1" | tr -d '\r')"
 MIHOMO_MODULE="github.com/metacubex/mihomo"
-MIHOMO_VERSION="${MIHOMO_VERSION:-v1.19.34}"
+MIHOMO_VERSION="${MIHOMO_VERSION:-${DEFAULT_MIHOMO_VERSION:-v1.19.34}}"
 MIHOMO_TAGS="with_gvisor,no_tailscale,no_zerotier,no_easytier"
 
 TARGET="${1:-all}"
@@ -62,6 +68,24 @@ goarch_for() {
     x86_64) echo "amd64" ;;
     *) echo "Unsupported arch: $1" >&2; exit 1 ;;
   esac
+}
+
+sha256_file() {
+  if command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "$1" | awk '{print $1}'
+  elif command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$1" | awk '{print $1}'
+  else
+    openssl dgst -sha256 "$1" | awk '{print $NF}'
+  fi
+}
+
+sign_if_macos() {
+  local path="$1"
+  chmod 0755 "$path"
+  if command -v codesign >/dev/null 2>&1; then
+    codesign --force --sign "$SIGN_IDENTITY" "$path"
+  fi
 }
 
 apply_patches() {
@@ -104,7 +128,7 @@ download_module() {
 
 report_binary() {
   local path="$1"
-  chmod 0755 "$path"
+  sign_if_macos "$path"
   echo "  -> $path ($(wc -c < "$path" | tr -d ' ') bytes)"
   if command -v lipo >/dev/null 2>&1; then
     lipo -info "$path"
@@ -114,6 +138,13 @@ report_binary() {
 # ---- Build xray ------------------------------------------------------------
 XRAY_SRC="$WORK_DIR/xray-src"
 download_module "$XRAY_MODULE" "$XRAY_VERSION" "$XRAY_SRC"
+if [ -d "$REPO_ROOT/../keqrnel/patches" ]; then
+  for patch in "$REPO_ROOT/../keqrnel/patches"/xray-*.patch; do
+    [ -f "$patch" ] || continue
+    echo "Applying keqrnel/$(basename "$patch") ..."
+    git -C "$XRAY_SRC" apply --whitespace=nowarn "$patch"
+  done
+fi
 apply_patches "$XRAY_SRC" "xray-*.patch"
 
 for arch in "${ARCHS[@]}"; do
@@ -163,6 +194,26 @@ for arch in "${ARCHS[@]}"; do
       .
   )
   report_binary "$arch_dir/mihomo"
+done
+
+# ---- Build keqdroid-tun LaunchDaemon ---------------------------------------
+# Build after signing xray and mihomo so embedded SHA-256 digests match the exact signed bytes.
+for arch in "${ARCHS[@]}"; do
+  goarch="$(goarch_for "$arch")"
+  arch_dir="$OUT_DIR/$arch"
+  XRAY_SHA="$(sha256_file "$arch_dir/xray")"
+  MIHOMO_SHA="$(sha256_file "$arch_dir/mihomo")"
+  echo "Building keqdroid-tun for darwin/$goarch ($arch) [xray=${XRAY_SHA:0:12} mihomo=${MIHOMO_SHA:0:12}] ..."
+  (
+    cd "$DAEMON_DIR"
+    CGO_ENABLED=0 GOOS=darwin GOARCH="$goarch" \
+      go build -trimpath -buildvcs=false \
+      -ldflags "-s -w -X main.xraySHA256=$XRAY_SHA -X main.mihomoSHA256=$MIHOMO_SHA" \
+      -o "$arch_dir/keqdroid-tun" \
+      .
+  )
+  report_binary "$arch_dir/keqdroid-tun"
+  printf '%s  xray\n%s  mihomo\n' "$XRAY_SHA" "$MIHOMO_SHA" > "$arch_dir/cores.sha256"
 done
 
 # ---- Geo databases ---------------------------------------------------------

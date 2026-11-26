@@ -1,14 +1,13 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import '../core/app_logger.dart';
 import '../core/exceptions.dart';
 import '../platform/vpn_native_bridge.dart';
+import '../services/macos_tun_service.dart';
 import '../services/xray_route_decisions.dart';
 import '../utils/desktop_tun.dart';
 import '../utils/macos_app_bundle.dart';
@@ -22,6 +21,7 @@ import 'macos_core_paths.dart';
 import 'macos_elevation.dart';
 import 'macos_system_proxy.dart';
 import 'mihomo_hot_reload.dart';
+import 'mihomo_tun_ready.dart';
 import 'socks_credential_generator.dart';
 import 'tun_failure_hints.dart';
 import 'tunnel_backend.dart';
@@ -34,36 +34,23 @@ class MacosTunnelBackend
     with DesktopTrafficStats, DesktopCoreSession
     implements TunnelBackend {
   static const tunInterfaceName = kMacosTunInterfaceName;
-
-  static const _runRootDir = '/var/run/keqdroid';
-  static const _rootXrayName = 'keqdroid-xray';
   static const coresLogName = 'keqdroid_cores.log';
-
-  static String get _rootRunDir => '$_runRootDir/${macosRealUid()}';
-  String get _coreLogPath => p.join(_rootRunDir, 'core.log');
-
-  DateTime? _rootCoreLaunchedAt;
+  static const _tunStartBudgetMs = 20000;
 
   static MacosTunnelBackend? activeInstance;
+  static String lastSessionLogs = '';
 
   final _stateCtrl = StreamController<VpnState>.broadcast();
+  final StringBuffer _xrayLog = StringBuffer();
 
   Process? _xrayProcess;
-  Process? _rootXrayProcess;
   Process? _mihomoProcess;
-  bool _mihomoRunsAsRoot = false;
-  File? _rootSentinel;
   Directory? _sessionDir;
   ConnectionMode? _activeMode;
   int? _xrayMetricsPort;
-
-  final StringBuffer _xrayLog = StringBuffer();
-  final StringBuffer _rootLog = StringBuffer();
-
-  Timer? _rootLogTimer;
-  int _rootLogOffset = 0;
-  String _rootLogPending = '';
-  bool _rootLogReading = false;
+  bool _viaService = false;
+  bool _systemProxyApplied = false;
+  Future<void>? _coreOutputDone;
 
   @override
   ConnectionMode? get activeMode => _activeMode;
@@ -74,10 +61,8 @@ class MacosTunnelBackend
   String get clashApiSecret => MihomoApiSession().secret;
 
   Map<String, int> get activeCorePids => {
+    if (_mihomoProcess != null) 'mihomo': _mihomoProcess!.pid,
     if (_xrayProcess != null) 'xray': _xrayProcess!.pid,
-    if (_mihomoProcess != null)
-      _mihomoRunsAsRoot ? 'mihomo (root, TUN)' : 'mihomo': _mihomoProcess!.pid,
-    if (_rootXrayProcess != null) 'xray (root, TUN)': _rootXrayProcess!.pid,
   };
 
   @override
@@ -93,22 +78,20 @@ class MacosTunnelBackend
     _stateCtrl.close();
   }
 
-  String exportSessionLogs({int maxLines = 400}) {
-    final combined = StringBuffer()
-      ..writeln('=== core ===')
-      ..writeln(_xrayLog)
-      ..writeln('=== root ===')
-      ..writeln(_rootLog);
-    return coreLogTail(combined, maxLines: maxLines);
+  String exportSessionLogs({int maxLines = 400}) =>
+      coreLogTail(_xrayLog, maxLines: maxLines);
+
+  String _sessionLogTail({int maxLines = 10}) {
+    final text = exportSessionLogs(maxLines: maxLines).trim();
+    return text == '(no process output)' ? '' : text;
   }
 
-  Future<void> _dumpLogsToFile() async {
+  Future<void> _dumpLogsToFile(String logs) async {
     try {
       final dir = (await getApplicationSupportDirectory()).path;
       final path = p.join(dir, coresLogName);
-      await File(path).writeAsString(exportSessionLogs(maxLines: 2000));
+      await File(path).writeAsString(logs);
       await Process.run('/bin/chmod', ['600', path]);
-      AppLogger.instance.info('Core logs written to $path');
     } catch (e) {
       AppLogger.instance.debug('Core logs not written', error: e);
     }
@@ -127,7 +110,6 @@ class MacosTunnelBackend
     emit(VpnState(status: VpnStatus.connecting, activeMode: request.mode));
     _activeMode = request.mode;
     _xrayLog.clear();
-    _rootLog.clear();
     connectionLines.clear();
     XrayRouteDecisions.reset();
 
@@ -135,16 +117,34 @@ class MacosTunnelBackend
       await cleanupForRestart();
       activeInstance = this;
       _activeMode = request.mode;
+
+      _viaService = false;
+      if (request.mode == ConnectionMode.tun && !macosRunningAsRoot()) {
+        if (await MacosTunService.state() != TunServiceState.ready) {
+          throw const VpnStartException(
+            'TUN mode needs administrator rights: the utun interface and the '
+            'system route table cannot be set up without them. Turn TUN on '
+            'again in the app to install the keqdroid service, or use Proxy '
+            'mode.',
+          );
+        }
+        _viaService = true;
+      }
+
+      if (request.mode == ConnectionMode.tun && await _tunInterfaceExists()) {
+        throw VpnStartException(
+          'The macOS interface $tunInterfaceName already exists. Disconnect '
+          'the other tunnel or wait for the previous keqdroid core to stop.',
+        );
+      }
+
       _sessionDir = await MacosCorePaths.sessionDir();
 
-      final isTun = request.mode == ConnectionMode.tun;
       switch (request.vpnBackend) {
         case VpnBackend.mihomo:
           await _startMihomoSession(request);
         case VpnBackend.xray:
-          await (isTun
-              ? _startXrayTunSession(request)
-              : _startXrayProxySession(request));
+          await _startXraySession(request);
       }
 
       startStatsLoop(request.mode);
@@ -152,16 +152,14 @@ class MacosTunnelBackend
 
       unawaited(_verifyChainReachable(request));
 
-      watchCoreExit(_xrayProcess, 'xray');
       watchCoreExit(_mihomoProcess, 'mihomo');
-      watchCoreExit(_rootXrayProcess, 'xray TUN');
+      watchCoreExit(_xrayProcess, 'xray');
     } catch (e, st) {
       AppLogger.instance.error(
         'macOS tunnel start failed',
         error: e,
         stackTrace: st,
       );
-      await _dumpLogsToFile();
       await cleanupForRestart();
       emit(
         VpnState(
@@ -175,36 +173,57 @@ class MacosTunnelBackend
     }
   }
 
-  Future<void> _startXrayProxySession(TunnelSessionRequest request) async {
-    final bin = await MacosCorePaths.xrayExecutable();
+  Future<void> _startXraySession(TunnelSessionRequest request) async {
+    final isTun = request.mode == ConnectionMode.tun;
+    final bin = _viaService && isTun
+        ? MacosCorePaths.bundledCorePath('xray')
+        : await MacosCorePaths.xrayExecutable();
     if (bin == null) {
       throw VpnStartException('xray not found. ${MacosCorePaths.binariesHint}');
     }
 
+    await ensureLocalPortsFree(request);
+
     final metricsPort = await freeLoopbackPort();
     final xrayLog = XraySessionLog.raise(request.xrayConfig);
     xrayLogThreshold = xrayLog.threshold;
-    final configFile = File(p.join(_sessionDir!.path, 'xray.json'));
-    await configFile.writeAsString(
-      withXrayDesktopSession(
-        xrayLog.config,
-        metricsPort: metricsPort,
-        processLog: request.processLog,
-      ),
+    final sessionConfig = withXrayDesktopSession(
+      xrayLog.config,
+      metricsPort: metricsPort,
+      processLog: !isTun && request.processLog,
+      tunName: isTun ? tunInterfaceName : null,
     );
+    final configFile = File(p.join(_sessionDir!.path, 'xray.json'));
+    await configFile.writeAsString(sessionConfig);
     _xrayMetricsPort = metricsPort;
-
-    await ensureLocalPortsFree(request);
+    xrayStarted = false;
 
     final geoDir = await MacosCorePaths.geoAssetDir();
-    _xrayProcess = await Process.start(
-      bin,
-      ['run', '-c', configFile.path],
-      workingDirectory: _sessionDir!.path,
-      environment: {'XRAY_LOCATION_ASSET': ?geoDir},
-      mode: ProcessStartMode.normal,
-    );
-    listenCoreOutput(_xrayProcess!, _xrayLog);
+    if (_viaService && isTun) {
+      _xrayProcess = await MacosTunService.startCore(
+        kind: 'xray',
+        config: MacosTunService.xrayForService(sessionConfig),
+        geoDir: geoDir,
+      );
+    } else {
+      _xrayProcess = await Process.start(
+        bin,
+        ['run', '-c', configFile.path],
+        workingDirectory: _sessionDir!.path,
+        environment: {
+          'XRAY_LOCATION_ASSET': ?geoDir,
+          kXrayStopOnStdinEof: '1',
+        },
+        mode: ProcessStartMode.normal,
+      );
+    }
+    _coreOutputDone = _pipeProcessOutput(_xrayProcess!);
+
+    if (isTun) {
+      final ready = await _waitForXrayTun(_xrayProcess!);
+      if (!ready) throw VpnStartException(_tunStartError(_xrayLog));
+      return;
+    }
 
     final socksReady = await waitForLocalPort(
       request.socksPort,
@@ -236,24 +255,11 @@ class MacosTunnelBackend
     }
   }
 
-  Future<void> _startXrayTunSession(TunnelSessionRequest request) async {
-    await ensureLocalPortsFree(request);
-
-    final metricsPort = await freeLoopbackPort();
-    final xrayLog = XraySessionLog.raise(request.xrayConfig);
-    xrayLogThreshold = xrayLog.threshold;
-    _xrayMetricsPort = metricsPort;
-    await _runXrayAsRoot(
-      withXrayDesktopSession(
-        xrayLog.config,
-        metricsPort: metricsPort,
-        tunName: tunInterfaceName,
-      ),
-    );
-  }
-
   Future<void> _startMihomoSession(TunnelSessionRequest request) async {
-    final bin = await MacosCorePaths.mihomoExecutable();
+    final isTun = request.mode == ConnectionMode.tun;
+    final bin = _viaService && isTun
+        ? MacosCorePaths.bundledCorePath('mihomo')
+        : await MacosCorePaths.mihomoExecutable();
     if (bin == null) {
       throw VpnStartException(
         'mihomo not found. ${MacosCorePaths.binariesHint}',
@@ -264,62 +270,37 @@ class MacosTunnelBackend
       throw const VpnStartException('mihomoConfig is required for mihomo');
     }
 
-    final isTun = request.mode == ConnectionMode.tun;
     await ensureLocalPortsFree(request);
 
     final configFile = File(p.join(_sessionDir!.path, 'mihomo.yaml'));
     await configFile.writeAsString(config);
 
-    if (isTun) {
-      _mihomoRunsAsRoot = true;
-      final home = await _stageGeoAssetsForRoot() ?? _sessionDir!.path;
-      final rootBin = await _stageBinaryForRoot(bin, 'mihomo');
-
-      _mihomoProcess = await _startElevatedCore(
-        binPath: rootBin,
-        configPath: configFile.path,
-        geoOrHomeDir: home,
+    if (_viaService && isTun) {
+      _mihomoProcess = await MacosTunService.startCore(
         kind: 'mihomo',
-        label: 'mihomo',
-        log: _rootLog,
-        onStarted: (proc) => _mihomoProcess = proc,
+        config: config,
+        geoDir: await MacosCorePaths.geoAssetDir(),
       );
+    } else {
+      _mihomoProcess = await Process.start(
+        bin,
+        ['-d', await MacosCorePaths.mihomoHomeDir(), '-f', configFile.path],
+        workingDirectory: _sessionDir!.path,
+        mode: ProcessStartMode.normal,
+      );
+    }
+    _coreOutputDone = _pipeProcessOutput(_mihomoProcess!);
 
-      final ready = await _waitForTunCore(
+    if (isTun) {
+      final ready = await _waitForMihomoTun(
         process: _mihomoProcess!,
-        log: _rootLog,
+        log: _xrayLog,
       );
-      final coreLog = await _readRootCoreLog();
-      if (coreLog.trim().isNotEmpty) {
-        _rootLog
-          ..writeln('=== mihomo (core) ===')
-          ..writeln(coreLog);
-      }
       if (!ready) {
-        final tail = coreLog.trim().isEmpty
-            ? coreLogTail(_rootLog)
-            : coreLogTail(StringBuffer(coreLog));
-        throw VpnStartException(
-          tunStartFailureMessage(
-            fallback: 'The mihomo TUN tunnel did not start.',
-            coreOutput: coreLog.trim().isEmpty ? _rootLog.toString() : coreLog,
-            windows: false,
-            macos: true,
-            tail: tail,
-          ),
-        );
+        throw VpnStartException(_tunStartError(_xrayLog, core: 'mihomo'));
       }
       return;
     }
-
-    _mihomoRunsAsRoot = false;
-    _mihomoProcess = await Process.start(
-      bin,
-      ['-d', await MacosCorePaths.mihomoHomeDir(), '-f', configFile.path],
-      workingDirectory: _sessionDir!.path,
-      mode: ProcessStartMode.normal,
-    );
-    listenCoreOutput(_mihomoProcess!, _xrayLog);
 
     final socksReady = await waitForLocalPort(
       request.socksPort,
@@ -351,350 +332,72 @@ class MacosTunnelBackend
     }
   }
 
-  // Конфиг пользователя исполняет ядро с правами root, поэтому без NOPASSWD-helper:
-  // каждый запуск подтверждает администратор. Root пишет только в /var/run/keqdroid/<uid>.
-  static const _tunWrapperBody =
-      r'''PATH="/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/bin:/opt/homebrew/bin"; export PATH
-umask 027
-SB="$1"; CFG="$2"; GEO="$3"; SENT="$4"; APPPID="$5"; KIND="$6"; CALLER_UID="$7"
-case "$KIND" in xray) EXT=json ;; mihomo) EXT=yaml ;; *) exit 5 ;; esac
-case "$APPPID" in ''|*[!0-9]*) exit 5 ;; esac
-OWNER="${SUDO_UID:-$CALLER_UID}"
-[ -z "$OWNER" ] && OWNER=$(id -u)
-case "$OWNER" in ''|*[!0-9]*) exit 5 ;; esac
-as_owner() {
-  if [ "$OWNER" = "0" ]; then
-    "$@"
-  else
-    /usr/bin/sudo -u "#$OWNER" -- "$@"
-  fi
-}
-RUN=/var/run/keqdroid/$OWNER
-mkdir -p /var/run/keqdroid && rm -rf "$RUN" && mkdir -m 0755 "$RUN" "$RUN/home" || exit 5
-LOGF=$RUN/core.log
-: >"$LOGF" && chown "$OWNER" "$LOGF" && chmod 0600 "$LOGF" || exit 5
-CONF=$RUN/config.$EXT
-as_owner /bin/cat -- "$CFG" >"$CONF" && chmod 0600 "$CONF" || exit 5
-for f in geoip.dat geosite.dat; do
-  [ -n "$GEO" ] && as_owner test -f "$GEO/$f" && as_owner /bin/cat -- "$GEO/$f" >"$RUN/home/$f"
-done
-: >"$RUN/core.auth"
-echo "[wrap mac v2] start KIND=$KIND app=$(kill -0 "$APPPID" 2>/dev/null && echo y || echo n)" >>"$LOGF"
-if [ "$KIND" = mihomo ]; then
-  set -- "$SB" -d "$RUN/home" -f "$CONF"
-else
-  set -- "$SB" run -c "$CONF"
-fi
-XRAY_LOCATION_ASSET="$RUN/home" "$@" >>"$LOGF" 2>&1 &
-sb=$!
-while [ -e "$SENT" ] && kill -0 "$APPPID" 2>/dev/null; do
-  kill -0 "$sb" 2>/dev/null || break
-  sleep 1
-done
-echo "[wrap mac v2] stop sent=$([ -e "$SENT" ] && echo y || echo n) app=$(kill -0 "$APPPID" 2>/dev/null && echo y || echo n) core=$(kill -0 "$sb" 2>/dev/null && echo y || echo n)" >>"$LOGF"
-kill -TERM "$sb" 2>/dev/null
-wait "$sb"
-''';
+  Future<void> _pipeProcessOutput(Process process) => Future.wait([
+    for (final lines in listenCoreOutput(process, _xrayLog))
+      lines.asFuture<void>().catchError((Object _) {}),
+  ]);
 
-  @visibleForTesting
-  static String get tunWrapperBodyForTest => _tunWrapperBody;
-
-  Future<void> _runXrayAsRoot(String config) async {
-    final bin = await MacosCorePaths.xrayExecutable();
-    if (bin == null) {
-      throw VpnStartException(
-        'xray not found (required for TUN mode). ${MacosCorePaths.binariesHint}',
-      );
-    }
-
-    final configFile = File(p.join(_sessionDir!.path, 'xray-tun.json'));
-    await configFile.writeAsString(config);
-    final rootGeoDir = await _stageGeoAssetsForRoot();
-    final rootBin = await _stageBinaryForRoot(bin, _rootXrayName);
-
-    xrayStarted = false;
-    _rootXrayProcess = await _startElevatedCore(
-      binPath: rootBin,
-      configPath: configFile.path,
-      geoOrHomeDir: rootGeoDir ?? '',
-      kind: 'xray',
-      label: 'xray',
-      log: _rootLog,
-      onStarted: (proc) => _rootXrayProcess = proc,
-    );
-    _startRootLogTail();
-
-    final ready = await _waitForTunCore(
-      process: _rootXrayProcess!,
-      log: _rootLog,
-      started: () => xrayStarted,
-    );
-
-    if (!ready) {
-      final coreLog = await _readRootCoreLog();
-      final tail = coreLog.trim().isEmpty
-          ? coreLogTail(_rootLog)
-          : coreLogTail(StringBuffer(coreLog));
-      throw VpnStartException(
-        tunStartFailureMessage(
-          fallback: 'The TUN tunnel did not start.',
-          coreOutput: coreLog.trim().isEmpty ? _rootLog.toString() : coreLog,
-          windows: false,
-          macos: true,
-          tail: tail,
-        ),
-      );
-    }
-  }
-
-  void _startRootLogTail() {
-    _stopRootLogTail();
-    _rootLogOffset = 0;
-    _rootLogPending = '';
-    _rootLogTimer = Timer.periodic(
-      const Duration(milliseconds: 500),
-      (_) => unawaited(_readRootLogTail()),
+  Future<void> _coreOutputDrained() async {
+    await _coreOutputDone?.timeout(
+      const Duration(seconds: 2),
+      onTimeout: () {},
     );
   }
 
-  void _stopRootLogTail() {
-    _rootLogTimer?.cancel();
-    _rootLogTimer = null;
-  }
-
-  Future<void> _readRootLogTail() async {
-    final path = _coreLogPath;
-    if (_rootLogReading || path.isEmpty) return;
-    _rootLogReading = true;
-    RandomAccessFile? file;
-    try {
-      final length = await File(path).length();
-      if (length < _rootLogOffset) {
-        _rootLogOffset = 0;
-        _rootLogPending = '';
-      }
-      if (length == _rootLogOffset) return;
-      file = await File(path).open();
-      await file.setPosition(_rootLogOffset);
-      final bytes = await file.read(length - _rootLogOffset);
-      _rootLogOffset += bytes.length;
-      final lines =
-          (_rootLogPending +
-                  const Utf8Decoder(allowMalformed: true).convert(bytes))
-              .split('\n');
-      _rootLogPending = lines.removeLast();
-      for (final line in lines) {
-        appendCoreLine(_xrayLog, line.trimRight());
-      }
-    } catch (_) {
-    } finally {
-      await file?.close();
-      _rootLogReading = false;
-    }
-  }
-
-  Future<String> _stageBinaryForRoot(String binPath, String name) async {
-    final staged = p.join(_sessionDir!.path, name);
-    try {
-      await File(binPath).copy(staged);
-      await Process.run('/bin/chmod', ['0755', staged]);
-    } catch (e) {
-      throw VpnStartException('Could not stage $name for elevation: $e');
-    }
-    return staged;
-  }
-
-  Future<String?> _stageGeoAssetsForRoot() async {
-    final geoDir = await MacosCorePaths.geoAssetDir();
-    if (geoDir == null) return null;
-
-    final rootGeoDir = Directory(p.join(_sessionDir!.path, 'geo'));
-    if (!rootGeoDir.existsSync()) rootGeoDir.createSync(recursive: true);
-
-    var copied = false;
-    for (final name in MacosCorePaths.geoFileNames) {
-      final src = File(p.join(geoDir, name));
-      if (!src.existsSync()) continue;
-      await src.copy(p.join(rootGeoDir.path, name));
-      copied = true;
-    }
-    return copied ? rootGeoDir.path : null;
-  }
-
-  Future<String> _readRootCoreLog() async {
-    try {
-      return await File(_coreLogPath).readAsString();
-    } catch (_) {
-      return '';
-    }
-  }
-
-  Future<Process> _startElevatedCore({
-    required String binPath,
-    required String configPath,
-    required String geoOrHomeDir,
-    required String kind,
-    required String label,
-    required StringBuffer log,
-    required void Function(Process) onStarted,
-  }) async {
-    // Чужой интерфейс с этим именем не должен стать признаком готовности.
-    if (await _tunInterfaceExists()) {
-      throw VpnStartException(
-        'The macOS interface $tunInterfaceName already exists. Disconnect '
-        'the other tunnel or wait for the previous keqdroid core to stop.',
-      );
-    }
-
-    final sentinelFile = File(p.join(_sessionDir!.path, 'core.run'));
-    await sentinelFile.writeAsString('1');
-    _rootSentinel = sentinelFile;
-
-    final authMarker = File(p.join(_rootRunDir, 'core.auth'));
-    _rootCoreLaunchedAt = DateTime.now();
-
-    final coreArgs = <String>[
-      binPath,
-      configPath,
-      geoOrHomeDir,
-      sentinelFile.path,
-      '$pid',
-      kind,
-      '${macosRealUid()}',
-    ];
-
-    final wrapperFile = File(p.join(_sessionDir!.path, 'tun_wrap.sh'));
-    await wrapperFile.writeAsString('#!/bin/sh\n$_tunWrapperBody');
-    await Process.run('/bin/chmod', ['0700', wrapperFile.path]);
-
-    final launch = planMacosElevation(
-      coreArgs: coreArgs,
-      wrapperScriptPath: wrapperFile.path,
-      asRoot: macosRunningAsRoot(),
-    );
-
-    final Process process;
-    try {
-      process = await Process.start(
-        launch.executable,
-        launch.args,
-        workingDirectory: _sessionDir!.path,
-        mode: ProcessStartMode.normal,
-      );
-    } on ProcessException catch (e) {
-      throw VpnStartException(
-        'Could not launch $label with elevated privileges through '
-        '${launch.executable}: ${e.message}',
-      );
-    }
-    onStarted(process);
-    listenCoreOutput(process, log);
-
-    await _waitForElevation(process: process, authMarker: authMarker, log: log);
-    return process;
-  }
-
-  Future<void> _waitForElevation({
-    required Process process,
-    required File authMarker,
-    required StringBuffer log,
-  }) async {
-    const maxWait = Duration(minutes: 2);
-    final sw = Stopwatch()..start();
-    while (sw.elapsed < maxWait) {
-      final code = await exitCodeOrNull(process);
-      if (code != null) {
-        throw VpnStartException(_elevationError(code, log));
-      }
-      if (_freshSince(authMarker, _rootCoreLaunchedAt)) return;
-      await Future<void>.delayed(const Duration(milliseconds: 300));
-    }
-    try {
-      process.kill(ProcessSignal.sigterm);
-    } catch (_) {}
-    throw const VpnStartException(
-      'Administrator authorization timed out (2 min). Approve the password '
-      'prompt to start TUN mode, or use Proxy mode.',
-    );
-  }
-
-  Future<bool> _waitForTunCore({
-    required Process process,
-    required StringBuffer log,
-    bool Function()? started,
-  }) async {
+  Future<bool> _waitForXrayTun(Process process) async {
     var waited = 0;
-    while (waited < 20000) {
+    while (waited < _tunStartBudgetMs) {
       final code = await exitCodeOrNull(process);
       if (code != null) {
-        throw VpnStartException(_elevationError(code, log));
+        await _coreOutputDrained();
+        throw VpnStartException(
+          'xray exited with code $code before the tunnel came up.\n'
+          '${_tunStartError(_xrayLog)}',
+        );
       }
-      if (started != null) {
-        if (started()) return true;
-      } else if (await _tunInterfaceExists()) {
-        return true;
-      }
-      await Future<void>.delayed(const Duration(milliseconds: 300));
-      waited += 300;
-    }
-    if (await _tunInterfaceExists()) return true;
-
-    final coreLog = await _readRootCoreLog();
-    if (coreLog.trim().isNotEmpty) {
-      log
-        ..writeln('=== core log (timeout) ===')
-        ..writeln(coreLog);
-    }
-
-    final stillRunning = await exitCodeOrNull(process);
-    if (stillRunning != null) {
-      throw VpnStartException(_elevationError(stillRunning, log));
+      if (xrayStarted) return true;
+      await Future<void>.delayed(const Duration(milliseconds: 250));
+      waited += 250;
     }
     return false;
   }
 
-  String _elevationError(int code, StringBuffer log) {
-    final text = log.toString().toLowerCase();
-    if (text.contains('user canceled') || text.contains('-128')) {
-      return 'Authorization cancelled. TUN mode needs administrator '
-          'privileges — approve the password prompt, or use Proxy mode.';
-    }
-    var coreTail = '';
-    try {
-      final coreLog = File(_coreLogPath);
-      final launchedAt = _rootCoreLaunchedAt;
-      if (launchedAt != null &&
-          !coreLog.lastModifiedSync().isBefore(launchedAt)) {
-        coreTail = coreLog.readAsStringSync().trim();
+  Future<bool> _waitForMihomoTun({
+    required Process process,
+    required StringBuffer log,
+  }) async {
+    final api = MihomoApiSession();
+    final clock = Stopwatch()..start();
+    while (clock.elapsedMilliseconds < _tunStartBudgetMs) {
+      final code = await exitCodeOrNull(process);
+      if (code != null) {
+        await _coreOutputDrained();
+        throw VpnStartException(
+          'mihomo exited with code $code before the tunnel came up.\n'
+          '${_tunStartError(log, core: 'mihomo')}',
+        );
       }
-    } catch (_) {}
-    final detail = coreTail.isNotEmpty
-        ? coreLogTail(StringBuffer(coreTail))
-        : coreLogTail(log);
-    final hint = tunFailureHint(
-      coreTail.isNotEmpty ? coreTail : log.toString(),
-      windows: false,
-      macos: true,
-    );
-    if (hint != null) {
-      return 'The tunnel core exited with code $code.\n'
-          '${hint.message}\n$detail';
+      final port = api.port;
+      final state = mihomoTunState(
+        coreOutput: log.toString(),
+        configs: port == null
+            ? null
+            : await fetchMihomoConfigs(port, api.secret),
+      );
+      if (state != MihomoTunState.pending) return state == MihomoTunState.up;
+      await Future<void>.delayed(const Duration(milliseconds: 250));
     }
-    return 'The tunnel core exited with code $code (TUN/elevation failed?).\n'
-        '$detail';
+    return false;
   }
 
-  static bool _freshSince(File file, DateTime? since) {
-    try {
-      if (!file.existsSync()) return false;
-      if (since == null) return true;
-      return !file.lastModifiedSync().isBefore(
-        since.subtract(const Duration(seconds: 1)),
+  String _tunStartError(StringBuffer log, {String core = 'xray'}) =>
+      tunStartFailureMessage(
+        fallback: 'The $core TUN tunnel did not start.',
+        coreOutput: log.toString(),
+        windows: false,
+        macos: true,
+        tail: coreLogTail(log),
       );
-    } catch (_) {
-      return false;
-    }
-  }
 
   Future<bool> _tunInterfaceExists() async {
     try {
@@ -702,6 +405,15 @@ wait "$sb"
       return r.exitCode == 0;
     } catch (_) {
       return false;
+    }
+  }
+
+  Future<void> _awaitTunInterfaceGone() async {
+    const budgetMs = 4000;
+    var waited = 0;
+    while (waited < budgetMs && await _tunInterfaceExists()) {
+      await Future<void>.delayed(const Duration(milliseconds: 150));
+      waited += 150;
     }
   }
 
@@ -723,6 +435,7 @@ wait "$sb"
   }
 
   Future<void> _applySystemProxy(TunnelSessionRequest request) async {
+    _systemProxyApplied = true;
     final ok = await (await MacosSystemProxy.system()).enable(
       httpPort: request.httpPort,
       socksPort: request.socksPort,
@@ -747,11 +460,19 @@ wait "$sb"
   static Future<void> cleanupStaleState() => _restoreSystemProxy();
 
   @override
-  Iterable<Process?> get sessionCores => [
-    _xrayProcess,
-    _rootXrayProcess,
-    _mihomoProcess,
-  ];
+  Iterable<Process?> get sessionCores => [_mihomoProcess, _xrayProcess];
+
+  @override
+  String? coreExitHint(String coreOutput) =>
+      tunFailureHint(coreOutput, windows: false, macos: true)?.message;
+
+  @override
+  String coreExitDetails() {
+    final details = _sessionLogTail();
+    final hint = coreExitHint(exportSessionLogs());
+    return '${hint == null ? '' : '\n$hint'}'
+        '${details.isEmpty ? '' : '\n$details'}';
+  }
 
   @override
   Future<bool> reloadMihomoConfig(TunnelSessionRequest request) async {
@@ -781,30 +502,28 @@ wait "$sb"
 
   @override
   Future<void> stopSessionInner({bool emitStates = true}) async {
+    final wasTun = _activeMode == ConnectionMode.tun;
     stopStatsLoop();
+    final logs = exportSessionLogs(maxLines: 2000);
+    if (logs.trim().isNotEmpty && logs.trim() != '(no process output)') {
+      lastSessionLogs = logs;
+      unawaited(_dumpLogsToFile(logs));
+    }
     if (emitStates) emit(const VpnState(status: VpnStatus.disconnecting));
 
-    if (_rootXrayProcess != null ||
-        _xrayProcess != null ||
-        _mihomoProcess != null) {
-      await _dumpLogsToFile();
+    if (_systemProxyApplied) {
+      await _restoreSystemProxy();
+      _systemProxyApplied = false;
     }
 
-    await _restoreSystemProxy();
-
-    await _stopRootCore(_rootXrayProcess);
-    _stopRootLogTail();
-    if (_mihomoRunsAsRoot) {
-      await _stopRootCore(_mihomoProcess);
-    } else {
-      await stopCoreProcess(_mihomoProcess);
-    }
-    await stopCoreProcess(_xrayProcess);
-    _rootXrayProcess = null;
-    _mihomoProcess = null;
-    _mihomoRunsAsRoot = false;
+    await stopCoreProcess(_xrayProcess, graceful: true);
+    await stopCoreProcess(_mihomoProcess, graceful: true);
     _xrayProcess = null;
+    _mihomoProcess = null;
     _xrayMetricsPort = null;
+    _coreOutputDone = null;
+
+    if (wasTun) await _awaitTunInterfaceGone();
 
     final dir = _sessionDir;
     _sessionDir = null;
@@ -815,53 +534,12 @@ wait "$sb"
     if (emitStates) emit(VpnState.disconnected);
   }
 
-  Future<void> _stopRootCore(Process? proc) async {
-    if (proc == null) return;
-    try {
-      final sentinel = _rootSentinel;
-      if (sentinel != null && sentinel.existsSync()) sentinel.deleteSync();
-    } catch (e) {
-      AppLogger.instance.warn('Root core sentinel not removed', error: e);
-    }
-    _rootSentinel = null;
-    try {
-      await proc.exitCode.timeout(const Duration(seconds: 8));
-    } catch (_) {
-      try {
-        proc.kill(ProcessSignal.sigterm);
-      } catch (_) {}
-      try {
-        await proc.exitCode.timeout(const Duration(seconds: 2));
-      } catch (_) {
-        try {
-          proc.kill(ProcessSignal.sigkill);
-        } catch (_) {}
-      }
-    }
-
-    // XNU detaches utun interfaces asynchronously after fd close; wait before allowing a reconnect.
-    const budgetMs = 6000;
-    var waited = 0;
-    while (waited < budgetMs && await _tunInterfaceExists()) {
-      await Future<void>.delayed(const Duration(milliseconds: 250));
-      waited += 250;
-    }
-    if (waited >= budgetMs) {
-      AppLogger.instance.warn(
-        'TUN interface $tunInterfaceName is still present '
-        '${budgetMs ~/ 1000}s after the core was stopped.',
-      );
-    }
-  }
-
   @override
-  Future<bool> requestTunnelPermission() async => true;
+  Future<bool> requestTunnelPermission() async => macosRunningAsRoot();
 
   @override
   Future<VpnState> getCurrentState() async {
-    if (_xrayProcess != null ||
-        _mihomoProcess != null ||
-        _rootXrayProcess != null) {
+    if (_xrayProcess != null || _mihomoProcess != null) {
       return buildConnectedState(_activeMode);
     }
     return VpnState.disconnected;
@@ -889,7 +567,7 @@ wait "$sb"
           if (!entity.path.endsWith('.app')) continue;
           final displayName = p.basenameWithoutExtension(entity.path);
           final exeName =
-              await _bundleExecutableName(entity.path) ?? displayName;
+              await MacosAppBundle.executableName(entity.path) ?? displayName;
           if (exeName.isEmpty || !seen.add(exeName.toLowerCase())) continue;
           apps.add({
             'packageName': exeName,
@@ -941,9 +619,6 @@ wait "$sb"
     return apps;
   }
 
-  static Future<String?> _bundleExecutableName(String appBundlePath) =>
-      MacosAppBundle.executableName(appBundlePath);
-
   @override
   Future<String?> getAppIcon(String path) async {
     if (path.isEmpty) return null;
@@ -969,7 +644,8 @@ wait "$sb"
       return port == null ? null : queryClashTraffic(port, secret: api.secret);
     }
     final port = _xrayMetricsPort;
-    return port == null ? null : queryXrayTraffic(port);
+    if (_xrayProcess == null || port == null) return null;
+    return queryXrayTraffic(port);
   }
 
   @override
@@ -978,11 +654,7 @@ wait "$sb"
     bool force = false,
   }) async {
     if (!statsPollingEnabled && !force) return;
-    if (_xrayProcess == null &&
-        _mihomoProcess == null &&
-        _rootXrayProcess == null) {
-      return;
-    }
+    if (_xrayProcess == null && _mihomoProcess == null) return;
     try {
       final counters = await sessionTrafficCounters();
       if (counters == null) {

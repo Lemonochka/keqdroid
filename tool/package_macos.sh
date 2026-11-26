@@ -34,6 +34,18 @@ case "$TARGET" in
   x86_64) ARCHS=(x86_64) ;;
 esac
 
+goarch_for() {
+  case "$1" in
+    arm64) echo "arm64" ;;
+    x86_64) echo "amd64" ;;
+    *) echo "Unsupported arch: $1" >&2; exit 1 ;;
+  esac
+}
+
+sha256_file() {
+  shasum -a 256 "$1" | awk '{print $1}'
+}
+
 VERSION="$(awk '/^version:/ {sub(/\+.*/, "", $2); print $2; exit}' "$REPO_ROOT/pubspec.yaml")"
 if [ -z "$VERSION" ]; then
   echo "Could not read version from pubspec.yaml" >&2
@@ -44,7 +56,7 @@ SIGN_IDENTITY="${MACOS_SIGN_IDENTITY:--}"
 OUT_DIR="$REPO_ROOT/release/$VERSION"
 
 if [ "$SKIP_CORES" -eq 0 ]; then
-  bash "$REPO_ROOT/tool/build_macos_cores.sh" "$TARGET"
+  MACOS_SIGN_IDENTITY="$SIGN_IDENTITY" bash "$REPO_ROOT/tool/build_macos_cores.sh" "$TARGET"
 fi
 
 if [ "$SKIP_FLUTTER" -eq 0 ]; then
@@ -52,7 +64,6 @@ if [ "$SKIP_FLUTTER" -eq 0 ]; then
   (
     cd "$REPO_ROOT"
     flutter pub get
-    # Official backups are readable only when the release key reaches Dart.
     BACKUP_KEY_DEFINE=()
     if [ -f secrets/backup_key.json ]; then
       BACKUP_KEY_DEFINE=(--dart-define-from-file=secrets/backup_key.json)
@@ -111,7 +122,6 @@ create_styled_dmg() {
 
   rm -f "$rw_dmg" "$dmg_path"
 
-  # Leave headroom on the read-write image so Finder can write .DS_Store cleanly.
   local size_mb
   size_mb="$(( $(du -sm "$stage_dir" | awk '{print $1}') + 32 ))"
 
@@ -220,31 +230,57 @@ for arch in "${ARCHS[@]}"; do
   cp -R "$APP_SRC" "$STAGE_DIR/keqdroid.app"
   APP_DST="$STAGE_DIR/keqdroid.app"
 
-  # Remove any cores copied during Xcode build before thinning and embedding target arch.
   BIN_DST="$APP_DST/Contents/Resources/bin"
   rm -rf "$BIN_DST"
 
   echo "Thinning keqdroid.app to $arch ..."
   thin_bundle_to_arch "$APP_DST" "$arch"
+  codesign --force --deep --sign "$SIGN_IDENTITY" "$APP_DST"
 
   mkdir -p "$BIN_DST"
   CORE_SRC="$REPO_ROOT/assets/bin/macos/$arch"
-  for bin in xray mihomo; do
+  for bin in xray mihomo keqdroid-tun; do
     if [ ! -f "$CORE_SRC/$bin" ]; then
-      echo "Missing $arch core: $CORE_SRC/$bin (run tool/build_macos_cores.sh $arch)" >&2
+      echo "Missing $arch binary: $CORE_SRC/$bin (run tool/build_macos_cores.sh $arch)" >&2
       exit 1
     fi
     cp -f "$CORE_SRC/$bin" "$BIN_DST/$bin"
     chmod 0755 "$BIN_DST/$bin"
-    codesign --force --sign "$SIGN_IDENTITY" "$BIN_DST/$bin"
   done
+
+  # Re-sign cores and rebuild keqdroid-tun if needed so embedded SHA-256 always matches signed bytes.
+  codesign --force --sign "$SIGN_IDENTITY" "$BIN_DST/xray"
+  codesign --force --sign "$SIGN_IDENTITY" "$BIN_DST/mihomo"
+  XRAY_SHA="$(sha256_file "$BIN_DST/xray")"
+  MIHOMO_SHA="$(sha256_file "$BIN_DST/mihomo")"
+  if command -v go >/dev/null 2>&1; then
+    goarch="$(goarch_for "$arch")"
+    (
+      cd "$REPO_ROOT/tool/macos_tun_daemon"
+      GOTOOLCHAIN=go1.27.3 CGO_ENABLED=0 GOOS=darwin GOARCH="$goarch" \
+        go build -trimpath -buildvcs=false \
+        -ldflags "-s -w -X main.xraySHA256=$XRAY_SHA -X main.mihomoSHA256=$MIHOMO_SHA" \
+        -o "$BIN_DST/keqdroid-tun" \
+        .
+    )
+    chmod 0755 "$BIN_DST/keqdroid-tun"
+  fi
+  codesign --force --sign "$SIGN_IDENTITY" "$BIN_DST/keqdroid-tun"
+
   for geo in geoip.dat geosite.dat; do
     if [ -f "$REPO_ROOT/assets/bin/macos/$geo" ]; then
       cp -f "$REPO_ROOT/assets/bin/macos/$geo" "$BIN_DST/$geo"
     fi
   done
 
-  codesign --force --deep --sign "$SIGN_IDENTITY" "$APP_DST"
+  # Sign outer app bundle without --deep so codesign seals Resources/bin without altering core bytes.
+  codesign --force --sign "$SIGN_IDENTITY" "$APP_DST"
+
+  if [ "$(sha256_file "$BIN_DST/xray")" != "$XRAY_SHA" ] || [ "$(sha256_file "$BIN_DST/mihomo")" != "$MIHOMO_SHA" ]; then
+    echo "Core binary checksum changed after bundle signing!" >&2
+    exit 1
+  fi
+  codesign --verify --deep --strict "$APP_DST"
 
   ln -s /Applications "$STAGE_DIR/Applications"
   DMG_PATH="$OUT_DIR/keqdroid-${VERSION}-macos-${arch}.dmg"

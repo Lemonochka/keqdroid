@@ -1718,6 +1718,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get desktopTunServiceUpdateMessage => 'Die App wurde aktualisiert, der keqdroid-Dienst für TUN muss mit aktualisiert werden. Windows fragt nach der Erlaubnis.';
 
   @override
+  String get desktopTunServiceMessageMacos => 'Der TUN-Modus läuft über den keqdroid-Dienst. Er wird einmal installiert: macOS fragt nach dem Administratorpasswort, danach schaltet sich TUN ohne Nachfrage und ohne Neustart ein.';
+
+  @override
+  String get desktopTunServiceUpdateMessageMacos => 'Die App wurde aktualisiert, der keqdroid-Dienst für TUN muss mit aktualisiert werden. macOS fragt nach dem Administratorpasswort.';
+
+  @override
   String get desktopTunServiceInstall => 'Dienst installieren';
 
   @override
@@ -2110,6 +2116,9 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get errorTunAdminMessage => 'Der TUN-Modus unter Windows benötigt Administratorrechte.';
+
+  @override
+  String get errorTunAdminMessageMacos => 'Der TUN-Modus unter macOS benötigt Administratorrechte.';
 
   @override
   String get errorTunAdminAction => 'Schalte TUN in der Seitenleiste erneut ein: die App bietet an, ihren Dienst zu installieren. Oder wechsle in den Proxy-Modus.';

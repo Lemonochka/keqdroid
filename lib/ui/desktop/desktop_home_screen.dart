@@ -16,6 +16,7 @@ import '../../services/linux_tray_vpn.dart';
 import '../../services/macos_autostart.dart';
 import '../../services/macos_background_service.dart';
 import '../../services/macos_tray_vpn.dart';
+import '../../services/macos_tun_service.dart';
 import '../../services/resume_after_update.dart';
 
 import '../../l10n/app_localizations.dart';
@@ -213,12 +214,16 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
         ? ConnectionMode.proxy
         : ConnectionMode.tun;
 
-    if (next == ConnectionMode.tun &&
-        Platform.isWindows &&
-        !await WindowsDesktopService.isProcessElevated() &&
-        await WindowsTunService.state() != TunServiceState.ready) {
-      // без службы спросим про неё, а окно в трее спрятало бы вопрос
-      await WindowsDesktopService.restoreMainWindow();
+    if (next == ConnectionMode.tun) {
+      if (Platform.isWindows &&
+          !await WindowsDesktopService.isProcessElevated() &&
+          await WindowsTunService.state() != TunServiceState.ready) {
+        // без службы спросим про неё, а окно в трее спрятало бы вопрос
+        await WindowsDesktopService.restoreMainWindow();
+      } else if (Platform.isMacOS &&
+          await MacosTunService.state() != TunServiceState.ready) {
+        await MacosBackgroundService.instance.restoreMainWindow();
+      }
     }
     if (!mounted) return;
     await applyDesktopConnectionMode(

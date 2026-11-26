@@ -40,6 +40,10 @@ class DebugLogService {
         final text = backend.exportSessionLogs(maxLines: maxLines);
         if (text.trim().isNotEmpty) return text;
       }
+      final last = MacosTunnelBackend.lastSessionLogs;
+      if (last.trim().isNotEmpty) {
+        return '--- Last session (core no longer running) ---\n$last';
+      }
       return 'No core session logs yet. Connect first. '
           '(Also dumped to Application Support/'
           '${MacosTunnelBackend.coresLogName} on disconnect.)';

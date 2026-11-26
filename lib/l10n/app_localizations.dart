@@ -3173,6 +3173,18 @@ abstract class AppLocalizations {
   /// **'The app was updated, and the keqdroid service for TUN needs updating too. Windows asks for permission.'**
   String get desktopTunServiceUpdateMessage;
 
+  /// No description provided for @desktopTunServiceMessageMacos.
+  ///
+  /// In en, this message translates to:
+  /// **'TUN mode runs through the keqdroid service. It is installed once: macOS asks for an administrator password, and after that TUN turns on without it and without a restart.'**
+  String get desktopTunServiceMessageMacos;
+
+  /// No description provided for @desktopTunServiceUpdateMessageMacos.
+  ///
+  /// In en, this message translates to:
+  /// **'The app was updated, and the keqdroid service for TUN needs updating too. macOS asks for an administrator password.'**
+  String get desktopTunServiceUpdateMessageMacos;
+
   /// No description provided for @desktopTunServiceInstall.
   ///
   /// In en, this message translates to:
@@ -3892,6 +3904,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'TUN mode on Windows needs Administrator rights.'**
   String get errorTunAdminMessage;
+
+  /// No description provided for @errorTunAdminMessageMacos.
+  ///
+  /// In en, this message translates to:
+  /// **'TUN mode on macOS needs administrator rights.'**
+  String get errorTunAdminMessageMacos;
 
   /// No description provided for @errorTunAdminAction.
   ///

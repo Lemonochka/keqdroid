@@ -131,8 +131,8 @@ TunFailureHint? tunFailureHint(
                 'routes. Run the app as Administrator, or use Proxy mode.'
           : macos
           ? 'The core was not allowed to create the utun device or edit routes. '
-                'TUN mode needs administrator privileges — approve the password '
-                'prompt, or use Proxy mode.'
+                'Install the keqdroid TUN service in Settings -> Permissions, '
+                'or use Proxy mode.'
           : 'The core was not allowed to create the TUN device or edit routes. '
                 'TUN mode needs root via pkexec (polkit) — approve the password '
                 'prompt. Inside containers/sandboxes it also needs CAP_NET_ADMIN '
@@ -224,9 +224,8 @@ TunFailureHint? tunFailureHint(
                 'Administrator rights (the adapter, the route table and DNS); if '
                 'the app is already elevated, a security product is blocking it.'
           : macos
-          ? 'Access denied while setting up the tunnel. TUN mode needs '
-                'administrator privileges — approve the password prompt, or '
-                'use Proxy mode.'
+          ? 'Access denied while setting up the tunnel. Install the keqdroid '
+                'TUN service in Settings -> Permissions, or use Proxy mode.'
           : 'Access denied while setting up the tunnel. TUN mode needs root — '
                 'approve the polkit prompt, or use Proxy mode.',
     );

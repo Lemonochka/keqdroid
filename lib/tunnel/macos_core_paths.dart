@@ -21,15 +21,58 @@ class MacosCorePaths {
   @visibleForTesting
   static String? executableOverride;
 
+  @visibleForTesting
+  static bool Function(String path)? isExecutableOverride;
+
   static final _staging = <String, Future<String>>{};
+  static final _shaCache = <String, ({int size, int mtimeUs, String sha256})>{};
   static int _tmpCounter = 0;
 
   static Future<Directory> sessionDir() =>
       Directory.systemTemp.createTemp('keqdis_session_');
 
+  static String bundleBinDir() {
+    final exeDir = p.dirname(executableOverride ?? Platform.resolvedExecutable);
+    return p.normalize(p.join(exeDir, '..', 'Resources', 'bin'));
+  }
+
+  static String? bundledCorePath(String fileName) {
+    final inBundle = p.join(bundleBinDir(), fileName);
+    if (File(inBundle).existsSync()) return inBundle;
+
+    final besideExe = p.join(
+      p.dirname(executableOverride ?? Platform.resolvedExecutable),
+      fileName,
+    );
+    if (File(besideExe).existsSync()) return besideExe;
+    return null;
+  }
+
+  static String? daemonExecutable() => bundledCorePath('keqdroid-tun');
+
   static Future<String?> xrayExecutable() => _resolveExecutable('xray');
 
   static Future<String?> mihomoExecutable() => _resolveExecutable('mihomo');
+
+  static Future<String> sha256Of(String path) async {
+    try {
+      final stat = await FileStat.stat(path);
+      if (stat.type != FileSystemEntityType.file) return '';
+      final mtimeUs = stat.modified.microsecondsSinceEpoch;
+      final cached = _shaCache[path];
+      if (cached != null &&
+          cached.size == stat.size &&
+          cached.mtimeUs == mtimeUs) {
+        return cached.sha256;
+      }
+      final digest = (await sha256.bind(File(path).openRead()).first)
+          .toString();
+      _shaCache[path] = (size: stat.size, mtimeUs: mtimeUs, sha256: digest);
+      return digest;
+    } catch (_) {
+      return '';
+    }
+  }
 
   static String _cacheRoot() {
     final override = cacheRootOverride;
@@ -53,9 +96,12 @@ class MacosCorePaths {
         final src = File(p.join(geoDir, name));
         if (!src.existsSync()) continue;
         final dst = File(p.join(dir.path, name));
-        if (await _sameContents(src, dst)) continue;
+        if (_sameSizeAndMtime(src, dst)) continue;
         try {
-          await replaceAtomically(dst.path, (tmp) => src.copy(tmp));
+          await replaceAtomically(dst.path, (tmp) async {
+            await src.copy(tmp);
+            await File(tmp).setLastModified(src.lastModifiedSync());
+          });
         } catch (e) {
           AppLogger.instance.warn('Geo file not copied: $name', error: e);
         }
@@ -64,13 +110,21 @@ class MacosCorePaths {
     return dir.path;
   }
 
-  static String _bundleBinDir() {
-    final exeDir = p.dirname(executableOverride ?? Platform.resolvedExecutable);
-    return p.normalize(p.join(exeDir, '..', 'Resources', 'bin'));
+  static bool _sameSizeAndMtime(File src, File dst) {
+    final dstStat = dst.statSync();
+    if (dstStat.type == FileSystemEntityType.notFound) return false;
+    final srcStat = src.statSync();
+    return srcStat.size == dstStat.size &&
+        srcStat.modified.isAtSameMomentAs(dstStat.modified);
   }
 
   static Future<String?> geoAssetDir() async {
-    final bundleBin = _bundleBinDir();
+    final cachedGeo = p.join(_cacheRoot(), 'keqdroid', 'geo');
+    if (geoFileNames.any((f) => File(p.join(cachedGeo, f)).existsSync())) {
+      return cachedGeo;
+    }
+
+    final bundleBin = bundleBinDir();
     if (geoFileNames.any((f) => File(p.join(bundleBin, f)).existsSync())) {
       return bundleBin;
     }
@@ -80,30 +134,27 @@ class MacosCorePaths {
       return exeDir;
     }
 
-    final cachedGeo = p.join(_cacheRoot(), 'keqdroid', 'geo');
-    if (geoFileNames.any((f) => File(p.join(cachedGeo, f)).existsSync())) {
-      return cachedGeo;
-    }
-
     return null;
   }
 
+  static bool _hasExecBit(String path) {
+    final override = isExecutableOverride;
+    if (override != null) return override(path);
+    try {
+      return FileStat.statSync(path).mode & 0x49 != 0;
+    } catch (_) {
+      return false;
+    }
+  }
+
   static Future<String?> _resolveExecutable(String fileName) async {
-    // App bundle (Contents/Resources/bin/) may be read-only (e.g. DMG mount or /Applications);
-    // stage into user cache so chmod +x always succeeds.
-    final inBundle = p.join(_bundleBinDir(), fileName);
-    if (File(inBundle).existsSync()) {
-      return stageExecutable(inBundle, fileName);
+    // в готовом .app бинарники уже 0755 и запускаются на месте без копирования в кэш
+    final bundled = bundledCorePath(fileName);
+    if (bundled != null) {
+      return _hasExecBit(bundled)
+          ? bundled
+          : stageExecutable(bundled, fileName);
     }
-
-    final besideExe = p.join(
-      p.dirname(executableOverride ?? Platform.resolvedExecutable),
-      fileName,
-    );
-    if (File(besideExe).existsSync()) {
-      return stageExecutable(besideExe, fileName);
-    }
-
     return _which(fileName);
   }
 
@@ -113,22 +164,17 @@ class MacosCorePaths {
         _staging.remove(fileName);
       });
 
-  static Future<bool> _sameContents(File a, File b) async {
-    if (!await b.exists() || await a.length() != await b.length()) return false;
-    final hashes = await Future.wait([
-      sha256.bind(a.openRead()).first,
-      sha256.bind(b.openRead()).first,
-    ]);
-    return hashes[0] == hashes[1];
-  }
-
   static Future<String> _stage(String src, String fileName) async {
     try {
       final dstPath = p.join(await _coresCacheDir(), fileName);
       final dst = File(dstPath);
       final srcFile = File(src);
-      if (!await _sameContents(srcFile, dst)) {
-        await replaceAtomically(dstPath, (tmp) => srcFile.copy(tmp));
+      if (!_sameSizeAndMtime(srcFile, dst) ||
+          await sha256Of(src) != await sha256Of(dstPath)) {
+        await replaceAtomically(dstPath, (tmp) async {
+          await srcFile.copy(tmp);
+          await File(tmp).setLastModified(srcFile.lastModifiedSync());
+        });
       }
       await _ensureExecutable(dstPath);
       return dstPath;
@@ -156,6 +202,7 @@ class MacosCorePaths {
   }
 
   static Future<void> _ensureExecutable(String path) async {
+    if (!Platform.isMacOS && !Platform.isLinux) return;
     try {
       final stat = await FileStat.stat(path);
       if (stat.mode & 0x40 != 0) return;

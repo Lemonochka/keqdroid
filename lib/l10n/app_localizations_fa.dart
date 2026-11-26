@@ -1711,6 +1711,12 @@ class AppLocalizationsFa extends AppLocalizations {
   String get desktopTunServiceUpdateMessage => 'برنامه به‌روز شده و سرویس keqdroid برای TUN هم باید به‌روز شود. ویندوز اجازه می‌خواهد.';
 
   @override
+  String get desktopTunServiceMessageMacos => 'حالت TUN از طریق سرویس keqdroid کار می‌کند. این سرویس یک بار نصب می‌شود: macOS رمز مدیر را می‌خواهد و پس از آن TUN بدون پرسش و بدون راه‌اندازی دوباره روشن می‌شود.';
+
+  @override
+  String get desktopTunServiceUpdateMessageMacos => 'برنامه به‌روز شده و سرویس keqdroid برای TUN هم باید به‌روز شود. macOS رمز مدیر را می‌خواهد.';
+
+  @override
   String get desktopTunServiceInstall => 'نصب سرویس';
 
   @override
@@ -2103,6 +2109,9 @@ class AppLocalizationsFa extends AppLocalizations {
 
   @override
   String get errorTunAdminMessage => 'حالت TUN در ویندوز به دسترسی مدیر نیاز دارد.';
+
+  @override
+  String get errorTunAdminMessageMacos => 'حالت TUN در macOS به دسترسی مدیر نیاز دارد.';
 
   @override
   String get errorTunAdminAction => 'TUN را دوباره در پنل کناری روشن کنید: برنامه نصب سرویس خود را پیشنهاد می‌دهد. یا به حالت پروکسی بروید.';

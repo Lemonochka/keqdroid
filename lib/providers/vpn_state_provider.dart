@@ -763,13 +763,14 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
         'to apply per-process rules.',
       );
     }
-    // на ходу права проверены ещё при подключении; без прав TUN поднимает служба KeqdroidTun
+    // на ходу права проверены ещё при подключении; без прав TUN поднимает служба keqdroid
     if (reuse == null &&
-        Platform.isWindows &&
+        (Platform.isWindows || Platform.isMacOS) &&
         connectionMode == ConnectionMode.tun) {
-      final elevated =
-          await engine.requestVpnPermission() ||
-          await WindowsTunService.state() == TunServiceState.ready;
+      final serviceReady = Platform.isMacOS
+          ? await MacosTunService.state() == TunServiceState.ready
+          : await WindowsTunService.state() == TunServiceState.ready;
+      final elevated = await engine.requestVpnPermission() || serviceReady;
       if (!elevated) {
         if (autostartTunFallback) {
           connectionMode = ConnectionMode.proxy;

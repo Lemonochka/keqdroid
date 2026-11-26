@@ -1,6 +1,6 @@
 import 'dart:io';
 
-typedef MacosElevationLaunch = ({
+typedef MacosAdminCommandPlan = ({
   String executable,
   List<String> args,
   bool viaOsascript,
@@ -35,27 +35,33 @@ String appleScriptAdminCommand(List<String> argv) {
       'with administrator privileges';
 }
 
-// Уже root — напрямую, иначе только после интерактивного подтверждения.
-MacosElevationLaunch planMacosElevation({
-  required List<String> coreArgs,
-  required String wrapperScriptPath,
+MacosAdminCommandPlan planMacosAdminCommand(
+  List<String> argv, {
   required bool asRoot,
 }) {
   if (asRoot) {
     return (
-      executable: '/bin/sh',
-      args: <String>[wrapperScriptPath, ...coreArgs],
+      executable: argv.first,
+      args: argv.sublist(1),
       viaOsascript: false,
     );
   }
-  final script = appleScriptAdminCommand([
-    '/bin/sh',
-    wrapperScriptPath,
-    ...coreArgs,
-  ]);
   return (
     executable: '/usr/bin/osascript',
-    args: <String>['-e', script],
+    args: <String>['-e', appleScriptAdminCommand(argv)],
     viaOsascript: true,
   );
+}
+
+bool macosAdminCancelled(String stderrText) {
+  final lower = stderrText.toLowerCase();
+  return lower.contains('user canceled') || lower.contains('(-128)');
+}
+
+Future<({int exitCode, String stderr})> runMacosAdminCommand(
+  List<String> argv,
+) async {
+  final plan = planMacosAdminCommand(argv, asRoot: macosRunningAsRoot());
+  final result = await Process.run(plan.executable, plan.args);
+  return (exitCode: result.exitCode, stderr: '${result.stderr}'.trim());
 }

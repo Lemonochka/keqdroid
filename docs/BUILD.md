@@ -76,7 +76,7 @@ bash tool/package_macos.sh arm64        # Apple Silicon only
 bash tool/package_macos.sh x86_64       # Intel only
 ```
 
-The Xcode build embeds `assets/bin/macos/<arch>/{xray,mihomo}` and `assets/bin/macos/{geoip.dat,geosite.dat}` into `keqdroid.app/Contents/Resources/bin/`, and `tool/package_macos.sh` thins each `.app` bundle to its single target architecture. Pass `MACOS_SIGN_IDENTITY` to sign with a Developer ID certificate instead of the default ad-hoc signature.
+The Xcode build embeds `assets/bin/macos/<arch>/{xray,mihomo,keqdroid-tun}` and `assets/bin/macos/{geoip.dat,geosite.dat}` into `keqdroid.app/Contents/Resources/bin/`, and `tool/package_macos.sh` thins each `.app` bundle to its single target architecture. Pass `MACOS_SIGN_IDENTITY` to sign with a Developer ID certificate instead of the default ad-hoc signature.
 
 ## Checks
 

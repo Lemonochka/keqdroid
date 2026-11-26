@@ -910,6 +910,8 @@
   "desktopTunServiceTitle": "Dienst für TUN",
   "desktopTunServiceMessage": "Der TUN-Modus läuft über den keqdroid-Dienst. Er wird einmal installiert: Windows fragt nach der Erlaubnis, danach schaltet sich TUN ohne Nachfrage und ohne Neustart ein.",
   "desktopTunServiceUpdateMessage": "Die App wurde aktualisiert, der keqdroid-Dienst für TUN muss mit aktualisiert werden. Windows fragt nach der Erlaubnis.",
+  "desktopTunServiceMessageMacos": "Der TUN-Modus läuft über den keqdroid-Dienst. Er wird einmal installiert: macOS fragt nach dem Administratorpasswort, danach schaltet sich TUN ohne Nachfrage und ohne Neustart ein.",
+  "desktopTunServiceUpdateMessageMacos": "Die App wurde aktualisiert, der keqdroid-Dienst für TUN muss mit aktualisiert werden. macOS fragt nach dem Administratorpasswort.",
   "desktopTunServiceInstall": "Dienst installieren",
   "desktopTunServiceUpdate": "Dienst aktualisieren",
   "desktopTunServiceCancel": "Abbrechen",
@@ -1126,6 +1128,7 @@
     }
   },
   "errorTunAdminMessage": "Der TUN-Modus unter Windows benötigt Administratorrechte.",
+  "errorTunAdminMessageMacos": "Der TUN-Modus unter macOS benötigt Administratorrechte.",
   "errorTunAdminAction": "Schalte TUN in der Seitenleiste erneut ein: die App bietet an, ihren Dienst zu installieren. Oder wechsle in den Proxy-Modus.",
   "errorTunAdapterRefusedTitle": "Windows hat den Adapter abgelehnt",
   "errorTunAdapterRefusedMessage": "Windows lehnte den TUN-Adapter dreimal ab, am Server liegt es nicht.",

@@ -340,7 +340,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "SRC=\"$PROJECT_DIR/../assets/bin/macos\"\nDST=\"$BUILT_PRODUCTS_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/bin\"\nmkdir -p \"$DST\"\nTARGET_ARCH=\"$ARCHS\"\ncase \"$TARGET_ARCH\" in\n  arm64|x86_64) ;;\n  *) TARGET_ARCH=\"$(uname -m)\" ;;\nesac\nfor bin in xray mihomo; do\n  if [ -f \"$SRC/$TARGET_ARCH/$bin\" ]; then\n    cp -f \"$SRC/$TARGET_ARCH/$bin\" \"$DST/$bin\"\n  elif [ -f \"$SRC/$bin\" ]; then\n    cp -f \"$SRC/$bin\" \"$DST/$bin\"\n  fi\n  if [ -f \"$DST/$bin\" ]; then\n    chmod 0755 \"$DST/$bin\"\n  fi\ndone\nfor geo in geoip.dat geosite.dat; do\n  if [ -f \"$SRC/$geo\" ]; then\n    cp -f \"$SRC/$geo\" \"$DST/$geo\"\n  fi\ndone\n";
+			shellScript = "SRC=\"$PROJECT_DIR/../assets/bin/macos\"\nDST=\"$BUILT_PRODUCTS_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/bin\"\nmkdir -p \"$DST\"\nTARGET_ARCH=\"$ARCHS\"\ncase \"$TARGET_ARCH\" in\n  arm64|x86_64) ;;\n  *) TARGET_ARCH=\"$(uname -m)\" ;;\nesac\nfor bin in xray mihomo keqdroid-tun; do\n  if [ -f \"$SRC/$TARGET_ARCH/$bin\" ]; then\n    cp -f \"$SRC/$TARGET_ARCH/$bin\" \"$DST/$bin\"\n  elif [ -f \"$SRC/$bin\" ]; then\n    cp -f \"$SRC/$bin\" \"$DST/$bin\"\n  fi\n  if [ -f \"$DST/$bin\" ]; then\n    chmod 0755 \"$DST/$bin\"\n  fi\ndone\nfor geo in geoip.dat geosite.dat; do\n  if [ -f \"$SRC/$geo\" ]; then\n    cp -f \"$SRC/$geo\" \"$DST/$geo\"\n  fi\ndone\n";
 		};
 		33CC111E2044C6BF0003C045 /* ShellScript */ = {
 			isa = PBXShellScriptBuildPhase;

@@ -1711,6 +1711,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get desktopTunServiceUpdateMessage => '应用已更新，用于 TUN 的 keqdroid 服务也需要一起更新。Windows 会请求您的许可。';
 
   @override
+  String get desktopTunServiceMessageMacos => 'TUN 模式通过 keqdroid 服务运行。服务只需安装一次：macOS 会请求管理员密码，之后开启 TUN 无需再次输入密码，也无需重启。';
+
+  @override
+  String get desktopTunServiceUpdateMessageMacos => '应用已更新，用于 TUN 的 keqdroid 服务也需要一起更新。macOS 会请求管理员密码。';
+
+  @override
   String get desktopTunServiceInstall => '安装服务';
 
   @override
@@ -2103,6 +2109,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get errorTunAdminMessage => 'Windows 上的 TUN 模式需要管理员权限。';
+
+  @override
+  String get errorTunAdminMessageMacos => 'macOS 上的 TUN 模式需要管理员权限。';
 
   @override
   String get errorTunAdminAction => '在侧栏中再次开启 TUN：应用会提示安装它的服务。或切换到代理模式。';

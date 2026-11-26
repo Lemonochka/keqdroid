@@ -1734,6 +1734,12 @@ class AppLocalizationsRu extends AppLocalizations {
   String get desktopTunServiceUpdateMessage => 'Приложение обновилось, и службу keqdroid для TUN нужно обновить вместе с ним. Windows спросит разрешение.';
 
   @override
+  String get desktopTunServiceMessageMacos => 'Режим TUN работает через службу keqdroid. Её ставят один раз: macOS спросит пароль администратора, а дальше TUN включается без него и без перезапуска.';
+
+  @override
+  String get desktopTunServiceUpdateMessageMacos => 'Приложение обновилось, и службу keqdroid для TUN нужно обновить вместе с ним. macOS спросит пароль администратора.';
+
+  @override
   String get desktopTunServiceInstall => 'Поставить службу';
 
   @override
@@ -2126,6 +2132,9 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get errorTunAdminMessage => 'Режим TUN на Windows требует прав администратора.';
+
+  @override
+  String get errorTunAdminMessageMacos => 'Режим TUN на macOS требует прав администратора.';
 
   @override
   String get errorTunAdminAction => 'Включите TUN в боковой панели ещё раз: приложение предложит поставить свою службу. Или переключитесь на режим Proxy.';

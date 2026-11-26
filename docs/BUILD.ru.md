@@ -76,7 +76,7 @@ bash tool/package_macos.sh arm64        # только Apple Silicon
 bash tool/package_macos.sh x86_64       # только Intel
 ```
 
-Фаза сборки Xcode копирует `assets/bin/macos/<arch>/{xray,mihomo}` и `assets/bin/macos/{geoip.dat,geosite.dat}` в `keqdroid.app/Contents/Resources/bin/`, а `tool/package_macos.sh` вырезает лишний срез из `.app` через `lipo -thin`. Для подписи сертификатом Developer ID вместо ad-hoc задайте переменную `MACOS_SIGN_IDENTITY`.
+Фаза сборки Xcode копирует `assets/bin/macos/<arch>/{xray,mihomo,keqdroid-tun}` и `assets/bin/macos/{geoip.dat,geosite.dat}` в `keqdroid.app/Contents/Resources/bin/`, а `tool/package_macos.sh` вырезает лишний срез из `.app` через `lipo -thin`. Для подписи сертификатом Developer ID вместо ad-hoc задайте переменную `MACOS_SIGN_IDENTITY`.
 
 ## Проверки
 

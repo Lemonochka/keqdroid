@@ -3,7 +3,9 @@ import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../app/app.dart';
 import '../providers/providers.dart';
+import '../ui/desktop/desktop_connection_mode.dart';
 import 'macos_background_service.dart';
 import 'vpn_engine.dart';
 
@@ -49,6 +51,16 @@ class MacosTrayVpn {
         return;
       case VpnStatus.disconnected || VpnStatus.error:
         if (_ref.read(serversProvider).activeServer == null) return;
+        final context = rootNavigatorKey.currentContext;
+        if (context != null &&
+            context.mounted &&
+            !await ensureTunReadyToConnect(
+              context,
+              _ref.read(settingsNotifierProvider).value,
+              showWindow: true,
+            )) {
+          return;
+        }
         await notifier.connect();
     }
   }
