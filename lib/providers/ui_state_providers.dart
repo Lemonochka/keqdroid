@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 abstract class StringSetNotifier extends Notifier<Set<String>> {
@@ -143,13 +144,41 @@ final vpnServerSwitchInProgressProvider =
       VpnServerSwitchInProgressNotifier.new,
     );
 
+bool _isLifecycleVisible(AppLifecycleState? state) =>
+    state != AppLifecycleState.hidden &&
+    state != AppLifecycleState.paused &&
+    state != AppLifecycleState.detached;
+
+class AppLifecycleVisibleNotifier extends Notifier<bool>
+    with WidgetsBindingObserver {
+  @override
+  bool build() {
+    final binding = WidgetsBinding.instance;
+    binding.addObserver(this);
+    ref.onDispose(() => binding.removeObserver(this));
+    return _isLifecycleVisible(binding.lifecycleState);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    this.state = _isLifecycleVisible(state);
+  }
+}
+
+final appLifecycleVisibleProvider =
+    NotifierProvider<AppLifecycleVisibleNotifier, bool>(
+      AppLifecycleVisibleNotifier.new,
+    );
+
 final desktopWindowVisibleProvider =
     NotifierProvider<DesktopWindowVisibleNotifier, bool>(
       DesktopWindowVisibleNotifier.new,
     );
 
+// трей прячет окно через SW_HIDE (inactive), а сворачивание на панель шлёт hidden без сигнала трея
 final desktopUiVisibleProvider = Provider<bool>((ref) {
-  return ref.watch(desktopWindowVisibleProvider);
+  return ref.watch(desktopWindowVisibleProvider) &&
+      ref.watch(appLifecycleVisibleProvider);
 });
 
 class ConnectRehearsalNotifier extends Notifier<bool> {

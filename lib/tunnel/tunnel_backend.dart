@@ -26,7 +26,7 @@ abstract class TunnelBackend {
 
   Future<bool> requestTunnelPermission();
 
-  void setTrafficStatsPollingEnabled(bool enabled) {}
+  void setTrafficStatsPollingEnabled(bool enabled, {String? reason}) {}
 
   Future<VpnState> getCurrentState();
 

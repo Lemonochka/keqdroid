@@ -36,8 +36,8 @@ class VpnEngine {
     }
   }
 
-  void setTrafficStatsPollingEnabled(bool enabled) =>
-      _backend.setTrafficStatsPollingEnabled(enabled);
+  void setTrafficStatsPollingEnabled(bool enabled, {String? reason}) =>
+      _backend.setTrafficStatsPollingEnabled(enabled, reason: reason);
 
   Future<({String username, String password})> fetchSocksCredentials() =>
       _backend.fetchSocksCredentials();

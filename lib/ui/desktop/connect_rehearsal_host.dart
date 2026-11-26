@@ -54,7 +54,7 @@ class _ConnectRehearsalHostState extends ConsumerState<ConnectRehearsalHost> {
     final status =
         ref.read(vpnStateProvider).value?.status ?? VpnStatus.disconnected;
     if (status != VpnStatus.disconnected) return;
-    if (_input != null) {
+    if (_input != null || !ref.read(appLifecycleVisibleProvider)) {
       _timer = Timer(const Duration(seconds: 1), _tryStart);
       return;
     }

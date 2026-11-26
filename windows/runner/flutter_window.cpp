@@ -135,7 +135,8 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
     std::optional<LRESULT> result =
         flutter_controller_->HandleTopLevelWindowProc(hwnd, message, wparam,
                                                       lparam);
-    if (result) {
+    // window_manager на SIZE_MINIMIZED возвращает 0 сам: вид Flutter не узнаёт про 0x0 и шлёт inactive вместо hidden
+    if (result && !(message == WM_SIZE && wparam == SIZE_MINIMIZED)) {
       return *result;
     }
   }

@@ -102,11 +102,12 @@ mixin DesktopTrafficStats {
     }
   }
 
-  void setTrafficStatsPollingEnabled(bool enabled) {
+  void setTrafficStatsPollingEnabled(bool enabled, {String? reason}) {
     if (statsPollingEnabled == enabled) return;
     statsPollingEnabled = enabled;
+    final detail = reason ?? (enabled ? 'window shown' : 'window hidden');
     AppLogger.instance.info(
-      'traffic polling ${enabled ? 'resumed: window shown' : 'paused: window hidden'}',
+      'traffic polling ${enabled ? 'resumed' : 'paused'}: $detail',
     );
     if (!enabled) {
       statsTimer?.cancel();

@@ -51,7 +51,7 @@ class AndroidTunnelBackend implements TunnelBackend {
   }
 
   @override
-  void setTrafficStatsPollingEnabled(bool enabled) {}
+  void setTrafficStatsPollingEnabled(bool enabled, {String? reason}) {}
 
   @override
   Future<({String username, String password})> fetchSocksCredentials() async {
