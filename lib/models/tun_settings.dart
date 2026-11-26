@@ -3,8 +3,7 @@ import 'dart:convert';
 class TunSettings {
   final String stack;
   final int mtu;
-  // auto выключает strict_route на Windows: с ним ломаются маршруты при втором VPN вроде Tailscale
-  final String strictRoute;
+  final bool strictRoute;
   final int udpTimeoutSec;
   final bool autoRoute;
 
@@ -13,7 +12,7 @@ class TunSettings {
   const TunSettings({
     this.stack = defaultStack,
     this.mtu = defaultMtu,
-    this.strictRoute = strictRouteAuto,
+    this.strictRoute = true,
     this.udpTimeoutSec = defaultUdpTimeoutSec,
     this.autoRoute = true,
     this.ipv6 = ipv6Close,
@@ -31,15 +30,6 @@ class TunSettings {
   // system на Windows держится на правиле фаервола, sing-tun глотает ошибку его создания,
   // и TUN поднимается без трафика
   static const defaultStack = stackGvisor;
-
-  static const strictRouteAuto = 'auto';
-  static const strictRouteOn = 'on';
-  static const strictRouteOff = 'off';
-  static const strictRouteModes = [
-    strictRouteAuto,
-    strictRouteOn,
-    strictRouteOff,
-  ];
 
   static const ipv6Close = 'close';
   static const ipv6Vpn = 'vpn';
@@ -61,20 +51,15 @@ class TunSettings {
 
   bool get isDefault => this == const TunSettings();
 
-  bool strictRouteEnabled({required bool windows}) => switch (strictRoute) {
-    strictRouteOn => true,
-    strictRouteOff => false,
-    _ => !windows,
-  };
-
   static String normalizeStack(String? raw) {
     final v = raw?.trim().toLowerCase();
     return stacks.contains(v) ? v! : defaultStack;
   }
 
-  static String normalizeStrictRoute(String? raw) {
-    final v = raw?.trim().toLowerCase();
-    return strictRouteModes.contains(v) ? v! : strictRouteAuto;
+  static bool parseStrictRoute(Object? raw) {
+    if (raw is bool) return raw;
+    if (raw is String) return raw.trim().toLowerCase() != 'off';
+    return true;
   }
 
   static String normalizeIpv6(String? raw) {
@@ -90,7 +75,8 @@ class TunSettings {
   Map<String, dynamic> toJson() => {
     'stack': stack,
     'mtu': mtu,
-    'strictRoute': strictRoute,
+    // строкой on или off, чтобы прежние версии не падали на типе при чтении
+    'strictRoute': strictRoute ? 'on' : 'off',
     'udpTimeoutSec': udpTimeoutSec,
     'autoRoute': autoRoute,
     'ipv6': ipv6,
@@ -114,7 +100,7 @@ class TunSettings {
     return TunSettings(
       stack: stack,
       mtu: mtu,
-      strictRoute: normalizeStrictRoute(json['strictRoute'] as String?),
+      strictRoute: parseStrictRoute(json['strictRoute']),
       udpTimeoutSec: clampUdpTimeout(
         (json['udpTimeoutSec'] as num?)?.toInt() ?? defaultUdpTimeoutSec,
       ),
@@ -128,7 +114,7 @@ class TunSettings {
   TunSettings copyWith({
     String? stack,
     int? mtu,
-    String? strictRoute,
+    bool? strictRoute,
     int? udpTimeoutSec,
     bool? autoRoute,
     String? ipv6,

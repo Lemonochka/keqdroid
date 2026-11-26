@@ -944,19 +944,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsTunStrictRouteTitle => 'Strenges Routing (strict route)';
 
   @override
-  String get settingsTunStrictRouteHint => 'Verhindert, dass Datenverkehr am TUN vorbeiläuft. Unter Windows kann es das Routing stören, wenn ein anderes VPN (z. B. Tailscale) aktiv ist';
-
-  @override
-  String get settingsTunStrictRouteAuto => 'Auto';
-
-  @override
-  String get settingsTunStrictRouteAutoHint => 'Linux: an, Windows: aus';
-
-  @override
-  String get settingsTunStrictRouteOn => 'An';
-
-  @override
-  String get settingsTunStrictRouteOff => 'Aus';
+  String get settingsTunStrictRouteHint => 'Verhindert, dass DNS und Datenverkehr am TUN vorbeilaufen. Unter Windows blockiert es das DNS eines anderen aktiven VPN (z. B. Tailscale MagicDNS).';
 
   @override
   String get settingsTunAutoRoute => 'Automatisches Routing (auto route)';

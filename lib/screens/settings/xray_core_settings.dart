@@ -1418,49 +1418,13 @@ class _XrayTunSection extends ConsumerWidget {
                 ],
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-              child: Text(
-                l10n.settingsTunStrictRouteTitle,
-                style: Theme.of(
-                  context,
-                ).textTheme.titleSmall?.copyWith(color: AppTheme.text(context)),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
-              child: Text(l10n.settingsTunStrictRouteHint),
-            ),
-            RadioGroup<String>(
-              groupValue: tun.strictRoute,
-              onChanged: (v) {
-                if (v != null) {
-                  _saveXrayTun(ref, settings, tun.copyWith(strictRoute: v));
-                }
-              },
-              child: Column(
-                children: [
-                  _xrayChoiceTile(
-                    context: context,
-                    value: TunSettings.strictRouteAuto,
-                    accent: accent,
-                    title: l10n.settingsTunStrictRouteAuto,
-                    subtitle: l10n.settingsTunStrictRouteAutoHint,
-                  ),
-                  _xrayChoiceTile(
-                    context: context,
-                    value: TunSettings.strictRouteOn,
-                    accent: accent,
-                    title: l10n.settingsTunStrictRouteOn,
-                  ),
-                  _xrayChoiceTile(
-                    context: context,
-                    value: TunSettings.strictRouteOff,
-                    accent: accent,
-                    title: l10n.settingsTunStrictRouteOff,
-                  ),
-                ],
-              ),
+            SwitchListTile(
+              value: tun.strictRoute,
+              onChanged: (v) =>
+                  _saveXrayTun(ref, settings, tun.copyWith(strictRoute: v)),
+              activeThumbColor: accent,
+              title: Text(l10n.settingsTunStrictRouteTitle),
+              subtitle: Text(l10n.settingsTunStrictRouteHint),
             ),
             SwitchListTile(
               value: tun.autoRoute,

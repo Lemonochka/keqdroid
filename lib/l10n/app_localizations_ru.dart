@@ -954,19 +954,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsTunStrictRouteTitle => 'Строгая маршрутизация (strict route)';
 
   @override
-  String get settingsTunStrictRouteHint => 'Не даёт трафику утекать мимо TUN. На Windows может ломать маршруты при другом активном VPN (например, Tailscale)';
-
-  @override
-  String get settingsTunStrictRouteAuto => 'Авто';
-
-  @override
-  String get settingsTunStrictRouteAutoHint => 'Linux: включён, Windows: выключен';
-
-  @override
-  String get settingsTunStrictRouteOn => 'Включён';
-
-  @override
-  String get settingsTunStrictRouteOff => 'Выключен';
+  String get settingsTunStrictRouteHint => 'Не даёт DNS и трафику утекать мимо TUN. На Windows блокирует DNS другого активного VPN (например, MagicDNS в Tailscale).';
 
   @override
   String get settingsTunAutoRoute => 'Заворачивать трафик в туннель (auto route)';

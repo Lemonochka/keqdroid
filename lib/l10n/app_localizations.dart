@@ -1760,32 +1760,8 @@ abstract class AppLocalizations {
   /// No description provided for @settingsTunStrictRouteHint.
   ///
   /// In en, this message translates to:
-  /// **'Prevents traffic from leaking around the TUN. On Windows it can break routing when another VPN (e.g. Tailscale) is active'**
+  /// **'Prevents DNS and traffic from leaking around the tunnel. On Windows it blocks the DNS of another active VPN (e.g. Tailscale MagicDNS).'**
   String get settingsTunStrictRouteHint;
-
-  /// No description provided for @settingsTunStrictRouteAuto.
-  ///
-  /// In en, this message translates to:
-  /// **'Auto'**
-  String get settingsTunStrictRouteAuto;
-
-  /// No description provided for @settingsTunStrictRouteAutoHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Linux: on, Windows: off'**
-  String get settingsTunStrictRouteAutoHint;
-
-  /// No description provided for @settingsTunStrictRouteOn.
-  ///
-  /// In en, this message translates to:
-  /// **'Enabled'**
-  String get settingsTunStrictRouteOn;
-
-  /// No description provided for @settingsTunStrictRouteOff.
-  ///
-  /// In en, this message translates to:
-  /// **'Disabled'**
-  String get settingsTunStrictRouteOff;
 
   /// No description provided for @settingsTunAutoRoute.
   ///

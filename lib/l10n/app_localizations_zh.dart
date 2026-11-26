@@ -940,19 +940,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsTunStrictRouteTitle => '严格路由';
 
   @override
-  String get settingsTunStrictRouteHint => '防止流量绕过 TUN。在 Windows 上，如有其他 VPN（如 Tailscale）处于活动状态，可能会破坏路由';
-
-  @override
-  String get settingsTunStrictRouteAuto => '自动';
-
-  @override
-  String get settingsTunStrictRouteAutoHint => 'Linux：开启，Windows：关闭';
-
-  @override
-  String get settingsTunStrictRouteOn => '开启';
-
-  @override
-  String get settingsTunStrictRouteOff => '关闭';
+  String get settingsTunStrictRouteHint => '防止 DNS 和流量绕过 TUN。在 Windows 上会阻止其他活动 VPN 的 DNS（如 Tailscale MagicDNS）。';
 
   @override
   String get settingsTunAutoRoute => '自动路由';

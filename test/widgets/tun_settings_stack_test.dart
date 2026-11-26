@@ -6,6 +6,7 @@ import 'package:keqdroid/l10n/app_localizations.dart';
 import 'package:keqdroid/models/app_settings.dart';
 import 'package:keqdroid/providers/providers.dart';
 import 'package:keqdroid/screens/settings_tab.dart';
+import 'package:keqdroid/services/storage_service.dart';
 import 'package:keqdroid/services/vpn_engine.dart';
 import 'package:keqdroid/tunnel/vpn_backend.dart';
 
@@ -27,18 +28,23 @@ Future<void> _frames(WidgetTester tester) async {
   }
 }
 
-Future<void> _openCoreSettings(WidgetTester tester, VpnBackend core) async {
+Future<void> _openCoreSettings(
+  WidgetTester tester,
+  VpnBackend core, {
+  bool realSettings = false,
+  StorageService? storageOverride,
+}) async {
   tester.view.physicalSize = const Size(900, 1800);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
 
-  final storage = await buildStorageService();
+  final storage = storageOverride ?? await buildStorageService();
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
         storageProvider.overrideWithValue(storage),
-        settingsNotifierProvider.overrideWith(_Settings.new),
+        if (!realSettings) settingsNotifierProvider.overrideWith(_Settings.new),
         activeVpnBackendProvider.overrideWithValue(core),
         vpnEngineProvider.overrideWithValue(
           VpnEngine.withBackend(FakeTunnelBackend()),
@@ -88,7 +94,10 @@ void main() {
     expect(find.text('TUN mode'), findsWidgets);
     expect(find.text('Network stack'), findsNothing);
     expect(find.text('gVisor'), findsNothing);
-    expect(find.text('Strict route'), findsOneWidget);
+    final strictTile = find.widgetWithText(SwitchListTile, 'Strict route');
+    expect(strictTile, findsOneWidget);
+    expect(tester.widget<SwitchListTile>(strictTile).value, isTrue);
+    expect(find.text('Linux: on, Windows: off'), findsNothing);
   });
 
   testWidgets('mihomo: все четыре стека на выбор', (tester) async {
@@ -97,5 +106,31 @@ void main() {
     for (final stack in const ['system', 'gVisor', 'mixed', 'Mips']) {
       expect(find.text(stack), findsOneWidget, reason: stack);
     }
+  });
+
+  testWidgets('Strict route выключается и включается тумблером с сохранением', (
+    tester,
+  ) async {
+    final storage = await buildStorageService();
+    await _openCoreSettings(
+      tester,
+      VpnBackend.xray,
+      realSettings: true,
+      storageOverride: storage,
+    );
+
+    final strictTile = find.widgetWithText(SwitchListTile, 'Strict route');
+    expect(tester.widget<SwitchListTile>(strictTile).value, isTrue);
+
+    await tester.ensureVisible(strictTile);
+    await tester.tap(strictTile);
+    await _frames(tester);
+    expect(tester.widget<SwitchListTile>(strictTile).value, isFalse);
+    expect((await storage.getSettings()).tun.strictRoute, isFalse);
+
+    await tester.tap(strictTile);
+    await _frames(tester);
+    expect(tester.widget<SwitchListTile>(strictTile).value, isTrue);
+    expect((await storage.getSettings()).tun.strictRoute, isTrue);
   });
 }

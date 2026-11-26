@@ -10,29 +10,54 @@ void main() {
     // нет. gvisor держит стек в процессе ядра и от фаервола не зависит.
     expect(tun.stack, 'gvisor');
     expect(tun.mtu, 9000);
-    expect(tun.strictRoute, 'auto');
+    expect(tun.strictRoute, isTrue);
     expect(tun.udpTimeoutSec, 300);
     expect(tun.autoRoute, isTrue);
     expect(tun.isDefault, isTrue);
   });
 
-  test('strict route auto keeps old per-platform behavior', () {
-    const tun = TunSettings();
-    expect(tun.strictRouteEnabled(windows: true), isFalse);
-    expect(tun.strictRouteEnabled(windows: false), isTrue);
+  test(
+    'strict route migrates legacy auto and on to true, keeps off as false',
+    () {
+      expect(TunSettings.fromJson(const {}).strictRoute, isTrue);
+      expect(
+        TunSettings.fromJson(const {'strictRoute': 'auto'}).strictRoute,
+        isTrue,
+      );
+      expect(
+        TunSettings.fromJson(const {'strictRoute': 'on'}).strictRoute,
+        isTrue,
+      );
+      expect(
+        TunSettings.fromJson(const {'strictRoute': true}).strictRoute,
+        isTrue,
+      );
+      expect(
+        TunSettings.fromJson(const {'strictRoute': 'off'}).strictRoute,
+        isFalse,
+      );
+      expect(
+        TunSettings.fromJson(const {'strictRoute': 'OFF'}).strictRoute,
+        isFalse,
+      );
+      expect(
+        TunSettings.fromJson(const {'strictRoute': false}).strictRoute,
+        isFalse,
+      );
 
-    const on = TunSettings(strictRoute: TunSettings.strictRouteOn);
-    expect(on.strictRouteEnabled(windows: true), isTrue);
-
-    const off = TunSettings(strictRoute: TunSettings.strictRouteOff);
-    expect(off.strictRouteEnabled(windows: false), isFalse);
-  });
+      expect(const TunSettings().toJson()['strictRoute'], 'on');
+      expect(
+        const TunSettings(strictRoute: false).toJson()['strictRoute'],
+        'off',
+      );
+    },
+  );
 
   test('json roundtrip preserves all fields', () {
     const tun = TunSettings(
       stack: 'gvisor',
       mtu: 9000,
-      strictRoute: 'on',
+      strictRoute: false,
       udpTimeoutSec: 60,
       autoRoute: false,
     );
@@ -60,7 +85,7 @@ void main() {
     });
     expect(tun.stack, TunSettings.defaultStack);
     expect(tun.mtu, TunSettings.minMtu);
-    expect(tun.strictRoute, 'auto');
+    expect(tun.strictRoute, isTrue);
     expect(tun.udpTimeoutSec, TunSettings.maxUdpTimeoutSec);
   });
 

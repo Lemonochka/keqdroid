@@ -30,7 +30,7 @@ Works only in VPN mode. The list is shared by all routing profiles.
 
 **Android.** The system itself applies the list: an app left out of the VPN works as if the VPN were off. The “Add Russian apps to bypass” button checks the installed apps from a built-in list.
 
-**Windows and Linux.** Here all traffic enters the tunnel, and the core then sends the programs that shouldn't be in it around the tunnel. You can specify a program by name (`chrome.exe`, `firefox`) or by full path. A name matches any program with that name, a path matches only that one. On Windows case doesn't matter, and the app adds `.exe` itself. In “All apps” mode, Tailscale, WireGuard and OpenVPN always bypass the tunnel so you don't end up with a tunnel inside a tunnel.
+**Windows and Linux.** Here all traffic enters the tunnel, and the core then sends the programs that shouldn't be in it around the tunnel. You can specify a program by name (`chrome.exe`, `firefox`) or by full path. A name matches any program with that name, a path matches only that one. On Windows case doesn't matter, and the app adds `.exe` itself. In “All apps” mode, Tailscale, WireGuard and OpenVPN always bypass the tunnel so you don't end up with a tunnel inside a tunnel. On Windows, “Strict route” (on by default) blocks DNS outside the tunnel: if the second VPN runs its own DNS (such as Tailscale MagicDNS), turn it off in TUN settings.
 
 keqdroid itself is never in the VPN, otherwise its connections to the server would loop back into its own tunnel. Its requests go through the local password-protected proxy, so they still go through the server.
 

@@ -944,19 +944,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsTunStrictRouteTitle => 'Strict route';
 
   @override
-  String get settingsTunStrictRouteHint => 'Prevents traffic from leaking around the TUN. On Windows it can break routing when another VPN (e.g. Tailscale) is active';
-
-  @override
-  String get settingsTunStrictRouteAuto => 'Auto';
-
-  @override
-  String get settingsTunStrictRouteAutoHint => 'Linux: on, Windows: off';
-
-  @override
-  String get settingsTunStrictRouteOn => 'Enabled';
-
-  @override
-  String get settingsTunStrictRouteOff => 'Disabled';
+  String get settingsTunStrictRouteHint => 'Prevents DNS and traffic from leaking around the tunnel. On Windows it blocks the DNS of another active VPN (e.g. Tailscale MagicDNS).';
 
   @override
   String get settingsTunAutoRoute => 'Auto route';

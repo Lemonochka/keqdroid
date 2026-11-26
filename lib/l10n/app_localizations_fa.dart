@@ -940,19 +940,7 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsTunStrictRouteTitle => 'مسیریابی سخت‌گیرانه (strict route)';
 
   @override
-  String get settingsTunStrictRouteHint => 'جلوی نشت ترافیک از کنار TUN را می‌گیرد. در ویندوز اگر VPN دیگری (مثلاً Tailscale) فعال باشد می‌تواند مسیریابی را خراب کند';
-
-  @override
-  String get settingsTunStrictRouteAuto => 'خودکار';
-
-  @override
-  String get settingsTunStrictRouteAutoHint => 'لینوکس: روشن، ویندوز: خاموش';
-
-  @override
-  String get settingsTunStrictRouteOn => 'فعال';
-
-  @override
-  String get settingsTunStrictRouteOff => 'غیرفعال';
+  String get settingsTunStrictRouteHint => 'جلوی نشت DNS و ترافیک به بیرون از TUN را می‌گیرد. در ویندوز DNS یک VPN فعال دیگر (مثلاً MagicDNS در Tailscale) را مسدود می‌کند.';
 
   @override
   String get settingsTunAutoRoute => 'مسیریابی خودکار (auto route)';

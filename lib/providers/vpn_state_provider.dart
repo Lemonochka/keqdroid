@@ -868,9 +868,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
 
     final desktop = Platform.isWindows || Platform.isLinux || Platform.isMacOS;
     final tunSession = connectionMode == ConnectionMode.tun;
-    final strictRoute = settings.tun.strictRouteEnabled(
-      windows: Platform.isWindows,
-    );
+    final strictRoute = settings.tun.strictRoute;
     // IPv6-адрес на TUN при выключенном в системе IPv6 роняет ядро; строгий маршрут на Linux закрывал IPv6
     // без маршрута (sing-tun, unreachable), теперь так же: захват и блок
     final captureIpv6 =
