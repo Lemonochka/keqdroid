@@ -77,23 +77,62 @@ bool shouldAutoPromptForUpdate(
   return true;
 }
 
+// в шапке релиза лежат плитки скачивания, а без разметки их пробелы и &nbsp; превращались в блок кода
 String sanitizeReleaseNotes(String raw) {
-  var text = raw;
-  text = text.replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '\n');
-  text = text.replaceAll(RegExp(r'</?p>', caseSensitive: false), '\n');
-  text = text.replaceAll(RegExp(r'</?details>', caseSensitive: false), '');
-  text = text.replaceAll(RegExp(r'</?summary>', caseSensitive: false), '');
-  text = text.replaceAll(RegExp(r'<h([1-6])>', caseSensitive: false), '\n## ');
-  text = text.replaceAll(RegExp(r'</h[1-6]>', caseSensitive: false), '\n');
-  text = text.replaceAll(RegExp(r'<[^>]+>'), '');
+  var text = raw.replaceAll('\r\n', '\n');
+  final codeSpans = <String>[];
+  text = text.replaceAllMapped(RegExp(r'```[\s\S]*?```|`[^`\n]+`'), (m) {
+    final index = codeSpans.length;
+    codeSpans.add(m.group(0)!);
+    return '\u0000CODE$index\u0000';
+  });
+
   text = text
-      .replaceAll('&amp;', '&')
+      .replaceAll(RegExp(r'<!--[\s\S]*?-->'), '')
+      .replaceAll(
+        RegExp(
+          r'<div\b[^>]*\balign\s*=\s*["\x27]?center["\x27]?[^>]*>[\s\S]*?</div>',
+          caseSensitive: false,
+        ),
+        '',
+      )
+      .replaceAll(
+        RegExp(r'<table\b[^>]*>[\s\S]*?</table>', caseSensitive: false),
+        '',
+      )
+      .replaceAll(
+        RegExp(r'<picture\b[^>]*>[\s\S]*?</picture>', caseSensitive: false),
+        '',
+      )
+      .replaceAll(
+        RegExp(r'<a\b[^>]*>\s*(?:<img\b[^>]*>\s*)+</a>', caseSensitive: false),
+        '',
+      )
+      .replaceAll(RegExp(r'\[!\[[^\]]*\]\([^)]*\)\]\([^)]*\)'), '')
+      .replaceAll(RegExp(r'!\[[^\]]*\]\([^)]*\)'), '')
+      .replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '\n')
+      .replaceAll(RegExp(r'</?p\b[^>]*>', caseSensitive: false), '\n')
+      .replaceAll(
+        RegExp(r'</?(?:details|summary)\b[^>]*>', caseSensitive: false),
+        '\n',
+      )
+      .replaceAll(RegExp(r'<h[1-6]\b[^>]*>', caseSensitive: false), '\n## ')
+      .replaceAll(RegExp(r'</h[1-6]>', caseSensitive: false), '\n')
+      .replaceAll(RegExp(r'<[a-zA-Z!/][^>]*>'), '')
+      .replaceAll(RegExp(r'&nbsp;|&#160;|&#xa0;', caseSensitive: false), ' ')
       .replaceAll('&lt;', '<')
       .replaceAll('&gt;', '>')
       .replaceAll('&quot;', '"')
-      .replaceAll('&#39;', "'");
-  text = text.replaceAll(RegExp(r'\n{3,}'), '\n\n');
-  return text.trim();
+      .replaceAll(RegExp(r'&#39;|&apos;', caseSensitive: false), "'")
+      .replaceAll('&amp;', '&')
+      .replaceAll(RegExp(r'^[ \t]+$', multiLine: true), '')
+      .replaceAll(RegExp(r'\n{3,}'), '\n\n')
+      .trim();
+
+  return text.replaceAllMapped(
+    RegExp(r'\u0000CODE(\d+)\u0000'),
+    (m) => codeSpans[int.parse(m.group(1)!)],
+  );
 }
 
 bool _updateDialogOpen = false;
@@ -190,6 +229,7 @@ class _UpdateDialogState extends ConsumerState<_UpdateDialog> {
                     shrinkWrap: true,
                     softLineBreak: true,
                     selectable: true,
+                    imageBuilder: (_, _, _) => const SizedBox.shrink(),
                     styleSheet: MarkdownStyleSheet(
                       p: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: subtitleColor,
