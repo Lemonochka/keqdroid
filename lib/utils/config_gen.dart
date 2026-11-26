@@ -39,12 +39,16 @@ class ConfigGeneratorV2 {
     OwnerGuard ownerGuard = OwnerGuard.off,
     bool resolveTargets = false,
   }) {
+    final tunPassesIpv6 =
+        (nativeTunInbound && desktopTun == null && nativeTunIpv6) ||
+        (desktopTun != null && desktopTun.captureIpv6 && desktopTun.passIpv6);
     final config = _buildXrayConfig(
       input,
       settings,
       resolvedServerIp: resolvedServerIp,
       localInboundsNoAuth: localInboundsNoAuth,
       nativeTunInbound: nativeTunInbound,
+      tunPassesIpv6: tunPassesIpv6,
       desktopTun: desktopTun,
       geoIndex: geoIndex,
       routeServers: routeServers,
@@ -154,12 +158,23 @@ class ConfigGeneratorV2 {
     };
   }
 
-  // тот же DoH, что в боевом конфиге: UDP-53 к 8.8.8.8 у части провайдеров подменяют, и пинг краснел бы на живом
+  // тот же DoH, что в боевом конфиге: UDP-53 к 8.8.8.8 у части провайдеров подменяют, и пинг краснел бы на живом;
+  // localhost закрыт от общего перебора, иначе при Fake IP мёртвый домен получал бы 198.18.x.x из системного DNS
   static Map<String, dynamic> _pingDns() => {
     'servers': [
       'https+local://1.1.1.1/dns-query',
       'https+local://8.8.8.8/dns-query',
-      'localhost',
+      {
+        'address': 'localhost',
+        'domains': const [
+          'domain:local',
+          'domain:lan',
+          'domain:home.arpa',
+          r'regexp:^[^.]+$',
+        ],
+        'skipFallback': true,
+        'finalQuery': true,
+      },
     ],
     'queryStrategy': 'UseIPv4',
   };
@@ -275,6 +290,7 @@ class ConfigGeneratorV2 {
     bool pingHttpInbound = false,
     bool localInboundsNoAuth = false,
     bool nativeTunInbound = false,
+    bool tunPassesIpv6 = false,
     DesktopTunOptions? desktopTun,
     GeoAssetIndex? geoIndex,
     List<RouteServerOutbound> routeServers = const [],
@@ -284,6 +300,7 @@ class ConfigGeneratorV2 {
     final trimmed = input.trim();
     final pc = pingSocksPort == null ? desktopTun : null;
     final tunInbound = nativeTunInbound || pc != null;
+    final passesIpv6 = pingSocksPort == null && tunPassesIpv6;
     final guard = pingSocksPort == null && nativeTunInbound && pc == null
         ? ownerGuard
         : OwnerGuard.off;
@@ -305,6 +322,7 @@ class ConfigGeneratorV2 {
         pingHttpInbound: pingHttpInbound,
         localInboundsNoAuth: localInboundsNoAuth,
         nativeTunInbound: tunInbound,
+        tunPassesIpv6: passesIpv6,
         desktopTun: pc,
         routeServers: routeServers,
         appRoutes: appRoutes,
@@ -322,6 +340,7 @@ class ConfigGeneratorV2 {
         pingHttpInbound: pingHttpInbound,
         localInboundsNoAuth: localInboundsNoAuth,
         nativeTunInbound: tunInbound,
+        tunPassesIpv6: passesIpv6,
         desktopTun: pc,
         geoIndex: geoIndex,
         routeServers: routeServers,
@@ -342,6 +361,7 @@ class ConfigGeneratorV2 {
         pingHttpInbound: pingHttpInbound,
         localInboundsNoAuth: localInboundsNoAuth,
         nativeTunInbound: tunInbound,
+        tunPassesIpv6: passesIpv6,
         desktopTun: pc,
         routeServers: routeServers,
         appRoutes: appRoutes,
@@ -540,6 +560,7 @@ class ConfigGeneratorV2 {
     bool pingHttpInbound = false,
     bool localInboundsNoAuth = false,
     bool nativeTunInbound = false,
+    bool tunPassesIpv6 = false,
     DesktopTunOptions? desktopTun,
     List<RouteServerOutbound> routeServers = const [],
     List<RouteAppRules> appRoutes = const [],
@@ -584,12 +605,18 @@ class ConfigGeneratorV2 {
       pingHttpInbound: pingHttpInbound,
       localInboundsNoAuth: localInboundsNoAuth,
       nativeTunInbound: nativeTunInbound,
-      desktopTun: desktopTun,
+      tunPassesIpv6: tunPassesIpv6,
+      desktopTun: pcOrNull(desktopTun, pingSocksPort),
       routeServers: routeServers,
       appRoutes: appRoutes,
       ownerGuard: ownerGuard,
     );
   }
+
+  static DesktopTunOptions? pcOrNull(
+    DesktopTunOptions? desktopTun,
+    int? pingSocksPort,
+  ) => pingSocksPort == null ? desktopTun : null;
 
   static void _applyDialerProxy(Map<String, dynamic> outbound, String tag) {
     final stream = Map<String, dynamic>.from(
@@ -606,14 +633,26 @@ class ConfigGeneratorV2 {
     stream['sockopt'] = sockopt;
 
     // перебор портов только у внешнего узла: за dialerProxy он не проверен, базовый порт рабочий
-    final finalmask = stream['finalmask'];
-    if (finalmask is Map) {
-      final quicParams = finalmask['quicParams'];
-      if (quicParams is Map) {
-        quicParams.remove('udpHop');
-        if (quicParams.isEmpty) finalmask.remove('quicParams');
+    final rawMask = stream['finalmask'];
+    if (rawMask is Map) {
+      final finalmask = Map<String, dynamic>.from(rawMask);
+      final udp = finalmask['udp'];
+      if (udp is List) {
+        final kept = [
+          for (final item in udp)
+            if (item is! Map || item['type'] != 'udphop') item,
+        ];
+        if (kept.isEmpty) {
+          finalmask.remove('udp');
+        } else {
+          finalmask['udp'] = kept;
+        }
       }
-      if (finalmask.isEmpty) stream.remove('finalmask');
+      if (finalmask.isEmpty) {
+        stream.remove('finalmask');
+      } else {
+        stream['finalmask'] = finalmask;
+      }
     }
 
     outbound['streamSettings'] = stream;
@@ -919,7 +958,14 @@ class ConfigGeneratorV2 {
       final finalmask = Map<String, dynamic>.from(
         (stream['finalmask'] as Map<String, dynamic>?) ?? {},
       );
-      final udp = [...((finalmask['udp'] as List?) ?? const []), noise];
+      final udp = [...((finalmask['udp'] as List?) ?? const [])];
+      // udphop с HandleDial обязан стоять последним: после slices.Reverse ядро требует его на индексе 0
+      final hopAt = udp.indexWhere((m) => m is Map && m['type'] == 'udphop');
+      if (hopAt >= 0) {
+        udp.insert(hopAt, noise);
+      } else {
+        udp.add(noise);
+      }
       finalmask['udp'] = udp;
       stream['finalmask'] = finalmask;
     }
@@ -991,9 +1037,25 @@ class ConfigGeneratorV2 {
     required bool isPingMode,
   }) => settings.fakeIp && nativeTunInbound && !isPingMode;
 
-  static List<Map<String, dynamic>> _fakeDnsPool() => [
-    {'ipPool': kFakeIpRange, 'poolSize': 65535},
-  ];
+  static List<Map<String, dynamic>> _fakeDnsPool(
+    Map<String, dynamic> dns, {
+    required bool allowIpv6,
+  }) =>
+      switch (dns['queryStrategy']?.toString().toLowerCase()) {
+        'useipv4' => [
+          {'ipPool': kFakeIpRange, 'poolSize': 65535},
+        ],
+        'useipv6' => [
+          {'ipPool': kFakeIpv6Range, 'poolSize': 65535},
+        ],
+        _ when !allowIpv6 => [
+          {'ipPool': kFakeIpRange, 'poolSize': 65535},
+        ],
+        _ => [
+          {'ipPool': kFakeIpRange, 'poolSize': 32768},
+          {'ipPool': kFakeIpv6Range, 'poolSize': 32768},
+        ],
+      };
 
   // без снифера подменный адрес так и уехал бы на сервер, поэтому тут он включён и при выключенном в настройках
   static Map<String, dynamic> _fakeDnsSniffing(XrayCoreSettings core) {
@@ -1046,27 +1108,27 @@ class ConfigGeneratorV2 {
     bool pingHttpInbound = false,
     bool localInboundsNoAuth = false,
     bool nativeTunInbound = false,
+    bool tunPassesIpv6 = false,
     DesktopTunOptions? desktopTun,
     GeoAssetIndex? geoIndex,
     List<RouteServerOutbound> routeServers = const [],
     List<RouteAppRules> appRoutes = const [],
     OwnerGuard ownerGuard = OwnerGuard.off,
   }) {
-    final inbounds = _buildInbounds(
-      settings,
-      pingSocksPort: pingSocksPort,
-      pingHttpInbound: pingHttpInbound,
-      localInboundsNoAuth: localInboundsNoAuth,
-      nativeTunInbound: nativeTunInbound,
-      desktopTun: desktopTun,
-    );
-
     if (pingSocksPort != null) {
+      final pingInbounds = _buildInbounds(
+        settings,
+        pingSocksPort: pingSocksPort,
+        pingHttpInbound: pingHttpInbound,
+        localInboundsNoAuth: localInboundsNoAuth,
+        nativeTunInbound: nativeTunInbound,
+        desktopTun: desktopTun,
+      );
       final serverAddress = resolvedServerIp?.trim().isNotEmpty == true
           ? resolvedServerIp!.trim()
           : custom.address;
       final config = custom.buildPingConfig(
-        inbounds: inbounds,
+        inbounds: pingInbounds,
         rules: _customPingRules(
           serverAddress: serverAddress,
           originalAddress: custom.address,
@@ -1128,8 +1190,12 @@ class ConfigGeneratorV2 {
     final placedDns = _placedDnsDomains(_placedRoutes(appRoutes));
 
     // перехват DNS автора висел на его dns-in, который мы заменили, без этого правила DNS падает в final.
-    // inboundTag обязателен: иначе dns-аутбаунд поймает запросы самого ядра и ответит сам себе по кругу
-    final fallbackDns = settings.xrayCore.buildDnsBlock(
+    // inboundTag обязателен: иначе dns-аутбаунд поймает запросы самого ядра и отправит их мимо туннеля
+    final dnsCore =
+        tunPassesIpv6 && settings.xrayCore.dnsQueryStrategy == 'UseIPv4'
+        ? settings.xrayCore.copyWith(dnsQueryStrategy: 'UseIP')
+        : settings.xrayCore;
+    final fallbackDns = dnsCore.buildDnsBlock(
       directDomains: [
         ..._normalizeDomains(
           splitDomainsAndIps(_parseRuleList(settings.directRules)).domains,
@@ -1149,26 +1215,48 @@ class ConfigGeneratorV2 {
         : CustomXrayConfig.mergeDns(custom.authorDns, fallbackDns) ??
               fallbackDns;
 
-    // с fakedns перехват всё ломает: домен из фейкового адреса достаёт только снифер с fakedns, а у нас его нет
     final usesFakeDns =
-        (!ownDns && custom.json.containsKey('fakedns')) ||
+        (!ownDns &&
+            (custom.json.containsKey('fakedns') ||
+                custom.json.containsKey('fakeDns'))) ||
         _dnsUsesFakeIp(effectiveDns);
+
+    final inbounds = _buildInbounds(
+      settings,
+      localInboundsNoAuth: localInboundsNoAuth,
+      nativeTunInbound: nativeTunInbound,
+      desktopTun: desktopTun,
+      forceFakeDnsSniffing: usesFakeDns,
+    );
 
     final dnsOutTag = _existingOutboundTag(custom, 'dns') ?? _customDnsTag;
     final inboundTags = <String>[
       for (final inbound in inbounds)
         if (inbound['tag'] is String) inbound['tag'] as String,
     ];
-    final interceptDns = !usesFakeDns && inboundTags.isNotEmpty;
+    // снифер с fakedns включён только на tun-in: в http-in его нет, поэтому с fakedns автора ловим только TUN
+    final dnsInboundTags = usesFakeDns
+        ? <String>[if (inboundTags.contains(_tunInboundTag)) _tunInboundTag]
+        : inboundTags;
+    final interceptDns = dnsInboundTags.isNotEmpty;
     final dnsRules = <Map<String, dynamic>>[
       if (interceptDns)
         {
           'type': 'field',
           'ruleTag': 'dns-out',
-          'inboundTag': inboundTags,
+          'inboundTag': dnsInboundTags,
           'port': '53',
           'network': 'tcp,udp',
           'outboundTag': dnsOutTag,
+        },
+    ];
+    final bootstrapDnsRules = <Map<String, dynamic>>[
+      if (_dnsHasServerTag(effectiveDns, XrayCoreSettings.bootstrapDnsTag))
+        {
+          'type': 'field',
+          'ruleTag': 'dns-bootstrap',
+          'inboundTag': [XrayCoreSettings.bootstrapDnsTag],
+          'outboundTag': directTag,
         },
     ];
 
@@ -1178,7 +1266,7 @@ class ConfigGeneratorV2 {
         {
           'type': 'field',
           'ruleTag': 'dns-out-tun',
-          'inboundTag': inboundTags,
+          'inboundTag': dnsInboundTags,
           'ip': ['$_androidTunDns/32'],
           'port': '53',
           'network': 'tcp,udp',
@@ -1250,7 +1338,11 @@ class ConfigGeneratorV2 {
     ];
 
     final usedTags = <String>{
-      for (final rule in [...desktopHead, ...appendRules])
+      for (final rule in [
+        ...desktopHead,
+        ...bootstrapDnsRules,
+        ...appendRules,
+      ])
         rule['outboundTag'] as String,
       if (settings.lanSharing) blockTag ?? _customBlockTag,
       if (outsideVpn != null) outsideVpn['outboundTag'] as String,
@@ -1283,6 +1375,7 @@ class ConfigGeneratorV2 {
         if (outsideVpn != null) customRule('outside-vpn', outsideVpn),
         ...lanRules,
         ...tunDnsRules,
+        ...bootstrapDnsRules,
         {
           'type': 'field',
           'ruleTag': 'exit-ip-probe',
@@ -1306,8 +1399,12 @@ class ConfigGeneratorV2 {
         )) {
       final dns = config['dns'];
       if (dns is Map) {
-        config['dns'] = _withFakeDns(dns.cast<String, dynamic>());
-        config['fakedns'] = _fakeDnsPool();
+        final fakeDnsMap = _withFakeDns(dns.cast<String, dynamic>());
+        config['dns'] = fakeDnsMap;
+        config['fakedns'] = _fakeDnsPool(
+          fakeDnsMap,
+          allowIpv6: tunPassesIpv6,
+        );
       }
     }
 
@@ -1332,7 +1429,7 @@ class ConfigGeneratorV2 {
         ...extraOutbounds,
       ];
     }
-    if (resolvesForIpRules && finalTag != custom.primaryOutboundTag) {
+    if (resolvesForIpRules) {
       final outbounds = [...config['outbounds'] as List];
       final index = outbounds.indexWhere(
         (o) => o is Map && o['tag'] == finalTag,
@@ -1341,6 +1438,12 @@ class ConfigGeneratorV2 {
       config['outbounds'] = outbounds;
     }
     return config;
+  }
+
+  static bool _dnsHasServerTag(Map<String, dynamic> dns, String tag) {
+    final servers = dns['servers'];
+    if (servers is! List) return false;
+    return servers.any((s) => s is Map && s['tag'] == tag);
   }
 
   static bool _dnsUsesFakeIp(Map<String, dynamic> dns) {
@@ -1937,7 +2040,7 @@ class ConfigGeneratorV2 {
       'masquerade': ?buildMasquerade(),
     };
 
-    // полоса и перебор портов в xray 26 живут в finalmask.quicParams, из hysteriaSettings ядро их выбрасывает
+    // полоса в xray 26 живёт в finalmask.quicParams, а перебор портов стал маской udphop в finalmask.udp
     final quicParams = <String, dynamic>{};
     final up = HysteriaLinkParams.formatBandwidth(getParam('up', hyParams.up));
     final down = HysteriaLinkParams.formatBandwidth(
@@ -1945,17 +2048,24 @@ class ConfigGeneratorV2 {
     );
     if (up != null) quicParams['brutalUp'] = up;
     if (down != null) quicParams['brutalDown'] = down;
-    final mport = getParam('mport', hyParams.mport);
-    if (mport.isNotEmpty) {
-      quicParams['udpHop'] = <String, dynamic>{
-        'ports': mport,
-        'interval': ?_hopInterval(
-          getParam('hop-interval', hyParams.hopInterval),
-        ),
-      };
-    }
 
     final finalmask = hyParams.buildFinalmask() ?? <String, dynamic>{};
+    final mport = getParam('mport', hyParams.mport);
+    if (mport.isNotEmpty) {
+      finalmask['udp'] = [
+        ...((finalmask['udp'] as List?) ?? const []),
+        {
+          'type': 'udphop',
+          'settings': <String, dynamic>{
+            'mode': 'intervallocal,intervalremote',
+            'remotePorts': mport,
+            'interval': ?_hopInterval(
+              getParam('hop-interval', hyParams.hopInterval),
+            ),
+          },
+        },
+      ];
+    }
     if (quicParams.isNotEmpty) finalmask['quicParams'] = quicParams;
     if (finalmask.isNotEmpty) streamSettings['finalmask'] = finalmask;
 
@@ -2161,6 +2271,7 @@ class ConfigGeneratorV2 {
     bool pingHttpInbound = false,
     bool localInboundsNoAuth = false,
     bool nativeTunInbound = false,
+    bool tunPassesIpv6 = false,
     DesktopTunOptions? desktopTun,
     List<RouteServerOutbound> routeServers = const [],
     List<RouteAppRules> appRoutes = const [],
@@ -2255,14 +2366,30 @@ class ConfigGeneratorV2 {
     final globalProxy =
         settings.finalOutbound == AppSettings.finalOutboundProxy;
 
+    final dnsCore = tunPassesIpv6 && core.dnsQueryStrategy == 'UseIPv4'
+        ? core.copyWith(dnsQueryStrategy: 'UseIP')
+        : core;
     final dns = isPingMode
         ? _pingDns()
-        : core.buildDnsBlock(
+        : dnsCore.buildDnsBlock(
             directDomains: [...directDomains, ...placedDns.direct],
             liftedDomains: placedDns.lifted,
             bootstrapDomains: bootstrapDomains,
             proxiedDoh: globalProxy,
           );
+
+    final inbounds = _buildInbounds(
+      settings,
+      pingSocksPort: pingSocksPort,
+      pingHttpInbound: pingHttpInbound,
+      localInboundsNoAuth: localInboundsNoAuth,
+      nativeTunInbound: nativeTunInbound,
+      desktopTun: desktopTun,
+    );
+    final inboundTags = <String>[
+      for (final inbound in inbounds)
+        if (inbound['tag'] is String) inbound['tag'] as String,
+    ];
 
     // ruleTag печатается в логе на Info, по нему экран Соединения показывает правило
     final rules = <Map<String, dynamic>>[];
@@ -2383,15 +2510,34 @@ class ConfigGeneratorV2 {
           }),
         );
       }
-      // DNS устройства отвечает ядро, иначе каждый запрос шёл отдельным TCP до сервера, и пачка с Android выбивала
-      // лимит новых соединений; после lan-правил, иначе вышел бы открытый резолвер наружу
-      rules.add(
-        rule('dns-out', {
-          'port': '53',
-          'network': 'tcp,udp',
-          'outboundTag': 'dns-out',
-        }),
+      // DNS устройства отвечает ядро, а его собственные запросы на 53 порт не должны попадать в dns-out:
+      // там isOwnLink отправляет их напрямую мимо туннеля и WFP (proxy/dns/dns.go)
+      final fakeDnsInSession = _fakeDnsApplies(
+        settings,
+        nativeTunInbound: nativeTunInbound,
+        isPingMode: false,
       );
+      final dnsInboundTags = fakeDnsInSession
+          ? <String>[if (inboundTags.contains(_tunInboundTag)) _tunInboundTag]
+          : inboundTags;
+      if (dnsInboundTags.isNotEmpty) {
+        rules.add(
+          rule('dns-out', {
+            'inboundTag': dnsInboundTags,
+            'port': '53',
+            'network': 'tcp,udp',
+            'outboundTag': 'dns-out',
+          }),
+        );
+      }
+      if (_dnsHasServerTag(dns, XrayCoreSettings.bootstrapDnsTag)) {
+        rules.add(
+          rule('dns-bootstrap', {
+            'inboundTag': [XrayCoreSettings.bootstrapDnsTag],
+            'outboundTag': 'direct',
+          }),
+        );
+      }
       rules.add(rule('exit-ip-probe', _exitIpProbeFields('proxy')));
       if (blockedDomains.isNotEmpty) {
         rules.add(
@@ -2536,6 +2682,17 @@ class ConfigGeneratorV2 {
     // (pickRouteInternal), и ловушка на любую сеть его отменяла; домен, который не отрезолвился, уходит в первый выход
     final resolvesForIpRules =
         !isPingMode && effectiveDomainStrategy == 'IPIfNonMatch';
+    if (!isPingMode &&
+        _dnsGoesThroughRouting(dns) &&
+        settings.finalOutbound == AppSettings.finalOutboundBlock) {
+      rules.add(
+        rule('dns-resolver', {
+          'port': '53',
+          'network': 'tcp,udp',
+          'outboundTag': 'direct',
+        }),
+      );
+    }
     if (desktopTun != null) {
       rules.addAll(
         _desktopTunTailRules(
@@ -2566,14 +2723,6 @@ class ConfigGeneratorV2 {
 
     _applyUdpNoise([...proxyOutbounds, ...routeOutbounds], core);
 
-    final inbounds = _buildInbounds(
-      settings,
-      pingSocksPort: pingSocksPort,
-      pingHttpInbound: pingHttpInbound,
-      localInboundsNoAuth: localInboundsNoAuth,
-      nativeTunInbound: nativeTunInbound,
-      desktopTun: desktopTun,
-    );
     final fakeDns = _fakeDnsApplies(
       settings,
       nativeTunInbound: nativeTunInbound,
@@ -2610,7 +2759,7 @@ class ConfigGeneratorV2 {
     return {
       'log': {'loglevel': isPingMode ? 'none' : core.logLevel},
       'dns': fakeDns ? _withFakeDns(dns) : dns,
-      if (fakeDns) 'fakedns': _fakeDnsPool(),
+      if (fakeDns) 'fakedns': _fakeDnsPool(dns, allowIpv6: tunPassesIpv6),
       'inbounds': inbounds,
       'outbounds': outbounds,
       'routing': {
@@ -2806,6 +2955,7 @@ class ConfigGeneratorV2 {
     bool localInboundsNoAuth = false,
     bool nativeTunInbound = false,
     DesktopTunOptions? desktopTun,
+    bool forceFakeDnsSniffing = false,
   }) {
     final core = settings.xrayCore;
     final isPingMode = pingSocksPort != null;
@@ -2823,11 +2973,12 @@ class ConfigGeneratorV2 {
               ? {'name': _tunInterfaceName, 'mtu': _defaultTunMtu}
               : _desktopTunSettings(desktopTun),
           'sniffing':
-              _fakeDnsApplies(
-                settings,
-                nativeTunInbound: nativeTunInbound,
-                isPingMode: isPingMode,
-              )
+              (forceFakeDnsSniffing ||
+                  _fakeDnsApplies(
+                    settings,
+                    nativeTunInbound: nativeTunInbound,
+                    isPingMode: isPingMode,
+                  ))
               ? _fakeDnsSniffing(core)
               : core.buildSniffing(),
         },

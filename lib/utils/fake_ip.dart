@@ -3,6 +3,9 @@ library;
 // у mihomo тот же диапазон записан с .1: оттуда он берёт адрес своего tun-интерфейса
 const kFakeIpRange = '198.18.0.0/16';
 
+// dns.FakeIPv6Pool ядра (RFC 5180), не попадает в fc00::/7 из direct-private
+const kFakeIpv6Range = '2001:2::/48';
+
 // проверки связности ОС: получив немой адрес, система рисует нет интернета поверх рабочего туннеля
 const kFakeIpFilter = <String>[
   '*.lan',

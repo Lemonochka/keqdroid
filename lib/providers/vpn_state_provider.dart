@@ -910,12 +910,6 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
               'for IPv6.',
       });
     }
-    // с UseIPv4 ядро не отдаёт AAAA, и IPv6 через сервер никто бы не выбрал
-    if (ipv6ViaVpn && settings.xrayCore.dnsQueryStrategy == 'UseIPv4') {
-      settings = settings.copyWith(
-        xrayCore: settings.xrayCore.copyWith(dnsQueryStrategy: 'UseIP'),
-      );
-    }
 
     final MihomoTunOptions? mihomoTun;
     if (!mihomoPicked) {

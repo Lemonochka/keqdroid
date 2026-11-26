@@ -108,22 +108,25 @@ void main() {
     expect(exit?.containsKey('domainStrategy') ?? false, isFalse);
   });
 
-  test('DoH идёт первым, системный резолвер — запасным', () {
+  test('в общем переборе только DoH, системный DNS закрыт на приватные зоны', () {
     final all =
         ((_generate(_domainServer)['dns'] as Map<String, dynamic>)['servers']
                 as List)
             .cast<Map<String, dynamic>>();
     final servers = all
-        // Записи со своим списком доменов общего резолва не касаются: это
-        // bootstrap на адрес сервера и сплит-DNS для Direct-доменов.
         .where((s) => !s.containsKey('domains'))
         .map((s) => s['address'])
         .toList();
     // Через туннель: так все DNS-запросы устройства идут одним постоянным
     // HTTP/2-соединением, а не отдельным TCP до сервера на каждый запрос.
-    expect(servers.first, startsWith('https://'));
-    // Сеть, где DoH не пускают, иначе осталась бы вообще без резолва.
-    expect(servers.last, 'localhost');
+    expect(servers, [
+      'https://1.1.1.1/dns-query',
+      'https://8.8.8.8/dns-query',
+    ]);
+    expect(all.last['address'], 'localhost');
+    expect(all.last['domains'], ['geosite:private']);
+    expect(all.last['skipFallback'], isTrue);
+    expect(all.last['finalQuery'], isTrue);
   });
 
   // Адрес сервера остаётся единственным, что нельзя резолвить через туннель: чтобы до

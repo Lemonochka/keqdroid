@@ -38,11 +38,6 @@
         "address": "https://8.8.8.8/dns-query",
         "timeoutMs": 2500,
         "serveStale": true
-      },
-      {
-        "address": "localhost",
-        "timeoutMs": 2500,
-        "serveStale": true
       }
     ]
   },

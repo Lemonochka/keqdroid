@@ -25,6 +25,11 @@
       },
       {
         "address": "localhost",
+        "domains": [
+          "geosite:private"
+        ],
+        "skipFallback": true,
+        "finalQuery": true,
         "timeoutMs": 2500,
         "serveStale": true
       }
@@ -182,6 +187,11 @@
       },
       {
         "type": "field",
+        "inboundTag": [
+          "tun-in",
+          "socks-in",
+          "http-in"
+        ],
         "port": "53",
         "network": "tcp,udp",
         "outboundTag": "dns-out",

@@ -44,21 +44,114 @@ List<String> _inboundTags(Map<String, dynamic> config) => [
 
 void main() {
   group('обычный конфиг из ссылки', () {
-    test('перехват DNS не привязан к инбаунду — накроет и будущий', () {
-      final dns = _rule(_config(_link), 'dns-out');
+    test(
+      'перехват DNS накрывает все наши инбаунды и не ловит собственные запросы ядра',
+      () {
+        for (final config in [
+          _config(_link),
+          _config(
+            _link,
+            const AppSettings(
+              lanSharing: true,
+              lanUsername: 'lanuser',
+              lanPassword: 'lanpass',
+            ),
+          ),
+          jsonDecode(
+                ConfigGeneratorV2.generateConfig(
+                  _link,
+                  const AppSettings(),
+                  nativeTunInbound: true,
+                ),
+              )
+              as Map<String, dynamic>,
+        ]) {
+          final dns = _rule(config, 'dns-out');
+          final tags = _inboundTags(config);
 
-      expect(dns['port'], '53');
-      expect(dns['network'], 'tcp,udp');
-      expect(dns['outboundTag'], 'dns-out');
-      // Ключевое: никакого inboundTag. Правило ловит DNS откуда угодно, в том
-      // числе из инбаунда, которого в этом конфиге ещё нет.
-      expect(
-        dns.containsKey('inboundTag'),
-        isFalse,
-        reason:
-            'привязка к списку инбаундов означала бы, что новый инбаунд '
-            'выпадает из перехвата молча',
+          expect(dns['port'], '53');
+          expect(dns['network'], 'tcp,udp');
+          expect(dns['outboundTag'], 'dns-out');
+          expect(
+            (dns['inboundTag'] as List?)?.cast<String>(),
+            tags,
+            reason:
+                'без inboundTag ядро перехватывает собственный порт-53 DNS '
+                'и шлёт его напрямую мимо туннеля (isOwnLink)',
+          );
+        }
+      },
+    );
+
+    test(
+      'свой UDP-53 резолвер при доменном сервере получает bootstrap-правило мимо туннеля',
+      () {
+        const domainLink =
+            'vless://00000000-0000-4000-8000-000000000000@vpn.example.com:443'
+            '?type=tcp&security=none#dns';
+        final settings = const AppSettings().copyWith(
+          xrayCore: const AppSettings().xrayCore.copyWith(
+            dnsUseCustom: true,
+            dnsServers: '8.8.8.8',
+          ),
+        );
+        final config = _config(domainLink, settings);
+        final servers = ((config['dns'] as Map)['servers'] as List)
+            .whereType<Map<String, dynamic>>()
+            .toList();
+        final bootstrap = servers.firstWhere(
+          (s) =>
+              s['address'] == '8.8.8.8' &&
+              ((s['domains'] as List?)?.contains('full:vpn.example.com') ??
+                  false),
+        );
+        final bootstrapTag = bootstrap['tag'] as String?;
+        expect(bootstrapTag, isNotNull);
+        expect(bootstrapTag, isNotEmpty);
+
+        final bootstrapRule = _rule(config, 'dns-bootstrap');
+        expect(bootstrapRule['inboundTag'], [bootstrapTag]);
+        expect(bootstrapRule['outboundTag'], 'direct');
+      },
+    );
+
+    test('свой резолвер на 53 порту при final=block не блокирует сам себя', () {
+      final settings =
+          const AppSettings(
+            finalOutbound: AppSettings.finalOutboundBlock,
+          ).copyWith(
+            xrayCore: const AppSettings().xrayCore.copyWith(
+              dnsUseCustom: true,
+              dnsServers: '8.8.8.8',
+            ),
+          );
+      final config = _config(_link, settings);
+      final resolver = _rule(config, 'dns-resolver');
+      expect(resolver['port'], '53');
+      expect(resolver['outboundTag'], 'direct');
+    });
+
+    test('проба пинга не держит общий localhost в хвосте DNS', () {
+      final ping =
+          jsonDecode(
+                ConfigGeneratorV2.generatePingConfig(
+                  _link,
+                  const AppSettings(),
+                  socksPort: 20999,
+                ),
+              )
+              as Map<String, dynamic>;
+      final servers = ((ping['dns'] as Map)['servers'] as List);
+      expect(servers, isNot(contains('localhost')));
+      final localEntries = servers.whereType<Map<String, dynamic>>().where(
+        (s) => s['address'] == 'localhost',
       );
+      expect(localEntries, isNotEmpty);
+      for (final entry in localEntries) {
+        expect(entry['skipFallback'], isTrue);
+        expect(entry['finalQuery'], isTrue);
+        expect(jsonEncode(entry), isNot(contains('geosite:')));
+      }
     });
 
     test(

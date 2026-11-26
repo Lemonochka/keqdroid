@@ -94,6 +94,11 @@
       },
       {
         "address": "localhost",
+        "domains": [
+          "geosite:private"
+        ],
+        "skipFallback": true,
+        "finalQuery": true,
         "timeoutMs": 2500,
         "serveStale": true
       }

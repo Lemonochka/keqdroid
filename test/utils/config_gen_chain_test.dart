@@ -188,8 +188,12 @@ void main() {
         final stream =
             _outboundByTag(config, tag)['streamSettings']
                 as Map<String, dynamic>;
-        final quic = (stream['finalmask'] as Map?)?['quicParams'] as Map?;
-        return quic?['udpHop'];
+        final udp = (stream['finalmask'] as Map?)?['udp'] as List?;
+        if (udp == null) return null;
+        for (final m in udp) {
+          if (m is Map && m['type'] == 'udphop') return m['settings'];
+        }
+        return null;
       }
 
       // Внешнему узлу перебор портов оставляем: он звонит сам.

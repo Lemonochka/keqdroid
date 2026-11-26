@@ -23,7 +23,7 @@ By default it's DoH from Cloudflare and Google: `https://1.1.1.1/dns-query` and 
 | via VPN | through your server; your ISP only sees the connection to the server |
 | direct or blocked | straight from the device |
 
-Xray asks servers one by one: if one doesn't answer within 2.5 s, it asks the next. System DNS comes last. Where the ISP blocks DoH, the core couldn't even find your server's address without it. mihomo asks all servers at once and takes the first answer.
+Xray asks servers one by one: if one doesn't answer within 2.5 s, it asks the next. System DNS is used only for local addresses (`geosite:private`), domains from “Direct” and looking up your VPN server's own address. mihomo asks all servers at once and takes the first answer.
 
 ::::: details What it looks like in the core config
 For the routes from the example on the [Routing](/en/routing) page:
@@ -36,7 +36,7 @@ For the routes from the example on the [Routing](/en/routing) page:
     {"address": "localhost", "domains": ["domain:direct.example"], "skipFallback": true},
     {"address": "https://1.1.1.1/dns-query"},
     {"address": "https://8.8.8.8/dns-query"},
-    {"address": "localhost"}
+    {"address": "localhost", "domains": ["geosite:private"], "skipFallback": true, "finalQuery": true}
   ],
   "queryStrategy": "UseIPv4"
 }
@@ -119,7 +119,7 @@ In VPN mode the strategy doesn't decide what happens to IPv6 from programs, on e
 
 ## Fake IP
 
-Normally a program waits for the core to find the site's real address, and when “Everything else” goes through the VPN, that's a query through the server. With Fake IP the core immediately answers with a stand-in address from `198.18.0.0/16` and remembers which site it gave it to. When the program connects to that address, the core sends the site name to the server, and the server looks up the real address. Opening a site for the first time gets faster by one round trip to the server.
+Normally a program waits for the core to find the site's real address, and when “Everything else” goes through the VPN, that's a query through the server. With Fake IP the core immediately answers with a stand-in address from `198.18.0.0/16` (and from `2001:2::/48` for IPv6 on Xray) and remembers which site it gave it to. When the program connects to that address, the core sends the site name to the server, and the server looks up the real address. Opening a site for the first time gets faster by one round trip to the server.
 
 - Works only in VPN mode.
 - A stand-in address lives for 1 second, so it doesn't linger in the system cache after the VPN is turned off.

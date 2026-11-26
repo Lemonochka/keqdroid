@@ -216,15 +216,62 @@ class CustomXrayConfig {
     return out;
   }
 
-  // обратный прокси VLESS: сервер сам открывает соединения к пользователю, и direct-private пускает их в локальную сеть
+  // обратный прокси VLESS: сервер сам открывает соединения к пользователю, и direct-private пускает их в локальную сеть;
+  // script в finalmask запускает Lua так же, как в роутинге и DNS (transport_finalmask.go)
   static Map<String, dynamic> _withoutReverse(Map<String, dynamic> outbound) {
-    final settings = outbound['settings'];
-    if (outbound['protocol']?.toString().toLowerCase() != 'vless' ||
-        settings is! Map ||
-        !settings.containsKey('reverse')) {
-      return outbound;
+    var out = outbound;
+    final settings = out['settings'];
+    if (out['protocol']?.toString().toLowerCase() == 'vless' &&
+        settings is Map &&
+        settings.containsKey('reverse')) {
+      out = {...out, 'settings': _asStringMap(settings)..remove('reverse')};
     }
-    return {...outbound, 'settings': _asStringMap(settings)..remove('reverse')};
+    final stream = out['streamSettings'];
+    if (stream is Map && stream['finalmask'] is Map) {
+      final cleanMask = _asStringMap(stream['finalmask'] as Map);
+      for (final key in const ['udp', 'tcp']) {
+        final list = cleanMask[key];
+        if (list is List) {
+          cleanMask[key] = [
+            for (final item in list)
+              item is Map ? _withoutScriptField(item) : item,
+          ];
+        }
+      }
+      out = {
+        ...out,
+        'streamSettings': {..._asStringMap(stream), 'finalmask': cleanMask},
+      };
+    }
+    return out;
+  }
+
+  static Map<String, dynamic> _withoutScriptField(Map<dynamic, dynamic> mask) {
+    final clean = _asStringMap(mask)
+      ..removeWhere((k, _) => k.toLowerCase() == 'script');
+    final settings = clean['settings'];
+    if (settings is Map) {
+      clean['settings'] = _asStringMap(settings)
+        ..removeWhere((k, _) => k.toLowerCase() == 'script');
+    }
+    return clean;
+  }
+
+  static void _ensurePrimaryTag(List<Object?> outbounds) {
+    if (outbounds.isEmpty) return;
+    Map<String, dynamic>? primary;
+    for (final item in outbounds) {
+      if (item is! Map<String, dynamic>) continue;
+      final proto = item['protocol']?.toString().toLowerCase() ?? '';
+      if (!_localOutboundProtocols.contains(proto)) {
+        primary = item;
+        break;
+      }
+    }
+    primary ??= outbounds.whereType<Map<String, dynamic>>().firstOrNull;
+    if (primary != null && (primary['tag']?.toString().trim() ?? '').isEmpty) {
+      primary['tag'] = 'proxy';
+    }
   }
 
   // script запускает Lua со стандартными библиотеками, а с ними и os.execute; webhook шлёт сведения о соединениях
@@ -266,13 +313,19 @@ class CustomXrayConfig {
   String get address => endpoint.address;
   int get port => endpoint.port;
 
+  // script запускает Lua и в dns, а useSystemHosts подмешивает системный hosts машины
+  static Map<String, dynamic> _dnsForCore(Map<dynamic, dynamic> dns) =>
+      _asStringMap(dns)
+        ..remove('script')
+        ..remove('useSystemHosts');
+
   Map<String, dynamic>? get authorDns {
     final raw = json['dns'];
     if (raw is! Map) return null;
     final servers = raw['servers'];
     if (servers is! List || servers.isEmpty) return null;
     return {
-      ..._asStringMap(raw),
+      ..._dnsForCore(raw),
       'servers': [for (final server in servers) _overTcp(server)],
     };
   }
@@ -407,14 +460,25 @@ class CustomXrayConfig {
       out['routing'] = _routingForCore(out['routing'] as Map);
     }
     if (out['outbounds'] is List) {
-      out['outbounds'] = [
+      final cleaned = <Object?>[
         for (final outbound in out['outbounds'] as List)
           outbound is Map ? _withoutReverse(_asStringMap(outbound)) : outbound,
       ];
+      _ensurePrimaryTag(cleaned);
+      out['outbounds'] = cleaned;
     }
 
+    if (ownDns) {
+      out
+        ..remove('fakedns')
+        ..remove('fakeDns');
+    }
     final mergedDns = ownDns ? dns : mergeDns(authorDns, dns);
-    if (mergedDns != null) out['dns'] = mergedDns;
+    if (mergedDns != null) {
+      out['dns'] = _dnsForCore(mergedDns);
+    } else if (out['dns'] is Map) {
+      out['dns'] = _dnsForCore(out['dns'] as Map);
+    }
 
     if (prependRules.isNotEmpty || appendRules.isNotEmpty) {
       final routing = Map<String, dynamic>.from(
@@ -443,6 +507,8 @@ class CustomXrayConfig {
     final outbounds = [
       for (final o in _outboundsOf(_deepCopy(json))) _withoutReverse(o),
     ];
+    // без tag на главном выходе правило на primaryOutboundTag не найдёт аутбаунд ни в одиночном замере, ни в пачке
+    _ensurePrimaryTag(outbounds);
     final out = <String, dynamic>{
       'log': {'loglevel': 'none'},
       'dns': {

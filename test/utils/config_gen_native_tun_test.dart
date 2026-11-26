@@ -85,12 +85,16 @@ void main() {
     });
 
     test(
-      'перехват DNS продолжает работать: правило не привязано к инбаунду',
+      'перехват DNS накрывает и tun-in, и локальные инбаунды',
       () {
-        final rules = ((_config()['routing'] as Map)['rules'] as List)
+        final cfg = _config();
+        final rules = ((cfg['routing'] as Map)['rules'] as List)
             .cast<Map<Object?, Object?>>();
         final dns = rules.firstWhere((r) => r['ruleTag'] == 'dns-out');
-        expect(dns.containsKey('inboundTag'), isFalse);
+        expect(
+          (dns['inboundTag'] as List).cast<String>(),
+          [for (final i in _inbounds(cfg)) i['tag'] as String],
+        );
       },
     );
   });

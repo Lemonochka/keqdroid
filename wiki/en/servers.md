@@ -88,7 +88,8 @@ The app always sets up the core's inbounds and log itself. The log path from the
 | `env` | changes the core's environment |
 | `geodata` | overwrites geo database files on a schedule |
 | `reverse`, `reverse` on a VLESS outbound | lets the server open connections into your local network |
-| `script` in routing | can run programs on the device |
+| `script` in routing, DNS and `finalmask` | can run programs on the device |
+| `useSystemHosts` in DNS | pulls in the device's system `hosts` file |
 | `webhook` on rules | sends connection details to an outside address |
 
 Your routes apply to whatever the config's own rules didn't catch. How the “Rules” and “DNS” items in “Ignore from provider” change this is covered in [Routing](/en/routing#ready-made-config-from-the-provider) and [DNS](/en/dns#ready-made-config-from-the-provider).

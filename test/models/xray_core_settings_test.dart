@@ -29,6 +29,34 @@ void main() {
       expect(servers[1]['address'], 'https+local://1.1.1.1/dns-query');
     });
 
+    test(
+      'общий список DNS по умолчанию не держит голый localhost без skipFallback',
+      () {
+        final dns = const XrayCoreSettings().buildDnsBlock(
+          directDomains: const [],
+          proxiedDoh: true,
+        );
+        final servers = (dns['servers'] as List).cast<Map<String, dynamic>>();
+        final fallback = servers
+            .where((s) => s['skipFallback'] != true)
+            .map((s) => s['address'])
+            .toList();
+
+        expect(fallback, [
+          'https://1.1.1.1/dns-query',
+          'https://8.8.8.8/dns-query',
+        ]);
+        expect(servers.last, {
+          'address': 'localhost',
+          'domains': ['geosite:private'],
+          'skipFallback': true,
+          'finalQuery': true,
+          'timeoutMs': 2500,
+          'serveStale': true,
+        });
+      },
+    );
+
     test('buildDnsBlock keeps the user-chosen server for direct domains', () {
       const core = XrayCoreSettings(
         dnsUseCustom: true,

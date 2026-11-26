@@ -666,9 +666,14 @@ class XrayCoreSettings {
       }
       servers.add({'address': '$dohScheme://1.1.1.1/dns-query'});
       servers.add({'address': '$dohScheme://8.8.8.8/dns-query'});
-      // системный последним: UDP-53 у части провайдеров подменяют, но где режут DoH,
-      // без него не найти даже адрес сервера
-      servers.add({'address': 'localhost'});
+      // без skipFallback ядро в serialQuery доходит до localhost на каждом NXDOMAIN и NODATA
+      // и на Windows шлёт запрос мимо TUN через собственное разрешение в WFP
+      servers.add({
+        'address': 'localhost',
+        'domains': const ['geosite:private'],
+        'skipFallback': true,
+        'finalQuery': true,
+      });
     }
 
     if (servers.isEmpty) {
@@ -686,6 +691,8 @@ class XrayCoreSettings {
     };
   }
 
+  static const bootstrapDnsTag = 'keq-dns-bootstrap';
+
   static List<Map<String, dynamic>> _bootstrapResolvers(
     List<Map<String, dynamic>> custom,
   ) {
@@ -700,7 +707,13 @@ class XrayCoreSettings {
       if (address is! String) continue;
       final local = _forceLocalScheme(address);
       if (local == null) continue;
-      out.add({...server, 'address': local});
+      // у голого UDP-53 нет схемы +local, он идёт через роутер ядра: отдельный тег выводит его мимо прокси
+      final needsDirectRoute = !local.contains('://');
+      out.add({
+        ...server,
+        'address': local,
+        if (needsDirectRoute) 'tag': bootstrapDnsTag,
+      });
       if (out.length == 2) break;
     }
     return out;

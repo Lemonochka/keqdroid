@@ -298,8 +298,11 @@ void main() {
       final map = jsonDecode(config) as Map<String, dynamic>;
       final outbound = (map['outbounds'] as List).first as Map<String, dynamic>;
       final stream = outbound['streamSettings'] as Map<String, dynamic>;
-      final quic = (stream['finalmask'] as Map)['quicParams'] as Map;
-      expect((quic['udpHop'] as Map)['ports'], '20000-20050,443');
+      final udp = (stream['finalmask'] as Map)['udp'] as List;
+      final hop = udp.cast<Map<String, dynamic>>().singleWhere(
+        (m) => m['type'] == 'udphop',
+      );
+      expect((hop['settings'] as Map)['remotePorts'], '20000-20050,443');
       expect((stream['tlsSettings'] as Map)['serverName'], 'hy2.example');
     });
 
@@ -797,11 +800,16 @@ void main() {
         expect(hysteria.containsKey(key), isFalse, reason: key);
       }
       final finalmask = stream['finalmask'] as Map<String, dynamic>;
-      expect(((finalmask['udp'] as List).single as Map)['type'], 'salamander');
+      final udp = (finalmask['udp'] as List).cast<Map<String, dynamic>>();
+      expect([for (final m in udp) m['type']], ['salamander', 'udphop']);
+      expect(udp.last['settings'], {
+        'mode': 'intervallocal,intervalremote',
+        'remotePorts': '20000-20050',
+        'interval': '30',
+      });
       expect(finalmask['quicParams'], {
         'brutalUp': '50mbps',
         'brutalDown': '200mbps',
-        'udpHop': {'ports': '20000-20050', 'interval': '30'},
       });
     });
 
@@ -819,8 +827,11 @@ void main() {
             ((jsonDecode(config) as Map)['outbounds'] as List)
                     .first['streamSettings']
                 as Map;
-        final quic = (stream['finalmask'] as Map)['quicParams'] as Map;
-        return (quic['udpHop'] as Map)['interval'];
+        final udp = (stream['finalmask'] as Map)['udp'] as List;
+        final hop = udp.cast<Map<String, dynamic>>().singleWhere(
+          (m) => m['type'] == 'udphop',
+        );
+        return (hop['settings'] as Map)['interval'];
       }
 
       expect(interval('3'), '5');

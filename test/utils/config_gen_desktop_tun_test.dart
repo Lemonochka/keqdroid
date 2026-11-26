@@ -280,30 +280,41 @@ void main() {
     expect(_tunSettings(config)['name'], kTunInterfaceName);
   });
 
-  test('готовый конфиг со своим fakedns: DNS из TUN не перехватываем', () {
-    final config = _config(
-      _windows,
-      input: jsonEncode({
-        'fakedns': [
-          {'ipPool': '198.18.0.0/15', 'poolSize': 65535},
-        ],
-        'outbounds': [
-          {
-            'tag': 'proxy',
-            'protocol': 'vless',
-            'settings': {
-              'address': '198.51.100.42',
-              'port': 443,
-              'id': '00000000-0000-4000-8000-000000000000',
-              'encryption': 'none',
+  test(
+    'готовый конфиг со своим fakedns в TUN перехватывает только tun-in и включает fakedns в снифере',
+    () {
+      final config = _config(
+        _windows,
+        input: jsonEncode({
+          'fakedns': [
+            {'ipPool': '198.18.0.0/15', 'poolSize': 65535},
+          ],
+          'outbounds': [
+            {
+              'tag': 'proxy',
+              'protocol': 'vless',
+              'settings': {
+                'address': '198.51.100.42',
+                'port': 443,
+                'id': '00000000-0000-4000-8000-000000000000',
+                'encryption': 'none',
+              },
             },
-          },
-        ],
-      }),
-    );
-    expect(_rule(config, 'tun-dns'), isNull);
-    expect(_rule(config, 'tun-own'), isNotNull);
-  });
+          ],
+        }),
+      );
+      expect(_rule(config, 'tun-dns'), isNotNull);
+      expect(_rule(config, 'dns-out')!['inboundTag'], ['tun-in']);
+      expect(_rule(config, 'tun-own'), isNotNull);
+      final tunInbound = (config['inbounds'] as List)
+          .cast<Map<String, dynamic>>()
+          .firstWhere((i) => i['tag'] == 'tun-in');
+      expect(
+        (tunInbound['sniffing'] as Map)['destOverride'],
+        contains('fakedns'),
+      );
+    },
+  );
 
   test('готовый конфиг с catch-all автора всё равно несёт правило tun-ipv6', () {
     // ядро применяет правило по тегу отдельно от остальных, поэтому общий catch-all провайдера сброс не отменяет

@@ -16,12 +16,14 @@ Map<String, dynamic> _gen(
   String input,
   AppSettings settings, {
   bool nativeTun = true,
+  bool nativeTunIpv6 = false,
 }) =>
     jsonDecode(
           ConfigGeneratorV2.generateConfig(
             input,
             settings,
             nativeTunInbound: nativeTun,
+            nativeTunIpv6: nativeTunIpv6,
           ),
         )
         as Map<String, dynamic>;
@@ -49,6 +51,10 @@ void main() {
     ]);
     expect(_servers(c).map(_address), contains('fakedns'));
     expect(_tunSniffing(c)['destOverride'], contains('fakedns'));
+    final dnsOutRule = ((c['routing'] as Map)['rules'] as List)
+        .cast<Map<String, dynamic>>()
+        .firstWhere((r) => r['ruleTag'] == 'dns-out');
+    expect(dnsOutRule['inboundTag'], ['tun-in']);
   });
 
   // Ядро опрашивает по доменам, потом всех остальных по порядку, кроме
@@ -142,15 +148,61 @@ void main() {
       expect(servers[2], 'tcp://1.1.1.1:53');
     });
 
-    test('свой fakedns автора не трогаем', () {
+    test('свой fakedns автора не трогаем, но перехват и снифер остаются', () {
       final c = _gen(
         custom({
           'servers': ['fakedns', '1.1.1.1'],
         }),
-        const AppSettings(fakeIp: true),
+        const AppSettings(fakeIp: false),
       );
       expect(_servers(c).where((s) => _address(s) == 'fakedns'), hasLength(1));
       expect(c.containsKey('fakedns'), isFalse);
+      expect(_tunSniffing(c)['destOverride'], contains('fakedns'));
+      final ruleTags = [
+        for (final r in ((c['routing'] as Map)['rules'] as List))
+          (r as Map)['ruleTag'],
+      ];
+      expect(ruleTags, containsAll(['dns-out-tun', 'dns-out']));
     });
+  });
+
+  test('двойной стек с IPv6 через туннель добавляет пул 2001:2::/48', () {
+    final noTunV6 = _gen(
+      _link,
+      const AppSettings(fakeIp: true).copyWith(
+        xrayCore: const AppSettings().xrayCore.copyWith(
+          dnsQueryStrategy: 'UseIP',
+        ),
+      ),
+    );
+    expect(noTunV6['fakedns'], [
+      {'ipPool': kFakeIpRange, 'poolSize': 65535},
+    ]);
+
+    final dual = _gen(
+      _link,
+      const AppSettings(fakeIp: true).copyWith(
+        xrayCore: const AppSettings().xrayCore.copyWith(
+          dnsQueryStrategy: 'UseIP',
+        ),
+      ),
+      nativeTunIpv6: true,
+    );
+    expect(dual['fakedns'], [
+      {'ipPool': kFakeIpRange, 'poolSize': 32768},
+      {'ipPool': '2001:2::/48', 'poolSize': 32768},
+    ]);
+
+    final v6Only = _gen(
+      _link,
+      const AppSettings(fakeIp: true).copyWith(
+        xrayCore: const AppSettings().xrayCore.copyWith(
+          dnsQueryStrategy: 'UseIPv6',
+        ),
+      ),
+    );
+    expect(v6Only['fakedns'], [
+      {'ipPool': '2001:2::/48', 'poolSize': 65535},
+    ]);
   });
 }

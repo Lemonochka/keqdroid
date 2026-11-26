@@ -6,7 +6,17 @@
     "servers": [
       "https+local://1.1.1.1/dns-query",
       "https+local://8.8.8.8/dns-query",
-      "localhost"
+      {
+        "address": "localhost",
+        "domains": [
+          "domain:local",
+          "domain:lan",
+          "domain:home.arpa",
+          "regexp:^[^.]+$"
+        ],
+        "skipFallback": true,
+        "finalQuery": true
+      }
     ],
     "queryStrategy": "UseIPv4"
   },
