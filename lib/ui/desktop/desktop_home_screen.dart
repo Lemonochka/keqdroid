@@ -71,6 +71,7 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
       MacosBackgroundService.instance.uiVisible.addListener(
         _onMacosWindowVisibility,
       );
+      VpnNativeBridge.registerOpenSettingsHandler(_openSettingsFromMenu);
     }
     VpnNativeBridge.registerAutostartHandler(
       () => _maybeAutostartConnect(force: true),
@@ -431,6 +432,7 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
       MacosBackgroundService.instance.uiVisible.removeListener(
         _onMacosWindowVisibility,
       );
+      VpnNativeBridge.registerOpenSettingsHandler(null);
     }
     HotkeyService.onPressed = null;
     VpnNativeBridge.registerAutostartHandler(null);
@@ -455,6 +457,13 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
     if (state == AppLifecycleState.resumed) {
       unawaited(DesktopBackgroundService.onAppResumed());
     }
+  }
+
+  void _openSettingsFromMenu() {
+    if (!mounted) return;
+    Navigator.of(context).popUntil((route) => route.isFirst);
+    _selectTab(2);
+    unawaited(MacosBackgroundService.instance.restoreMainWindow());
   }
 
   void _selectTab(int index) {

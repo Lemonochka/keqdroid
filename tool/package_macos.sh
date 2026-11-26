@@ -274,7 +274,10 @@ for arch in "${ARCHS[@]}"; do
   done
 
   # Sign outer app bundle without --deep so codesign seals Resources/bin without altering core bytes.
-  codesign --force --sign "$SIGN_IDENTITY" "$APP_DST"
+  # Re-apply Release.entitlements so file_picker's SecTask entitlement check succeeds after re-signing.
+  codesign --force --sign "$SIGN_IDENTITY" \
+    --entitlements "$REPO_ROOT/macos/Runner/Release.entitlements" \
+    "$APP_DST"
 
   if [ "$(sha256_file "$BIN_DST/xray")" != "$XRAY_SHA" ] || [ "$(sha256_file "$BIN_DST/mihomo")" != "$MIHOMO_SHA" ]; then
     echo "Core binary checksum changed after bundle signing!" >&2
