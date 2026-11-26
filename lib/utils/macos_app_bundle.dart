@@ -1,9 +1,14 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:path/path.dart' as p;
 
 abstract final class MacosAppBundle {
+  static final _xmlExecutablePattern = RegExp(
+    r'<key>\s*CFBundleExecutable\s*</key>\s*<string>([^<]*)</string>',
+  );
+
   // File picker returns the .app package, while both cores see its executable.
   static Future<String> resolveProcessPath(String raw) async {
     if (!Platform.isMacOS) return raw;
@@ -33,13 +38,45 @@ abstract final class MacosAppBundle {
     );
   }
 
+  @visibleForTesting
+  static String? parseXmlExecutable(String xml) {
+    final m = _xmlExecutablePattern.firstMatch(xml);
+    if (m == null) return null;
+    final decoded = m
+        .group(1)!
+        .replaceAll('&amp;', '&')
+        .replaceAll('&lt;', '<')
+        .replaceAll('&gt;', '>')
+        .replaceAll('&quot;', '"')
+        .replaceAll('&apos;', "'")
+        .trim();
+    return decoded.isEmpty ? null : decoded;
+  }
+
   static Future<String?> executableName(String appBundlePath) async {
-    final plist = p.join(appBundlePath, 'Contents', 'Info.plist');
-    if (!File(plist).existsSync()) return null;
+    final plistFile = File(p.join(appBundlePath, 'Contents', 'Info.plist'));
+    if (!plistFile.existsSync()) return null;
+    try {
+      final bytes = await plistFile.readAsBytes();
+      final isBinary =
+          bytes.length >= 6 &&
+          bytes[0] == 0x62 && // 'b'
+          bytes[1] == 0x70 && // 'p'
+          bytes[2] == 0x6c && // 'l'
+          bytes[3] == 0x69 && // 'i'
+          bytes[4] == 0x73 && // 's'
+          bytes[5] == 0x74; // 't'
+      if (!isBinary) {
+        final parsed = parseXmlExecutable(
+          utf8.decode(bytes, allowMalformed: true),
+        );
+        if (parsed != null) return parsed;
+      }
+    } catch (_) {}
     try {
       final r = await Process.run('/usr/bin/defaults', [
         'read',
-        plist,
+        plistFile.path,
         'CFBundleExecutable',
       ]);
       if (r.exitCode == 0) {

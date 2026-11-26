@@ -110,7 +110,11 @@ void main() {
       final cachedGeo = Directory(
         p.join(tmp.path, 'Caches', 'keqdroid', 'geo'),
       )..createSync(recursive: true);
+      // Partial cache missing geosite.dat must not shadow a complete bundle dir.
       File(p.join(cachedGeo.path, 'geoip.dat')).writeAsBytesSync([42]);
+      expect(await MacosCorePaths.geoAssetDir(), binDir.path);
+
+      File(p.join(cachedGeo.path, 'geosite.dat')).writeAsBytesSync([43]);
       expect(await MacosCorePaths.geoAssetDir(), cachedGeo.path);
     },
   );

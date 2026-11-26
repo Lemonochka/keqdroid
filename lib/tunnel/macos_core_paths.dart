@@ -119,21 +119,21 @@ class MacosCorePaths {
   }
 
   static Future<String?> geoAssetDir() async {
-    final cachedGeo = p.join(_cacheRoot(), 'keqdroid', 'geo');
-    if (geoFileNames.any((f) => File(p.join(cachedGeo, f)).existsSync())) {
-      return cachedGeo;
+    final candidates = [
+      p.join(_cacheRoot(), 'keqdroid', 'geo'),
+      bundleBinDir(),
+      p.dirname(executableOverride ?? Platform.resolvedExecutable),
+    ];
+    for (final dir in candidates) {
+      if (geoFileNames.every((f) => File(p.join(dir, f)).existsSync())) {
+        return dir;
+      }
     }
-
-    final bundleBin = bundleBinDir();
-    if (geoFileNames.any((f) => File(p.join(bundleBin, f)).existsSync())) {
-      return bundleBin;
+    for (final dir in candidates) {
+      if (geoFileNames.any((f) => File(p.join(dir, f)).existsSync())) {
+        return dir;
+      }
     }
-
-    final exeDir = p.dirname(executableOverride ?? Platform.resolvedExecutable);
-    if (geoFileNames.any((f) => File(p.join(exeDir, f)).existsSync())) {
-      return exeDir;
-    }
-
     return null;
   }
 
