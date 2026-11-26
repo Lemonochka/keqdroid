@@ -10,6 +10,7 @@ import 'package:keqdroid/models/ping_test_config.dart';
 import 'package:keqdroid/platform/platform_bootstrap.dart';
 import 'package:keqdroid/providers/providers.dart';
 import 'package:keqdroid/screens/settings_tab.dart';
+import 'package:keqdroid/screens/split_tunneling_screen.dart';
 import 'package:keqdroid/screens/subscriptions_tab.dart';
 import 'package:keqdroid/services/storage_service.dart';
 import 'package:keqdroid/services/vpn_engine.dart';
@@ -622,6 +623,80 @@ void main() {
         TvFocusHighlight.containerOf(tester.element(find.byType(TextField))),
         isNull,
       );
+    },
+  );
+
+  testWidgets(
+    'Раздельное туннелирование на ТВ: из режима Все приложения пульт спускается и листает список',
+    (tester) async {
+      _setTvViewport(tester);
+      final storage = await buildStorageService(
+        initialValues: {
+          'keqdis_settings': const AppSettings(
+            appLanguageCode: 'ru',
+          ).toJsonString(),
+        },
+      );
+      final apps = [
+        for (var i = 0; i < 30; i++)
+          AppInfo(packageName: 'app.example.$i', appName: 'App $i'),
+      ];
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            storageProvider.overrideWithValue(storage),
+            vpnEngineProvider.overrideWithValue(
+              VpnEngine.withBackend(FakeTunnelBackend()),
+            ),
+            installedAppsProvider(false).overrideWith((ref) async => apps),
+            installedAppsProvider(true).overrideWith((ref) async => apps),
+          ],
+          child: KeqdroidApp(home: const SplitTunnelingScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final modeNode = Focus.of(tester.element(find.text('Все приложения')));
+      modeNode.requestFocus();
+      await tester.pumpAndSettle();
+      expect(modeNode.hasPrimaryFocus, isTrue);
+
+      var onFirstApp = false;
+      for (var i = 0; i < 8; i++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+        await tester.pumpAndSettle();
+        if (_focusContainsText('App 0')) {
+          onFirstApp = true;
+          break;
+        }
+      }
+      expect(
+        onFirstApp,
+        isTrue,
+        reason:
+            'в режиме Все приложения строки должны принимать фокус для прокрутки',
+      );
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.select);
+      await tester.pumpAndSettle();
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(SplitTunnelingScreen)),
+      );
+      final split = container.read(splitTunnelingProvider);
+      expect(split.includePackages, isEmpty);
+      expect(split.excludePackages, isEmpty);
+
+      var onSixthApp = false;
+      for (var i = 0; i < 8; i++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+        await tester.pumpAndSettle();
+        if (_focusContainsText('App 5')) {
+          onSixthApp = true;
+          break;
+        }
+      }
+      expect(onSixthApp, isTrue);
     },
   );
 }

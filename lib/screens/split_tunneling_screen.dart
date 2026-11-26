@@ -845,7 +845,10 @@ class _AppListBody extends ConsumerWidget {
           margin: ExpressiveListSegment.segmentMargin(
             index: i,
           ).resolve(Directionality.of(context)),
-          onTap: mode == TunnelMode.all ? null : () => onToggle(app),
+          // в режиме Все приложения строки на ТВ только листаются, но фокус им нужен
+          onTap: mode == TunnelMode.all
+              ? (TvFocus.enabled ? () {} : null)
+              : () => onToggle(app),
         );
       },
     );

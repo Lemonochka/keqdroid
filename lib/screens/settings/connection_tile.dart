@@ -5,6 +5,7 @@ import 'package:keqdroid/services/xray_access_log_parser.dart';
 import 'package:keqdroid/shared/ui/accent_edge_card.dart';
 import 'package:keqdroid/shared/ui/app_theme.dart';
 import 'package:keqdroid/shared/ui/expressive.dart';
+import 'package:keqdroid/shared/ui/tv_focus.dart';
 
 class ConnectionTile extends StatelessWidget {
   const ConnectionTile({
@@ -178,13 +179,19 @@ class ConnectionTile extends StatelessWidget {
     );
     if (onTap == null) return card;
     // рябь InkWell легла бы под непрозрачную заливку карточки
-    return MouseRegion(
+    final tappable = MouseRegion(
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
         child: card,
       ),
+    );
+    if (!TvFocus.enabled) return tappable;
+    return TvTappable(
+      onTap: onTap,
+      radius: BorderRadius.circular(14),
+      child: tappable,
     );
   }
 

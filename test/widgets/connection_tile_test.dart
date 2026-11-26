@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/l10n/app_localizations.dart';
 import 'package:keqdroid/models/connection_entry.dart';
+import 'package:keqdroid/platform/platform_bootstrap.dart';
 import 'package:keqdroid/screens/settings/connection_tile.dart';
+import 'package:keqdroid/shared/ui/tv_focus.dart';
 
 // Экран Соединения дважды показывал пустоту при непустом счётчике: оба раза
 // плитка падала внутри списка (сначала в paint на разноцветной рамке со
@@ -13,6 +16,7 @@ Widget _screen(
   List<ConnectionEntry> entries, {
   bool showProcess = false,
   bool ruleInfoAvailable = true,
+  VoidCallback? onTap,
 }) => MaterialApp(
   locale: const Locale('ru'),
   localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -23,10 +27,21 @@ Widget _screen(
       brightness: Brightness.dark,
     ),
   ),
+  builder: (context, child) => Actions(
+    actions: <Type, Action<Intent>>{
+      DirectionalFocusIntent: TvDirectionalFocusAction(),
+    },
+    child: child ?? const SizedBox.shrink(),
+  ),
   home: Scaffold(
     body: Column(
       children: [
-        const Padding(padding: EdgeInsets.all(12), child: Text('фильтр')),
+        Padding(
+          padding: const EdgeInsets.all(12),
+          child: onTap == null
+              ? const Text('фильтр')
+              : FilledButton(onPressed: () {}, child: const Text('фильтр')),
+        ),
         Expanded(
           child: ListView.separated(
             padding: const EdgeInsets.fromLTRB(12, 6, 12, 24),
@@ -36,6 +51,7 @@ Widget _screen(
               entry: entries[i],
               showProcess: showProcess,
               ruleInfoAvailable: ruleInfoAvailable,
+              onTap: onTap,
             ),
           ),
         ),
@@ -152,6 +168,34 @@ void main() {
 
       await tester.pumpWidget(_screen(_sevenConnections()));
       expect(find.text('firefox.exe'), findsNothing);
+    });
+
+    testWidgets('на ТВ пульт выделяет соединение и OK открывает подробности', (
+      tester,
+    ) async {
+      PlatformBootstrap.debugIsTelevisionOverride = true;
+      addTearDown(() => PlatformBootstrap.debugIsTelevisionOverride = null);
+      var opened = 0;
+      await tester.pumpWidget(
+        _screen([_entry(host: 'www.google.com')], onTap: () => opened++),
+      );
+      await tester.pumpAndSettle();
+
+      Focus.of(tester.element(find.text('фильтр'))).requestFocus();
+      await tester.pumpAndSettle();
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pumpAndSettle();
+
+      final primary = FocusManager.instance.primaryFocus?.context;
+      expect(
+        primary?.findAncestorWidgetOfExactType<ConnectionTile>(),
+        isNotNull,
+        reason: 'фокус должен уйти из фильтра на карточку соединения',
+      );
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.select);
+      await tester.pumpAndSettle();
+      expect(opened, 1);
     });
   });
 }
