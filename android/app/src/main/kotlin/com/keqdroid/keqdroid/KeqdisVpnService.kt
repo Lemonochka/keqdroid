@@ -816,7 +816,9 @@ class KeqdisVpnService : VpnService() {
             NativeLog.w("KEQDIS", "mihomo reload: ${it.message}")
             return@withLock false
         }
-        if (!withContext(Dispatchers.IO) { putMihomoConfig(port, secret, text) }) return@withLock false
+        val raised = mihomoSessionLogLevel(text)
+        if (!withContext(Dispatchers.IO) { putMihomoConfig(port, secret, raised?.config ?: text) }) return@withLock false
+        NativeHelper.setCoreLogLevel(raised?.floor ?: 0)
         // ядро, поднятое заново после смерти или смены сети, и плитка читают конфиг из этого файла
         runCatching { File(path).writeText(text) }
         closeMihomoConnections()
@@ -1543,6 +1545,7 @@ class KeqdisVpnService : VpnService() {
                             else VPN_BACKEND_XRAY,
                         )
                         putExtra(EXTRA_CORE_ENGINE, lastCoreEngine)
+                        putExtra(EXTRA_TUNNEL_MODE, lastTunnelMode)
                         putExtra(EXTRA_XRAY_CONFIG, lastXrayConfigPath)
                         putExtra("socks_port", lastSocksPort)
                         putStringArrayListExtra("exclude_packages", ArrayList(lastExcludePackages))

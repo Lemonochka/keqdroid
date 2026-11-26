@@ -1,5 +1,6 @@
 package com.keqdroid.keqdroid
 
+import android.app.Notification
 import android.content.ComponentName
 import android.content.Intent
 import com.keqdroid.keqdroid.RoboSession.context
@@ -11,7 +12,9 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows
 
 @RunWith(RobolectricTestRunner::class)
 class SnapshotIntentTest {
@@ -79,5 +82,41 @@ class SnapshotIntentTest {
                 Intent().putExtra(KeqdisVpnService.EXTRA_TUNNEL_MODE, KeqdisVpnService.TUNNEL_MODE_PROXY),
             ),
         )
+    }
+
+    @Test
+    fun `notification connect action preserves proxy tunnel mode`() {
+        val config = saveSnapshot(
+            tunnelMode = KeqdisVpnService.TUNNEL_MODE_PROXY,
+            backend = KeqdisVpnService.VPN_BACKEND_MIHOMO,
+        )
+        val service = Robolectric.buildService(KeqdisVpnService::class.java).create().get()
+        fun setField(name: String, value: Any?) {
+            KeqdisVpnService::class.java.getDeclaredField(name).apply {
+                isAccessible = true
+                set(service, value)
+            }
+        }
+        setField("lastXrayConfigPath", config.path)
+        setField("socksUsername", "user")
+        setField("socksPassword", "pass")
+        setField("lastCoreKind", KeqdisVpnService.CORE_KIND_MIHOMO)
+        setField("lastTunnelMode", KeqdisVpnService.TUNNEL_MODE_PROXY)
+
+        val buildNotif = KeqdisVpnService::class.java.getDeclaredMethod(
+            "buildControlNotification",
+            String::class.java,
+            Boolean::class.javaPrimitiveType,
+            Boolean::class.javaPrimitiveType,
+        ).apply { isAccessible = true }
+        val notification = buildNotif.invoke(service, "Disconnected", false, false) as Notification
+        val pending = notification.actions.single().actionIntent
+        val connectIntent = Shadows.shadowOf(pending).savedIntent
+
+        assertEquals(
+            KeqdisVpnService.TUNNEL_MODE_PROXY,
+            connectIntent.getStringExtra(KeqdisVpnService.EXTRA_TUNNEL_MODE),
+        )
+        assertFalse(KeqdisVpnService.startsTunnel(connectIntent))
     }
 }
