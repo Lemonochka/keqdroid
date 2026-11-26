@@ -55,6 +55,9 @@ jobs:
         with:
           go-version: '1.27.3'
           cache: false
+      - name: Test macOS TUN daemon
+        working-directory: tool/macos_tun_daemon
+        run: go test -race ./...
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}

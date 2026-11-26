@@ -267,4 +267,106 @@ void main() {
     expect(steps, ['open', 'send', 'close']);
     expect(allowed, isTrue);
   });
+
+  test('startCore handles fragmented and coalesced frames and closes before exitCode', () async {
+    var closed = false;
+    MacosTunService.transportOverride = () async {
+      final ctrl = StreamController<Uint8List>();
+      return (
+        incoming: ctrl.stream,
+        send: (Uint8List packet) async {
+          final frame = utf8.decode(packet.sublist(4));
+          if (frame.startsWith('start\n')) {
+            // Coalesce ok + two out frames + split across odd chunk boundaries.
+            final combined = Uint8List.fromList([
+              ..._encodeFrame('ok\n4242'),
+              ..._encodeFrame('out\nline-1'),
+              ..._encodeFrame('out\nline-2'),
+            ]);
+            ctrl.add(Uint8List.sublistView(combined, 0, 2));
+            ctrl.add(Uint8List.sublistView(combined, 2, 11));
+            ctrl.add(Uint8List.sublistView(combined, 11));
+          } else if (frame == 'stop') {
+            ctrl.add(_encodeFrame('exit\n0'));
+          }
+        },
+        close: () async {
+          closed = true;
+          unawaited(ctrl.close());
+        },
+      );
+    };
+
+    final proc = await MacosTunService.startCore(kind: 'xray', config: '{}');
+    expect(proc.pid, 4242);
+
+    final linesFuture = proc.stdout
+        .transform(utf8.decoder)
+        .transform(const LineSplitter())
+        .toList();
+
+    await proc.stdin.close();
+    final exitCode = await proc.exitCode;
+    expect(exitCode, 0);
+    expect(closed, isTrue);
+    expect(await linesFuture, ['line-1', 'line-2']);
+  });
+
+  testWidgets('ensureMacosTunService retries state check after install', (
+    tester,
+  ) async {
+    var connectAttempts = 0;
+    MacosTunService.transportOverride = () async {
+      connectAttempts++;
+      if (connectAttempts < 3) {
+        throw const SocketException('daemon socket still starting');
+      }
+      final ctrl = StreamController<Uint8List>();
+      return (
+        incoming: ctrl.stream,
+        send: (Uint8List packet) async {
+          final frame = utf8.decode(packet.sublist(4));
+          if (frame == 'version') {
+            ctrl.add(
+              _encodeFrame('version\n1\n$daemonXraySha\n$daemonMihomoSha'),
+            );
+          }
+        },
+        close: () async {
+          unawaited(ctrl.close());
+        },
+      );
+    };
+
+    plistExists = false;
+    bool? allowed;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: TextButton(
+              onPressed: () async {
+                allowed = await ensureMacosTunService(context);
+              },
+              child: const Text('enable-tun'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('enable-tun'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Install the service'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pumpAndSettle();
+
+    expect(connectAttempts, 3);
+    expect(allowed, isTrue);
+  });
 }

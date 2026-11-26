@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"os/user"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -134,15 +135,20 @@ func installDaemon(uid int, bundleBinDir string) error {
 	}
 
 	if err := startLaunchdJob(); err != nil {
+		_ = os.Remove(plistPath)
 		return err
 	}
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
 		if st, err := os.Lstat(sockPath); err == nil && st.Mode()&os.ModeSocket != 0 {
-			return nil
+			if sys, ok := st.Sys().(*syscall.Stat_t); ok && sys.Uid == uint32(uid) {
+				return nil
+			}
 		}
 		time.Sleep(50 * time.Millisecond)
 	}
+	stopLaunchdJob()
+	_ = os.Remove(plistPath)
 	return errors.New("service started, but socket did not appear")
 }
 
@@ -177,7 +183,9 @@ func startLaunchdJob() error {
 			return fmt.Errorf("launchctl bootstrap failed: %s (%w)", msg, err)
 		}
 	}
-	_ = exec.Command("/bin/launchctl", "kickstart", "-k", "system/"+serviceLabel).Run()
+	// RunAtLoad already launches the daemon; kickstart without -k starts it
+	// only if it is not yet running, avoiding an unnecessary kill+restart race.
+	_ = exec.Command("/bin/launchctl", "kickstart", "system/"+serviceLabel).Run()
 	return nil
 }
 
@@ -199,37 +207,48 @@ func runDaemon() error {
 	if err := ensureRootDir(sockDir, 0o755); err != nil {
 		return err
 	}
-	_ = os.Remove(sockPath)
+	tmpSock := fmt.Sprintf("%s/.tun.%d.sock", sockDir, os.Getpid())
+	_ = os.Remove(tmpSock)
 
 	oldMask := unix.Umask(0o177)
-	ln, err := net.Listen("unix", sockPath)
+	ln, err := net.Listen("unix", tmpSock)
 	unix.Umask(oldMask)
 	if err != nil {
-		return fmt.Errorf("listen %s: %w", sockPath, err)
+		return fmt.Errorf("listen %s: %w", tmpSock, err)
 	}
-	if err := os.Chown(sockPath, allowedUID, 0); err != nil {
+	if err := os.Chown(tmpSock, allowedUID, 0); err != nil {
 		_ = ln.Close()
+		_ = os.Remove(tmpSock)
 		return fmt.Errorf("chown socket: %w", err)
 	}
-	if err := os.Chmod(sockPath, 0o600); err != nil {
+	if err := os.Chmod(tmpSock, 0o600); err != nil {
 		_ = ln.Close()
+		_ = os.Remove(tmpSock)
 		return fmt.Errorf("chmod socket: %w", err)
 	}
+	if err := os.Rename(tmpSock, sockPath); err != nil {
+		_ = ln.Close()
+		_ = os.Remove(tmpSock)
+		return fmt.Errorf("publish socket: %w", err)
+	}
+	ownSockStat, _ := os.Lstat(sockPath)
 
 	starter := &darwinCoreStarter{allowedUID: uint32(allowedUID)}
 	server := NewServerState(starter)
 
 	var (
-		clientsWg sync.WaitGroup
-		connsMu   sync.Mutex
-		conns     = make(map[net.Conn]struct{})
+		clientsWg    sync.WaitGroup
+		connsMu      sync.Mutex
+		shuttingDown bool
+		conns        = make(map[net.Conn]struct{})
 	)
 	sigCh := make(chan os.Signal, 2)
 	signal.Notify(sigCh, syscall.SIGTERM, syscall.SIGINT)
 	go func() {
 		<-sigCh
-		_ = ln.Close()
 		connsMu.Lock()
+		shuttingDown = true
+		_ = ln.Close()
 		for c := range conns {
 			_ = c.Close()
 		}
@@ -249,6 +268,11 @@ func runDaemon() error {
 			continue
 		}
 		connsMu.Lock()
+		if shuttingDown {
+			connsMu.Unlock()
+			_ = conn.Close()
+			break
+		}
 		conns[conn] = struct{}{}
 		connsMu.Unlock()
 
@@ -271,9 +295,13 @@ func runDaemon() error {
 	}()
 	select {
 	case <-done:
-	case <-time.After(6 * time.Second):
+	case <-time.After(8 * time.Second):
 	}
-	_ = os.Remove(sockPath)
+	if ownSockStat != nil {
+		if curSt, err := os.Lstat(sockPath); err == nil && os.SameFile(ownSockStat, curSt) {
+			_ = os.Remove(sockPath)
+		}
+	}
 	return nil
 }
 
@@ -415,6 +443,7 @@ func (d *darwinCoreStarter) Start(req StartRequest) (RunningCore, error) {
 		stdinW:  inW,
 		stdoutR: outR,
 		doneCh:  make(chan struct{}),
+		killCh:  make(chan struct{}),
 	}, nil
 }
 
@@ -441,7 +470,9 @@ type darwinRunningCore struct {
 	stdoutR    *os.File
 	stdinOnce  sync.Once
 	streamOnce sync.Once
+	killOnce   sync.Once
 	doneCh     chan struct{}
+	killCh     chan struct{}
 	streamWg   sync.WaitGroup
 	started    atomic.Bool
 }
@@ -451,9 +482,11 @@ func (c *darwinRunningCore) PID() int { return c.pid }
 func (c *darwinRunningCore) StartStreaming(onLine func(string), onExit func(int)) {
 	c.streamOnce.Do(func() {
 		c.started.Store(true)
+		stdoutDone := make(chan struct{})
 		c.streamWg.Add(2)
 		go func() {
 			defer c.streamWg.Done()
+			defer close(stdoutDone)
 			defer c.stdoutR.Close()
 			sc := bufio.NewScanner(c.stdoutR)
 			sc.Buffer(make([]byte, 64*1024), 1024*1024)
@@ -475,6 +508,13 @@ func (c *darwinRunningCore) StartStreaming(onLine func(string), onExit func(int)
 					code = 1
 				}
 			}
+			// Drain remaining stdout lines and let utun disappear before
+			// reporting exit so the next session sees a clean interface.
+			select {
+			case <-stdoutDone:
+			case <-time.After(500 * time.Millisecond):
+			}
+			waitForTunDetach(2 * time.Second)
 			onExit(code)
 		}()
 	})
@@ -493,15 +533,25 @@ func (c *darwinRunningCore) Stop(graceful bool) {
 		c.StartStreaming(func(string) {}, func(int) {})
 	}
 	c.closeStdin()
-	_ = unix.Kill(-c.pid, unix.SIGTERM)
-	waitDur := 400 * time.Millisecond
-	if graceful {
-		waitDur = 5 * time.Second
+	if !graceful {
+		c.killOnce.Do(func() { close(c.killCh) })
+		_ = unix.Kill(-c.pid, unix.SIGTERM)
+		select {
+		case <-c.doneCh:
+			return
+		case <-time.After(400 * time.Millisecond):
+		}
+		_ = unix.Kill(-c.pid, unix.SIGKILL)
+		return
 	}
+	_ = unix.Kill(-c.pid, unix.SIGTERM)
 	select {
 	case <-c.doneCh:
 		return
-	case <-time.After(waitDur):
+	case <-c.killCh:
+		_ = unix.Kill(-c.pid, unix.SIGKILL)
+		return
+	case <-time.After(5 * time.Second):
 	}
 	_ = unix.Kill(-c.pid, unix.SIGKILL)
 }
@@ -622,11 +672,22 @@ func readRegularLimited(path string, limit int64) ([]byte, error) {
 
 // geo-база приходит по пути от пользователя: берём только обычный файл без симлинков, доступный ему самому на чтение
 func stageGeoFile(src, dst string, allowedUID uint32) {
+	stampPath := dst + ".stamp"
+	clearStaged := func() {
+		_ = os.Remove(dst)
+		_ = os.Remove(stampPath)
+	}
 	if !dirTraversableByUser(filepath.Dir(src), allowedUID) {
+		if _, err := os.Stat(filepath.Dir(src)); errors.Is(err, os.ErrNotExist) {
+			clearStaged()
+		}
 		return
 	}
 	fd, err := unix.Open(src, unix.O_RDONLY|unix.O_NOFOLLOW|unix.O_CLOEXEC, 0)
 	if err != nil {
+		if errors.Is(err, unix.ENOENT) {
+			clearStaged()
+		}
 		return
 	}
 	f := os.NewFile(uintptr(fd), src)
@@ -640,11 +701,10 @@ func stageGeoFile(src, dst string, allowedUID uint32) {
 	if !ok {
 		return
 	}
-	if sys.Uid != allowedUID && (st.Mode().Perm()&0o004) == 0 {
+	if !userCanAccessMode(allowedUID, sys.Uid, sys.Gid, st.Mode().Perm(), 0o400, 0o040, 0o004) {
 		return
 	}
 
-	stampPath := dst + ".stamp"
 	stamp := fmt.Sprintf("%d:%d", st.Size(), st.ModTime().UnixNano())
 	if curSt, err := os.Lstat(dst); err == nil && curSt.Mode().IsRegular() && curSt.Size() == st.Size() {
 		if prev, err := os.ReadFile(stampPath); err == nil && string(prev) == stamp {
@@ -659,6 +719,42 @@ func stageGeoFile(src, dst string, allowedUID uint32) {
 	if err := writeFreshFile(dst, data, 0o600); err == nil {
 		_ = writeFreshFile(stampPath, []byte(stamp), 0o600)
 	}
+}
+
+func userCanAccessMode(uid, ownerUID, ownerGID uint32, perm, ownerBit, groupBit, otherBit os.FileMode) bool {
+	if ownerUID == uid {
+		return perm&ownerBit != 0
+	}
+	groupAllowed := perm&groupBit != 0
+	otherAllowed := perm&otherBit != 0
+	if groupAllowed == otherAllowed {
+		return groupAllowed
+	}
+	if userInGroup(uid, ownerGID) {
+		return groupAllowed
+	}
+	return otherAllowed
+}
+
+func userInGroup(uid, gid uint32) bool {
+	u, err := user.LookupId(strconv.FormatUint(uint64(uid), 10))
+	if err != nil {
+		return false
+	}
+	gidStr := strconv.FormatUint(uint64(gid), 10)
+	if u.Gid == gidStr {
+		return true
+	}
+	gids, err := u.GroupIds()
+	if err != nil {
+		return false
+	}
+	for _, g := range gids {
+		if g == gidStr {
+			return true
+		}
+	}
+	return false
 }
 
 func dirTraversableByUser(dir string, allowedUID uint32) bool {
@@ -679,7 +775,7 @@ func dirTraversableByUser(dir string, allowedUID uint32) bool {
 		if !ok {
 			return false
 		}
-		if sys.Uid != allowedUID && (st.Mode().Perm()&0o001) == 0 {
+		if !userCanAccessMode(allowedUID, sys.Uid, sys.Gid, st.Mode().Perm(), 0o100, 0o010, 0o001) {
 			return false
 		}
 		parent := filepath.Dir(cur)

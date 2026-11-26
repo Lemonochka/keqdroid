@@ -125,9 +125,21 @@ func NewServerState(starter CoreStarter) *ServerState {
 func (s *ServerState) ServeClient(raw io.ReadWriteCloser) {
 	fc := NewFrameConn(raw)
 	var (
-		ownsCore bool
-		active   RunningCore
+		ownsCore  atomic.Bool
+		activeMu  sync.Mutex
+		active    RunningCore
+		activeGen uint64
 	)
+	releaseBusy := func() {
+		if ownsCore.Swap(false) {
+			s.coreBusy.Store(false)
+		}
+	}
+	getActive := func() RunningCore {
+		activeMu.Lock()
+		defer activeMu.Unlock()
+		return active
+	}
 	for {
 		frame, err := fc.ReadFrame()
 		if err != nil {
@@ -143,33 +155,47 @@ func (s *ServerState) ServeClient(raw io.ReadWriteCloser) {
 				_ = fc.WriteFrame("error\nbad start request")
 				continue
 			}
-			if ownsCore || !s.coreBusy.CompareAndSwap(false, true) {
+			if ownsCore.Load() || !s.coreBusy.CompareAndSwap(false, true) {
 				_ = fc.WriteFrame("error\nthe core is already running")
 				continue
 			}
-			ownsCore = true
+			ownsCore.Store(true)
 			core, err := s.starter.Start(req)
 			if err != nil {
-				ownsCore = false
+				ownsCore.Store(false)
 				s.coreBusy.Store(false)
 				_ = fc.WriteFrame("error\n" + err.Error())
 				continue
 			}
+			activeMu.Lock()
+			activeGen++
+			myGen := activeGen
 			active = core
+			activeMu.Unlock()
 			if err := fc.WriteFrame("ok\n" + strconv.Itoa(core.PID())); err != nil {
 				break
 			}
 			core.StartStreaming(
 				func(line string) { _ = fc.WriteFrame("out\n" + line) },
-				func(code int) { _ = fc.WriteFrame("exit\n" + strconv.Itoa(code)) },
+				func(code int) {
+					activeMu.Lock()
+					if activeGen == myGen {
+						active = nil
+					}
+					activeMu.Unlock()
+					// Release the busy slot before notifying the client so an
+					// immediate reconnect over a new socket never races coreBusy.
+					releaseBusy()
+					_ = fc.WriteFrame("exit\n" + strconv.Itoa(code))
+				},
 			)
 		case frame == "stop":
-			if active != nil {
-				active.Stop(true)
+			if cur := getActive(); cur != nil {
+				go cur.Stop(true)
 			}
 		case frame == "kill":
-			if active != nil {
-				active.Stop(false)
+			if cur := getActive(); cur != nil {
+				go cur.Stop(false)
 			}
 		default:
 			_ = fc.WriteFrame("error\nunknown command")
@@ -177,14 +203,13 @@ func (s *ServerState) ServeClient(raw io.ReadWriteCloser) {
 	}
 
 	// сокет закрываем до Wait, чтобы поток чтения stdout ядра не завис на записи ушедшему клиенту
-	if active != nil {
-		active.Stop(false)
+	cur := getActive()
+	if cur != nil {
+		cur.Stop(false)
 	}
 	_ = fc.Close()
-	if active != nil {
-		active.Wait()
+	if cur != nil {
+		cur.Wait()
 	}
-	if ownsCore {
-		s.coreBusy.Store(false)
-	}
+	releaseBusy()
 }

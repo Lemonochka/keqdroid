@@ -267,33 +267,75 @@ class _FrameSocket {
   final Future<void> Function(Uint8List data) _send;
   final Future<void> Function() _onClose;
   late final StreamSubscription<Uint8List> _sub;
-  final BytesBuilder _buf = BytesBuilder(copy: false);
+  Uint8List _buf = Uint8List(0);
+  int _offset = 0;
   final List<Completer<String>> _waiters = [];
   Future<void> _writeChain = Future<void>.value();
   Object? _error;
   bool _closed = false;
 
   void _onData(Uint8List chunk) {
-    _buf.add(chunk);
+    if (chunk.isEmpty) return;
+    final remaining = _buf.length - _offset;
+    if (remaining == 0) {
+      _buf = chunk;
+      _offset = 0;
+    } else {
+      final combined = Uint8List(remaining + chunk.length)
+        ..setRange(0, remaining, _buf, _offset)
+        ..setRange(remaining, remaining + chunk.length, chunk);
+      _buf = combined;
+      _offset = 0;
+    }
     _drainFrames();
+  }
+
+  Future<String>? _tryTakeFrame() {
+    final available = _buf.length - _offset;
+    if (available < 4) return null;
+    final len = ByteData.sublistView(
+      _buf,
+      _offset,
+      _offset + 4,
+    ).getUint32(0, Endian.little);
+    if (len > MacosTunService._maxFrameBytes) {
+      const err = SocketException('TUN service frame exceeds limit');
+      _failAll(err);
+      return Future.error(err);
+    }
+    if (available < 4 + len) return null;
+    final frame = const Utf8Decoder(
+      allowMalformed: true,
+    ).convert(Uint8List.sublistView(_buf, _offset + 4, _offset + 4 + len));
+    _offset += 4 + len;
+    if (_offset == _buf.length) {
+      _buf = Uint8List(0);
+      _offset = 0;
+    }
+    return Future.value(frame);
   }
 
   void _drainFrames() {
     while (_waiters.isNotEmpty) {
-      final bytes = _buf.toBytes();
-      if (bytes.length < 4) return;
-      final len = ByteData.sublistView(bytes, 0, 4).getUint32(0, Endian.little);
+      final available = _buf.length - _offset;
+      if (available < 4) return;
+      final len = ByteData.sublistView(
+        _buf,
+        _offset,
+        _offset + 4,
+      ).getUint32(0, Endian.little);
       if (len > MacosTunService._maxFrameBytes) {
         _failAll(const SocketException('TUN service frame exceeds limit'));
         return;
       }
-      if (bytes.length < 4 + len) return;
+      if (available < 4 + len) return;
       final frame = const Utf8Decoder(
         allowMalformed: true,
-      ).convert(Uint8List.sublistView(bytes, 4, 4 + len));
-      _buf.clear();
-      if (bytes.length > 4 + len) {
-        _buf.add(Uint8List.sublistView(bytes, 4 + len));
+      ).convert(Uint8List.sublistView(_buf, _offset + 4, _offset + 4 + len));
+      _offset += 4 + len;
+      if (_offset == _buf.length) {
+        _buf = Uint8List(0);
+        _offset = 0;
       }
       _waiters.removeAt(0).complete(frame);
     }
@@ -316,24 +358,9 @@ class _FrameSocket {
   }
 
   Future<String> readFrame() {
-    final bytes = _buf.toBytes();
-    if (bytes.length >= 4) {
-      final len = ByteData.sublistView(bytes, 0, 4).getUint32(0, Endian.little);
-      if (len > MacosTunService._maxFrameBytes) {
-        return Future.error(
-          const SocketException('TUN service frame exceeds limit'),
-        );
-      }
-      if (bytes.length >= 4 + len) {
-        final frame = const Utf8Decoder(
-          allowMalformed: true,
-        ).convert(Uint8List.sublistView(bytes, 4, 4 + len));
-        _buf.clear();
-        if (bytes.length > 4 + len) {
-          _buf.add(Uint8List.sublistView(bytes, 4 + len));
-        }
-        return Future.value(frame);
-      }
+    if (_waiters.isEmpty) {
+      final ready = _tryTakeFrame();
+      if (ready != null) return ready;
     }
     if (_error != null) return Future.error(_error!);
     if (_closed) {
@@ -398,6 +425,7 @@ class _MacosServiceCoreProcess implements Process {
 
   void _pumpFrames(void Function() onDone) {
     unawaited(() async {
+      int? code;
       try {
         while (true) {
           final frame = await _client.readFrame();
@@ -405,17 +433,16 @@ class _MacosServiceCoreProcess implements Process {
             final line = frame.substring('out\n'.length);
             if (!_stdout.isClosed) _stdout.add(utf8.encode('$line\n'));
           } else if (frame.startsWith('exit\n')) {
-            final code =
-                int.tryParse(frame.substring('exit\n'.length).trim()) ?? -1;
-            _finish(code);
+            code = int.tryParse(frame.substring('exit\n'.length).trim()) ?? -1;
             break;
           }
         }
       } catch (_) {
-        _finish(-1);
+        code ??= -1;
       } finally {
         onDone();
         await _client.close();
+        _finish(code ?? -1);
       }
     }());
   }
