@@ -36,12 +36,15 @@ abstract final class MultiPingConfig {
         probeInbounds.add(inbound);
       }
       final probeOutbounds = <Map<String, dynamic>>[];
-      for (final raw in (config['outbounds'] as List? ?? const [])) {
-        final outbound = Map<String, dynamic>.from(raw as Map);
-        final tag = outbound['tag']?.toString();
-        if (tag != null) {
+      final rawOutbounds = config['outbounds'] as List? ?? const [];
+      for (var j = 0; j < rawOutbounds.length; j++) {
+        final outbound = Map<String, dynamic>.from(rawOutbounds[j] as Map);
+        final tag = outbound['tag']?.toString().trim() ?? '';
+        if (tag.isNotEmpty) {
           renamed[tag] = '$tag$suffix';
           outbound['tag'] = '$tag$suffix';
+        } else {
+          outbound['tag'] = 'untagged-$j$suffix';
         }
         probeOutbounds.add(outbound);
       }

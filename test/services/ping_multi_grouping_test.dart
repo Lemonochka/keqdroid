@@ -65,15 +65,16 @@ class _OneBadServerBackend extends FakeTunnelBackend {
 
 // Кого можно измерить общим конфигом, а кого нельзя.
 //
-// Общий конфиг складывает серверы в один документ: у каждого свой инбаунд,
-// свой аутбаунд и свои правила. Сервер, который сам себе конфиг (готовый
-// Clash или Xray от провайдера, цепочка, AmneziaWG), туда не вкладывается:
-// он несёт собственные инбаунды, роутинг и DNS, и попытка его вложить
-// молча измерила бы не то. Такие остаются на поштучном пути.
+// Генераторы замера выбрасывают входы, DNS и маршруты автора, оставляя только
+// выходной узел и его цепочку или группу, поэтому в пачку ложатся и ссылки, и
+// готовые конфиги. Не складывается только нераспознанный текст, чтобы одна
+// мусорная строка не роняла соседние серверы.
 void main() {
   const vless =
       'vless://bfd62637-6d18-49ea-b726-82274f5dda83@a.example.com:443?encryption=none&type=tcp&security=reality&sni=www.nvidia.com&pbk=KlybaLW0-grtjEATyTVFIYoWIaoW-Duxi4lcM54_t2U#a';
   const hysteria = 'hy2://secret@b.example.com:443?sni=b.example.com#b';
+  const chain =
+      'keqchain://?name=hop&hop=vless%3A%2F%2Fbfd62637-6d18-49ea-b726-82274f5dda83%40a.example.com%3A443%3Fencryption%3Dnone%23a&hop=hy2%3A%2F%2Fsecret%40b.example.com%3A443%23b';
   const awg = '''
 [Interface]
 PrivateKey = aQ==
@@ -91,17 +92,16 @@ proxies:
     port: 443
     uuid: bfd62637-6d18-49ea-b726-82274f5dda83
 ''';
-  const xrayJson = '{"outbounds":[{"protocol":"vless","tag":"proxy"}]}';
+  const xrayJson =
+      '{"outbounds":[{"protocol":"vless","tag":"proxy","settings":{"vnext":[{"address":"e.example.com","port":443,"users":[{"id":"bfd62637-6d18-49ea-b726-82274f5dda83"}]}]}}]}';
 
-  test('обычные ссылки складываются', () {
+  test('ссылки и готовые конфиги складываются в пачку', () {
     expect(PingService.mergeableForMultiPing(vless), isTrue);
     expect(PingService.mergeableForMultiPing(hysteria), isTrue);
-  });
-
-  test('сервер, который сам себе конфиг, — нет', () {
-    expect(PingService.mergeableForMultiPing(clashYaml), isFalse);
-    expect(PingService.mergeableForMultiPing(xrayJson), isFalse);
-    expect(PingService.mergeableForMultiPing(awg), isFalse);
+    expect(PingService.mergeableForMultiPing(chain), isTrue);
+    expect(PingService.mergeableForMultiPing(clashYaml), isTrue);
+    expect(PingService.mergeableForMultiPing(xrayJson), isTrue);
+    expect(PingService.mergeableForMultiPing(awg), isTrue);
   });
 
   test('мусор не складывается тоже', () {
@@ -198,4 +198,46 @@ proxies:
     expect(PingService.multiPingChunk, lessThanOrEqualTo(25));
     expect(PingService.multiPingChunk, greaterThan(1));
   });
+
+  test(
+    'подписка из готовых Xray JSON пингуется пачкой и делит битый пополам',
+    () async {
+      final backend = _OneBadServerBackend();
+      PingService.debugMultiPingSupported = true;
+      PingService.debugEngine = VpnEngine.withBackend(backend);
+      addTearDown(() {
+        PingService.debugMultiPingSupported = null;
+        PingService.debugEngine = null;
+      });
+      ServerItem jsonServer(String id, String host) => ServerItem(
+        id: id,
+        config: xrayJson.replaceFirst('e.example.com', host),
+        type: ServerItemType.subscription,
+        subscriptionId: 'json-sub',
+      );
+      final servers = [
+        jsonServer('j1', 'j1.example.com'),
+        jsonServer('j2', 'j2.example.com'),
+        jsonServer('bad', 'bad.example.com'),
+        jsonServer('j3', 'j3.example.com'),
+      ];
+
+      final results = await PingService.pingUrlBatch(
+        servers,
+        const AppSettings(),
+        resolvedIps: {
+          'j1': '192.0.2.11',
+          'j2': '192.0.2.12',
+          'bad': _badIp,
+          'j3': '192.0.2.13',
+        },
+      );
+
+      expect(
+        {for (final r in results) r.serverId: r.success},
+        {'j1': true, 'j2': true, 'bad': false, 'j3': true},
+      );
+      expect(backend.multiSizes.first, 4);
+    },
+  );
 }

@@ -1,10 +1,12 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/models/app_settings.dart';
 import 'package:keqdroid/utils/config_gen.dart';
 import 'package:keqdroid/utils/mihomo_config_gen.dart';
 import 'package:keqdroid/utils/multi_ping_config.dart';
+import 'package:keqdroid/utils/proxy_chain.dart';
 import 'package:keqdroid/utils/socks5_credentials.dart';
 
 // Общий конфиг замера: вся пачка меряется одним ядром вместо ядра на сервер.
@@ -427,5 +429,249 @@ rules:
       expect(inbounds.map((i) => i['protocol']), ['http', 'http']);
       expect(inbounds.map((i) => i['port']), [3001, 3002]);
     });
+  });
+
+  group('готовый Xray JSON в пачке', () {
+    const uuid = '00000000-0000-4000-8000-000000000000';
+    final untaggedJson = jsonEncode({
+      'outbounds': [
+        {
+          'protocol': 'vless',
+          'settings': {
+            'vnext': [
+              {
+                'address': '198.51.100.70',
+                'port': 443,
+                'users': [
+                  {'id': uuid, 'encryption': 'none'},
+                ],
+              },
+            ],
+          },
+          'streamSettings': {
+            'network': 'tcp',
+            'security': 'tls',
+            'tlsSettings': {'serverName': 'u.example'},
+          },
+        },
+        {'protocol': 'freedom'},
+        {'protocol': 'dns', 'tag': 'dns-out'},
+      ],
+    });
+    final chainedJson = jsonEncode({
+      'outbounds': [
+        {
+          'tag': 'exit',
+          'protocol': 'trojan',
+          'settings': {
+            'servers': [
+              {'address': '198.51.100.71', 'port': 443, 'password': 'secret'},
+            ],
+          },
+          'streamSettings': {
+            'network': 'tcp',
+            'security': 'tls',
+            'tlsSettings': {'serverName': 'exit.example'},
+            'sockopt': {'dialerProxy': 'relay'},
+          },
+        },
+        {
+          'tag': 'relay',
+          'protocol': 'vless',
+          'settings': {
+            'vnext': [
+              {
+                'address': '198.51.100.72',
+                'port': 443,
+                'users': [
+                  {'id': uuid, 'encryption': 'none'},
+                ],
+              },
+            ],
+          },
+          'streamSettings': {
+            'network': 'tcp',
+            'security': 'tls',
+            'tlsSettings': {'serverName': 'relay.example'},
+          },
+        },
+        {'protocol': 'blackhole', 'tag': 'block'},
+      ],
+    });
+
+    setUp(() => Socks5Credentials().init('u', 'p'));
+
+    test(
+      'безымянные выходы получают уникальные теги, цепочка и привязка целы',
+      () {
+        final mergedText = MultiPingConfig.mergeXray([
+          (
+            id: 'u',
+            configJson: ConfigGeneratorV2.generatePingConfig(
+              untaggedJson,
+              const AppSettings(),
+              socksPort: 3101,
+              httpInbound: true,
+              outboundInterface: 'Ethernet',
+            ),
+            port: 3101,
+          ),
+          (
+            id: 'c',
+            configJson: ConfigGeneratorV2.generatePingConfig(
+              chainedJson,
+              const AppSettings(),
+              socksPort: 3102,
+              httpInbound: true,
+              outboundInterface: 'Ethernet',
+            ),
+            port: 3102,
+          ),
+        ]);
+        final merged = jsonDecode(mergedText) as Map<String, dynamic>;
+        final outbounds = (merged['outbounds'] as List)
+            .cast<Map<String, dynamic>>();
+        final tags = {
+          for (final o in outbounds) o['tag']?.toString().trim() ?? '',
+        };
+        expect(tags, isNot(contains('')));
+        expect(tags.length, outbounds.length);
+
+        final dnsOut = outbounds.singleWhere((o) => o['tag'] == 'dns-out-0');
+        expect(dnsOut.containsKey('streamSettings'), isFalse);
+
+        final rules = ((merged['routing'] as Map)['rules'] as List)
+            .cast<Map<String, dynamic>>();
+        for (final rule in rules) {
+          expect(tags, contains(rule['outboundTag']));
+        }
+        expect(rules.any((r) => r['outboundTag'] == 'proxy-0'), isTrue);
+        final exit = outbounds.singleWhere((o) => o['tag'] == 'exit-1');
+        expect(exit['streamSettings']['sockopt']['dialerProxy'], 'relay-1');
+        final relay = outbounds.singleWhere((o) => o['tag'] == 'relay-1');
+        expect(relay['streamSettings']['sockopt']['interface'], 'Ethernet');
+      },
+    );
+
+    test(
+      'живые xray.exe и mihomo.exe принимают пачки готовых конфигов без ошибок',
+      () async {
+        final xrayExe = File('assets/bin/windows/xray.exe');
+        final mihomoExe = File('assets/bin/windows/mihomo.exe');
+        if (!Platform.isWindows ||
+            !xrayExe.existsSync() ||
+            !mihomoExe.existsSync()) {
+          return;
+        }
+
+        final dir = Directory.systemTemp.createTempSync('multi_ping_live');
+        addTearDown(() {
+          if (dir.existsSync()) dir.deleteSync(recursive: true);
+        });
+        for (final dat in ['geoip.dat', 'geosite.dat']) {
+          final src = File('assets/bin/windows/$dat');
+          if (src.existsSync()) {
+            src.copySync('${dir.path}${Platform.pathSeparator}$dat');
+          }
+        }
+
+        final chainUri = const ProxyChainConfig(
+          name: 'hop',
+          hops: [
+            ProxyChainHop(
+              name: 'entry',
+              config:
+                  'vless://00000000-0000-4000-8000-000000000000@198.51.100.80:443?encryption=none&type=tcp&security=tls&sni=a.example#a',
+            ),
+            ProxyChainHop(
+              name: 'exit',
+              config: 'trojan://pass@198.51.100.81:443?sni=b.example#b',
+            ),
+          ],
+        ).encode();
+        final xrayInputs = [untaggedJson, chainedJson, chainUri];
+        final xrayMerged = MultiPingConfig.mergeXray([
+          for (var i = 0; i < xrayInputs.length; i++)
+            (
+              id: 'x$i',
+              configJson: ConfigGeneratorV2.generatePingConfig(
+                xrayInputs[i],
+                const AppSettings(),
+                socksPort: 3201 + i,
+                httpInbound: true,
+              ),
+              port: 3201 + i,
+            ),
+        ]);
+        final xrayConfigFile = File(
+          '${dir.path}${Platform.pathSeparator}ping_xray.json',
+        )..writeAsStringSync(xrayMerged);
+        final xrayRes = await Process.run(
+          xrayExe.absolute.path,
+          ['run', '-test', '-c', xrayConfigFile.path],
+          environment: {'XRAY_LOCATION_ASSET': dir.path},
+        );
+        expect(
+          xrayRes.exitCode,
+          0,
+          reason: '${xrayRes.stdout}\n${xrayRes.stderr}',
+        );
+
+        final wgPriv = base64Encode(List<int>.filled(32, 7));
+        final wgPub = base64Encode(List<int>.filled(32, 9));
+        final awg =
+            '''
+[Interface]
+PrivateKey = $wgPriv
+Address = 10.0.0.2/32
+Jc = 4
+Jmin = 40
+Jmax = 70
+
+[Peer]
+PublicKey = $wgPub
+Endpoint = 198.51.100.82:51820
+AllowedIPs = 0.0.0.0/0
+''';
+        const clashProfile = '''
+proxies:
+  - {name: "NL", type: trojan, server: 198.51.100.91, port: 443, password: password}
+  - {name: "FI", type: trojan, server: 198.51.100.92, port: 443, password: password}
+proxy-groups:
+  - {name: Select, type: select, proxies: [NL, FI]}
+rules:
+  - MATCH,Select
+''';
+        final mihomoInputs = [clashProfile, awg, chainUri];
+        final mihomoMerged = MultiPingConfig.mergeMihomo([
+          for (var i = 0; i < mihomoInputs.length; i++)
+            (
+              id: 'm$i',
+              configJson: MihomoConfigGen.generatePingConfig(
+                mihomoInputs[i],
+                const AppSettings(),
+                socksPort: 3301 + i,
+                httpInbound: true,
+              ),
+              port: 3301 + i,
+            ),
+        ], httpListeners: true);
+        final mihomoConfigFile = File(
+          '${dir.path}${Platform.pathSeparator}ping_mihomo.yaml',
+        )..writeAsStringSync(mihomoMerged);
+        final mihomoRes = await Process.run(mihomoExe.absolute.path, [
+          '-t',
+          '-d',
+          dir.path,
+          '-f',
+          mihomoConfigFile.path,
+        ]);
+        expect(
+          mihomoRes.exitCode,
+          0,
+          reason: '${mihomoRes.stdout}\n${mihomoRes.stderr}',
+        );
+      },
+    );
   });
 }

@@ -136,7 +136,11 @@ class ConfigGeneratorV2 {
   static Object? _boundOutbound(Object? outbound, String name) {
     if (outbound is! Map) return outbound;
     final protocol = outbound['protocol'];
-    if (protocol == 'blackhole' || protocol == 'loopback') return outbound;
+    if (protocol == 'blackhole' ||
+        protocol == 'loopback' ||
+        protocol == 'dns') {
+      return outbound;
+    }
     if (outbound['proxySettings'] != null) return outbound;
     final stream = Map<String, dynamic>.from(
       outbound['streamSettings'] as Map? ?? const <String, dynamic>{},

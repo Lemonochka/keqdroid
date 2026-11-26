@@ -572,7 +572,7 @@ class PingService {
   static const multiPingBatches = 3;
 
   static bool mergeableForMultiPing(String serverConfig) =>
-      detectServerFormat(serverConfig) == ServerFormat.link;
+      detectServerFormat(serverConfig) != ServerFormat.unknown;
 
   static Iterable<List<T>> _chunked<T>(List<T> items, int size) sync* {
     for (var i = 0; i < items.length; i += size) {
