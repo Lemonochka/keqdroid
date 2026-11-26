@@ -131,7 +131,7 @@ TunFailureHint? tunFailureHint(
                 'routes. Run the app as Administrator, or use Proxy mode.'
           : macos
           ? 'The core was not allowed to create the utun device or edit routes. '
-                'Install the keqdroid TUN service in Settings -> Permissions, '
+                'Install the keqdroid TUN service when enabling TUN mode, '
                 'or use Proxy mode.'
           : 'The core was not allowed to create the TUN device or edit routes. '
                 'TUN mode needs root via pkexec (polkit) — approve the password '

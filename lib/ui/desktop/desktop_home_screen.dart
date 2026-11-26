@@ -36,6 +36,7 @@ import '../../shared/ui/app_theme.dart';
 import '../../shared/ui/halloween/halloween_icons.dart';
 import '../../shared/ui/liquid_toast.dart';
 import '../../shared/ui/update_dialog.dart';
+import '../../tunnel/macos_elevation.dart';
 import '../../utils/clipboard_import.dart';
 import 'connect_rehearsal_host.dart';
 import 'desktop_connection_mode.dart';
@@ -222,6 +223,7 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
         // без службы спросим про неё, а окно в трее спрятало бы вопрос
         await WindowsDesktopService.restoreMainWindow();
       } else if (Platform.isMacOS &&
+          !macosRunningAsRoot() &&
           await MacosTunService.state() != TunServiceState.ready) {
         await MacosBackgroundService.instance.restoreMainWindow();
       }
