@@ -1,11 +1,17 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/models/app_settings.dart';
 import 'package:keqdroid/models/server_item.dart';
+import 'package:keqdroid/models/subscription.dart';
 import 'package:keqdroid/providers/providers.dart';
+import 'package:keqdroid/services/connections_service.dart';
+import 'package:keqdroid/services/subscription_body_parser.dart';
 import 'package:keqdroid/services/vpn_engine.dart';
+import 'package:keqdroid/utils/clash_template.dart';
 
 import '../helpers/fake_tunnel_backend.dart';
 import '../helpers/test_storage.dart';
@@ -205,4 +211,87 @@ void main() {
     expect(backend.sessions.last.mihomoConfig, contains('b.example.com'));
     expect(container.read(vpnStateProvider).value?.status, VpnStatus.connected);
   });
+
+  test(
+    'смена сервера на ходу заново закрепляет выбранный узел в группе шаблона Clash',
+    () async {
+      final prevOverrides = HttpOverrides.current;
+      HttpOverrides.global = null;
+      addTearDown(() => HttpOverrides.global = prevOverrides);
+
+      final putCalls = <({String path, String body})>[];
+
+      final rawTemplate = File(
+        'test/fixtures/subscription_payloads/clash-template-groups.txt',
+      ).readAsStringSync();
+      final template = ClashTemplate.fromBody(rawTemplate)!;
+      final templatedServers = [
+        for (final c in SubscriptionBodyParser.parseBody(rawTemplate))
+          ServerItem.fromRaw(c, subscriptionId: 's1'),
+      ];
+
+      final storage = await buildStorageService(
+        initialValues: {
+          'keqdis_clash_template_s1': template.encode(),
+        },
+      );
+      await storage.saveSubscriptions([
+        Subscription(
+          id: 's1',
+          name: 'Sub',
+          url: 'https://example.com/s1',
+          groupChoices: const {'Любой доступный': '🇱🇻 Latvia'},
+        ),
+      ]);
+      await storage.saveServers(templatedServers);
+      await storage.setActiveServerId(templatedServers[0].id);
+      await storage.saveSettings(
+        const AppSettings(vpnCore: AppSettings.vpnCoreMihomo),
+      );
+
+      final backend = _SwitchBackend()..reloads = true;
+      final container = ProviderContainer(
+        overrides: [
+          storageProvider.overrideWithValue(storage),
+          vpnEngineProvider.overrideWithValue(VpnEngine.withBackend(backend)),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      container.read(serversProvider);
+      await container.read(subscriptionsProvider.future);
+      await container.read(vpnStateProvider.future);
+      await container.read(vpnStateProvider.notifier).connect();
+      backend.calls.clear();
+
+      final apiServer = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      ConnectionsService.debugClashPort = apiServer.port;
+      addTearDown(() async {
+        ConnectionsService.debugClashPort = null;
+        await apiServer.close();
+      });
+      apiServer.listen((req) async {
+        final body = await utf8.decoder.bind(req).join();
+        if (req.method == 'PUT') {
+          putCalls.add((path: req.uri.path, body: body));
+        }
+        req.response.statusCode = 204;
+        await req.response.close();
+      });
+
+      await _switchTo(container, templatedServers[1]);
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      expect(backend.calls, ['reload']);
+      expect(
+        putCalls.any(
+          (c) =>
+              Uri.decodeComponent(c.path) == '/proxies/Любой доступный' &&
+              c.body.contains('Latvia'),
+        ),
+        isTrue,
+        reason: 'PUT /configs сбрасывает группы шаблона, пин нужно прислать заново',
+      );
+    },
+  );
 }

@@ -98,6 +98,7 @@
     "IP-CIDR,192.0.0.0/24,DIRECT,no-resolve",
     "IP-CIDR,198.51.100.0/24,DIRECT,no-resolve",
     "IP-CIDR,203.0.113.0/24,DIRECT,no-resolve",
+    "AND,((NETWORK,udp),(DST-PORT,443)),REJECT",
     "DOMAIN-SUFFIX,proxy.example,proxy",
     "GEOSITE,google,proxy",
     "IP-CIDR,10.10.0.0/16,DIRECT",

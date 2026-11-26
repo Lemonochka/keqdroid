@@ -38,7 +38,7 @@
 ```json
 "rules": [
   {"ip": ["169.254.0.0/16", "224.0.0.0/4", "255.255.255.255/32"], "outboundTag": "block", "ruleTag": "block-special"},
-  {"port": "53", "network": "tcp,udp", "outboundTag": "dns-out", "ruleTag": "dns-out"},
+  {"inboundTag": ["socks-in", "http-in"], "port": "53", "network": "tcp,udp", "outboundTag": "dns-out", "ruleTag": "dns-out"},
   {"domain": ["full:www.cloudflare.com"], "outboundTag": "proxy", "ruleTag": "exit-ip-probe"},
   {"domain": ["domain:ads.example", "geosite:category-ads-all"], "outboundTag": "block", "ruleTag": "block-domains"},
   {"ip": ["198.51.100.33"], "outboundTag": "direct", "ruleTag": "server-ip"},
@@ -137,4 +137,4 @@
 
 ## QUIC на серверах с Vision
 
-Если сервер подключён через VLESS с Vision (`xtls-rprx-vision`), а «Всё остальное» идёт через VPN, приложение на Xray блокирует QUIC (UDP на порт 443). Сервер с Vision всё равно не пропускает QUIC, но отказывает только после полного рукопожатия, и браузер на каждой попытке терял время. С блокировкой браузер сразу переходит на обычное соединение. С вариантом `xtls-rprx-vision-udp443` блокировки нет, потому что там сервер пропускает QUIC.
+Если сервер подключён через VLESS с Vision (`xtls-rprx-vision`), а «Всё остальное» идёт через VPN, приложение блокирует QUIC (UDP на порт 443). Сервер с Vision всё равно не пропускает QUIC, но отказывает только после полного рукопожатия, и браузер на каждой попытке терял время. С блокировкой браузер сразу переходит на обычное соединение. С вариантом `xtls-rprx-vision-udp443` блокировки нет, потому что там сервер пропускает QUIC.

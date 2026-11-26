@@ -30,6 +30,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
   Future<void>? _attempt;
   // нажатия подключить, отменить, отключить: ждущий очереди connect уступает более позднему
   int _intent = 0;
+  int _pinsRunId = 0;
   // стоп от отмены или отключения: доделываясь поверх нового старта, он выключал прокси и терял новое ядро
   Future<void>? _stopping;
   // сессия, которую поднял этот connect: смена сервера на mihomo берёт из неё порты, логин и пароль и API
@@ -291,16 +292,22 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
   // в конфиге mihomo закрепить узел в url-test нечем, а store-selected выключен, поэтому шлём после каждого
   // подключения; список proxy-providers ядро может ещё качать, тогда Set отвечает proxy not exist
   Future<void> _applyTemplatePins() async {
+    final runId = ++_pinsRunId;
     final server = ref.read(serversProvider).activeServer;
     final subId = server?.subscriptionId;
     if (server == null || subId == null) return;
-    final template = ref.read(subscriptionTemplateProvider(subId));
+    final storage = ref.read(storageProvider);
+    final settings = await storage.getSettings();
+    if (!ref.mounted || runId != _pinsRunId || !clashTemplateApplies(settings)) {
+      return;
+    }
+    final raw = storage.getClashTemplate(subId);
+    final template = raw == null ? null : ClashTemplate.fromBody(raw);
     if (template == null || template.nodeFor(server) == null) return;
+    final subs = await storage.getSubscriptions();
+    if (!ref.mounted || runId != _pinsRunId) return;
     final choices =
-        (ref.read(subscriptionsProvider).value ?? const <Subscription>[])
-            .where((s) => s.id == subId)
-            .firstOrNull
-            ?.groupChoices ??
+        subs.where((s) => s.id == subId).firstOrNull?.groupChoices ??
         const <String, String>{};
     final pins = {
       for (final MapEntry(:key, :value) in choices.entries)
@@ -308,11 +315,16 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     };
     for (var attempt = 0; pins.isNotEmpty && attempt < 5; attempt++) {
       if (attempt > 0) await Future<void>.delayed(const Duration(seconds: 2));
-      if (!ref.mounted || state.value?.status != VpnStatus.connected) return;
+      if (!ref.mounted ||
+          runId != _pinsRunId ||
+          state.value?.status != VpnStatus.connected) {
+        return;
+      }
       for (final group in [...pins.keys]) {
         if (await MihomoGroupsApi.select(group, pins[group]!)) {
           pins.remove(group);
         }
+        if (!ref.mounted || runId != _pinsRunId) return;
       }
     }
     if (pins.isNotEmpty) {
@@ -320,7 +332,9 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
         'Template pins not applied: ${pins.keys.join(', ')}',
       );
     }
-    if (ref.mounted) ref.invalidate(liveTemplateGroupsProvider(subId));
+    if (ref.mounted && runId == _pinsRunId) {
+      ref.invalidate(liveTemplateGroupsProvider(subId));
+    }
   }
 
   Future<void> syncFromNative() async {
@@ -1138,6 +1152,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
 
   Future<void> disconnect() async {
     _intent++;
+    _pinsRunId++;
     _followSelection = false;
     _live = null;
     // посреди подключения это отмена: смена режима на ПК гасила прокси под попыткой, та падала с ошибкой,
@@ -1229,6 +1244,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       }
       if (!await engine.reloadMihomoConfig(built.request)) return false;
       _live = built;
+      unawaited(_applyTemplatePins());
       AppLogger.instance.info('Server switched in place, the tunnel stayed up');
       return true;
     } catch (e, st) {

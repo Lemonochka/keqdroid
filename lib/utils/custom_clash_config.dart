@@ -705,7 +705,113 @@ class CustomClashConfig {
           key.toString(): value is List ? clean(value) : value,
       };
     }
+    final dns = out['dns'];
+    if (dns is Map && !index.isEmpty) {
+      out['dns'] = _cleanDnsGeo(dns, index, dropped, clean);
+    }
     return (config: CustomClashConfig._(out), dropped: dropped);
+  }
+
+  static Map<String, dynamic> _cleanDnsGeo(
+    Map<dynamic, dynamic> rawDns,
+    GeoAssetIndex index,
+    List<String> dropped,
+    List<Object?> Function(List<Object?> raw) cleanRules,
+  ) {
+    final dns = Map<String, dynamic>.from(rawDns);
+    List<String> resolveGeositeCode(String rawCode) {
+      var code = rawCode.trim().toLowerCase();
+      final attr = code.indexOf('@');
+      if (attr >= 0) code = code.substring(0, attr);
+      final token = 'geosite:$code';
+      if (isKnownGeoToken(token, index)) return [rawCode.trim()];
+      final subs = geoSubstitutes(token, index);
+      if (subs != null) {
+        return [for (final s in subs) s.substring('geosite:'.length)];
+      }
+      dropped.add(token);
+      return const [];
+    }
+
+    Map<String, dynamic> cleanPolicy(Map<dynamic, dynamic> rawPolicy) {
+      final out = <String, dynamic>{};
+      for (final MapEntry(:key, :value) in rawPolicy.entries) {
+        final k = key.toString().trim();
+        final lower = k.toLowerCase();
+        if (!lower.startsWith('geosite:')) {
+          out[k] = value;
+          continue;
+        }
+        final kept = <String>[];
+        for (final part in k.substring('geosite:'.length).split(',')) {
+          if (part.trim().isEmpty) continue;
+          kept.addAll(resolveGeositeCode(part));
+        }
+        if (kept.isNotEmpty) {
+          out['geosite:${kept.join(',')}'] = value;
+        }
+      }
+      return out;
+    }
+
+    if (dns['nameserver-policy'] is Map) {
+      dns['nameserver-policy'] = cleanPolicy(dns['nameserver-policy'] as Map);
+    }
+    if (dns['proxy-server-nameserver-policy'] is Map) {
+      dns['proxy-server-nameserver-policy'] = cleanPolicy(
+        dns['proxy-server-nameserver-policy'] as Map,
+      );
+    }
+
+    final filterMode = dns['fake-ip-filter-mode']?.toString().toLowerCase();
+    if (dns['fake-ip-filter'] is List) {
+      if (filterMode == 'rule') {
+        dns['fake-ip-filter'] = cleanRules(
+          (dns['fake-ip-filter'] as List).cast<Object?>(),
+        );
+      } else {
+        final cleanedFilter = <Object?>[];
+        for (final item in dns['fake-ip-filter'] as List) {
+          final s = item.toString().trim();
+          if (s.toLowerCase().startsWith('geosite:')) {
+            final kept = <String>[];
+            for (final part in s.substring('geosite:'.length).split(',')) {
+              if (part.trim().isEmpty) continue;
+              kept.addAll(resolveGeositeCode(part));
+            }
+            if (kept.isNotEmpty) {
+              cleanedFilter.add('geosite:${kept.join(',')}');
+            }
+          } else {
+            cleanedFilter.add(item);
+          }
+        }
+        dns['fake-ip-filter'] = cleanedFilter;
+      }
+    }
+
+    final fbRaw = dns['fallback-filter'];
+    if (fbRaw is Map) {
+      final fb = Map<String, dynamic>.from(fbRaw);
+      if (fb['geoip'] != false) {
+        final rawCode = fb['geoip-code']?.toString().trim() ?? 'CN';
+        final code = rawCode.toLowerCase();
+        if (code.isNotEmpty &&
+            code != 'lan' &&
+            !isKnownGeoToken('geoip:$code', index)) {
+          fb['geoip'] = false;
+          dropped.add('geoip:$code');
+        }
+      }
+      if (fb['geosite'] is List) {
+        fb['geosite'] = [
+          for (final item in fb['geosite'] as List)
+            ...resolveGeositeCode(item.toString()),
+        ];
+      }
+      dns['fallback-filter'] = fb;
+    }
+    return dns;
   }
 
   // базы ASN мы не возим, а без неё ядро до подъёма туннеля качает её с GitHub и на отказе не берёт весь конфиг (geodata.InitASN)

@@ -1242,12 +1242,12 @@ void main() {
         );
       });
 
-      test('список без единого адреса остаётся на прежней паре', () {
+      test('список без единого адреса остаётся на защищённой паре DoH', () {
         // Подставить туда нечего: без bootstrap имена DoH-серверов не
         // разрешаются вовсе, и DNS умирает целиком.
         expect(bootstrapFor('https://dns.quad9.net/dns-query, localhost'), [
-          '1.1.1.1',
-          '8.8.8.8',
+          'https://1.1.1.1/dns-query',
+          'https://8.8.8.8/dns-query',
         ]);
       });
 
@@ -1257,7 +1257,10 @@ void main() {
           'https://[2620:fe::fe]/dns-query',
         ]);
         // Имя с портом всё ещё остаётся именем.
-        expect(bootstrapFor('tls://dns.quad9.net:853'), ['1.1.1.1', '8.8.8.8']);
+        expect(bootstrapFor('tls://dns.quad9.net:853'), [
+          'https://1.1.1.1/dns-query',
+          'https://8.8.8.8/dns-query',
+        ]);
       });
     });
 

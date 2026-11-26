@@ -38,7 +38,7 @@ Take these routes as an example: “Block” `ads.example, geosite:category-ads-
 ```json
 "rules": [
   {"ip": ["169.254.0.0/16", "224.0.0.0/4", "255.255.255.255/32"], "outboundTag": "block", "ruleTag": "block-special"},
-  {"port": "53", "network": "tcp,udp", "outboundTag": "dns-out", "ruleTag": "dns-out"},
+  {"inboundTag": ["socks-in", "http-in"], "port": "53", "network": "tcp,udp", "outboundTag": "dns-out", "ruleTag": "dns-out"},
   {"domain": ["full:www.cloudflare.com"], "outboundTag": "proxy", "ruleTag": "exit-ip-probe"},
   {"domain": ["domain:ads.example", "geosite:category-ads-all"], "outboundTag": "block", "ruleTag": "block-domains"},
   {"ip": ["198.51.100.33"], "outboundTag": "direct", "ruleTag": "server-ip"},
@@ -137,4 +137,4 @@ The “Rules” item in “Ignore from provider” removes the config's rules th
 
 ## QUIC on Vision servers
 
-If the server is connected over VLESS with Vision (`xtls-rprx-vision`) and “Everything else” goes through the VPN, the app blocks QUIC (UDP to port 443) on Xray. A Vision server doesn't let QUIC through anyway, but it only refuses after a full handshake, so the browser lost time on every attempt. With the block, the browser switches to a regular connection right away. The `xtls-rprx-vision-udp443` variant has no block, because there the server does let QUIC through.
+If the server is connected over VLESS with Vision (`xtls-rprx-vision`) and “Everything else” goes through the VPN, the app blocks QUIC (UDP to port 443). A Vision server doesn't let QUIC through anyway, but it only refuses after a full handshake, so the browser lost time on every attempt. With the block, the browser switches to a regular connection right away. The `xtls-rprx-vision-udp443` variant has no block, because there the server does let QUIC through.

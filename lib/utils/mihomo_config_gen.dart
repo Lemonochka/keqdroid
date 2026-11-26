@@ -61,6 +61,8 @@ class MihomoTunOptions {
   bool get takesIpv6 =>
       ipv6 == TunSettings.ipv6Close || ipv6 == TunSettings.ipv6Vpn;
 
+  bool get passesIpv6 => ipv6 == TunSettings.ipv6Vpn;
+
   bool get closesIpv6 => ipv6 == TunSettings.ipv6Close;
 
   bool get autoDetectInterface => autoRoute;
@@ -222,7 +224,11 @@ class MihomoConfigGen {
       'sniffer': buildSniffer(settings.xrayCore),
       if (buildHosts(settings.xrayCore).isNotEmpty)
         'hosts': buildHosts(settings.xrayCore),
-      'dns': buildDns(settings, fakeIp: fakeIp),
+      'dns': buildDns(
+        settings,
+        fakeIp: fakeIp,
+        tunIpv6: tun?.passesIpv6 ?? false,
+      ),
       if (tun != null) 'tun': buildTun(tun),
       if (settings.lanSharing) 'listeners': buildLanListeners(settings),
       if (settings.lanSharing || appRules.isNotEmpty)
@@ -233,6 +239,7 @@ class MihomoConfigGen {
             appRules,
             proxyTarget: proxyName,
             routeServers: routeServers,
+            blockQuic: _visionRejectsQuic(proxies),
           ),
         },
       'proxies': [...proxies, ...buildRouteServerProxies(routeServers)],
@@ -259,6 +266,7 @@ class MihomoConfigGen {
         routeServers: routeServers,
         appRoutes: appRules,
         ownerGuard: guard,
+        blockQuic: _visionRejectsQuic(proxies),
       ),
     };
   }
@@ -321,7 +329,11 @@ class MihomoConfigGen {
       sniffer: buildSniffer(settings.xrayCore),
       logLevel: _logLevel(settings.xrayCore.logLevel),
       // наш DNS, если у автора своего нет или пользователь поставил наш поверх
-      dns: buildDns(settings, fakeIp: fakeIp),
+      dns: buildDns(
+        settings,
+        fakeIp: fakeIp,
+        tunIpv6: tun?.passesIpv6 ?? false,
+      ),
       ownDns: settings.ignoreProviderDns,
       // правила по процессам раньше авторских: так пользователь решает за свою машину
       prependRules: [
@@ -594,6 +606,7 @@ class MihomoConfigGen {
   static Map<String, dynamic> buildDns(
     AppSettings settings, {
     bool fakeIp = false,
+    bool tunIpv6 = false,
   }) {
     final core = settings.xrayCore;
     final servers = dnsServers(core);
@@ -613,7 +626,7 @@ class MihomoConfigGen {
 
     return <String, dynamic>{
       'enable': true,
-      'ipv6': core.dnsQueryStrategy != 'UseIPv4',
+      'ipv6': tunIpv6 || core.dnsQueryStrategy != 'UseIPv4',
       'enhanced-mode': fakeIp ? 'fake-ip' : 'normal',
       if (fakeIp) ...{
         // из него же ядро берёт адрес своего tun-интерфейса, а его мы пускаем мимо туннеля
@@ -664,7 +677,10 @@ class MihomoConfigGen {
     return out.isEmpty ? _bootstrapFallback : out;
   }
 
-  static const _bootstrapFallback = ['1.1.1.1', '8.8.8.8'];
+  static const _bootstrapFallback = [
+    'https://1.1.1.1/dns-query',
+    'https://8.8.8.8/dns-query',
+  ];
 
   // DoH к публичным резолверам провайдер может резать, и прямое соединение висело на резолве (issue #9);
   // список опрашивается параллельно, живой DoH запасной не тормозит, а system не годится, на Android он 114.114.114.114
@@ -690,6 +706,7 @@ class MihomoConfigGen {
   }
 
   static bool _hasIpAddress(String server) =>
+      !server.startsWith('dhcp://') &&
       InternetAddress.tryParse(_hostOf(server)) != null;
 
   static String _hostOf(String server) {
@@ -724,7 +741,7 @@ class MihomoConfigGen {
     }
     final name = scheme.group(1)!.toLowerCase();
     if (!_dnsSchemes.contains(name)) return null;
-    final local = scheme.group(2) != null;
+    final local = scheme.group(2) != null && name != 'dhcp';
     return '$name://${v.substring(scheme.end)}${local ? '#DIRECT' : ''}';
   }
 
@@ -1500,8 +1517,11 @@ class MihomoConfigGen {
     }
     if (password.isEmpty) throw ArgumentError('Hysteria2 requires password');
 
-    final sni = _param(uri, 'sni', uri.host);
-    final obfs = _param(uri, 'obfs');
+    final sni = params.sni.isNotEmpty ? params.sni : uri.host;
+    final obfs = params.obfsType;
+    final obfsPassword = params.obfsPassword.isNotEmpty
+        ? params.obfsPassword
+        : _param(uri, 'obfsParam');
     final out = <String, dynamic>{
       'name': proxyName,
       'type': 'hysteria2',
@@ -1510,21 +1530,21 @@ class MihomoConfigGen {
       'password': password,
       if (sni.isNotEmpty) 'sni': sni,
       if (obfs.isNotEmpty) 'obfs': obfs,
-      if (obfs.isNotEmpty)
-        'obfs-password': _param(uri, 'obfs-password', _param(uri, 'obfsParam')),
+      if (obfs.isNotEmpty) 'obfs-password': obfsPassword,
     };
-    final up = _param(uri, 'up');
-    final down = _param(uri, 'down');
-    if (up.isNotEmpty) out['up'] = up;
-    if (down.isNotEmpty) out['down'] = down;
+    if (params.up.isNotEmpty) out['up'] = params.up;
+    if (params.down.isNotEmpty) out['down'] = params.down;
     final alpn = _alpn(_param(uri, 'alpn'));
     if (alpn != null) out['alpn'] = alpn;
+    final ech = _echOpts(_rawParam(uri, 'ech'));
+    if (ech != null) out['ech-opts'] = ech;
     if (params.mport.isNotEmpty) {
       out['ports'] = params.mport;
       if (params.hopInterval.isNotEmpty) {
         out['hop-interval'] = params.hopInterval;
       }
     }
+    _applyCertPinning(out, uri);
     // fingerprint тут отпечаток сертификата, а не uTLS
     if (params.pinSha256.isNotEmpty) out['fingerprint'] = params.pinSha256;
     return out;
@@ -1941,6 +1961,7 @@ class MihomoConfigGen {
     List<RouteServerOutbound> routeServers = const [],
     List<RouteAppRules> appRoutes = const [],
     OwnerGuard ownerGuard = OwnerGuard.off,
+    bool blockQuic = false,
   }) {
     final rules = <String>[
       ?outsideVpnRule(ownerGuard),
@@ -1976,6 +1997,7 @@ class MihomoConfigGen {
         ruleLists: ruleLists,
         routeServers: routeServers,
         appRoutes: appRoutes,
+        blockQuic: blockQuic,
       ),
     ];
 
@@ -2007,6 +2029,19 @@ class MihomoConfigGen {
   static const closeTunIpv6Key = 'keqdroid-tun-close-ipv6';
 
   static const closedTunIpv6Rule = 'AND,((IN-TYPE,TUN),(IP-CIDR6,::/0)),REJECT';
+
+  static const visionQuicRejectRule = 'AND,((NETWORK,udp),(DST-PORT,443)),REJECT';
+
+  static bool _visionRejectsQuic(List<Map<String, dynamic>> proxies) {
+    if (proxies.isEmpty) return false;
+    final exit = proxies.firstWhere(
+      (p) => p['name'] == proxyName,
+      orElse: () => proxies.first,
+    );
+    if (exit['type'] != 'vless') return false;
+    final flow = exit['flow']?.toString().trim() ?? '';
+    return flow.startsWith('xtls-rprx-vision') && !flow.endsWith('-udp443');
+  }
 
   // первым правилом, раньше авторских
   static String? outsideVpnRule(OwnerGuard guard) => switch (guard) {
@@ -2189,21 +2224,51 @@ class MihomoConfigGen {
     List<RouteAppRules> routes, {
     required String proxyTarget,
     List<RouteServerOutbound> routeServers = const [],
+    bool blockQuic = false,
   }) {
     final strategy = _ipRuleStrategy(settings, routeServers, routes);
     final suffix = _ipSuffix(strategy);
+    final quicBlocked =
+        blockQuic && settings.finalOutbound == AppSettings.finalOutboundProxy;
     final sets = <String, List<String>>{};
     for (final route in routes) {
       if (route.allTraffic || _inline(route)) continue;
       final target = _appRouteTarget(route, proxyTarget);
       final body = _appRouteBody(route, target, suffix);
-      if (body.isNotEmpty) sets[route.tag] = body;
+      if (body.isNotEmpty) {
+        sets[route.tag] =
+            quicBlocked &&
+                route.forAllApps &&
+                route.ownOrder &&
+                target == proxyTarget &&
+                _routeCatchesUdp443(route)
+            ? [
+                for (final r in body) ...[_quicRejectRule(r, target), r],
+              ]
+            : body;
+      }
       final tail = _ipRules(route.entries, target, '');
       if (strategy == 'IPIfNonMatch' && tail.isNotEmpty) {
         sets[_appRouteIpSet(route)] = tail;
       }
     }
     return sets;
+  }
+
+  static bool _routeCatchesUdp443(RouteAppRules route) =>
+      route.network != RouteNetwork.tcp &&
+      (route.ports.isEmpty ||
+          route.ports.any((range) => range.$1 <= 443 && 443 <= range.$2));
+
+  static String _quicRejectRule(String rule, String target) {
+    const noResolve = ',no-resolve';
+    final withNoResolve = ',$target$noResolve';
+    final condition = rule.endsWith(withNoResolve)
+        ? '${rule.substring(0, rule.length - withNoResolve.length)}$noResolve'
+        : rule.endsWith(',$target')
+        ? rule.substring(0, rule.length - ',$target'.length)
+        : rule;
+    return 'AND,(($condition),(NETWORK,udp),(DST-PORT,443)),REJECT';
   }
 
   static Map<String, dynamic> buildAppRouteProviders(
@@ -2245,6 +2310,7 @@ class MihomoConfigGen {
     RuleListDomains ruleLists = RuleListDomains.none,
     List<RouteServerOutbound> routeServers = const [],
     List<RouteAppRules> appRoutes = const [],
+    bool blockQuic = false,
   }) {
     final rules = <String>[];
     final strategy = _ipRuleStrategy(settings, routeServers, appRoutes);
@@ -2314,12 +2380,33 @@ class MihomoConfigGen {
     rules.addAll(appRules(protoDirect));
     addGroup(settings.directRules, 'DIRECT', directListSet, ruleLists.direct);
     if (appOther.isEmpty) rules.addAll(privateRanges);
+    final quicBlocked =
+        blockQuic && settings.finalOutbound == AppSettings.finalOutboundProxy;
     for (final route in placed) {
-      rules.addAll(
-        _inline(route)
-            ? _appRouteBody(route, _appRouteTarget(route, proxyTarget), inPlace)
-            : appRules([route]),
-      );
+      final target = _appRouteTarget(route, proxyTarget);
+      if (_inline(route)) {
+        final body = _appRouteBody(route, target, inPlace);
+        if (quicBlocked && target == proxyTarget) {
+          for (final r in body) {
+            rules
+              ..add(_quicRejectRule(r, target))
+              ..add(r);
+          }
+        } else {
+          rules.addAll(body);
+        }
+      } else {
+        final own = appRules([route]);
+        if (quicBlocked &&
+            target == proxyTarget &&
+            route.allTraffic &&
+            _routeCatchesUdp443(route)) {
+          for (final r in own) {
+            rules.add(_quicRejectRule(r, target));
+          }
+        }
+        rules.addAll(own);
+      }
     }
     // между обходом и через VPN, как в разделе всех приложений (routesIn)
     rules.addAll(appRules(protoServer));
@@ -2330,6 +2417,9 @@ class MihomoConfigGen {
         _routeServerListSet(server),
         server.listDomains,
       );
+    }
+    if (quicBlocked) {
+      rules.add(visionQuicRejectRule);
     }
     rules.addAll(appRules(protoVpn));
     addGroup(settings.proxyRules, proxyTarget, proxyListSet, ruleLists.proxy);

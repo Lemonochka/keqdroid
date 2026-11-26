@@ -66,7 +66,11 @@ class ConnectionsService {
       Platform.isMacOS ||
       Platform.isAndroid;
 
+  @visibleForTesting
+  static int? debugClashPort;
+
   static int? activeClashPort() {
+    if (debugClashPort != null) return debugClashPort;
     if (Platform.isWindows) {
       return WindowsTunnelBackend.activeInstance?.clashApiPort;
     }
