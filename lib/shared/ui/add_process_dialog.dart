@@ -66,7 +66,6 @@ class _AddProcessDialogState extends State<_AddProcessDialog> {
               child: TextButton.icon(
                 onPressed: () async {
                   try {
-                    // Unix executables have no .exe extension.
                     final unix = Platform.isLinux || Platform.isMacOS;
                     final r = await AppFileDialogs.pickFile(
                       dialogTitle: l10n.splitAddAppPickFile,

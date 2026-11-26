@@ -260,7 +260,13 @@ class MacosBackgroundService with WindowListener, TrayListener {
   };
 
   @override
-  void onWindowFocus() => uiVisible.value = true;
+  void onWindowFocus() {
+    uiVisible.value = true;
+    if (_boundsRestorePending) {
+      _boundsRestorePending = false;
+      unawaited(_restoreWindowBounds());
+    }
+  }
 
   @override
   void onWindowMinimize() => uiVisible.value = false;

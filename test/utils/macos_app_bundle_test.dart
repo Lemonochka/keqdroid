@@ -45,6 +45,12 @@ void main() {
 </dict>
 </plist>''';
       expect(MacosAppBundle.parseXmlExecutable(xml), 'Foo & Bar');
+      expect(
+        MacosAppBundle.parseXmlExecutable(
+          xml.replaceFirst('Foo &amp; Bar', 'Foo &amp;lt; Bar'),
+        ),
+        'Foo &lt; Bar',
+      );
 
       final tmp = Directory.systemTemp.createTempSync('keq_plist_');
       addTearDown(() => tmp.deleteSync(recursive: true));

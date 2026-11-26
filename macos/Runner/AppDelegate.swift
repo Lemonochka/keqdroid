@@ -16,7 +16,8 @@ class AppDelegate: FlutterAppDelegate {
   }
 
   override func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-    if allowImmediateTerminate || isTerminating { return .terminateNow }
+    if allowImmediateTerminate { return .terminateNow }
+    if isTerminating { return .terminateCancel }
     guard let bridge = platformBridge else { return .terminateNow }
     isTerminating = true
     bridge.notifyAppWillTerminate { [weak self] handled in

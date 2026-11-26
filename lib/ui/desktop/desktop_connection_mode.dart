@@ -146,7 +146,8 @@ Future<bool> ensureMacosTunService(
   final state = await MacosTunService.state();
   if (state == TunServiceState.ready) return true;
   if (showWindow) {
-    await (restoreWindow ?? MacosBackgroundService.instance.restoreMainWindow)();
+    await (restoreWindow ??
+        MacosBackgroundService.instance.restoreMainWindow)();
   }
   if (!context.mounted) return false;
   final install = await showDesktopTunServiceDialog(

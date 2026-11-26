@@ -44,11 +44,11 @@ abstract final class MacosAppBundle {
     if (m == null) return null;
     final decoded = m
         .group(1)!
-        .replaceAll('&amp;', '&')
         .replaceAll('&lt;', '<')
         .replaceAll('&gt;', '>')
         .replaceAll('&quot;', '"')
         .replaceAll('&apos;', "'")
+        .replaceAll('&amp;', '&')
         .trim();
     return decoded.isEmpty ? null : decoded;
   }
@@ -59,13 +59,7 @@ abstract final class MacosAppBundle {
     try {
       final bytes = await plistFile.readAsBytes();
       final isBinary =
-          bytes.length >= 6 &&
-          bytes[0] == 0x62 && // 'b'
-          bytes[1] == 0x70 && // 'p'
-          bytes[2] == 0x6c && // 'l'
-          bytes[3] == 0x69 && // 'i'
-          bytes[4] == 0x73 && // 's'
-          bytes[5] == 0x74; // 't'
+          bytes.length >= 6 && ascii.decode(bytes.sublist(0, 6)) == 'bplist';
       if (!isBinary) {
         final parsed = parseXmlExecutable(
           utf8.decode(bytes, allowMalformed: true),

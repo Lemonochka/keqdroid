@@ -157,11 +157,9 @@ class MacosTunService {
     try {
       client = await _openFrameClient();
     } catch (e) {
-      throw ProcessException(
-        'keqdroid-tun',
-        [kind],
-        'TUN service is unreachable: $e',
-      );
+      throw ProcessException('keqdroid-tun', [
+        kind,
+      ], 'TUN service is unreachable: $e');
     }
 
     final appDir = MacosCorePaths.bundleBinDir();
@@ -173,19 +171,15 @@ class MacosTunService {
       );
       if (reply.startsWith('error\n')) {
         await client.close();
-        throw ProcessException(
-          'keqdroid-tun',
-          [kind],
-          'TUN service: ${reply.substring('error\n'.length)}',
-        );
+        throw ProcessException('keqdroid-tun', [
+          kind,
+        ], 'TUN service: ${reply.substring('error\n'.length)}');
       }
       if (!reply.startsWith('ok\n')) {
         await client.close();
-        throw ProcessException(
-          'keqdroid-tun',
-          [kind],
-          'TUN service returned unexpected response: $reply',
-        );
+        throw ProcessException('keqdroid-tun', [
+          kind,
+        ], 'TUN service returned unexpected response: $reply');
       }
       final corePid = int.tryParse(reply.substring('ok\n'.length).trim()) ?? 0;
       final process = _MacosServiceCoreProcess(corePid, client);

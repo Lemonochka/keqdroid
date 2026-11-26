@@ -90,40 +90,65 @@ void main() {
     expect(svc.uiVisible.value, isTrue);
   });
 
-  test('defers window bounds and maximize restore when autostarted in tray', () async {
-    MacosAutostart.captureLaunchArgs([MacosAutostart.flag]);
-    await MacosAutostart.setStartInTray(true);
+  test(
+    'defers window bounds and maximize restore when autostarted in tray',
+    () async {
+      MacosAutostart.captureLaunchArgs([MacosAutostart.flag]);
+      await MacosAutostart.setStartInTray(true);
 
-    final svc = MacosBackgroundService.forTesting();
-    await svc.initWindowAndTray();
+      final svc = MacosBackgroundService.forTesting();
+      await svc.initWindowAndTray();
 
-    expect(svc.uiVisible.value, isFalse);
-    expect(windowCalls, isNot(contains('setBounds')));
-    expect(windowCalls, isNot(contains('maximize')));
+      expect(svc.uiVisible.value, isFalse);
+      expect(windowCalls, isNot(contains('setBounds')));
+      expect(windowCalls, isNot(contains('maximize')));
 
-    await svc.restoreMainWindow();
+      await svc.restoreMainWindow();
 
-    expect(svc.uiVisible.value, isTrue);
-    expect(windowCalls, contains('setBounds'));
-    expect(windowCalls, contains('maximize'));
-    expect(windowCalls, contains('show'));
-  });
+      expect(svc.uiVisible.value, isTrue);
+      expect(windowCalls, contains('setBounds'));
+      expect(windowCalls, contains('maximize'));
+      expect(windowCalls, contains('show'));
+    },
+  );
 
-  test('re-entrant app terminate during in-flight quit confirms terminate cleanly', () async {
+  test(
+    'restores deferred window bounds when focused from Dock after tray autostart',
+    () async {
+      MacosAutostart.captureLaunchArgs([MacosAutostart.flag]);
+      await MacosAutostart.setStartInTray(true);
+
+      final svc = MacosBackgroundService.forTesting();
+      await svc.initWindowAndTray();
+
+      expect(windowCalls, isNot(contains('setBounds')));
+
+      svc.onWindowFocus();
+      await Future<void>.delayed(Duration.zero);
+
+      expect(svc.uiVisible.value, isTrue);
+      expect(windowCalls, contains('setBounds'));
+      expect(windowCalls, contains('maximize'));
+    },
+  );
+
+  test('repeated app terminate waits for in-flight tray quit', () async {
     final svc = MacosBackgroundService.forTesting();
     final cleanupGate = Completer<void>();
     svc.onQuit = () => cleanupGate.future;
 
     final firstQuit = svc.quit();
-    // macOS Cmd+Q arrives while tray quit cleanup is still running.
-    final appTerminate = svc.quit(fromAppTerminate: true);
-    await appTerminate;
+    await svc.quit(fromAppTerminate: true);
+    await svc.quit(fromAppTerminate: true);
     expect(vpnCalls, isNot(contains('confirmAppTerminate')));
 
     cleanupGate.complete();
     await firstQuit;
 
-    expect(vpnCalls, contains('confirmAppTerminate'));
+    expect(
+      vpnCalls.where((call) => call == 'confirmAppTerminate'),
+      hasLength(1),
+    );
     expect(exitCodes, isEmpty);
   });
 

@@ -210,10 +210,7 @@ class MacosTunnelBackend
         bin,
         ['run', '-c', configFile.path],
         workingDirectory: _sessionDir!.path,
-        environment: {
-          'XRAY_LOCATION_ASSET': ?geoDir,
-          kXrayStopOnStdinEof: '1',
-        },
+        environment: {'XRAY_LOCATION_ASSET': ?geoDir, kXrayStopOnStdinEof: '1'},
         mode: ProcessStartMode.normal,
       );
     }

@@ -103,8 +103,7 @@ final class MacosPlatformBridge {
         result(cached as String)
         return
       }
-      // AppKit's NSWorkspace/NSImage must only be touched on the main thread;
-      // extract an immutable CGImage here and encode PNG off the main thread.
+      // NSWorkspace и NSImage вызываем в основном потоке, PNG собираем в фоновом
       guard let cgImage = Self.loadAppIconCGImageOnMain(path: path) else {
         result(nil)
         return

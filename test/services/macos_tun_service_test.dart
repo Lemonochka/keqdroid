@@ -104,8 +104,8 @@ void main() {
     nextAdminResult = (exitCode: 0, stderr: '');
 
     MacosTunService.plistExistsOverride = () => plistExists;
-    MacosTunService.coreHashesOverride =
-        () async => (xray: 'xray-sha', mihomo: 'mihomo-sha');
+    MacosTunService.coreHashesOverride = () async =>
+        (xray: 'xray-sha', mihomo: 'mihomo-sha');
     MacosTunService.uidOverride = 501;
     MacosTunService.runAdminOverride = (argv) async {
       adminCommands.add(argv);
@@ -136,8 +136,8 @@ void main() {
 
     setUp(() async {
       server = await startMockDaemon();
-      MacosTunService.connectOverride =
-          () => Socket.connect(InternetAddress.loopbackIPv4, server.port);
+      MacosTunService.connectOverride = () =>
+          Socket.connect(InternetAddress.loopbackIPv4, server.port);
     });
 
     tearDown(() => server.close());
@@ -268,49 +268,52 @@ void main() {
     expect(allowed, isTrue);
   });
 
-  test('startCore handles fragmented and coalesced frames and closes before exitCode', () async {
-    var closed = false;
-    MacosTunService.transportOverride = () async {
-      final ctrl = StreamController<Uint8List>();
-      return (
-        incoming: ctrl.stream,
-        send: (Uint8List packet) async {
-          final frame = utf8.decode(packet.sublist(4));
-          if (frame.startsWith('start\n')) {
-            // Coalesce ok + two out frames + split across odd chunk boundaries.
-            final combined = Uint8List.fromList([
-              ..._encodeFrame('ok\n4242'),
-              ..._encodeFrame('out\nline-1'),
-              ..._encodeFrame('out\nline-2'),
-            ]);
-            ctrl.add(Uint8List.sublistView(combined, 0, 2));
-            ctrl.add(Uint8List.sublistView(combined, 2, 11));
-            ctrl.add(Uint8List.sublistView(combined, 11));
-          } else if (frame == 'stop') {
-            ctrl.add(_encodeFrame('exit\n0'));
-          }
-        },
-        close: () async {
-          closed = true;
-          unawaited(ctrl.close());
-        },
-      );
-    };
+  test(
+    'startCore handles fragmented and coalesced frames and closes before exitCode',
+    () async {
+      var closed = false;
+      MacosTunService.transportOverride = () async {
+        final ctrl = StreamController<Uint8List>();
+        return (
+          incoming: ctrl.stream,
+          send: (Uint8List packet) async {
+            final frame = utf8.decode(packet.sublist(4));
+            if (frame.startsWith('start\n')) {
+              // Coalesce ok + two out frames + split across odd chunk boundaries.
+              final combined = Uint8List.fromList([
+                ..._encodeFrame('ok\n4242'),
+                ..._encodeFrame('out\nline-1'),
+                ..._encodeFrame('out\nline-2'),
+              ]);
+              ctrl.add(Uint8List.sublistView(combined, 0, 2));
+              ctrl.add(Uint8List.sublistView(combined, 2, 11));
+              ctrl.add(Uint8List.sublistView(combined, 11));
+            } else if (frame == 'stop') {
+              ctrl.add(_encodeFrame('exit\n0'));
+            }
+          },
+          close: () async {
+            closed = true;
+            unawaited(ctrl.close());
+          },
+        );
+      };
 
-    final proc = await MacosTunService.startCore(kind: 'xray', config: '{}');
-    expect(proc.pid, 4242);
+      final proc = await MacosTunService.startCore(kind: 'xray', config: '{}');
+      expect(proc.pid, 4242);
 
-    final linesFuture = proc.stdout
-        .transform(utf8.decoder)
-        .transform(const LineSplitter())
-        .toList();
+      final linesFuture = proc.stdout
+          .transform(utf8.decoder)
+          .transform(const LineSplitter())
+          .toList();
 
-    await proc.stdin.close();
-    final exitCode = await proc.exitCode;
-    expect(exitCode, 0);
-    expect(closed, isTrue);
-    expect(await linesFuture, ['line-1', 'line-2']);
-  });
+      await proc.stdin.close();
+      final exitCode = await proc.exitCode;
+      expect(exitCode, 0);
+      expect(closed, isTrue);
+      expect(await linesFuture, ['line-1', 'line-2']);
+    },
+  );
 
   testWidgets('ensureMacosTunService retries state check after install', (
     tester,
