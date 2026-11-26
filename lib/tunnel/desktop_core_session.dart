@@ -113,11 +113,8 @@ mixin DesktopCoreSession {
     connectionLines.add(line);
     if (!XraySessionLog.keep(line, xrayLogThreshold)) return;
     buffer.writeln(line);
-    if (buffer.length > 64 * 1024) {
-      final trimmed = coreLogTail(buffer, maxLines: 200);
-      buffer
-        ..clear()
-        ..writeln(trimmed);
+    if (buffer.length > _maxLogBufferChars) {
+      _trimCoreBuffer(buffer);
     }
   }
 
@@ -257,6 +254,44 @@ mixin DesktopCoreSession {
       downloadUrl: downloadUrl,
       timeoutMs: timeoutMs,
     );
+  }
+}
+
+const _maxLogBufferChars = 64 * 1024;
+// 200 длинных ошибок ядра длиннее 64 КиБ, без потолка в знаках ужатие гонялось бы на каждую следующую строку
+const _trimmedLogBufferChars = 32 * 1024;
+const _trimmedLogBufferLines = 200;
+
+void _trimCoreBuffer(StringBuffer buffer) {
+  final nonEmpty = buffer
+      .toString()
+      .split('\n')
+      .where((l) => l.trim().isNotEmpty)
+      .toList(growable: false);
+  buffer.clear();
+  if (nonEmpty.isEmpty) return;
+  var start = nonEmpty.length > _trimmedLogBufferLines
+      ? nonEmpty.length - _trimmedLogBufferLines
+      : 0;
+  var chars = 0;
+  var first = nonEmpty.length;
+  for (var i = nonEmpty.length - 1; i >= start; i--) {
+    final next = chars + nonEmpty[i].length + 1;
+    if (next > _trimmedLogBufferChars && first < nonEmpty.length) break;
+    chars = next;
+    first = i;
+  }
+  if (first == nonEmpty.length - 1 &&
+      nonEmpty[first].length > _trimmedLogBufferChars) {
+    buffer.writeln(
+      nonEmpty[first].substring(
+        nonEmpty[first].length - _trimmedLogBufferChars,
+      ),
+    );
+    return;
+  }
+  for (var i = first; i < nonEmpty.length; i++) {
+    buffer.writeln(nonEmpty[i]);
   }
 }
 

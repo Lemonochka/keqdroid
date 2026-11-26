@@ -102,6 +102,20 @@ void main() {
         expect(sample.describe(), isNot(contains('private')));
       },
     );
+
+    test(
+      'ядро службы TUN без доступа к счётчикам не притворяется выключенным',
+      () {
+        const sample = MemorySample(
+          rss: 240 * _mb,
+          peakRss: 260 * _mb,
+          privateBytes: 235 * _mb,
+          serviceCores: {'xray'},
+        );
+        expect(sample.describe(), contains('cores xray (service)'));
+        expect(sample.describe(), isNot(contains('no core running')));
+      },
+    );
   });
 
   test('сводка опросов /connections: максимумы за период, висящие — как есть', () {

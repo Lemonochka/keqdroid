@@ -72,6 +72,12 @@ class MemoryWatch {
           (native?['self'] as Map?)?.cast<String, Object?>() ?? const {};
       final cores =
           (native?['cores'] as Map?)?.cast<String, Object?>() ?? const {};
+      final readableCores = <String, int>{
+        for (final entry in cores.entries)
+          if (entry.value case final Map<Object?, Object?> core
+              when core['ok'] == true)
+            entry.key: core['privateBytes'] as int,
+      };
       return MemorySample(
         rss: common.rss,
         peakRss: common.peakRss,
@@ -83,11 +89,11 @@ class MemoryWatch {
         liveImages: common.liveImages,
         imageBytes: common.imageBytes,
         polls: common.polls,
-        cores: {
-          for (final entry in cores.entries)
-            if (entry.value case final Map<Object?, Object?> core
-                when core['ok'] == true)
-              entry.key: core['privateBytes'] as int,
+        cores: readableCores,
+        // ядро службы TUN работает под SYSTEM и свои счётчики процессу без прав не отдаёт
+        serviceCores: {
+          for (final name in pids.keys)
+            if (!readableCores.containsKey(name)) name,
         },
       );
     }
@@ -223,6 +229,7 @@ class MemorySample {
     this.imageBytes = 0,
     this.polls = '',
     this.cores = const {},
+    this.serviceCores = const {},
   });
 
   final int rss;
@@ -239,10 +246,15 @@ class MemorySample {
   final String polls;
 
   final Map<String, int> cores;
+  final Set<String> serviceCores;
 
   int get size => privateBytes ?? rss;
 
   String describe() {
+    final coreEntries = <String>[
+      for (final e in cores.entries) '${e.key} ${mb(e.value)}',
+      for (final name in serviceCores) '$name (service)',
+    ];
     final parts = <String>[
       [
         if (privateBytes != null) 'private ${mb(privateBytes!)}',
@@ -254,9 +266,9 @@ class MemorySample {
       ].join(', '),
       'images $liveImages live, ${mb(imageBytes)} cached',
       if (polls.isNotEmpty) '/connections: $polls',
-      cores.isEmpty
+      coreEntries.isEmpty
           ? 'no core running'
-          : 'cores ${cores.entries.map((e) => '${e.key} ${mb(e.value)}').join(', ')}',
+          : 'cores ${coreEntries.join(', ')}',
     ];
     return parts.join('; ');
   }

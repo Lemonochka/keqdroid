@@ -58,8 +58,7 @@ ProcessResources QueryProcessResources(uint32_t pid) {
   const DWORD target = self ? GetCurrentProcessId() : static_cast<DWORD>(pid);
   HANDLE process =
       self ? GetCurrentProcess()
-           : OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_VM_READ,
-                         FALSE, target);
+           : OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, target);
   if (process == nullptr) return out;
 
   PROCESS_MEMORY_COUNTERS_EX counters{};

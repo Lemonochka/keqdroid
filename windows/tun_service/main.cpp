@@ -568,13 +568,12 @@ std::string StartCore(HANDLE pipe_handle, Pipe* pipe, const StartRequest& req,
     DWORD got = 0;
     while (::ReadFile(out_read, buf, sizeof(buf), &got, nullptr) && got > 0) {
       pending.append(buf, got);
-      size_t nl = 0;
-      while ((nl = pending.find('\n')) != std::string::npos) {
-        std::string line = pending.substr(0, nl);
-        if (!line.empty() && line.back() == '\r') line.pop_back();
-        pipe->Write("out\n" + line);
-        pending.erase(0, nl + 1);
-      }
+      const size_t nl = pending.rfind('\n');
+      if (nl == std::string::npos) continue;
+      std::string chunk = pending.substr(0, nl);
+      if (!chunk.empty() && chunk.back() == '\r') chunk.pop_back();
+      pipe->Write("out\n" + chunk);
+      pending.erase(0, nl + 1);
     }
     if (!pending.empty()) pipe->Write("out\n" + pending);
     ::CloseHandle(out_read);

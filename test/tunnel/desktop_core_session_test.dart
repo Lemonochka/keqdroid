@@ -281,6 +281,27 @@ void main() {
         expect(kept.last, 'line 0699');
       });
 
+      test(
+        'длинные строки после ужатия опускают буфер ниже порога 64 КиБ',
+        () async {
+          final b = make();
+          final core = FakeCoreProcess();
+          b.adopt(core);
+
+          // 200 строк по 500 знаков весят 100 КиБ: по числу строк буфер остался бы выше 64 КиБ
+          for (var i = 0; i < 400; i++) {
+            core.out('line ${i.toString().padLeft(4, '0')} ${'x' * 489}\n');
+          }
+          await pumpEventQueue();
+
+          final logs = b.logs(maxLines: 1000);
+          expect(logs.length, lessThanOrEqualTo(64 * 1024));
+          final kept = _numberedLines(logs);
+          expect(kept.length, greaterThanOrEqualTo(65));
+          expect(kept.last, 'line 0399');
+        },
+      );
+
       test('хвост берёт последние непустые строки', () async {
         final b = make();
         // у Linux журнал из двух разделов, у пустого остаются заголовки

@@ -80,7 +80,9 @@ void main() {
           .transform(const LineSplitter())
           .toList();
 
-      await _fromNative('onOutput', {'line': 'Tun adapter listening'});
+      await _fromNative('onOutput', {
+        'line': 'Tun adapter listening\r\n[Info] [1] first\n[Info] [2] second',
+      });
       await process.stdin.close();
       expect(calls.last.method, 'stopCore');
       expect(calls.last.arguments, {'graceful': true});
@@ -90,7 +92,11 @@ void main() {
 
       await _fromNative('onExit', {'code': 1});
       expect(await process.exitCode, 1);
-      expect(await lines, ['Tun adapter listening']);
+      expect(await lines, [
+        'Tun adapter listening',
+        '[Info] [1] first',
+        '[Info] [2] second',
+      ]);
     },
   );
 

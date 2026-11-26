@@ -23,6 +23,7 @@ namespace {
 constexpr wchar_t kServiceName[] = L"KeqdroidTun";
 constexpr wchar_t kPipeName[] = L"\\\\.\\pipe\\keqdroid-tun";
 constexpr uint32_t kMaxFrame = 64u << 20;
+constexpr size_t kMaxQueuedOutput = 512u << 10;
 
 std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> g_channel;
 
@@ -283,13 +284,47 @@ std::vector<std::string> SplitLines(const std::string& s) {
 std::mutex g_session_mutex;
 std::shared_ptr<ClientPipe> g_session;
 
-void Dispatch(const std::string& method, flutter::EncodableMap args) {
-  KeqdroidPostToPlatformThread([method, args]() {
-    if (g_channel) {
-      g_channel->InvokeMethod(method,
-                              std::make_unique<flutter::EncodableValue>(args));
+// при блокировке фаерволом ядро шлёт тысячи строк в секунду, и отдельный вызов канала на каждую забивает очередь окна
+struct OutputBatch {
+  std::mutex mutex;
+  std::string pending;
+  bool scheduled = false;
+};
+
+void FlushOutputBatch(const std::shared_ptr<OutputBatch>& batch) {
+  std::string chunk;
+  {
+    std::lock_guard<std::mutex> lock(batch->mutex);
+    batch->scheduled = false;
+    chunk.swap(batch->pending);
+  }
+  if (chunk.empty() || !g_channel) return;
+  flutter::EncodableMap args;
+  args[flutter::EncodableValue("line")] = flutter::EncodableValue(chunk);
+  g_channel->InvokeMethod("onOutput",
+                          std::make_unique<flutter::EncodableValue>(args));
+}
+
+void QueueOutput(const std::shared_ptr<OutputBatch>& batch,
+                 const std::string& body) {
+  bool schedule = false;
+  {
+    std::lock_guard<std::mutex> lock(batch->mutex);
+    if (!batch->pending.empty()) batch->pending.push_back('\n');
+    batch->pending.append(body);
+    if (batch->pending.size() > kMaxQueuedOutput) {
+      const size_t cut = batch->pending.size() - kMaxQueuedOutput;
+      const size_t nl = batch->pending.find('\n', cut);
+      batch->pending.erase(0, nl == std::string::npos ? cut : nl + 1);
     }
-  });
+    if (!batch->scheduled) {
+      batch->scheduled = true;
+      schedule = true;
+    }
+  }
+  if (schedule) {
+    KeqdroidPostToPlatformThread([batch]() { FlushOutputBatch(batch); });
+  }
 }
 
 void Reply(Result result, flutter::EncodableValue value) {
@@ -446,6 +481,7 @@ void StartCore(const flutter::EncodableMap& args, Result result) {
         flutter::EncodableValue(removed);
     Reply(result, flutter::EncodableValue(out));
 
+    auto output = std::make_shared<OutputBatch>();
     int exit_code = -1;
     while (pipe->Read(&frame)) {
       const size_t nl = frame.find('\n');
@@ -453,9 +489,7 @@ void StartCore(const flutter::EncodableMap& args, Result result) {
       const std::string body =
           nl == std::string::npos ? std::string() : frame.substr(nl + 1);
       if (kind_of == "out") {
-        flutter::EncodableMap line;
-        line[flutter::EncodableValue("line")] = flutter::EncodableValue(body);
-        Dispatch("onOutput", line);
+        QueueOutput(output, body);
       } else if (kind_of == "exit") {
         exit_code = std::atoi(body.c_str());
         break;
@@ -466,9 +500,14 @@ void StartCore(const flutter::EncodableMap& args, Result result) {
       if (g_session == pipe) g_session.reset();
     }
     pipe->Close();
-    flutter::EncodableMap done;
-    done[flutter::EncodableValue("code")] = flutter::EncodableValue(exit_code);
-    Dispatch("onExit", done);
+    KeqdroidPostToPlatformThread([output, exit_code]() {
+      FlushOutputBatch(output);
+      if (!g_channel) return;
+      flutter::EncodableMap done;
+      done[flutter::EncodableValue("code")] = flutter::EncodableValue(exit_code);
+      g_channel->InvokeMethod("onExit",
+                              std::make_unique<flutter::EncodableValue>(done));
+    });
   }).detach();
 }
 
