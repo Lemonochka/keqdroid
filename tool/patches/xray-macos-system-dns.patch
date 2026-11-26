@@ -59,7 +59,7 @@ new file mode 100644
 index 0000000..6c405e3
 --- /dev/null
 +++ b/proxy/tun/tun_darwin_dns.go
-@@ -0,0 +1,437 @@
+@@ -0,0 +1,440 @@
 +//go:build darwin && !ios
 +
 +package tun
@@ -244,10 +244,13 @@ index 0000000..6c405e3
 +}
 +
 +func flushDarwinDNSCache() {
-+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-+	defer cancel()
-+	_ = exec.CommandContext(ctx, "/usr/bin/dscacheutil", "-flushcache").Run()
-+	_ = exec.CommandContext(ctx, "/usr/bin/killall", "-HUP", "mDNSResponder").Run()
++	flush := func(path string, args ...string) {
++		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
++		defer cancel()
++		_ = exec.CommandContext(ctx, path, args...).Run()
++	}
++	flush("/usr/bin/dscacheutil", "-flushcache")
++	flush("/usr/bin/killall", "-HUP", "mDNSResponder")
 +}
 +
 +func darwinDlopen(path string) (uintptr, error) {

@@ -13,7 +13,6 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
-	"os/user"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -183,8 +182,7 @@ func startLaunchdJob() error {
 			return fmt.Errorf("launchctl bootstrap failed: %s (%w)", msg, err)
 		}
 	}
-	// RunAtLoad already launches the daemon; kickstart without -k starts it
-	// only if it is not yet running, avoiding an unnecessary kill+restart race.
+	// RunAtLoad уже запускает службу, kickstart без -k не убивает работающий процесс
 	_ = exec.Command("/bin/launchctl", "kickstart", "system/"+serviceLabel).Run()
 	return nil
 }
@@ -508,8 +506,7 @@ func (c *darwinRunningCore) StartStreaming(onLine func(string), onExit func(int)
 					code = 1
 				}
 			}
-			// Drain remaining stdout lines and let utun disappear before
-			// reporting exit so the next session sees a clean interface.
+			// Сообщаем выход после чтения stdout и удаления utun, иначе reconnect видит прошлый интерфейс
 			select {
 			case <-stdoutDone:
 			case <-time.After(500 * time.Millisecond):
@@ -737,20 +734,13 @@ func userCanAccessMode(uid, ownerUID, ownerGID uint32, perm, ownerBit, groupBit,
 }
 
 func userInGroup(uid, gid uint32) bool {
-	u, err := user.LookupId(strconv.FormatUint(uint64(uid), 10))
+	out, err := exec.Command("/usr/bin/id", "-G", strconv.FormatUint(uint64(uid), 10)).Output()
 	if err != nil {
 		return false
 	}
 	gidStr := strconv.FormatUint(uint64(gid), 10)
-	if u.Gid == gidStr {
-		return true
-	}
-	gids, err := u.GroupIds()
-	if err != nil {
-		return false
-	}
-	for _, g := range gids {
-		if g == gidStr {
+	for _, group := range strings.Fields(string(out)) {
+		if group == gidStr {
 			return true
 		}
 	}

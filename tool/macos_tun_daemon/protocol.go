@@ -183,8 +183,7 @@ func (s *ServerState) ServeClient(raw io.ReadWriteCloser) {
 						active = nil
 					}
 					activeMu.Unlock()
-					// Release the busy slot before notifying the client so an
-					// immediate reconnect over a new socket never races coreBusy.
+					// reconnect по новому сокету не должен упираться в coreBusy после завершения прошлого ядра
 					releaseBusy()
 					_ = fc.WriteFrame("exit\n" + strconv.Itoa(code))
 				},

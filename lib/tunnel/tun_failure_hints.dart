@@ -225,7 +225,7 @@ TunFailureHint? tunFailureHint(
                 'the app is already elevated, a security product is blocking it.'
           : macos
           ? 'Access denied while setting up the tunnel. Install the keqdroid '
-                'TUN service in Settings -> Permissions, or use Proxy mode.'
+                'TUN service when enabling TUN mode, or use Proxy mode.'
           : 'Access denied while setting up the tunnel. TUN mode needs root — '
                 'approve the polkit prompt, or use Proxy mode.',
     );

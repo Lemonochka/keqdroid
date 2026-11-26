@@ -274,7 +274,7 @@ for arch in "${ARCHS[@]}"; do
   done
 
   # Sign outer app bundle without --deep so codesign seals Resources/bin without altering core bytes.
-  # Re-apply Release.entitlements so file_picker's SecTask entitlement check succeeds after re-signing.
+  # После переподписи file_picker снова проверяет entitlements внешнего бандла
   codesign --force --sign "$SIGN_IDENTITY" \
     --entitlements "$REPO_ROOT/macos/Runner/Release.entitlements" \
     "$APP_DST"
