@@ -14,7 +14,58 @@ import 'package:keqdroid/shared/ui/update_dialog.dart';
 import 'package:keqdroid/tunnel/tunnel_state.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-// Настройки не приходят никогда: загрузка стоит на старте и в сеть не идёт.
+const _notesWithBadgeTable = '''
+<div align="center">
+
+<table>
+  <thead>
+    <tr>
+      <th align="center"><img src="https://raw.githubusercontent.com/Lemonochka/keqdroid/master/.github/badges/icon-android.svg" width="16" height="16" align="absmiddle" alt=""> &nbsp;Android</th>
+      <th align="center"><img src="https://raw.githubusercontent.com/Lemonochka/keqdroid/master/.github/badges/icon-windows.svg" width="15" height="15" align="absmiddle" alt=""> &nbsp;Windows</th>
+      <th align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Lemonochka/keqdroid/master/.github/badges/icon-apple-dark.svg"><img src="https://raw.githubusercontent.com/Lemonochka/keqdroid/master/.github/badges/icon-apple-light.svg" width="15" height="15" align="absmiddle" alt=""></picture> &nbsp;macOS</th>
+      <th align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Lemonochka/keqdroid/master/.github/badges/icon-linux-dark.svg"><img src="https://raw.githubusercontent.com/Lemonochka/keqdroid/master/.github/badges/icon-linux-light.svg" width="16" height="16" align="absmiddle" alt=""></picture> &nbsp;Linux</th>
+      <th align="center"><img src="https://raw.githubusercontent.com/Lemonochka/keqdroid/master/.github/badges/icon-telegram.svg" width="15" height="15" align="absmiddle" alt=""> &nbsp;Telegram</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td align="center"><a href="https://github.com/Lemonochka/keqdroid/releases/download/v0.39.3/keqdroid-0.39.3-android.apk"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Lemonochka/keqdroid/master/.github/badges/64bit-dark.svg"><img src="https://raw.githubusercontent.com/Lemonochka/keqdroid/master/.github/badges/64bit-light.svg" height="26" align="absmiddle" alt="64-bit"></picture></a>&nbsp;<a href="https://github.com/Lemonochka/keqdroid/releases/download/v0.39.3/keqdroid-0.39.3-armeabi-v7a-android.apk"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Lemonochka/keqdroid/master/.github/badges/32bit-dark.svg"><img src="https://raw.githubusercontent.com/Lemonochka/keqdroid/master/.github/badges/32bit-light.svg" height="26" align="absmiddle" alt="32-bit"></picture></a></td>
+      <td align="center"><a href="https://github.com/Lemonochka/keqdroid/releases/download/v0.39.3/keqdroid-windows-x64-0.39.3-setup.exe"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Lemonochka/keqdroid/master/.github/badges/installer-dark.svg"><img src="https://raw.githubusercontent.com/Lemonochka/keqdroid/master/.github/badges/installer-light.svg" height="26" align="absmiddle" alt="Installer"></picture></a>&nbsp;<a href="https://github.com/Lemonochka/keqdroid/releases/download/v0.39.3/keqdroid-windows-x64-0.39.3.zip"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Lemonochka/keqdroid/master/.github/badges/zip-dark.svg"><img src="https://raw.githubusercontent.com/Lemonochka/keqdroid/master/.github/badges/zip-light.svg" height="26" align="absmiddle" alt="ZIP"></picture></a></td>
+      <td align="center"><a href="https://github.com/Lemonochka/keqdroid/releases/download/v0.39.3/keqdroid-0.39.3-x86_64.AppImage"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Lemonochka/keqdroid/master/.github/badges/appimage-dark.svg"><img src="https://raw.githubusercontent.com/Lemonochka/keqdroid/master/.github/badges/appimage-light.svg" height="26" align="absmiddle" alt="AppImage"></picture></a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+      <td align="center"><a href="https://t.me/keqdroid"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Lemonochka/keqdroid/master/.github/badges/telegram-dark.svg"><img src="https://raw.githubusercontent.com/Lemonochka/keqdroid/master/.github/badges/telegram-light.svg" height="26" align="absmiddle" alt="@keqdroid"></picture></a></td>
+    </tr>
+  </tbody>
+</table>
+
+</div>
+
+
+## macOS
+
+- keqdroid is available on macOS 13 and later with Xray and mihomo.
+
+## Settings and diagnostics
+
+- Connection mode on Android and the Xray/mihomo choice are on the same screen.
+
+## Android TV
+
+- Remote-control navigation reaches text fields and controls.
+''';
+
+const _notesWithShieldsBadges = '''
+<div align="center">
+
+[![Android](https://img.shields.io/badge/Android-APK-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://github.com/Lemonochka/keqdroid/releases/download/v0.39.0/keqdroid-0.39.0-android.apk)
+[![Telegram](https://img.shields.io/badge/Telegram-chat-26A5E4?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/keqdroid)
+
+</div>
+
+
+## Linux
+
+- The tray menu has Connect and Disconnect at the top.
+''';
 class _StuckStorage extends StorageService {
   _StuckStorage(super.prefs);
 
@@ -91,46 +142,47 @@ void main() {
     await tester.pumpAndSettle();
   });
 
-  test('sanitizeReleaseNotes вырезает плитки скачивания и оставляет только текст', () {
-    final notes0393 = File('release/notes-0.39.3.md').readAsStringSync();
-    final cleaned = sanitizeReleaseNotes(notes0393);
+  test(
+    'sanitizeReleaseNotes вырезает плитки скачивания и оставляет только текст',
+    () {
+      final cleaned = sanitizeReleaseNotes(_notesWithBadgeTable);
 
-    expect(cleaned, startsWith('## macOS'));
-    expect(cleaned, isNot(contains('&nbsp;')));
-    expect(cleaned, isNot(contains('Telegram')));
-    expect(cleaned, isNot(contains('Installer')));
-    expect(cleaned, isNot(contains('AppImage')));
-    expect(cleaned, contains('## Settings and diagnostics'));
-    expect(cleaned, contains('## Android TV'));
+      expect(cleaned, startsWith('## macOS'));
+      expect(cleaned, isNot(contains('&nbsp;')));
+      expect(cleaned, isNot(contains('Telegram')));
+      expect(cleaned, isNot(contains('Installer')));
+      expect(cleaned, isNot(contains('AppImage')));
+      expect(cleaned, contains('## Settings and diagnostics'));
+      expect(cleaned, contains('## Android TV'));
 
-    final notes0390 = File('release/notes-0.39.0.md').readAsStringSync();
-    final cleanedOld = sanitizeReleaseNotes(notes0390);
-    expect(cleanedOld, startsWith('## Linux'));
-    expect(cleanedOld, isNot(contains('shields.io')));
-    expect(cleanedOld, isNot(contains('![Android]')));
+      final cleanedOld = sanitizeReleaseNotes(_notesWithShieldsBadges);
+      expect(cleanedOld, startsWith('## Linux'));
+      expect(cleanedOld, isNot(contains('shields.io')));
+      expect(cleanedOld, isNot(contains('![Android]')));
 
-    final withCodeTag = sanitizeReleaseNotes(
-      '<table><tr><td><picture><img src="a.svg"></picture>&nbsp;</td></tr></table>\n'
-      '[![Android](https://img.shields.io/badge/Android-APK-green)](https://example.com/a.apk)\n\n'
-      '- Parses JSON wrapped in `<pre>` or between `<table>` and `</table>` (&amp;lt;ok&amp;gt;).',
-    );
-    expect(
-      withCodeTag,
-      '- Parses JSON wrapped in `<pre>` or between `<table>` and `</table>` (&lt;ok&gt;).',
-    );
+      final withCodeTag = sanitizeReleaseNotes(
+        '<table><tr><td><picture><img src="a.svg"></picture>&nbsp;</td></tr></table>\n'
+        '[![Android](https://img.shields.io/badge/Android-APK-green)](https://example.com/a.apk)\n\n'
+        '- Parses JSON wrapped in `<pre>` or between `<table>` and `</table>` (&amp;lt;ok&amp;gt;).',
+      );
+      expect(
+        withCodeTag,
+        '- Parses JSON wrapped in `<pre>` or between `<table>` and `</table>` (&lt;ok&gt;).',
+      );
 
-    final releaseDir = Directory('release');
-    if (releaseDir.existsSync()) {
-      for (final file in releaseDir.listSync().whereType<File>()) {
-        if (!file.path.endsWith('.md')) continue;
-        final text = sanitizeReleaseNotes(file.readAsStringSync());
-        expect(text, isNotEmpty, reason: file.path);
-        expect(text, isNot(contains('&nbsp;')), reason: file.path);
-        expect(text, isNot(contains('shields.io')), reason: file.path);
-        expect(text, isNot(contains('.github/badges/')), reason: file.path);
+      final releaseDir = Directory('release');
+      if (releaseDir.existsSync()) {
+        for (final file in releaseDir.listSync().whereType<File>()) {
+          if (!file.path.endsWith('.md')) continue;
+          final text = sanitizeReleaseNotes(file.readAsStringSync());
+          expect(text, isNotEmpty, reason: file.path);
+          expect(text, isNot(contains('&nbsp;')), reason: file.path);
+          expect(text, isNot(contains('shields.io')), reason: file.path);
+          expect(text, isNot(contains('.github/badges/')), reason: file.path);
+        }
       }
-    }
-  });
+    },
+  );
 
   testWidgets('окно обновления показывает только текст без плиток и &nbsp;', (
     tester,
@@ -145,7 +197,7 @@ void main() {
       latestVersion: '0.39.3',
       downloadUrl: 'https://example.invalid/keqdroid-setup.exe',
       apkSize: 49 * 1024 * 1024,
-      releaseNotes: File('release/notes-0.39.3.md').readAsStringSync(),
+      releaseNotes: _notesWithBadgeTable,
     );
     await tester.pumpWidget(
       ProviderScope(
