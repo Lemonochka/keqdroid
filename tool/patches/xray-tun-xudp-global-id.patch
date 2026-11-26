@@ -1,0 +1,252 @@
+Scope XUDP GlobalID by TUN exit when per-exit UDP is enabled.
+
+Without a scope the source hash and wire format stay byte-for-byte upstream.
+With per-exit UDP, equal source-only IDs make different flows reuse one server
+XUDP session (XUDP hit), detach the previous Mux and share its UDP socket. Add
+the exit key to the hash so independent exits get independent UDP sessions.
+Reconnecting the same exit retains its ID and can still reattach that session.
+
+SOCKS and other inbounds are unchanged. PacketWriter and common/mux/frame.go
+stay upstream: every nonzero GlobalID is written exactly as before.
+
+diff --git a/common/xudp/xudp.go b/common/xudp/xudp.go
+--- a/common/xudp/xudp.go
++++ b/common/xudp/xudp.go
+@@ -62,6 +62,13 @@
+ 	platform.RegisterEnvReload(reloadEnvSettings)
+ }
+ 
++type globalIDScopeKey struct{}
++
++// keqdroid: no scope keeps the upstream hash; an empty scope is still scoped.
++func ContextWithGlobalIDScope(ctx context.Context, scope string) context.Context {
++	return context.WithValue(ctx, globalIDScopeKey{}, scope)
++}
++
+ func GetGlobalID(ctx context.Context) (globalID [8]byte) {
+ 	if cone := ctx.Value("cone"); cone == nil || !cone.(bool) { // cone is nil only in some unit tests
+ 		return
+@@ -70,6 +77,10 @@
+ 		(inbound.Name == "dokodemo-door" || inbound.Name == "socks" || inbound.Name == "shadowsocks" || inbound.Name == "tun") {
+ 		h := blake3.New(8, ensureBaseKey())
+ 		h.Write([]byte(inbound.Source.String()))
++		if scope, ok := ctx.Value(globalIDScopeKey{}).(string); ok {
++			h.Write([]byte{0})
++			h.Write([]byte(scope))
++		}
+ 		copy(globalID[:], h.Sum(nil))
+ 		if Show.Load() {
+ 			errors.LogInfo(ctx, fmt.Sprintf("XUDP inbound.Source.String(): %v\tglobalID: %v\n", inbound.Source.String(), globalID))
+
+diff --git a/common/xudp/xudp_test.go b/common/xudp/xudp_test.go
+--- a/common/xudp/xudp_test.go
++++ b/common/xudp/xudp_test.go
+@@ -1,11 +1,16 @@
+ package xudp
+ 
+ import (
++	"bytes"
++	"context"
++	"encoding/binary"
+ 	"testing"
+ 
+ 	"github.com/xtls/xray-core/common"
+ 	"github.com/xtls/xray-core/common/buf"
+ 	"github.com/xtls/xray-core/common/net"
++	"github.com/xtls/xray-core/common/session"
++	"lukechampine.com/blake3"
+ )
+ 
+ func TestXudpReadWrite(t *testing.T) {
+@@ -34,3 +39,75 @@
+ 		t.Error("failed to parse xudp buffer")
+ 	}
+ }
++
++func globalIDTestContext(inbound string, source net.Destination) context.Context {
++	ctx := context.WithValue(context.Background(), "cone", true)
++	return session.ContextWithInbound(ctx, &session.Inbound{Name: inbound, Source: source})
++}
++
++func checkGlobalIDFrame(t *testing.T, id [8]byte) {
++	t.Helper()
++	destination := net.UDPDestination(net.IPAddress(net.ParseIP("1.2.3.4")), 50001)
++	output := &buf.MultiBufferContainer{}
++	writer := NewPacketWriter(output, destination, id)
++	packet := buf.New()
++	packet.WriteString("voice")
++	packet.UDP = &destination
++	if err := writer.WriteMultiBuffer(buf.MultiBuffer{packet}); err != nil {
++		t.Fatal(err)
++	}
++	if len(output.MultiBuffer) != 1 {
++		t.Fatalf("frames = %d, want 1", len(output.MultiBuffer))
++	}
++	frame := output.MultiBuffer[0]
++	if got := binary.BigEndian.Uint16(frame.Bytes()); got != 20 {
++		t.Fatalf("metadata length = %d, want 20", got)
++	}
++	if frame.Byte(4) != 1 || frame.Byte(5) != 1 || frame.Byte(6) != 2 {
++		t.Fatalf("not an XUDP new-data frame: %v", frame.Bytes())
++	}
++	if !bytes.Equal(frame.Bytes()[14:22], id[:]) {
++		t.Fatalf("frame GlobalID = %v, want %v", frame.Bytes()[14:22], id)
++	}
++}
++
++func TestGlobalIDWithoutScopeMatchesLegacy(t *testing.T) {
++	source := net.UDPDestination(net.IPAddress(net.ParseIP("172.19.0.1")), 50000)
++	for _, inbound := range []string{"tun", "socks"} {
++		t.Run(inbound, func(t *testing.T) {
++			got := GetGlobalID(globalIDTestContext(inbound, source))
++			h := blake3.New(8, ensureBaseKey())
++			h.Write([]byte(source.String()))
++			var want [8]byte
++			copy(want[:], h.Sum(nil))
++			if got == ([8]byte{}) || got != want {
++				t.Fatalf("GlobalID = %v, want legacy %v", got, want)
++			}
++			checkGlobalIDFrame(t, got)
++		})
++	}
++}
++
++func TestGlobalIDScopeSeparatesUDPExits(t *testing.T) {
++	source := net.UDPDestination(net.IPAddress(net.ParseIP("172.19.0.1")), 50000)
++	ctx := globalIDTestContext("tun", source)
++	legacy := GetGlobalID(ctx)
++	seen := make(map[[8]byte]string)
++	for _, scope := range []string{"exit-a", "exit-b", ""} {
++		t.Run(scope, func(t *testing.T) {
++			scopedCtx := ContextWithGlobalIDScope(ctx, scope)
++			id := GetGlobalID(scopedCtx)
++			if id == ([8]byte{}) || id == legacy {
++				t.Fatalf("scoped GlobalID = %v, legacy %v", id, legacy)
++			}
++			if repeated := GetGlobalID(scopedCtx); repeated != id {
++				t.Fatalf("same scope changed GlobalID: %v then %v", id, repeated)
++			}
++			if previous, found := seen[id]; found {
++				t.Fatalf("scopes %q and %q share GlobalID %v", previous, scope, id)
++			}
++			seen[id] = scope
++			checkGlobalIDFrame(t, id)
++		})
++	}
++}
+
+diff --git a/proxy/tun/handler.go b/proxy/tun/handler.go
+--- a/proxy/tun/handler.go
++++ b/proxy/tun/handler.go
+@@ -15,6 +15,7 @@
+ 	"github.com/xtls/xray-core/common/protocol"
+ 	"github.com/xtls/xray-core/common/session"
+ 	"github.com/xtls/xray-core/common/signal"
++	"github.com/xtls/xray-core/common/xudp"
+ 	"github.com/xtls/xray-core/core"
+ 	"github.com/xtls/xray-core/features/policy"
+ 	"github.com/xtls/xray-core/features/routing"
+@@ -251,6 +252,10 @@
+ 	ctx = c.ContextWithID(ctx, session.NewID())
+ 
+ 	source := net.DestinationFromAddr(conn.RemoteAddr())
++	// keqdroid: one source can have independent full-cone flows on different exits.
++	if conn, ok := conn.(*udpConn); ok && conn.handler.exitOf != nil {
++		ctx = xudp.ContextWithGlobalIDScope(ctx, conn.key.exit)
++	}
+ 
+ 	inbound := session.Inbound{
+ 		Name:          "tun",
+
+diff --git a/proxy/tun/handler_test.go b/proxy/tun/handler_test.go
+--- a/proxy/tun/handler_test.go
++++ b/proxy/tun/handler_test.go
+@@ -11,6 +11,8 @@
+ 	"github.com/xtls/xray-core/common"
+ 	"github.com/xtls/xray-core/common/buf"
+ 	xnet "github.com/xtls/xray-core/common/net"
++	"github.com/xtls/xray-core/common/xudp"
++	"github.com/xtls/xray-core/features/policy"
+ 	"github.com/xtls/xray-core/features/routing"
+ 	"github.com/xtls/xray-core/transport"
+ )
+@@ -179,3 +181,79 @@
+ 		t.Fatalf("connection write mismatch: got %q, want %q", got, "downlink")
+ 	}
+ }
++
++type globalIDPolicyManager struct{}
++
++func (globalIDPolicyManager) Type() interface{}        { return policy.ManagerType() }
++func (globalIDPolicyManager) Start() error             { return nil }
++func (globalIDPolicyManager) Close() error             { return nil }
++func (globalIDPolicyManager) ForSystem() policy.System { return policy.System{} }
++func (globalIDPolicyManager) ForLevel(uint32) policy.Session {
++	return policy.Session{Timeouts: policy.Timeout{ConnectionIdle: time.Minute}}
++}
++
++type globalIDDispatcher struct {
++	called bool
++	id     [8]byte
++}
++
++func (*globalIDDispatcher) Type() interface{} { return routing.DispatcherType() }
++func (*globalIDDispatcher) Start() error      { return nil }
++func (*globalIDDispatcher) Close() error      { return nil }
++func (*globalIDDispatcher) Dispatch(context.Context, xnet.Destination) (*transport.Link, error) {
++	return nil, nil
++}
++func (d *globalIDDispatcher) DispatchLink(ctx context.Context, _ xnet.Destination, _ *transport.Link) error {
++	d.called = true
++	d.id = xudp.GetGlobalID(ctx)
++	return nil
++}
++
++func globalIDForUDPFlow(t *testing.T, perExit bool, exit string) [8]byte {
++	t.Helper()
++	source := xnet.UDPDestination(xnet.ParseAddress("10.0.0.2"), 40000)
++	destination := xnet.UDPDestination(xnet.ParseAddress("1.1.1.1"), 3478)
++	var exitOf func(src xnet.Destination, dst xnet.Destination) string
++	if perExit {
++		exitOf = func(xnet.Destination, xnet.Destination) string { return exit }
++	} else {
++		exit = ""
++	}
++	udpHandler := &udpConnectionHandler{exitOf: exitOf}
++	conn := &udpConn{
++		handler: udpHandler,
++		queue:   newPacketQueue(1),
++		key:     udpKey{src: source, exit: exit},
++		src:     source,
++		dst:     destination,
++	}
++	dispatcher := &globalIDDispatcher{}
++	handler := &Handler{
++		ctx:           context.WithValue(context.Background(), "cone", true),
++		config:        &Config{},
++		policyManager: globalIDPolicyManager{},
++		dispatcher:    dispatcher,
++	}
++	handler.HandleConnection(conn, destination)
++	if !dispatcher.called {
++		t.Fatal("dispatcher was not called")
++	}
++	return dispatcher.id
++}
++
++func TestHandlerScopesGlobalIDOnlyForPerExitFlows(t *testing.T) {
++	legacy := globalIDForUDPFlow(t, false, "")
++	first := globalIDForUDPFlow(t, true, "exit-a")
++	if first == ([8]byte{}) || first == legacy {
++		t.Fatalf("per-exit GlobalID = %v, legacy %v", first, legacy)
++	}
++	if repeated := globalIDForUDPFlow(t, true, "exit-a"); repeated != first {
++		t.Fatalf("same exit changed GlobalID: %v then %v", first, repeated)
++	}
++	if second := globalIDForUDPFlow(t, true, "exit-b"); second == first || second == legacy {
++		t.Fatalf("different exits share GlobalID: %v and %v", first, second)
++	}
++	if empty := globalIDForUDPFlow(t, true, ""); empty == first || empty == legacy {
++		t.Fatalf("empty exit is not distinct: %v, first %v, legacy %v", empty, first, legacy)
++	}
++}
