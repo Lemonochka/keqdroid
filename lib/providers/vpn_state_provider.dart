@@ -930,6 +930,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
         device: desktopTunInterfaceName(),
         stack: picked.stack,
         mtu: settings.tun.mtu,
+        macos: Platform.isMacOS,
         autoRoute: settings.tun.autoRoute,
         strictRoute: strictRoute,
         ipv6: ipv6ViaVpn

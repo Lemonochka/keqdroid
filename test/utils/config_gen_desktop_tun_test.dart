@@ -402,13 +402,35 @@ void main() {
       expect(config, _config(_windows));
     });
 
-    test('macOS TUN uses Darwin utun interface name', () {
-      const macosTun = DesktopTunOptions(
-        windows: false,
-        macos: true,
-        mtu: 9000,
+    test('на macOS TUN берёт utun99 и отдаёт системному DNS адрес шлюза', () {
+      final macos = _tunSettings(
+        _config(
+          const DesktopTunOptions(
+            windows: false,
+            macos: true,
+            mtu: 9000,
+            strictRoute: true,
+          ),
+        ),
       );
-      expect(_tunSettings(_config(macosTun))['name'], kMacosTunInterfaceName);
+      expect(macos['name'], kMacosTunInterfaceName);
+      // у utun на Darwin свой адрес 172.19.0.2 уходит в lo0, в туннель попадает только peer 172.19.0.1
+      expect(macos['dns'], [kTunInterfaceAddress]);
+      expect(macos['autoSystemRoutingTable'], ['0.0.0.0/0']);
+      expect(macos.containsKey('autoSystemWfpBlockLeak'), isFalse);
+
+      final manual = _tunSettings(
+        _config(
+          const DesktopTunOptions(
+            windows: false,
+            macos: true,
+            mtu: 9000,
+            autoRoute: false,
+          ),
+        ),
+      );
+      expect(manual.containsKey('dns'), isFalse);
+      expect(manual.containsKey('autoSystemRoutingTable'), isFalse);
     });
   });
 }

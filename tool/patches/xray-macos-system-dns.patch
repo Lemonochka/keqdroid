@@ -1,0 +1,573 @@
+Desktop TUN on macOS registers its DNS server in SCDynamicStore when the
+inbound settings carry a dns list, the way sing-tun does on Darwin.
+
+DarwinTun configured the utun interface and its /1..8 routes, yet ignored
+options.DNS completely. On Wi-Fi networks where DHCP hands out a router DNS
+on the local subnet (such as 192.168.1.1 on a /24 link), the link route on
+en0 is more specific than utun's /1..8 routes, so mDNSResponder kept sending
+every system DNS query directly to the ISP router outside the tunnel: blocked
+domains failed to resolve and Fake IP never saw system lookups.
+
+Now DarwinTun.Start publishes a temporary catch-all DNS resolver entry
+(SupplementalMatchDomains [""] with SupplementalMatchOrders [1]) in
+SCDynamicStore through CoreFoundation and SystemConfiguration loaded via
+libSystem, switches Go's own process resolver off mDNSResponder onto sockets
+bound to the physical outbound interface while skipping the TUN DNS address,
+and flushes dscacheutil. Because SCDynamicStoreAddTemporaryValue binds the
+entry to the store session file descriptor, configd removes it automatically
+both on normal Close and if the xray process is killed abruptly.
+diff --git a/proxy/tun/tun_darwin.go b/proxy/tun/tun_darwin.go
+index a005681..0740f0d 100644
+--- a/proxy/tun/tun_darwin.go
++++ b/proxy/tun/tun_darwin.go
+@@ -58,6 +58,8 @@ type DarwinTun struct {
+ 	routeMonitorOnce sync.Once
+ 	systemRoutes     []netip.Prefix
+ 	gateway          netip.Prefix
++	dnsSession       *darwinDNSSession
++	dnsResolver      *savedDarwinResolver
+ }
+ 
+ // waitKqueue owns a kqueue fd used by DarwinTun.Wait() to block on
+@@ -212,9 +214,15 @@ func (t *DarwinTun) Start() error {
+ 		return err
+ 	}
+ 
++	if err := t.setSystemDNS(); err != nil {
++		_ = t.unsetSystemRoutes()
++		return err
++	}
++
+ 	if updater != nil {
+ 		fd, err := unix.Socket(unix.AF_ROUTE, unix.SOCK_RAW, 0)
+ 		if err != nil {
++			t.unsetSystemDNS()
+ 			_ = t.unsetSystemRoutes()
+ 			return err
+ 		}
+@@ -233,6 +241,7 @@ func (t *DarwinTun) Close() error {
+ 	if t.waitKq != nil {
+ 		t.waitKq.close()
+ 	}
++	t.unsetSystemDNS()
+ 	routeErr := t.unsetSystemRoutes()
+ 	return xerrors.Combine(routeErr, t.tunFile.Close())
+ }
+diff --git a/proxy/tun/tun_darwin_dns.go b/proxy/tun/tun_darwin_dns.go
+new file mode 100644
+index 0000000..c6dc4bc
+--- /dev/null
++++ b/proxy/tun/tun_darwin_dns.go
+@@ -0,0 +1,419 @@
++//go:build darwin && !ios
++
++package tun
++
++import (
++	"context"
++	"crypto/rand"
++	"encoding/hex"
++	"fmt"
++	"net"
++	"net/netip"
++	"os/exec"
++	"runtime"
++	"strings"
++	"sync"
++	"syscall"
++	"unsafe"
++
++	xerrors "github.com/xtls/xray-core/common/errors"
++	"github.com/xtls/xray-core/transport/internet"
++)
++
++const (
++	darwinRTLDNow    = 0x2
++	darwinRTLDLocal  = 0x4
++	darwinUTF8       = 0x08000100
++	darwinSInt32Type = 3
++)
++
++//go:cgo_import_dynamic libc_dlopen dlopen "/usr/lib/libSystem.B.dylib"
++//go:cgo_import_dynamic libc_dlsym dlsym "/usr/lib/libSystem.B.dylib"
++
++var (
++	libc_dlopen_trampoline_addr uintptr
++	libc_dlsym_trampoline_addr  uintptr
++)
++
++//go:linkname darwinSyscall6 syscall.syscall6
++func darwinSyscall6(fn, a1, a2, a3, a4, a5, a6 uintptr) (r1, r2 uintptr, err syscall.Errno)
++
++type darwinSCFramework struct {
++	cfStringCreate       uintptr
++	cfArrayCreate        uintptr
++	cfDictionaryCreate   uintptr
++	cfNumberCreate       uintptr
++	cfRelease            uintptr
++	cfArrayCallBacks     uintptr
++	cfDictKeyCallBacks   uintptr
++	cfDictValueCallBacks uintptr
++	scStoreCreate        uintptr
++	scStoreAddTemporary  uintptr
++	scError              uintptr
++	scErrorString        uintptr
++}
++
++var (
++	darwinSCOnce sync.Once
++	darwinSC     darwinSCFramework
++	darwinSCErr  error
++)
++
++type darwinDNSSession struct {
++	once  sync.Once
++	store uintptr
++}
++
++func (s *darwinDNSSession) close() {
++	if s == nil {
++		return
++	}
++	s.once.Do(func() {
++		if s.store != 0 && darwinSC.cfRelease != 0 {
++			darwinSyscall6(darwinSC.cfRelease, s.store, 0, 0, 0, 0, 0)
++			s.store = 0
++		}
++	})
++}
++
++type savedDarwinResolver struct {
++	preferGo bool
++	dial     func(ctx context.Context, network, address string) (net.Conn, error)
++}
++
++func (s *savedDarwinResolver) restore() {
++	if s == nil {
++		return
++	}
++	net.DefaultResolver.PreferGo = s.preferGo
++	net.DefaultResolver.Dial = s.dial
++}
++
++// resolveDarwinOnOwn switches Go's process-wide resolver off libSystem/mDNSResponder
++// onto sockets bound to the physical interface, skipping the TUN's own DNS address,
++// the same way tun_windows.go does when Windows points its DNS client at the TUN.
++func resolveDarwinOnOwn() *savedDarwinResolver {
++	saved := &savedDarwinResolver{
++		preferGo: net.DefaultResolver.PreferGo,
++		dial:     net.DefaultResolver.Dial,
++	}
++	dialer := &net.Dialer{Control: func(network, address string, c syscall.RawConn) error {
++		for _, ctl := range internet.Controllers {
++			if err := ctl(network, address, c); err != nil {
++				return err
++			}
++		}
++		return nil
++	}}
++	net.DefaultResolver.Dial = func(ctx context.Context, network, address string) (net.Conn, error) {
++		if internet.IsSkippedDNSServer(address) {
++			return nil, xerrors.New("skipped DNS server ", address)
++		}
++		if ap, err := netip.ParseAddrPort(address); err == nil && (network == "udp" || network == "tcp") {
++			if ap.Addr().Unmap().Is4() {
++				network += "4"
++			} else {
++				network += "6"
++			}
++		}
++		return dialer.DialContext(ctx, network, address)
++	}
++	net.DefaultResolver.PreferGo = true
++	return saved
++}
++
++func parseDarwinDNSServers(configured []string) ([]netip.Addr, error) {
++	if len(configured) == 0 {
++		return nil, nil
++	}
++	out := make([]netip.Addr, 0, len(configured))
++	for _, raw := range configured {
++		trimmed := strings.TrimSpace(raw)
++		if trimmed == "" {
++			continue
++		}
++		addr, err := netip.ParseAddr(trimmed)
++		if err != nil {
++			return nil, xerrors.New("invalid macOS TUN DNS address ", raw).Base(err)
++		}
++		out = append(out, addr.Unmap())
++	}
++	return out, nil
++}
++
++func (t *DarwinTun) setSystemDNS() error {
++	servers, err := parseDarwinDNSServers(t.options.DNS)
++	if err != nil {
++		return err
++	}
++	if len(servers) == 0 {
++		return nil
++	}
++	internet.SkipDNSServers(servers)
++	t.dnsResolver = resolveDarwinOnOwn()
++	session, err := registerDarwinSystemDNS(t.options.Name, servers)
++	if err != nil {
++		t.unsetSystemDNS()
++		return xerrors.New("failed to set macOS system DNS").Base(err)
++	}
++	t.dnsSession = session
++	flushDarwinDNSCache()
++	xerrors.LogInfo(context.Background(), "[tun] system DNS set to ", servers, " on ", t.options.Name)
++	return nil
++}
++
++func (t *DarwinTun) unsetSystemDNS() {
++	hadDNS := t.dnsSession != nil || t.dnsResolver != nil
++	if t.dnsSession != nil {
++		t.dnsSession.close()
++		t.dnsSession = nil
++	}
++	if t.dnsResolver != nil {
++		t.dnsResolver.restore()
++		t.dnsResolver = nil
++	}
++	if hadDNS {
++		internet.SkipDNSServers(nil)
++		flushDarwinDNSCache()
++	}
++}
++
++func flushDarwinDNSCache() {
++	go func() {
++		_ = exec.Command("/usr/bin/dscacheutil", "-flushcache").Run()
++	}()
++}
++
++func darwinDlopen(path string) (uintptr, error) {
++	ptr, err := syscall.BytePtrFromString(path)
++	if err != nil {
++		return 0, err
++	}
++	h, _, _ := darwinSyscall6(libc_dlopen_trampoline_addr, uintptr(unsafe.Pointer(ptr)), darwinRTLDNow|darwinRTLDLocal, 0, 0, 0, 0)
++	runtime.KeepAlive(ptr)
++	if h == 0 {
++		return 0, fmt.Errorf("dlopen %s failed", path)
++	}
++	return h, nil
++}
++
++func darwinDlsym(handle uintptr, symbol string) (uintptr, error) {
++	ptr, err := syscall.BytePtrFromString(symbol)
++	if err != nil {
++		return 0, err
++	}
++	addr, _, _ := darwinSyscall6(libc_dlsym_trampoline_addr, handle, uintptr(unsafe.Pointer(ptr)), 0, 0, 0, 0)
++	runtime.KeepAlive(ptr)
++	if addr == 0 {
++		return 0, fmt.Errorf("dlsym %s failed", symbol)
++	}
++	return addr, nil
++}
++
++func loadDarwinSC() (*darwinSCFramework, error) {
++	darwinSCOnce.Do(func() {
++		cf, err := darwinDlopen("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")
++		if err != nil {
++			darwinSCErr = err
++			return
++		}
++		sc, err := darwinDlopen("/System/Library/Frameworks/SystemConfiguration.framework/SystemConfiguration")
++		if err != nil {
++			darwinSCErr = err
++			return
++		}
++		for _, s := range []struct {
++			lib  uintptr
++			name string
++			dst  *uintptr
++		}{
++			{cf, "CFStringCreateWithCString", &darwinSC.cfStringCreate},
++			{cf, "CFArrayCreate", &darwinSC.cfArrayCreate},
++			{cf, "CFDictionaryCreate", &darwinSC.cfDictionaryCreate},
++			{cf, "CFNumberCreate", &darwinSC.cfNumberCreate},
++			{cf, "CFRelease", &darwinSC.cfRelease},
++			{cf, "kCFTypeArrayCallBacks", &darwinSC.cfArrayCallBacks},
++			{cf, "kCFTypeDictionaryKeyCallBacks", &darwinSC.cfDictKeyCallBacks},
++			{cf, "kCFTypeDictionaryValueCallBacks", &darwinSC.cfDictValueCallBacks},
++			{sc, "SCDynamicStoreCreate", &darwinSC.scStoreCreate},
++			{sc, "SCDynamicStoreAddTemporaryValue", &darwinSC.scStoreAddTemporary},
++			{sc, "SCError", &darwinSC.scError},
++			{sc, "SCErrorString", &darwinSC.scErrorString},
++		} {
++			*s.dst, err = darwinDlsym(s.lib, s.name)
++			if err != nil {
++				darwinSCErr = err
++				return
++			}
++		}
++	})
++	return &darwinSC, darwinSCErr
++}
++
++func (f *darwinSCFramework) release(ref uintptr) {
++	if ref != 0 {
++		darwinSyscall6(f.cfRelease, ref, 0, 0, 0, 0, 0)
++	}
++}
++
++func (f *darwinSCFramework) cfString(s string) (uintptr, error) {
++	buf := append([]byte(s), 0)
++	ref, _, _ := darwinSyscall6(f.cfStringCreate, 0, uintptr(unsafe.Pointer(&buf[0])), darwinUTF8, 0, 0, 0)
++	runtime.KeepAlive(buf)
++	if ref == 0 {
++		return 0, fmt.Errorf("CFStringCreateWithCString failed")
++	}
++	return ref, nil
++}
++
++func (f *darwinSCFramework) cfStringArray(items []string) (uintptr, error) {
++	refs := make([]uintptr, 0, len(items))
++	defer func() {
++		for _, r := range refs {
++			f.release(r)
++		}
++	}()
++	for _, item := range items {
++		r, err := f.cfString(item)
++		if err != nil {
++			return 0, err
++		}
++		refs = append(refs, r)
++	}
++	arr, _, _ := darwinSyscall6(f.cfArrayCreate, 0, uintptr(unsafe.Pointer(unsafe.SliceData(refs))), uintptr(len(refs)), f.cfArrayCallBacks, 0, 0)
++	runtime.KeepAlive(refs)
++	if arr == 0 {
++		return 0, fmt.Errorf("CFArrayCreate failed")
++	}
++	return arr, nil
++}
++
++func (f *darwinSCFramework) lastError(prefix string) error {
++	code, _, _ := darwinSyscall6(f.scError, 0, 0, 0, 0, 0, 0)
++	msgPtr, _, _ := darwinSyscall6(f.scErrorString, uintptr(int32(code)), 0, 0, 0, 0, 0)
++	if msgPtr == 0 {
++		return fmt.Errorf("%s: SCError %d", prefix, int32(code))
++	}
++	var msg []byte
++	p := *(**[256]byte)(unsafe.Pointer(&msgPtr))
++	for i := 0; i < len(p); i++ {
++		if p[i] == 0 {
++			msg = p[:i]
++			break
++		}
++	}
++	return fmt.Errorf("%s: %s (%d)", prefix, string(msg), int32(code))
++}
++
++// registerDarwinSystemDNS publishes a session-bound catch-all DNS entry in SCDynamicStore.
++// configd removes the entry automatically when the session closes or the process dies.
++func registerDarwinSystemDNS(ifaceName string, servers []netip.Addr) (*darwinDNSSession, error) {
++	f, err := loadDarwinSC()
++	if err != nil {
++		return nil, err
++	}
++
++	var id [16]byte
++	if _, err := rand.Read(id[:]); err != nil {
++		return nil, err
++	}
++	storeKey := "State:/Network/Service/keqdroid-xray-" + hex.EncodeToString(id[:]) + "/DNS"
++
++	addrs := make([]string, len(servers))
++	for i, s := range servers {
++		addrs[i] = s.String()
++	}
++
++	serverArr, err := f.cfStringArray(addrs)
++	if err != nil {
++		return nil, err
++	}
++	defer f.release(serverArr)
++
++	domainArr, err := f.cfStringArray([]string{""})
++	if err != nil {
++		return nil, err
++	}
++	defer f.release(domainArr)
++
++	orderVal := int32(1)
++	orderNum, _, _ := darwinSyscall6(f.cfNumberCreate, 0, darwinSInt32Type, uintptr(unsafe.Pointer(&orderVal)), 0, 0, 0)
++	runtime.KeepAlive(&orderVal)
++	if orderNum == 0 {
++		return nil, fmt.Errorf("CFNumberCreate failed")
++	}
++	defer f.release(orderNum)
++
++	orderSlice := []uintptr{orderNum}
++	orderArr, _, _ := darwinSyscall6(f.cfArrayCreate, 0, uintptr(unsafe.Pointer(unsafe.SliceData(orderSlice))), 1, f.cfArrayCallBacks, 0, 0)
++	runtime.KeepAlive(orderSlice)
++	if orderArr == 0 {
++		return nil, fmt.Errorf("CFArrayCreate for orders failed")
++	}
++	defer f.release(orderArr)
++
++	kServers, err := f.cfString("ServerAddresses")
++	if err != nil {
++		return nil, err
++	}
++	defer f.release(kServers)
++
++	kDomains, err := f.cfString("SupplementalMatchDomains")
++	if err != nil {
++		return nil, err
++	}
++	defer f.release(kDomains)
++
++	kOrders, err := f.cfString("SupplementalMatchOrders")
++	if err != nil {
++		return nil, err
++	}
++	defer f.release(kOrders)
++
++	keys := []uintptr{kServers, kDomains, kOrders}
++	vals := []uintptr{serverArr, domainArr, orderArr}
++	dict, _, _ := darwinSyscall6(
++		f.cfDictionaryCreate,
++		0,
++		uintptr(unsafe.Pointer(unsafe.SliceData(keys))),
++		uintptr(unsafe.Pointer(unsafe.SliceData(vals))),
++		uintptr(len(keys)),
++		f.cfDictKeyCallBacks,
++		f.cfDictValueCallBacks,
++	)
++	runtime.KeepAlive(keys)
++	runtime.KeepAlive(vals)
++	if dict == 0 {
++		return nil, fmt.Errorf("CFDictionaryCreate failed")
++	}
++	defer f.release(dict)
++
++	label, err := f.cfString("keqdroid-xray " + ifaceName)
++	if err != nil {
++		return nil, err
++	}
++	defer f.release(label)
++
++	keyRef, err := f.cfString(storeKey)
++	if err != nil {
++		return nil, err
++	}
++	defer f.release(keyRef)
++
++	runtime.LockOSThread()
++	defer runtime.UnlockOSThread()
++
++	store, _, _ := darwinSyscall6(f.scStoreCreate, 0, label, 0, 0, 0, 0)
++	if store == 0 {
++		return nil, f.lastError("SCDynamicStoreCreate")
++	}
++	session := &darwinDNSSession{store: store}
++
++	ok, _, _ := darwinSyscall6(f.scStoreAddTemporary, store, keyRef, dict, 0, 0, 0)
++	if uint8(ok) == 0 {
++		err := f.lastError("SCDynamicStoreAddTemporaryValue")
++		session.close()
++		return nil, err
++	}
++	return session, nil
++}
+diff --git a/proxy/tun/tun_darwin_dns.s b/proxy/tun/tun_darwin_dns.s
+new file mode 100644
+index 0000000..37ea080
+--- /dev/null
++++ b/proxy/tun/tun_darwin_dns.s
+@@ -0,0 +1,13 @@
++//go:build darwin && !ios
++
++#include "textflag.h"
++
++TEXT libc_dlopen_trampoline<>(SB),NOSPLIT,$0-0
++	JMP	libc_dlopen(SB)
++GLOBL	·libc_dlopen_trampoline_addr(SB), RODATA, $8
++DATA	·libc_dlopen_trampoline_addr(SB)/8, $libc_dlopen_trampoline<>(SB)
++
++TEXT libc_dlsym_trampoline<>(SB),NOSPLIT,$0-0
++	JMP	libc_dlsym(SB)
++GLOBL	·libc_dlsym_trampoline_addr(SB), RODATA, $8
++DATA	·libc_dlsym_trampoline_addr(SB)/8, $libc_dlsym_trampoline<>(SB)
+diff --git a/proxy/tun/tun_darwin_dns_test.go b/proxy/tun/tun_darwin_dns_test.go
+new file mode 100644
+index 0000000..cb3da3e
+--- /dev/null
++++ b/proxy/tun/tun_darwin_dns_test.go
+@@ -0,0 +1,51 @@
++//go:build darwin && !ios
++
++package tun
++
++import (
++	"context"
++	"net"
++	"net/netip"
++	"testing"
++
++	"github.com/xtls/xray-core/transport/internet"
++)
++
++func TestParseDarwinDNSServers(t *testing.T) {
++	got, err := parseDarwinDNSServers(nil)
++	if err != nil || len(got) != 0 {
++		t.Fatalf("empty input gave %v, %v", got, err)
++	}
++
++	got, err = parseDarwinDNSServers([]string{" 172.19.0.1 ", "", "::ffff:172.19.0.2"})
++	if err != nil {
++		t.Fatal(err)
++	}
++	if len(got) != 2 || got[0] != netip.MustParseAddr("172.19.0.1") || got[1] != netip.MustParseAddr("172.19.0.2") {
++		t.Fatalf("unexpected parsed servers: %v", got)
++	}
++
++	if _, err := parseDarwinDNSServers([]string{"not-an-ip"}); err == nil {
++		t.Fatal("expected error for invalid IP")
++	}
++}
++
++func TestResolveDarwinOnOwnSkipsTunDNSAndRestores(t *testing.T) {
++	preferGo, dial := net.DefaultResolver.PreferGo, net.DefaultResolver.Dial
++	internet.SkipDNSServers([]netip.Addr{netip.MustParseAddr("172.19.0.1")})
++	t.Cleanup(func() { internet.SkipDNSServers(nil) })
++
++	saved := resolveDarwinOnOwn()
++	if !net.DefaultResolver.PreferGo || net.DefaultResolver.Dial == nil {
++		saved.restore()
++		t.Fatal("net.DefaultResolver was not updated")
++	}
++	if _, err := net.DefaultResolver.Dial(context.Background(), "udp", "172.19.0.1:53"); err == nil {
++		saved.restore()
++		t.Fatal("expected TUN DNS address to be skipped")
++	}
++	saved.restore()
++	if net.DefaultResolver.PreferGo != preferGo || (net.DefaultResolver.Dial == nil) != (dial == nil) {
++		t.Fatal("net.DefaultResolver was not restored")
++	}
++}
+diff --git a/proxy/tun/tun_ios_dns.go b/proxy/tun/tun_ios_dns.go
+new file mode 100644
+index 0000000..b5b831b
+--- /dev/null
++++ b/proxy/tun/tun_ios_dns.go
+@@ -0,0 +1,11 @@
++//go:build ios
++
++package tun
++
++type darwinDNSSession struct{}
++
++type savedDarwinResolver struct{}
++
++func (t *DarwinTun) setSystemDNS() error { return nil }
++
++func (t *DarwinTun) unsetSystemDNS() {}

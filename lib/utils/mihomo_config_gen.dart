@@ -31,6 +31,7 @@ class MihomoTunOptions {
     this.device,
     required this.stack,
     this.mtu = 0,
+    this.macos = false,
     this.autoRoute = true,
     this.strictRoute = false,
     this.fromFileDescriptor = false,
@@ -46,6 +47,8 @@ class MihomoTunOptions {
   final String stack;
 
   final int mtu;
+
+  final bool macos;
 
   // на Android маршруты ставит VpnService, ядро без root получит отказ
   final bool autoRoute;
@@ -272,6 +275,8 @@ class MihomoConfigGen {
     if (tun.mtu > 0) 'mtu': tun.mtu,
     'auto-route': tun.autoRoute,
     'auto-detect-interface': tun.autoDetectInterface,
+    // без dns-mode sing-tun на Darwin держит DNSModeDisabled и не регистрирует DNS в SCDynamicStore
+    if (tun.macos && tun.autoRoute) 'dns-mode': 'hijack',
     if (tun.strictRoute) 'strict-route': true,
     // пустой список сильнее умолчания ядра, адрес по нему же ставит VpnService на Android
     if (tun.ipv6 == TunSettings.ipv6Bypass) 'inet6-address': const <String>[],

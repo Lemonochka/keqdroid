@@ -2639,6 +2639,8 @@ class ConfigGeneratorV2 {
       'mtu': tun.mtu,
       'gateway': [kTunInterfacePrefix, if (v6) kTunInterfaceIpv6Prefix],
       if (tun.windows) 'dns': [kTunDnsAddress],
+      // у utun на Darwin свой 172.19.0.2 уходит в lo0, в туннель попадает только peer 172.19.0.1
+      if (tun.macos && tun.autoRoute) 'dns': [kTunInterfaceAddress],
       if (tun.autoRoute)
         'autoSystemRoutingTable': ['0.0.0.0/0', if (v6) '::/0'],
       'autoOutboundsInterface': 'auto',

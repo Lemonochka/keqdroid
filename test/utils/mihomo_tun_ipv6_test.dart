@@ -152,4 +152,32 @@ void main() {
       }
     },
   );
+
+  test(
+    'на macOS TUN включает dns-mode hijack только при своей маршрутизации',
+    () {
+      // без dns-mode sing-tun на Darwin оставляет DNSModeDisabled и не пишет резолвер в SCDynamicStore
+      final macos = _build(
+        const MihomoTunOptions(
+          device: kMacosTunInterfaceName,
+          stack: TunSettings.stackGvisor,
+          mtu: 9000,
+          macos: true,
+        ),
+      );
+      expect(_tun(macos)['dns-mode'], 'hijack');
+
+      final manual = _build(
+        const MihomoTunOptions(
+          device: kMacosTunInterfaceName,
+          stack: TunSettings.stackGvisor,
+          mtu: 9000,
+          macos: true,
+          autoRoute: false,
+        ),
+      );
+      expect(_tun(manual).containsKey('dns-mode'), isFalse);
+      expect(_tun(_build(_pc(null))).containsKey('dns-mode'), isFalse);
+    },
+  );
 }
