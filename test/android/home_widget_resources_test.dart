@@ -734,6 +734,8 @@ String _layout(_Kind k) =>
 <?xml version="1.0" encoding="utf-8"?>
 $_header
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:ignore="UseAppTint"
     android:id="@+id/w_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
@@ -815,6 +817,15 @@ void main() {
       final xml = generated['$_res/layout/widget_${k.name}.xml']!;
       final tags = RegExp(r'<([A-Za-z.]+)\s').allMatches(xml).map((m) => m[1]);
       expect(tags.toSet().difference(allowed), isEmpty, reason: k.name);
+    }
+  });
+
+  test('RemoteViews layouts keep platform tint attributes', () {
+    for (final k in _kinds) {
+      final xml = generated['$_res/layout/widget_${k.name}.xml']!;
+      expect(xml, contains('android:tint='), reason: k.name);
+      expect(xml, contains('tools:ignore="UseAppTint"'), reason: k.name);
+      expect(xml, isNot(contains('app:tint=')), reason: k.name);
     }
   });
 

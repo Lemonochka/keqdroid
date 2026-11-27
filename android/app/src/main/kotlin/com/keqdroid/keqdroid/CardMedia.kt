@@ -11,6 +11,7 @@ import android.os.Handler
 import android.os.Looper
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.effect.Presentation
 import androidx.media3.transformer.Composition
 import androidx.media3.transformer.EditedMediaItem
@@ -134,6 +135,7 @@ class CardMedia(private val context: Context, messenger: BinaryMessenger) :
     }
 
     // Transformer живёт на потоке с Looper: запускаем и ждём ответа на главном
+    @androidx.annotation.OptIn(markerClass = [UnstableApi::class])
     private fun transcode(call: MethodCall, result: MethodChannel.Result) {
         val input = call.argument<String>("input")!!
         val output = call.argument<String>("output")!!

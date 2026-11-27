@@ -45,6 +45,8 @@ jobs:
       - run: flutter build apk --debug --config-only
       - run: ./gradlew :app:testDebugUnitTest
         working-directory: android
+      - run: ./gradlew :app:lintDebug
+        working-directory: android
 
   macos-build:
     runs-on: macos-15
