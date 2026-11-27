@@ -13,11 +13,11 @@
 }:
 stdenv.mkDerivation (finalAttrs: {
   pname = "keqdroid";
-  version = "0.40.0";
+  version = "0.40.1";
 
   src = fetchurl {
     url = "https://github.com/Lemonochka/keqdroid/releases/download/v${finalAttrs.version}/keqdroid-${finalAttrs.version}-linux-x64.tar.gz";
-    hash = "sha256-CSfBUvK+NysU+N+zSW/UlzlSPqBvWPU54647dZoP9Dg=";
+    hash = "sha256-991g5DoRM3dYqsYjTvgulXUXgQ7iYHEy3Jy1QvZGLXQ=";
   };
 
   nativeBuildInputs = [
