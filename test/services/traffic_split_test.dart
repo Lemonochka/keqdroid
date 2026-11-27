@@ -99,6 +99,45 @@ void main() {
     });
   });
 
+  group('асинхронный разбор /connections', () {
+    test(
+      'большой ответ даёт тот же снимок, маленький остаётся поддержан',
+      () async {
+        final large = jsonEncode({
+          'downloadTotal': 1234,
+          'uploadTotal': 567,
+          'connections': [
+            for (var i = 0; i < 3000; i++)
+              {
+                'id': 'connection-$i',
+                'metadata': {
+                  'host': 'service-$i.example.com',
+                  'padding': 'x' * 64,
+                },
+                'chains': [i.isEven ? 'proxy' : 'DIRECT'],
+                'download': 1000 + i,
+                'upload': 100 + i,
+              },
+          ],
+        });
+        expect(large.length, greaterThan(256 * 1024));
+
+        final snapshot = await TrafficSplitSource.parseSnapshotAsync(large);
+        expect(snapshot!.connections, hasLength(3000));
+        expect(snapshot.coreDownload, 1234);
+        expect(snapshot.coreUpload, 567);
+        expect(snapshot.connections.first.id, 'connection-0');
+        expect(snapshot.connections.last.download, 3999);
+
+        final small = await TrafficSplitSource.parseSnapshotAsync(
+          '{"connections":[{"id":"a","chains":["proxy"],"download":1}]}',
+        );
+        expect(small!.connections.single.id, 'a');
+        expect(await TrafficSplitSource.parseSnapshotAsync('[]'), isNull);
+      },
+    );
+  });
+
   group('счётчики соединений в скорость', () {
     test('первый снимок только отмечает базу', () {
       final tracker = TrafficSplitTracker();

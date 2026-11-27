@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart' show visibleForTesting;
+import 'package:flutter/foundation.dart' show compute, visibleForTesting;
 
 import '../core/connections_poll_stats.dart';
 import '../models/traffic_split.dart';
@@ -75,7 +75,7 @@ class TrafficSplitSource {
           .join()
           .timeout(connectionsBodyTimeout);
       chars = body.length;
-      return snapshot = parseSnapshot(body);
+      return snapshot = await parseSnapshotAsync(body);
     } catch (_) {
       _reset();
       return null;
@@ -87,6 +87,15 @@ class TrafficSplitSource {
         connections: snapshot?.connections.length,
       );
     }
+  }
+
+  // изолят только для крупного ответа: обычный опрос не должен платить за пересылку
+  static const _offThreadMinChars = 256 * 1024;
+
+  @visibleForTesting
+  static Future<ConnectionsSnapshot?> parseSnapshotAsync(String body) async {
+    if (body.length < _offThreadMinChars) return parseSnapshot(body);
+    return compute(parseSnapshot, body);
   }
 
   @visibleForTesting
