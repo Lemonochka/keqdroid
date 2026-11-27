@@ -8,6 +8,7 @@ import 'package:keqdroid/models/subscription.dart';
 import 'package:keqdroid/providers/providers.dart';
 import 'package:keqdroid/services/auto_select_home.dart';
 import 'package:keqdroid/services/core_dial_failures.dart';
+import 'package:keqdroid/services/names_fallback.dart';
 import 'package:keqdroid/services/ping_service.dart';
 import 'package:keqdroid/services/vpn_engine.dart';
 import 'package:keqdroid/tunnel/tunnel_backend.dart';
@@ -174,15 +175,28 @@ class _CapturedTimer implements Timer {
 }
 
 class _Rig {
-  _Rig(this.container, this.backend, this.timers);
+  _Rig(
+    this.container,
+    this.backend,
+    this._capturedTimers,
+    this._otherTimers,
+    this._timerZone,
+  );
 
   final ProviderContainer container;
   final _Backend backend;
-  final List<_CapturedTimer> timers;
+  final List<_CapturedTimer> _capturedTimers;
+  final List<_CapturedTimer> _otherTimers;
+  final Zone _timerZone;
+
+  List<_CapturedTimer> get timers =>
+      _capturedTimers.where((t) => !_otherTimers.contains(t)).toList();
 
   VpnStateNotifier get vpn => container.read(vpnStateProvider.notifier);
 
   String? get active => container.read(serversProvider).activeServerId;
+
+  Future<T> capture<T>(Future<T> Function() action) => _timerZone.run(action);
 
   ServerItem server(String id) =>
       container.read(serversProvider).servers.firstWhere((s) => s.id == id);
@@ -245,11 +259,41 @@ Future<_Rig> _rig({bool neighbours = false, bool autoSelect = true}) async {
     ],
   );
   addTearDown(container.dispose);
+  await container.read(subscriptionsProvider.future);
 
   // настоящие таймеры тикали бы сами посреди теста: ловим их и зовём вручную
   final timers = <_CapturedTimer>[];
-  runZoned(
-    () => container.read(vpnStateProvider),
+  return runZoned(
+    () async {
+      container.read(vpnStateProvider);
+      expect(timers, isEmpty, reason: 'до подключения сторож не нужен');
+
+      container.read(serversProvider);
+      await container.read(vpnStateProvider.future);
+      await _until(
+        () => container.read(serversProvider).servers.length == servers.length,
+      );
+      await container.read(vpnStateProvider.notifier).connect();
+      expect(
+        container.read(vpnStateProvider).value?.status,
+        VpnStatus.connected,
+      );
+      expect(
+        [for (final t in timers) t.period],
+        [
+          if (autoSelect) ...const [
+            Duration(seconds: 30),
+            Duration(seconds: 1),
+            Duration(minutes: 1),
+          ],
+          NamesFallback.checkEvery,
+        ],
+      );
+      final otherTimers = autoSelect ? timers.sublist(3) : [...timers];
+      // хвосты замера пишут пинги через ref, закрытый контейнер их уронил бы
+      addTearDown(_drain);
+      return _Rig(container, backend, timers, otherTimers, Zone.current);
+    },
     zoneSpecification: ZoneSpecification(
       createPeriodicTimer: (self, parent, zone, period, callback) {
         final timer = _CapturedTimer(period, callback);
@@ -258,22 +302,6 @@ Future<_Rig> _rig({bool neighbours = false, bool autoSelect = true}) async {
       },
     ),
   );
-  expect(
-    [for (final t in timers) t.period],
-    const [Duration(seconds: 30), Duration(seconds: 1), Duration(minutes: 1)],
-  );
-
-  await container.read(subscriptionsProvider.future);
-  container.read(serversProvider);
-  await container.read(vpnStateProvider.future);
-  await _until(
-    () => container.read(serversProvider).servers.length == servers.length,
-  );
-  await container.read(vpnStateProvider.notifier).connect();
-  expect(container.read(vpnStateProvider).value?.status, VpnStatus.connected);
-  // хвосты замера пишут пинги через ref, закрытый контейнер их уронил бы
-  addTearDown(_drain);
-  return _Rig(container, backend, timers);
 }
 
 Future<void> _jumpToNeighbour(_Rig rig) async {
@@ -346,7 +374,7 @@ void main() {
       },
     );
 
-    test('VPN выключен: сторож молчит', () async {
+    test('VPN выключен: таймеры остановлены, сторож молчит', () async {
       final rig = await _rig();
       rig.backend.latency['own1'] = 100;
       await rig.vpn.disconnect();
@@ -355,6 +383,7 @@ void main() {
         rig.container.read(vpnStateProvider).value?.status,
         VpnStatus.disconnected,
       );
+      expect(rig.timers.every((t) => !t.isActive), isTrue);
       await rig.stall();
       await rig.stall();
       await rig.vpn.debugAutoSelectProbe();
@@ -362,6 +391,56 @@ void main() {
       await rig.recheckAfter(const Duration(minutes: 5));
       await rig.recheckAfter(const Duration(minutes: 5));
       expect(rig.backend.measured, isEmpty);
+
+      await rig.capture(() => rig.vpn.connect());
+      expect(
+        rig.container.read(vpnStateProvider).value?.status,
+        VpnStatus.connected,
+      );
+      expect(rig.timers, hasLength(6));
+      expect(rig.timers.sublist(3).every((t) => t.isActive), isTrue);
+    });
+
+    test('выключение автовыбора гасит таймеры и очищает дом, '
+        'включение запускает их заново', () async {
+      final rig = await _rig();
+      await AutoSelectHomeStore.save(
+        const AutoSelectHome(
+          subscriptionId: 'own',
+          homeId: 'own1',
+          pickedId: 'own3',
+        ),
+      );
+
+      await rig.container
+          .read(subscriptionsProvider.notifier)
+          .editMeta('own', autoSelect: false);
+      await _drain();
+      expect(rig.timers.every((t) => !t.isActive), isTrue);
+      expect(await AutoSelectHomeStore.load(), isNull);
+
+      await rig.capture(
+        () => rig.container
+            .read(subscriptionsProvider.notifier)
+            .handAutoSelectTo('own'),
+      );
+      await _drain();
+      expect(rig.timers, hasLength(6));
+      expect(rig.timers.sublist(3).every((t) => t.isActive), isTrue);
+    });
+
+    test('обновления телеметрии не пересоздают работающие таймеры', () async {
+      final rig = await _rig();
+      final initial = [...rig.timers];
+
+      await rig.totals(sent: 1000, received: 500);
+      await rig.totals(sent: 2000, received: 1000);
+
+      expect(rig.timers, hasLength(3));
+      for (var i = 0; i < initial.length; i++) {
+        expect(identical(rig.timers[i], initial[i]), isTrue);
+        expect(rig.timers[i].isActive, isTrue);
+      }
     });
 
     test(

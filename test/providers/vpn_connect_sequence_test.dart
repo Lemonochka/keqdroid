@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/models/server_item.dart';
 import 'package:keqdroid/providers/providers.dart';
 import 'package:keqdroid/services/vpn_engine.dart';
+import 'package:keqdroid/tunnel/vpn_backend.dart';
 import 'package:keqdroid/utils/socks5_credentials.dart';
 
 import '../helpers/fake_tunnel_backend.dart';
@@ -197,6 +198,41 @@ void main() {
       password: 'pass-2',
     ));
   });
+
+  test(
+    'повреждённый шаблон провайдера не мешает обычному подключению',
+    () async {
+      final backend = _RecordingBackend();
+      final storage = await buildStorageService(
+        initialValues: const {'keqdis_clash_template_sub-broken': 'proxies: ['},
+      );
+      final server = ServerItem(
+        id: 'srv-template',
+        type: ServerItemType.subscription,
+        subscriptionId: 'sub-broken',
+        config: _server.config,
+      );
+      await storage.saveServers([server]);
+      await storage.setActiveServerId(server.id);
+      final container = ProviderContainer(
+        overrides: [
+          storageProvider.overrideWithValue(storage),
+          vpnEngineProvider.overrideWithValue(VpnEngine.withBackend(backend)),
+        ],
+      );
+      addTearDown(container.dispose);
+      container.read(serversProvider);
+      await container.read(vpnStateProvider.future);
+
+      await container.read(vpnStateProvider.notifier).connect();
+
+      final session = backend.session;
+      expect(session, isNotNull);
+      expect(session!.xrayConfig, contains('198.51.100.10'));
+      expect(session.mihomoConfig, isNull);
+      expect(session.vpnBackend, VpnBackend.xray);
+    },
+  );
 
   test('без выбранного сервера сессия не стартует вовсе', () async {
     final backend = _RecordingBackend();

@@ -45,17 +45,15 @@ class _AutoSelectMonitor {
   int? _networkMark;
 
   void start() {
-    _probeTimer?.cancel();
+    if (_probeTimer != null) return;
     _probeTimer = Timer.periodic(
       AutoSelectWatchdog.probeEvery,
       (_) => unawaited(probe()),
     );
-    _listenTimer?.cancel();
     _listenTimer = Timer.periodic(
       AutoSelectWatchdog.listenEvery,
       (_) => unawaited(listenOnce()),
     );
-    _recheckTimer?.cancel();
     _recheckTimer = Timer.periodic(
       NeighbourHomePace.every,
       (_) => unawaited(recheckTick()),
@@ -64,8 +62,24 @@ class _AutoSelectMonitor {
 
   void stop() {
     _probeTimer?.cancel();
+    _probeTimer = null;
     _listenTimer?.cancel();
+    _listenTimer = null;
     _recheckTimer?.cancel();
+    _recheckTimer = null;
+  }
+
+  Future<void> clearUnusedHome() async {
+    await _clearUnusedHome(await AutoSelectHomeStore.load());
+  }
+
+  Future<void> _clearUnusedHome(AutoSelectHome? home) async {
+    if (home == null) return;
+    final subs =
+        ref.read(subscriptionsProvider).value ?? const <Subscription>[];
+    if (!subs.any((s) => s.id == home.subscriptionId && s.autoSelect)) {
+      await AutoSelectHomeStore.save(null);
+    }
   }
 
   Future<_AutoTarget?> _target() async {
@@ -546,12 +560,7 @@ class _AutoSelectMonitor {
     final target = await _target();
     var home = await AutoSelectHomeStore.load();
     if (target == null) {
-      final subs =
-          ref.read(subscriptionsProvider).value ?? const <Subscription>[];
-      if (home != null &&
-          !subs.any((s) => s.id == home!.subscriptionId && s.autoSelect)) {
-        await AutoSelectHomeStore.save(null);
-      }
+      await _clearUnusedHome(home);
       _recheckSeenBytes = null;
       _homePace = const NeighbourHomePace();
       return;

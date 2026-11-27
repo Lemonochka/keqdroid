@@ -38,6 +38,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
   Completer<void>? _disconnectWaiter;
   Timer? _androidPollTimer;
   AppLifecycleListener? _androidLifecycle;
+  bool _autoSelectInForeground = true;
 
   late final _autoSelect = _AutoSelectMonitor(
     ref: () => ref,
@@ -232,11 +233,39 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     _androidPollTimer = null;
   }
 
+  void _onAutoSelectSubscriptions(AsyncValue<List<Subscription>> next) {
+    final subs = next.value;
+    if (subs != null && !subs.any((s) => s.autoSelect)) {
+      unawaited(_autoSelect.clearUnusedHome());
+    }
+    _syncAutoSelect();
+  }
+
+  void _syncAutoSelect([VpnState? current]) {
+    final connected = (current ?? state.value)?.status == VpnStatus.connected;
+    final enabled =
+        ref.read(subscriptionsProvider).value?.any((s) => s.autoSelect) ??
+        false;
+    if (_autoSelectInForeground && connected && enabled) {
+      _autoSelect.start();
+    } else {
+      _autoSelect.stop();
+    }
+  }
+
+  void _onAndroidBackground() {
+    _autoSelectInForeground = false;
+    _autoSelect.stop();
+    _stopAndroidPolling();
+  }
+
   void _onAndroidResumed() {
     if (!Platform.isAndroid) return;
+    _autoSelectInForeground = true;
     ref.read(vpnEngineProvider).refreshStateStream();
     unawaited(syncFromNative());
     _startAndroidPolling();
+    _syncAutoSelect();
   }
 
   @override
@@ -250,17 +279,24 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       }
       _applyNativeState(s);
     });
-    _autoSelect.start();
     listenSelf((previous, next) {
       if (previous?.value?.status != VpnStatus.connected &&
           next.value?.status == VpnStatus.connected) {
         unawaited(_applyTemplatePins());
       }
+      _syncAutoSelect();
     });
+    // подписки могут переподключить VPN: ref.listen здесь дал бы цикл зависимостей
+    final autoSelectSubscriptions = ref.container.listen(
+      subscriptionsProvider,
+      (_, next) => _onAutoSelectSubscriptions(next),
+      fireImmediately: true,
+    );
     if (_syncsCredentials) {
       localProxyCredentialsSync = syncSocksCredentialsFromService;
     }
     ref.onDispose(() {
+      autoSelectSubscriptions.close();
       if (localProxyCredentialsSync == syncSocksCredentialsFromService) {
         localProxyCredentialsSync = null;
       }
@@ -276,15 +312,18 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       _androidLifecycle?.dispose();
       _androidLifecycle = AppLifecycleListener(
         onResume: _onAndroidResumed,
-        onPause: _stopAndroidPolling,
-        onHide: _stopAndroidPolling,
+        onPause: _onAndroidBackground,
+        onHide: _onAndroidBackground,
       );
       _onAndroidResumed();
     }
 
     try {
-      return await engine.getCurrentState();
+      final current = await engine.getCurrentState();
+      _syncAutoSelect(current);
+      return current;
     } catch (_) {
+      _autoSelect.stop();
       return VpnState.disconnected;
     }
   }
@@ -298,7 +337,9 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     if (server == null || subId == null) return;
     final storage = ref.read(storageProvider);
     final settings = await storage.getSettings();
-    if (!ref.mounted || runId != _pinsRunId || !clashTemplateApplies(settings)) {
+    if (!ref.mounted ||
+        runId != _pinsRunId ||
+        !clashTemplateApplies(settings)) {
       return;
     }
     final raw = storage.getClashTemplate(subId);
@@ -626,29 +667,11 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     }
   }
 
-  // сборка сессии для connect и для смены сервера на ходу; в reuse порты, логин и пароль и API работающего ядра,
-  // а null возвращается, когда на ходу эту сессию не поднять
-  Future<_LiveSession?> _buildSession(
+  Future<({String? templated, VpnBackendChoice choice})> _prepareRunConfig(
     ServerItem server,
-    VpnEngine engine, {
-    _LiveSession? reuse,
-    bool autostartTunFallback = false,
-  }) async {
+    AppSettings stored,
+  ) async {
     final storage = ref.read(storageProvider);
-    final profile = profileForServer(
-      await storage.getRoutingProfiles(),
-      server,
-    );
-    final saved = await storage.getSettings();
-    // «Всё остальное» профиля только в эту сессию: на диск настройки пишет лишь _saveDuringConnect
-    final stored = profile == null
-        ? saved
-        : saved.copyWith(finalOutbound: profile.finalOutbound);
-    final routes = profile?.routes ?? await storage.getRoutes();
-    if (profile != null) {
-      AppLogger.instance.info('Routing profile: ${profile.name}');
-    }
-
     final subId = server.subscriptionId;
     final template = subId == null ? null : storage.getClashTemplate(subId);
     String? templated;
@@ -694,6 +717,36 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
             skip: VpnCoreSkip.clashTemplate,
           )
         : resolved;
+    return (templated: templated, choice: choice);
+  }
+
+  // сборка сессии для connect и для смены сервера на ходу; в reuse порты, логин и пароль и API работающего ядра,
+  // а null возвращается, когда на ходу эту сессию не поднять
+  Future<_LiveSession?> _buildSession(
+    ServerItem server,
+    VpnEngine engine, {
+    _LiveSession? reuse,
+    bool autostartTunFallback = false,
+  }) async {
+    final storage = ref.read(storageProvider);
+    final profile = profileForServer(
+      await storage.getRoutingProfiles(),
+      server,
+    );
+    final saved = await storage.getSettings();
+    // «Всё остальное» профиля только в эту сессию: на диск настройки пишет лишь _saveDuringConnect
+    final stored = profile == null
+        ? saved
+        : saved.copyWith(finalOutbound: profile.finalOutbound);
+    final routes = profile?.routes ?? await storage.getRoutes();
+    if (profile != null) {
+      AppLogger.instance.info('Routing profile: ${profile.name}');
+    }
+
+    final prepared = await _prepareRunConfig(server, stored);
+    final templated = prepared.templated;
+    final runConfig = templated ?? server.config;
+    final choice = prepared.choice;
     // на ходу меняется только конфиг mihomo, для другого ядра нужны стоп и старт
     if (reuse != null && choice.backend != VpnBackend.mihomo) return null;
     // режим сохранённый: если автозапуск откатится в прокси, генератор без туннеля правил по процессам и так не напишет
