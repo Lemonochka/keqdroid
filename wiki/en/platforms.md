@@ -94,6 +94,7 @@ x86_64, distributions on par with Ubuntu 22.04 and Debian 12 or newer.
 | `.deb` | Debian, Ubuntu, Mint |
 | `.rpm` | Fedora, openSUSE |
 | `PKGBUILD` | Arch: build it with `makepkg -si` in its folder |
+| `github:Lemonochka/keqdroid/nix` | NixOS: import `inputs.keqdroid.nixosModules.default` and set `programs.keqdroid.enable = true` |
 | `.AppImage` | any distribution, no installation |
 | `.tar.gz` | any distribution: unpack and run |
 
@@ -104,6 +105,8 @@ The packages install the app so that only root can change its files.
 In Proxy mode the app writes the system proxy into GNOME and KDE settings. Firefox picks it up from there in any desktop environment. In other environments, set the address `127.0.0.1` and the port in your programs manually.
 
 TUN mode needs root: when you connect, the app asks for your password through `pkexec`. If you turn on “Passwordless TUN” in “Permissions”, the app installs a polkit rule once and stops asking for the password.
+
+On NixOS, `programs.keqdroid` enables polkit and the `pkexec` wrapper automatically (set `programs.keqdroid.tun.enable = false` if you only use Proxy mode). In Hyprland, Sway, niri and river, run a polkit authentication agent alongside your session. “Passwordless TUN” writes its rule to `/etc/polkit-1/rules.d`, so it is unavailable when `system.etc.overlay.mutable = false`.
 
 ### Tray and autostart
 

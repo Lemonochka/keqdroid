@@ -110,152 +110,46 @@ jobs:
             }
             const sri = 'sha256-' + Buffer.from(hex, 'hex').toString('base64');
 
-            const flakeNix = [
-              '{',
-              '  description = "keqdroid proxy and VPN client";',
-              '',
-              '  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";',
-              '',
-              '  outputs =',
-              '    { nixpkgs, ... }:',
-              '    let',
-              '      pkgs = nixpkgs.legacyPackages.x86_64-linux;',
-              '      keqdroid = pkgs.callPackage ./nix/package.nix { };',
-              '    in',
-              '    {',
-              '      packages.x86_64-linux = {',
-              '        inherit keqdroid;',
-              '        default = keqdroid;',
-              '      };',
-              '      overlays.default = final: prev: {',
-              '        keqdroid = final.callPackage ./nix/package.nix { };',
-              '      };',
-              '    };',
-              '}',
-              '',
-            ].join('\n');
+            const readRepoFile = async (path, ref) => {
+              const { data } = await github.rest.repos.getContent({ owner, repo, path, ref });
+              if (Array.isArray(data) || data.type !== 'file' || !data.content) {
+                throw new Error(`Unexpected content response for ${path} at ${ref}`);
+              }
+              return Buffer.from(data.content, 'base64').toString('utf8');
+            };
 
-            const flakeLock = JSON.stringify({
-              nodes: {
-                nixpkgs: {
-                  locked: {
-                    lastModified: 1795234589,
-                    narHash: 'sha256-f/VVvxf5RsQgWVhUtefoca5ktVg0DA2bnkMOcmSnozo=',
-                    owner: 'NixOS',
-                    repo: 'nixpkgs',
-                    rev: '2786a2a72088ecf32aea5b3ec52099e6a7cff78f',
-                    type: 'github',
-                  },
-                  original: {
-                    owner: 'NixOS',
-                    ref: 'nixos-unstable',
-                    repo: 'nixpkgs',
-                    type: 'github',
-                  },
-                },
-                root: {
-                  inputs: {
-                    nixpkgs: 'nixpkgs',
-                  },
-                },
-              },
-              root: 'root',
-              version: 7,
-            }, null, 2) + '\n';
+            let sourceRef = release.tag_name;
+            try {
+              await github.rest.repos.getContent({
+                owner,
+                repo,
+                path: 'tool/nix/flake.nix',
+                ref: sourceRef,
+              });
+            } catch (e) {
+              if (e.status !== 404) throw e;
+              sourceRef = context.sha;
+            }
 
-            const packageNix = [
-              '{',
-              '  lib,',
-              '  stdenv,',
-              '  fetchurl,',
-              '  autoPatchelfHook,',
-              '  copyDesktopItems,',
-              '  makeDesktopItem,',
-              '  wrapGAppsHook3,',
-              '  gsettings-desktop-schemas,',
-              '  gtk3,',
-              '  libepoxy,',
-              '  libx11,',
-              '}:',
-              'stdenv.mkDerivation (finalAttrs: {',
-              '  pname = "keqdroid";',
-              `  version = "${version}";`,
-              '',
-              '  src = fetchurl {',
-              `    url = "https://github.com/${owner}/${repo}/releases/download/v\${finalAttrs.version}/keqdroid-\${finalAttrs.version}-linux-x64.tar.gz";`,
-              `    hash = "${sri}";`,
-              '  };',
-              '',
-              '  nativeBuildInputs = [',
-              '    autoPatchelfHook',
-              '    copyDesktopItems',
-              '    wrapGAppsHook3',
-              '  ];',
-              '  buildInputs = [',
-              '    gsettings-desktop-schemas',
-              '    gtk3',
-              '    libepoxy',
-              '    libx11',
-              '    stdenv.cc.cc.lib',
-              '  ];',
-              '',
-              '  dontBuild = true;',
-              '  dontStrip = true;',
-              '',
-              "  installPhase = ''",
-              '    runHook preInstall',
-              '    mkdir -p $out/lib/keqdroid $out/bin',
-              '    cp -r . $out/lib/keqdroid',
-              '    ln -s $out/lib/keqdroid/keqdroid $out/bin/keqdroid',
-              '    for name in keqdroid com.keqdroid.keqdroid; do',
-              '      install -Dm644 data/flutter_assets/assets/icon.png $out/share/icons/hicolor/256x256/apps/$name.png',
-              '    done',
-              '    runHook postInstall',
-              "  '';",
-              '',
-              '  desktopItems = [',
-              '    (makeDesktopItem {',
-              '      name = "keqdroid";',
-              '      desktopName = "KeqDroid";',
-              '      comment = "keqdroid proxy/VPN client";',
-              '      exec = "keqdroid %u";',
-              '      icon = "keqdroid";',
-              '      categories = [ "Network" ];',
-              '      mimeTypes = [',
-              '        "x-scheme-handler/keqdroid"',
-              '        "x-scheme-handler/keqdis"',
-              '      ];',
-              '      startupWMClass = "com.keqdroid.keqdroid";',
-              '    })',
-              '    (makeDesktopItem {',
-              '      name = "com.keqdroid.keqdroid";',
-              '      desktopName = "KeqDroid";',
-              '      exec = "keqdroid %u";',
-              '      icon = "keqdroid";',
-              '      noDisplay = true;',
-              '    })',
-              '  ];',
-              '',
-              '  meta = {',
-              '    description = "Proxy/VPN client on Xray-core and mihomo";',
-              `    homepage = "https://github.com/${owner}/${repo}";`,
-              '    license = with lib.licenses; [',
-              '      agpl3Only',
-              '      gpl3Only',
-              '      mpl20',
-              '    ];',
-              '    sourceProvenance = [ lib.sourceTypes.binaryNativeCode ];',
-              '    mainProgram = "keqdroid";',
-              '    platforms = [ "x86_64-linux" ];',
-              '  };',
-              '})',
-              '',
-            ].join('\n');
+            const [flakeNix, flakeLock, packageNix, moduleNix] = await Promise.all([
+              readRepoFile('tool/nix/flake.nix', sourceRef),
+              readRepoFile('tool/nix/flake.lock', sourceRef),
+              readRepoFile('tool/nix/nix/package.nix', sourceRef),
+              readRepoFile('tool/nix/nix/module.nix', sourceRef),
+            ]);
+
+            const sourceJson = JSON.stringify(
+              { owner, repo, version, hash: sri },
+              null,
+              2,
+            ) + '\n';
 
             const files = [
               ['flake.nix', flakeNix],
               ['flake.lock', flakeLock],
               ['nix/package.nix', packageNix],
+              ['nix/module.nix', moduleNix],
+              ['nix/source.json', sourceJson],
             ];
 
             const treeEntries = [];

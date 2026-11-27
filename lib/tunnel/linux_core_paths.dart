@@ -21,15 +21,28 @@ class LinuxCorePaths {
       'или поместите их рядом с исполняемым файлом / в \$PATH.';
 
   // заранее: иначе ProcessException вписывает в текст всю команду вместе с телом root-обёртки
-  static String? findPkexec() {
-    final onPath = _which('pkexec');
+  static String? findPkexec({
+    @visibleForTesting String? pathEnvOverride,
+    @visibleForTesting bool Function(String)? fileExistsOverride,
+  }) {
+    final exists =
+        fileExistsOverride ?? (String path) => File(path).existsSync();
+    // на NixOS в sw/bin лежит pkexec из polkit.bin без setuid, живая обёртка только здесь
+    if (exists('/run/wrappers/bin/pkexec')) {
+      return '/run/wrappers/bin/pkexec';
+    }
+    final onPath = _which(
+      'pkexec',
+      pathEnvOverride: pathEnvOverride,
+      fileExistsOverride: exists,
+    );
     if (onPath != null) return onPath;
     // PATH графической сессии бывает урезан, а pkexec везде лежит здесь
     for (final candidate in const [
       '/usr/bin/pkexec',
       '/usr/local/bin/pkexec',
     ]) {
-      if (File(candidate).existsSync()) return candidate;
+      if (exists(candidate)) return candidate;
     }
     return null;
   }
@@ -277,12 +290,20 @@ class LinuxCorePaths {
     }
   }
 
-  static String? _which(String name) {
-    final pathEnv = Platform.environment['PATH'];
-    if (pathEnv == null) return null;
-    for (final dir in pathEnv.split(':')) {
-      final candidate = p.join(dir.trim(), name);
-      if (File(candidate).existsSync()) return candidate;
+  static String? _which(
+    String name, {
+    String? pathEnvOverride,
+    bool Function(String)? fileExistsOverride,
+  }) {
+    final pathEnv = pathEnvOverride ?? Platform.environment['PATH'];
+    if (pathEnv == null || pathEnv.isEmpty) return null;
+    final exists =
+        fileExistsOverride ?? (String path) => File(path).existsSync();
+    for (final rawDir in pathEnv.split(':')) {
+      final dir = rawDir.trim();
+      if (dir.isEmpty) continue;
+      final candidate = p.join(dir, name);
+      if (exists(candidate)) return candidate;
     }
     return null;
   }

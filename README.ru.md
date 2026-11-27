@@ -104,7 +104,7 @@ https://github.com/user-attachments/assets/e1f899dd-4f2c-4ca2-896c-1da64a3a5645
 
 **Windows.** Установщик ставит приложение в Program Files и может удалить его вместе с данными, портабельная версия запускается из любой папки. Приложение может запускаться вместе с системой, подключаться автоматически и работать в трее. Настройки хранятся в `%APPDATA%\com.keqdroid\keqdroid\`, обе версии пользуются ими.
 
-**Linux.** Приложение может запускаться при входе в систему и подключаться автоматически. В Arch Linux установка выполняется командой `makepkg -si` с файлом `PKGBUILD` из релиза. В NixOS добавьте `github:Lemonochka/keqdroid/nix` во входы flake и включите `inputs.keqdroid.packages.x86_64-linux.default` в `environment.systemPackages`.
+**Linux.** Приложение может запускаться при входе в систему и подключаться автоматически. В Arch Linux установка выполняется командой `makepkg -si` с файлом `PKGBUILD` из релиза. В NixOS добавьте `github:Lemonochka/keqdroid/nix` во входы flake, подключите модуль `inputs.keqdroid.nixosModules.default` и включите `programs.keqdroid.enable = true` (в отдельных композиторах Wayland вроде Hyprland или Sway для режима TUN также нужен запущенный агент аутентификации polkit).
 
 **macOS.** Есть отдельные сборки для Apple Silicon и Intel. Приложение может запускаться при входе в систему, подключаться автоматически и оставаться в строке меню.
 
