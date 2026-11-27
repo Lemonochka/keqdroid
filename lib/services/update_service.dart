@@ -13,6 +13,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'linux_appimage_updater.dart';
 import 'linux_install.dart';
+import 'macos_dmg_updater.dart';
 import 'release_signature.dart';
 import 'windows_install.dart';
 import 'windows_setup_updater.dart';
@@ -723,9 +724,17 @@ class UpdateService {
       );
     }
 
+    if (Platform.isMacOS && ext == '.dmg') {
+      final applied = await MacosDmgUpdater.applyDmgUpdate(
+        dmgPath: file.path,
+        beforeRestart: beforeRestart,
+      );
+      if (applied) return true;
+    }
+
     await beforeInstaller?.call();
     if (Platform.isMacOS) {
-      await Process.start('open', [file.path]);
+      await Process.start('/usr/bin/open', [file.path]);
       return false;
     }
     await OpenFilex.open(file.path);
