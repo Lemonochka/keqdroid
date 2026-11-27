@@ -296,13 +296,11 @@ class LinuxCorePaths {
     bool Function(String)? fileExistsOverride,
   }) {
     final pathEnv = pathEnvOverride ?? Platform.environment['PATH'];
-    if (pathEnv == null || pathEnv.isEmpty) return null;
+    if (pathEnv == null) return null;
     final exists =
         fileExistsOverride ?? (String path) => File(path).existsSync();
-    for (final rawDir in pathEnv.split(':')) {
-      final dir = rawDir.trim();
-      if (dir.isEmpty) continue;
-      final candidate = p.join(dir, name);
+    for (final dir in pathEnv.split(':')) {
+      final candidate = p.join(dir.trim(), name);
       if (exists(candidate)) return candidate;
     }
     return null;

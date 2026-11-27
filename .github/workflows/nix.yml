@@ -128,7 +128,8 @@ jobs:
               });
             } catch (e) {
               if (e.status !== 404) throw e;
-              sourceRef = context.sha;
+              // older tags predate tool/nix; on release events context.sha is the tag commit too
+              sourceRef = context.payload.repository?.default_branch || 'master';
             }
 
             const [flakeNix, flakeLock, packageNix, moduleNix] = await Promise.all([

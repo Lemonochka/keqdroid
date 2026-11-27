@@ -10,8 +10,7 @@
   gsettings-desktop-schemas,
   gtk3,
   libepoxy,
-  libx11 ? xorg.libX11,
-  xorg ? null,
+  libx11,
   xdg-utils,
 }:
 let

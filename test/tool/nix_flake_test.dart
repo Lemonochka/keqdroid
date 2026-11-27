@@ -53,7 +53,6 @@ void main() {
       expect(pkg, contains('--prefix PATH : /run/wrappers/bin'));
       expect(pkg, contains('--suffix PATH :'));
       expect(pkg, isNot(contains('polkit')));
-      expect(pkg, contains('libx11 ? xorg.libX11'));
     },
   );
 
