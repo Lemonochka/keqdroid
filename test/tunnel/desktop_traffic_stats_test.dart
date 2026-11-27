@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/core/connections_poll_stats.dart';
@@ -90,4 +92,39 @@ void main() {
     expect(stats.polls, greaterThanOrEqualTo(2));
     stats.stopStatsLoop();
   });
+
+  test(
+    'читает потоковый /traffic по одному соединению вместо повторных HTTP-запросов',
+    () async {
+      var httpRequests = 0;
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(() => server.close(force: true));
+      server.listen((req) async {
+        httpRequests++;
+        expect(req.uri.path, '/traffic');
+        expect(req.headers.value(HttpHeaders.authorizationHeader), 'Bearer s3');
+        req.response.statusCode = 200;
+        req.response.bufferOutput = false;
+        req.response.write(
+          '${jsonEncode({'up': 10, 'down': 20, 'upTotal': 100, 'downTotal': 250})}\n',
+        );
+        await req.response.flush();
+        await Future<void>.delayed(const Duration(milliseconds: 80));
+        req.response.write(
+          '${jsonEncode({'up': 30, 'down': 40, 'upTotal': 130, 'downTotal': 290})}\n',
+        );
+        await req.response.flush();
+        await Future<void>.delayed(const Duration(seconds: 5));
+        await req.response.close();
+      });
+
+      final stats = _Stats();
+      final first = await stats.queryClashTraffic(server.port, secret: 's3');
+      final second = await stats.queryClashTraffic(server.port, secret: 's3');
+      expect(first, (down: 250, up: 100));
+      expect(second, (down: 290, up: 130));
+      expect(httpRequests, 1);
+      stats.stopStatsLoop();
+    },
+  );
 }

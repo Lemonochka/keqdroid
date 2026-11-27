@@ -37,6 +37,8 @@ mixin DesktopTrafficStats {
   bool resumeBaselinePending = false;
 
   HttpClient? _statsHttpClient;
+  _ClashTrafficFeed? _activeClashFeed;
+  final _liveClashFeeds = <_ClashTrafficFeed>{};
 
   @protected
   HttpClient get statsHttp =>
@@ -139,7 +141,13 @@ mixin DesktopTrafficStats {
   // и пока поле указывает на закрываемый клиент, это рекурсия до переполнения стека
   void resetStatsHttp() {
     final client = _statsHttpClient;
+    final feeds = _liveClashFeeds.toList();
     _statsHttpClient = null;
+    _activeClashFeed = null;
+    _liveClashFeeds.clear();
+    for (final feed in feeds) {
+      feed.close();
+    }
     client?.close(force: true);
   }
 
@@ -174,7 +182,7 @@ mixin DesktopTrafficStats {
     }
   }
 
-  // у mihomo токен обязателен: без него 401, и счётчики молча нули
+  // /traffic шлёт по 60 байт раз в секунду вместо полного списка /connections; токен обязателен
   Future<({int down, int up})?> queryClashTraffic(
     int port, {
     String secret = '',
@@ -182,40 +190,37 @@ mixin DesktopTrafficStats {
     final poll = ConnectionsPollStats.instance.begin();
     var ok = false;
     var chars = 0;
-    int? connections;
     try {
-      final req = await statsHttp
-          .get('127.0.0.1', port, '/connections')
-          .timeout(const Duration(seconds: 2));
-      if (secret.isNotEmpty) {
-        req.headers.set(HttpHeaders.authorizationHeader, 'Bearer $secret');
+      var feed = _activeClashFeed;
+      if (feed == null ||
+          feed.isClosed ||
+          feed.port != port ||
+          feed.secret != secret) {
+        feed = _ClashTrafficFeed(
+          port,
+          secret,
+          onDone: (self) {
+            _liveClashFeeds.remove(self);
+            if (identical(_activeClashFeed, self)) _activeClashFeed = null;
+          },
+        );
+        _activeClashFeed = feed;
+        _liveClashFeeds.add(feed);
       }
-      final resp = await req.close().timeout(const Duration(seconds: 2));
-      if (resp.statusCode != 200) {
-        await resp.drain<void>();
+      final sample = await feed.next(() => statsHttp, connectionsBodyTimeout);
+      if (sample == null) {
+        resetStatsHttp();
         return null;
       }
-      final body = await resp
-          .transform(utf8.decoder)
-          .join()
-          .timeout(connectionsBodyTimeout);
-      chars = body.length;
-      final json = jsonDecode(body) as Map<String, dynamic>;
-      connections = (json['connections'] as List?)?.length;
-      final down = (json['downloadTotal'] as num?)?.toInt() ?? 0;
-      final up = (json['uploadTotal'] as num?)?.toInt() ?? 0;
+      chars = sample.chars;
       ok = true;
-      return (down: down, up: up);
+      return (down: sample.down, up: sample.up);
     } catch (_) {
       resetStatsHttp();
       return null;
     } finally {
-      ConnectionsPollStats.instance.end(
-        poll,
-        ok: ok,
-        bodyChars: chars,
-        connections: connections,
-      );
+      if (!statsPollingEnabled) resetStatsHttp();
+      ConnectionsPollStats.instance.end(poll, ok: ok, bodyChars: chars);
     }
   }
 
@@ -248,5 +253,114 @@ mixin DesktopTrafficStats {
       totalUpload: totalUpload > 0 ? totalUpload : null,
       duration: started != null ? DateTime.now().difference(started) : null,
     );
+  }
+}
+
+typedef _ClashTrafficSample = ({int down, int up, int chars});
+
+class _ClashTrafficFeed {
+  _ClashTrafficFeed(this.port, this.secret, {required this.onDone});
+
+  final int port;
+  final String secret;
+  final void Function(_ClashTrafficFeed self) onDone;
+
+  StreamSubscription<String>? _sub;
+  _ClashTrafficSample? _unread;
+  final _waiters = <Completer<_ClashTrafficSample?>>[];
+  bool _closed = false;
+  Future<void>? _opening;
+
+  bool get isClosed => _closed;
+
+  Future<_ClashTrafficSample?> next(
+    HttpClient Function() client,
+    Duration bodyTimeout,
+  ) async {
+    if (_closed) return null;
+    final buffered = _unread;
+    if (buffered != null) {
+      _unread = null;
+      return buffered;
+    }
+    final waiter = Completer<_ClashTrafficSample?>();
+    _waiters.add(waiter);
+    _opening ??= _open(client);
+    try {
+      return await waiter.future.timeout(bodyTimeout);
+    } on TimeoutException {
+      _waiters.remove(waiter);
+      rethrow;
+    }
+  }
+
+  Future<void> _open(HttpClient Function() client) async {
+    try {
+      final req = await client()
+          .get('127.0.0.1', port, '/traffic')
+          .timeout(const Duration(seconds: 2));
+      if (secret.isNotEmpty) {
+        req.headers.set(HttpHeaders.authorizationHeader, 'Bearer $secret');
+      }
+      final resp = await req.close().timeout(const Duration(seconds: 2));
+      if (_closed) {
+        unawaited(resp.drain<void>().catchError((_) {}));
+        return;
+      }
+      if (resp.statusCode != 200) {
+        await resp.drain<void>();
+        close();
+        return;
+      }
+      _sub = resp
+          .transform(utf8.decoder)
+          .transform(const LineSplitter())
+          .listen(
+            _onLine,
+            onError: (_) => close(),
+            onDone: close,
+            cancelOnError: true,
+          );
+    } catch (_) {
+      close();
+    }
+  }
+
+  void _onLine(String line) {
+    if (_closed || line.trim().isEmpty) return;
+    try {
+      final json = jsonDecode(line) as Map<String, dynamic>;
+      final down =
+          ((json['downTotal'] ?? json['downloadTotal']) as num?)?.toInt() ?? 0;
+      final up =
+          ((json['upTotal'] ?? json['uploadTotal']) as num?)?.toInt() ?? 0;
+      final sample = (down: down, up: up, chars: line.length);
+      if (_waiters.isEmpty) {
+        _unread = sample;
+        return;
+      }
+      final pending = _waiters.toList();
+      _waiters.clear();
+      for (final w in pending) {
+        if (!w.isCompleted) w.complete(sample);
+      }
+    } catch (_) {
+      close();
+    }
+  }
+
+  void close() {
+    if (_closed) return;
+    _closed = true;
+    _unread = null;
+    final sub = _sub;
+    _sub = null;
+    if (sub != null) unawaited(sub.cancel().catchError((_) {}));
+    final pending = _waiters.toList();
+    _waiters.clear();
+    for (final w in pending) {
+      if (!w.isCompleted) w.complete(null);
+    }
+    onDone(this);
   }
 }
