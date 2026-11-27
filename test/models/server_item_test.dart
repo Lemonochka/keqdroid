@@ -121,4 +121,62 @@ void main() {
     expect(server.address, 'ssr.example');
     expect(server.port, 8388);
   });
+
+  group('structured custom/clash metadata and copyWith cache', () {
+    test('extracts Xray JSON metadata and preserves it across copyWith', () {
+      final raw = jsonEncode({
+        'remarks': '🇫🇮 Helsinki JSON',
+        'dns': {
+          'servers': ['1.1.1.1'],
+        },
+        'routing': {
+          'rules': [
+            {
+              'type': 'field',
+              'domain': ['geosite:private'],
+              'outboundTag': 'direct',
+            },
+          ],
+        },
+        'outbounds': [
+          {
+            'tag': 'proxy',
+            'protocol': 'vless',
+            'settings': {
+              'vnext': [
+                {
+                  'address': 'fi.example.com',
+                  'port': 8443,
+                  'users': [
+                    {'id': '00000000-0000-0000-0000-000000000001'},
+                  ],
+                },
+              ],
+            },
+          },
+          {'tag': 'direct', 'protocol': 'freedom'},
+        ],
+      });
+      final item = ServerItem.fromRaw(raw);
+      expect(item.protocol, 'custom');
+      expect(item.derivedName, '🇫🇮 Helsinki JSON');
+      expect(item.address, 'fi.example.com');
+      expect(item.port, 8443);
+      expect(item.countryCode, 'FI');
+      expect(item.hasProviderRules, isTrue);
+      expect(item.hasProviderDns, isTrue);
+
+      final pinged = item.copyWith(pingMs: 52, lastPingType: 'url');
+      expect(pinged.protocol, 'custom');
+      expect(pinged.derivedName, '🇫🇮 Helsinki JSON');
+      expect(pinged.address, 'fi.example.com');
+      expect(pinged.port, 8443);
+      expect(pinged.countryCode, 'FI');
+      expect(pinged.hasProviderRules, isTrue);
+      expect(pinged.hasProviderDns, isTrue);
+
+      final renamed = pinged.copyWith(customName: '🇯🇵 Tokyo Override');
+      expect(renamed.countryCode, 'JP');
+    });
+  });
 }

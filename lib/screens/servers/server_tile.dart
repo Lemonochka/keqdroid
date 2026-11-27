@@ -243,12 +243,9 @@ class _ServerTile extends ConsumerWidget {
       ),
     );
     final pingColorType = PingService.pingColorTypeForServer(
-      server.copyWith(
-        pingMs: pingMs,
-        lastTestedAt: lastTestedAt,
-        lastPingType: lastPingType,
-      ),
+      server,
       settings,
+      lastPingType: lastPingType,
     );
 
     final vpnStatus = ref.watch(

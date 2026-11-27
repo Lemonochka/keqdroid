@@ -315,19 +315,11 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
         ignoreProviderRules ||
         templates.isNotEmpty ||
         profiles.any((p) => p.providerSubscriptionId != null) ||
-        servers.any(
-          (s) =>
-              (s.customConfig?.hasProviderRules ?? false) ||
-              (s.clashConfig?.hasProviderRules ?? false),
-        );
+        servers.any((s) => s.hasProviderRules);
     final showProviderDns =
         ignoreProviderDns ||
         templates.any((t) => t.config.hasProviderDns) ||
-        servers.any(
-          (s) =>
-              (s.customConfig?.hasProviderDns ?? false) ||
-              (s.clashConfig?.hasProviderDns ?? false),
-        );
+        servers.any((s) => s.hasProviderDns);
     // профиль провайдера только смотрят, пока его правила слушают
     bool locked(RoutingProfile p) =>
         p.providerSubscriptionId != null && !ignoreProviderRules;

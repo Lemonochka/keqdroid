@@ -95,7 +95,16 @@ class ServersNotifier extends Notifier<ServersState> {
     StorageService storage,
     List<ServerItem> servers,
   ) async {
-    final chains = servers.where((s) => s.protocol == 'chain').toList();
+    if (!servers.any((s) => ProxyChainConfig.looksLikeChain(s.config))) {
+      return servers;
+    }
+    final chains = servers
+        .where(
+          (s) =>
+              ProxyChainConfig.looksLikeChain(s.config) &&
+              s.protocol == 'chain',
+        )
+        .toList();
     if (chains.isEmpty) return servers;
 
     final live = <String, ({String config, String name})>{

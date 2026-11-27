@@ -1341,9 +1341,10 @@ class PingService {
 
   static PingType pingColorTypeForServer(
     ServerItem server,
-    AppSettings settings,
-  ) {
-    final stored = pingTypeFromStored(server.lastPingType);
+    AppSettings settings, {
+    String? lastPingType,
+  }) {
+    final stored = pingTypeFromStored(lastPingType ?? server.lastPingType);
     if (stored != null) return stored;
     return effectivePingType(server, pingTypeFromSettings(settings));
   }

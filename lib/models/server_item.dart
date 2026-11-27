@@ -44,12 +44,10 @@ class ServerItem {
   bool _flagParsed = false;
   String? _cachedAddress;
   int? _cachedPort;
-  Map<String, dynamic>? _cachedVmessPayload;
-  bool _vmessPayloadParsed = false;
-  CustomXrayConfig? _cachedCustom;
-  bool _customParsed = false;
-  CustomClashConfig? _cachedClash;
-  bool _clashParsed = false;
+  bool _vmessMetaParsed = false;
+  bool _structuredMetaParsed = false;
+  bool _cachedHasProviderRules = false;
+  bool _cachedHasProviderDns = false;
   ProxyChainConfig? _cachedChain;
   bool _chainParsed = false;
   String? _cachedSameServerKey;
@@ -166,35 +164,59 @@ class ServerItem {
     Object? ipv6Exit = _sentinel,
     Object? ipv6CheckedAt = _sentinel,
     Object? namesFallbackAt = _sentinel,
-  }) => ServerItem(
-    id: id ?? this.id,
-    config: config ?? this.config,
-    type: type ?? this.type,
-    subscriptionId: subscriptionId ?? this.subscriptionId,
-    subscriptionName: subscriptionName ?? this.subscriptionName,
-    addedAt: addedAt ?? this.addedAt,
-    customName: customName == _sentinel
+  }) {
+    final nextConfig = config ?? this.config;
+    final nextCustomName = customName == _sentinel
         ? this.customName
-        : customName as String?,
-    pinnedAt: pinnedAt == _sentinel ? this.pinnedAt : pinnedAt as DateTime?,
-    configOverridden: configOverridden ?? this.configOverridden,
-    autoSkip: autoSkip ?? this.autoSkip,
-    pingMs: pingMs == _sentinel ? this.pingMs : pingMs as int?,
-    lastTestedAt: lastTestedAt == _sentinel
-        ? this.lastTestedAt
-        : lastTestedAt as DateTime?,
-    lastPingType: lastPingType == _sentinel
-        ? this.lastPingType
-        : lastPingType as String?,
-    pingSamples: pingSamples ?? this.pingSamples,
-    ipv6Exit: ipv6Exit == _sentinel ? this.ipv6Exit : ipv6Exit as bool?,
-    ipv6CheckedAt: ipv6CheckedAt == _sentinel
-        ? this.ipv6CheckedAt
-        : ipv6CheckedAt as DateTime?,
-    namesFallbackAt: namesFallbackAt == _sentinel
-        ? this.namesFallbackAt
-        : namesFallbackAt as DateTime?,
-  );
+        : customName as String?;
+    final copy = ServerItem(
+      id: id ?? this.id,
+      config: nextConfig,
+      type: type ?? this.type,
+      subscriptionId: subscriptionId ?? this.subscriptionId,
+      subscriptionName: subscriptionName ?? this.subscriptionName,
+      addedAt: addedAt ?? this.addedAt,
+      customName: nextCustomName,
+      pinnedAt: pinnedAt == _sentinel ? this.pinnedAt : pinnedAt as DateTime?,
+      configOverridden: configOverridden ?? this.configOverridden,
+      autoSkip: autoSkip ?? this.autoSkip,
+      pingMs: pingMs == _sentinel ? this.pingMs : pingMs as int?,
+      lastTestedAt: lastTestedAt == _sentinel
+          ? this.lastTestedAt
+          : lastTestedAt as DateTime?,
+      lastPingType: lastPingType == _sentinel
+          ? this.lastPingType
+          : lastPingType as String?,
+      pingSamples: pingSamples ?? this.pingSamples,
+      ipv6Exit: ipv6Exit == _sentinel ? this.ipv6Exit : ipv6Exit as bool?,
+      ipv6CheckedAt: ipv6CheckedAt == _sentinel
+          ? this.ipv6CheckedAt
+          : ipv6CheckedAt as DateTime?,
+      namesFallbackAt: namesFallbackAt == _sentinel
+          ? this.namesFallbackAt
+          : namesFallbackAt as DateTime?,
+    );
+    if (nextConfig == this.config) {
+      copy
+        .._cachedDerivedName = _cachedDerivedName
+        .._cachedAddress = _cachedAddress
+        .._cachedPort = _cachedPort
+        .._vmessMetaParsed = _vmessMetaParsed
+        .._structuredMetaParsed = _structuredMetaParsed
+        .._cachedHasProviderRules = _cachedHasProviderRules
+        .._cachedHasProviderDns = _cachedHasProviderDns
+        .._cachedChain = _cachedChain
+        .._chainParsed = _chainParsed
+        .._cachedSameServerKey = _cachedSameServerKey
+        .._cachedProtocol = _cachedProtocol;
+      if (nextCustomName == this.customName) {
+        copy
+          .._cachedFlag = _cachedFlag
+          .._flagParsed = _flagParsed;
+      }
+    }
+    return copy;
+  }
 
   bool get isPinned => pinnedAt != null;
 
@@ -216,23 +238,11 @@ class ServerItem {
           title.isNotEmpty ? title : _chainRouteLabel(chain),
         );
       }
-      if (protocol == 'custom') {
-        final custom = customConfig!;
-        final remarks = custom.remarks;
-        return _cachedDerivedName = _sanitizeUtf16(
-          remarks.isNotEmpty
-              ? remarks
-              : (custom.address.isNotEmpty ? custom.address : 'Custom config'),
-        );
-      }
-      if (protocol == 'clash') {
-        final clash = clashConfig!;
-        final remarks = clash.remarks;
-        return _cachedDerivedName = _sanitizeUtf16(
-          remarks.isNotEmpty
-              ? remarks
-              : (clash.address.isNotEmpty ? clash.address : 'Clash config'),
-        );
+      if (protocol == 'custom' || protocol == 'clash') {
+        _ensureStructuredMeta();
+        return _cachedDerivedName ??= protocol == 'clash'
+            ? 'Clash config'
+            : 'Custom config';
       }
       if (protocol == 'awg') {
         final profile = AwgProfile.parse(config);
@@ -243,10 +253,8 @@ class ServerItem {
         return _cachedDerivedName!;
       }
       if (protocol == 'vmess') {
-        final ps = (_vmessPayload()?['ps'] ?? '').toString().trim();
-        if (ps.isNotEmpty) {
-          return _cachedDerivedName = _sanitizeUtf16(ps);
-        }
+        _ensureVmessMeta();
+        if (_cachedDerivedName != null) return _cachedDerivedName!;
       }
       final uri = Uri.parse(config);
       String raw;
@@ -308,9 +316,9 @@ class ServerItem {
   };
 
   // из сырой строки: Uri.parse приводит host к нижнему регистру, а base64 к нему чувствителен
-  Map<String, dynamic>? _vmessPayload() {
-    if (_vmessPayloadParsed) return _cachedVmessPayload;
-    _vmessPayloadParsed = true;
+  void _ensureVmessMeta() {
+    if (_vmessMetaParsed) return;
+    _vmessMetaParsed = true;
     try {
       final payload = config
           .substring('vmess://'.length)
@@ -319,9 +327,54 @@ class ServerItem {
           .replaceAll('_', '/');
       final decoded = utf8.decode(base64.decode(base64.normalize(payload)));
       final json = jsonDecode(decoded);
-      if (json is Map<String, dynamic>) _cachedVmessPayload = json;
+      if (json is Map<String, dynamic>) {
+        final ps = (json['ps'] ?? '').toString().trim();
+        if (ps.isNotEmpty) _cachedDerivedName = _sanitizeUtf16(ps);
+        _cachedAddress = (json['add'] ?? '').toString().trim();
+        _cachedPort = int.tryParse((json['port'] ?? '').toString()) ?? 0;
+      }
     } catch (_) {}
-    return _cachedVmessPayload;
+  }
+
+  // готовый JSON/YAML в Map весит под 250 КБ на сервер, поэтому оставляем только поля строки списка
+  void _ensureStructuredMeta() {
+    if (_structuredMetaParsed) return;
+    _structuredMetaParsed = true;
+    if (CustomClashConfig.looksLikeClash(config)) {
+      final clash = CustomClashConfig.tryParse(config);
+      if (clash != null) {
+        final remarks = clash.remarks;
+        _cachedProtocol = 'clash';
+        _cachedDerivedName = _sanitizeUtf16(
+          remarks.isNotEmpty
+              ? remarks
+              : (clash.address.isNotEmpty ? clash.address : 'Clash config'),
+        );
+        _cachedAddress = clash.address;
+        _cachedPort = clash.port;
+        _cachedHasProviderRules = clash.hasProviderRules;
+        _cachedHasProviderDns = clash.hasProviderDns;
+        return;
+      }
+    }
+    if (CustomXrayConfig.looksLikeJson(config)) {
+      final custom = CustomXrayConfig.tryParse(config);
+      if (custom != null) {
+        final remarks = custom.remarks;
+        _cachedProtocol = 'custom';
+        _cachedDerivedName = _sanitizeUtf16(
+          remarks.isNotEmpty
+              ? remarks
+              : (custom.address.isNotEmpty ? custom.address : 'Custom config'),
+        );
+        _cachedAddress = custom.address;
+        _cachedPort = custom.port;
+        _cachedHasProviderRules = custom.hasProviderRules;
+        _cachedHasProviderDns = custom.hasProviderDns;
+        return;
+      }
+    }
+    _cachedProtocol ??= 'unknown';
   }
 
   String get address {
@@ -335,17 +388,16 @@ class ServerItem {
       if (protocol == 'chain') {
         return _hopItem(chainConfig!.entry.config).address;
       }
-      if (protocol == 'custom') {
-        return customConfig!.address;
-      }
-      if (protocol == 'clash') {
-        return clashConfig!.address;
+      if (protocol == 'custom' || protocol == 'clash') {
+        _ensureStructuredMeta();
+        return _cachedAddress ?? '';
       }
       if (protocol == 'awg') {
         return AwgProfile.parse(config).endpointHost;
       }
       if (protocol == 'vmess') {
-        return (_vmessPayload()?['add'] ?? '').toString().trim();
+        _ensureVmessMeta();
+        return _cachedAddress ?? '';
       }
       if (protocol == 'ssr') return SsrLink.tryParse(config)?.host ?? '';
       if (protocol == 'mieru') return MieruLink.tryParse(config)?.host ?? '';
@@ -369,17 +421,16 @@ class ServerItem {
       if (protocol == 'chain') {
         return _hopItem(chainConfig!.entry.config).port;
       }
-      if (protocol == 'custom') {
-        return customConfig!.port;
-      }
-      if (protocol == 'clash') {
-        return clashConfig!.port;
+      if (protocol == 'custom' || protocol == 'clash') {
+        _ensureStructuredMeta();
+        return _cachedPort ?? 0;
       }
       if (protocol == 'awg') {
         return AwgProfile.parse(config).endpointPort;
       }
       if (protocol == 'vmess') {
-        return int.tryParse((_vmessPayload()?['port'] ?? '').toString()) ?? 0;
+        _ensureVmessMeta();
+        return _cachedPort ?? 0;
       }
       if (protocol == 'mieru') return MieruLink.tryParse(config)?.port ?? 0;
       if (protocol == 'ssr') return SsrLink.tryParse(config)?.port ?? 0;
@@ -392,22 +443,28 @@ class ServerItem {
     }
   }
 
+  bool get hasProviderRules {
+    if (protocol != 'custom' && protocol != 'clash') return false;
+    _ensureStructuredMeta();
+    return _cachedHasProviderRules;
+  }
+
+  bool get hasProviderDns {
+    if (protocol != 'custom' && protocol != 'clash') return false;
+    _ensureStructuredMeta();
+    return _cachedHasProviderDns;
+  }
+
   CustomXrayConfig? get customConfig {
-    if (_customParsed) return _cachedCustom;
-    _customParsed = true;
-    if (CustomXrayConfig.looksLikeJson(config)) {
-      _cachedCustom = CustomXrayConfig.tryParse(config);
-    }
-    return _cachedCustom;
+    if (_cachedProtocol != null && _cachedProtocol != 'custom') return null;
+    if (!CustomXrayConfig.looksLikeJson(config)) return null;
+    return CustomXrayConfig.tryParse(config);
   }
 
   CustomClashConfig? get clashConfig {
-    if (_clashParsed) return _cachedClash;
-    _clashParsed = true;
-    if (CustomClashConfig.looksLikeClash(config)) {
-      _cachedClash = CustomClashConfig.tryParse(config);
-    }
-    return _cachedClash;
+    if (_cachedProtocol != null && _cachedProtocol != 'clash') return null;
+    if (!CustomClashConfig.looksLikeClash(config)) return null;
+    return CustomClashConfig.tryParse(config);
   }
 
   ProxyChainConfig? get chainConfig {
@@ -433,11 +490,11 @@ class ServerItem {
     ];
   }
 
-  // раскладка по группам спрашивает каждый сервер, а здесь копия всего конфига в нижнем регистре
   String get protocol => _cachedProtocol ??= _protocolOf();
 
   String _protocolOf() {
-    final lower = config.toLowerCase();
+    final headLen = config.length < 16 ? config.length : 16;
+    final lower = config.substring(0, headLen).toLowerCase();
     if (lower.startsWith('${ProxyChainConfig.scheme}://')) {
       // битая цепочка остаётся unknown, иначе chainConfig! ниже упадёт на null
       return chainConfig != null ? 'chain' : 'unknown';
@@ -456,9 +513,8 @@ class ServerItem {
     if (SocksLink.isSocks(config)) return 'socks';
     if (AwgProfile.isAwgConfig(config)) return 'awg';
     // clash проверять раньше xray: json-конфиг clash тоже начинается с {
-    if (clashConfig != null) return 'clash';
-    if (customConfig != null) return 'custom';
-    return 'unknown';
+    _ensureStructuredMeta();
+    return _cachedProtocol ?? 'unknown';
   }
 
   // одиночные суррогаты от провайдеров роняют движок текста Flutter
