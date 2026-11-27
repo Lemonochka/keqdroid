@@ -190,6 +190,23 @@ class MacosDmgUpdater {
         );
       }
 
+      // проверяем всю вложенную подпись до снятия quarantine
+      final signature = await runProcess('/usr/bin/codesign', [
+        '--verify',
+        '--deep',
+        '--strict',
+        '--verbose=2',
+        stagedApp,
+      ]);
+      if (signature.exitCode != 0) {
+        throw StateError(
+          _tail(signature.stderr) ??
+              _tail(signature.stdout) ??
+              'Updated app bundle failed code signature verification '
+                  '(exit ${signature.exitCode})',
+        );
+      }
+
       // Strip quarantine flag so Gatekeeper does not block or translocate relaunch.
       await runProcess('/usr/bin/xattr', [
         '-dr',
@@ -218,11 +235,6 @@ class MacosDmgUpdater {
       _deleteQuietly(mountDir);
     }
 
-    // DMG is no longer needed once the verified bundle is staged.
-    try {
-      await File(dmgPath).delete();
-    } catch (_) {}
-
     final scriptFile = File(
       p.join(tempDir().path, 'keqdroid_update_$stamp.sh'),
     );
@@ -240,6 +252,10 @@ class MacosDmgUpdater {
       _deleteQuietly(scriptFile);
       rethrow;
     }
+
+    try {
+      await File(dmgPath).delete();
+    } catch (_) {}
 
     await cleanupBeforeExit();
     await Future<void>.delayed(const Duration(milliseconds: 150));
@@ -264,7 +280,8 @@ class MacosDmgUpdater {
   }
 
   @visibleForTesting
-  static String updaterScript({bool relaunch = true}) => '''#!/bin/sh
+  static String updaterScript({bool relaunch = true}) =>
+      '''#!/bin/sh
 trap '' HUP
 APPPID="\$1"
 STAGED="\$2"

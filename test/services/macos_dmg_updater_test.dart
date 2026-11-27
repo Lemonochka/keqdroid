@@ -14,7 +14,10 @@ Directory _createFakeAppBundle(
     ..createSync(recursive: true);
   File(p.join(macosDir.path, 'keqdroid')).writeAsStringSync('bin-$version');
   File(p.join(app.path, 'Contents', 'Info.plist')).writeAsStringSync(
-    '<plist><dict><key>CFBundleShortVersionString</key>'
+    '<plist><dict><key>CFBundleIdentifier</key>'
+    '<string>com.keqdroid.keqdroid</string>'
+    '<key>CFBundlePackageType</key><string>APPL</string>'
+    '<key>CFBundleShortVersionString</key>'
     '<string>$version</string></dict></plist>',
   );
   return app;
@@ -110,7 +113,10 @@ void main() {
       'mounts with -nobrowse, stages via ditto, detaches, runs beforeRestart, launches detached swap and exits',
       () async {
         final installRoot = Directory(p.join(tmp.path, 'Apps'))..createSync();
-        final installedApp = _createFakeAppBundle(installRoot, version: '0.40.1');
+        final installedApp = _createFakeAppBundle(
+          installRoot,
+          version: '0.40.1',
+        );
         final dmgFile = File(p.join(tmp.path, 'keqdroid-0.40.2.dmg'))
           ..writeAsStringSync('fake-dmg');
 
@@ -165,10 +171,18 @@ void main() {
             contains('-noautoopen'),
           ),
         );
+        final signatureIdx = calls.indexWhere(
+          (c) => c.contains('/usr/bin/codesign'),
+        );
+        final quarantineIdx = calls.indexWhere(
+          (c) => c.contains('/usr/bin/xattr'),
+        );
         final detachIdx = calls.indexWhere((c) => c.contains('hdiutil detach'));
         final beforeRestartIdx = calls.indexOf('beforeRestart');
         final detachedIdx = calls.indexOf('detached:/bin/sh');
-        expect(detachIdx, greaterThan(0));
+        expect(signatureIdx, greaterThan(0));
+        expect(quarantineIdx, greaterThan(signatureIdx));
+        expect(detachIdx, greaterThan(quarantineIdx));
         expect(beforeRestartIdx, greaterThan(detachIdx));
         expect(detachedIdx, greaterThan(beforeRestartIdx));
 
@@ -226,13 +240,120 @@ void main() {
         expect(beforeRestartCalled, isFalse);
         expect(launchedScript, isFalse);
         expect(
-          installRoot
-              .listSync()
-              .where((e) => p.basename(e.path).startsWith('.keqdroid_update_')),
+          installRoot.listSync().where(
+            (e) => p.basename(e.path).startsWith('.keqdroid_update_'),
+          ),
           isEmpty,
         );
       },
     );
+
+    test('rejects a broken app signature before removing quarantine', () async {
+      final installRoot = Directory(p.join(tmp.path, 'Apps'))..createSync();
+      final installedApp = _createFakeAppBundle(installRoot);
+      final dmgFile = File(p.join(tmp.path, 'keqdroid.dmg'))
+        ..writeAsStringSync('fake-dmg');
+      MacosDmgUpdater.executablePath = () =>
+          p.join(installedApp.path, 'Contents', 'MacOS', 'keqdroid');
+
+      var quarantineRemoved = false;
+      var beforeRestartCalled = false;
+      var launchedScript = false;
+      MacosDmgUpdater.runProcess = (exe, args) async {
+        if (exe == '/usr/bin/hdiutil' && args.first == 'attach') {
+          final mountPoint = args[args.indexOf('-mountpoint') + 1];
+          _createFakeAppBundle(Directory(mountPoint), version: '0.40.2');
+          return ProcessResult(0, 0, '', '');
+        }
+        if (exe == '/usr/bin/ditto') {
+          final dst = args[1];
+          _createFakeAppBundle(
+            Directory(p.dirname(dst)),
+            name: p.basename(dst),
+            version: '0.40.2',
+          );
+          return ProcessResult(0, 0, '', '');
+        }
+        if (exe == '/usr/bin/codesign') {
+          return ProcessResult(0, 1, '', 'code object is not signed at all');
+        }
+        if (exe == '/usr/bin/xattr') quarantineRemoved = true;
+        return ProcessResult(0, 0, '', '');
+      };
+      MacosDmgUpdater.startDetached = (_, _) async => launchedScript = true;
+      MacosDmgUpdater.exitProcess = (_) {};
+
+      await expectLater(
+        MacosDmgUpdater.applyDmgUpdate(
+          dmgPath: dmgFile.path,
+          beforeRestart: () async => beforeRestartCalled = true,
+        ),
+        throwsA(
+          isA<StateError>().having(
+            (e) => e.message,
+            'message',
+            contains('code object is not signed at all'),
+          ),
+        ),
+      );
+
+      expect(quarantineRemoved, isFalse);
+      expect(beforeRestartCalled, isFalse);
+      expect(launchedScript, isFalse);
+      expect(dmgFile.existsSync(), isTrue);
+      expect(
+        installRoot.listSync().where(
+          (e) => p.basename(e.path).startsWith('.keqdroid_update_'),
+        ),
+        isEmpty,
+      );
+    });
+
+    test('keeps the verified DMG when beforeRestart fails', () async {
+      final installRoot = Directory(p.join(tmp.path, 'Apps'))..createSync();
+      final installedApp = _createFakeAppBundle(installRoot);
+      final dmgFile = File(p.join(tmp.path, 'keqdroid.dmg'))
+        ..writeAsStringSync('fake-dmg');
+      MacosDmgUpdater.executablePath = () =>
+          p.join(installedApp.path, 'Contents', 'MacOS', 'keqdroid');
+
+      var launchedScript = false;
+      MacosDmgUpdater.runProcess = (exe, args) async {
+        if (exe == '/usr/bin/hdiutil' && args.first == 'attach') {
+          final mountPoint = args[args.indexOf('-mountpoint') + 1];
+          _createFakeAppBundle(Directory(mountPoint), version: '0.40.2');
+          return ProcessResult(0, 0, '', '');
+        }
+        if (exe == '/usr/bin/ditto') {
+          final dst = args[1];
+          _createFakeAppBundle(
+            Directory(p.dirname(dst)),
+            name: p.basename(dst),
+            version: '0.40.2',
+          );
+        }
+        return ProcessResult(0, 0, '', '');
+      };
+      MacosDmgUpdater.startDetached = (_, _) async => launchedScript = true;
+      MacosDmgUpdater.exitProcess = (_) {};
+
+      await expectLater(
+        MacosDmgUpdater.applyDmgUpdate(
+          dmgPath: dmgFile.path,
+          beforeRestart: () async => throw StateError('disconnect failed'),
+        ),
+        throwsA(isA<StateError>()),
+      );
+
+      expect(dmgFile.existsSync(), isTrue);
+      expect(launchedScript, isFalse);
+      expect(
+        installRoot.listSync().where(
+          (e) => p.basename(e.path).startsWith('.keqdroid_update_'),
+        ),
+        isEmpty,
+      );
+    });
 
     test(
       'returns false for fallback when running from a mounted /Volumes DMG',
@@ -285,16 +406,14 @@ void main() {
 
         expect(res.exitCode, 0, reason: '${res.stderr}');
         expect(
-          File(p.join(target.path, 'Contents', 'MacOS', 'keqdroid'))
-              .readAsStringSync(),
+          File(
+            p.join(target.path, 'Contents', 'MacOS', 'keqdroid'),
+          ).readAsStringSync(),
           'bin-0.40.2',
         );
         expect(staged.existsSync(), isFalse);
         expect(script.existsSync(), isFalse);
-        expect(
-          apps.listSync().where((e) => e.path.contains('.old.')),
-          isEmpty,
-        );
+        expect(apps.listSync().where((e) => e.path.contains('.old.')), isEmpty);
       },
     );
 
@@ -304,7 +423,22 @@ void main() {
         if (!Platform.isMacOS) return;
 
         final srcFolder = Directory(p.join(tmp.path, 'dmg_src'))..createSync();
-        _createFakeAppBundle(srcFolder, version: '0.40.2');
+        final sourceApp = _createFakeAppBundle(srcFolder, version: '0.40.2');
+        final sourceExe = p.join(
+          sourceApp.path,
+          'Contents',
+          'MacOS',
+          'keqdroid',
+        );
+        await Process.run('/bin/chmod', ['+x', sourceExe]);
+        final sign = await Process.run('/usr/bin/codesign', [
+          '--force',
+          '--deep',
+          '--sign',
+          '-',
+          sourceApp.path,
+        ]);
+        expect(sign.exitCode, 0, reason: '${sign.stderr}');
         final dmgPath = p.join(tmp.path, 'test-update.dmg');
 
         final create = await Process.run('/usr/bin/hdiutil', [
@@ -324,7 +458,10 @@ void main() {
 
         final installRoot = Directory(p.join(tmp.path, 'Installed'))
           ..createSync();
-        final installedApp = _createFakeAppBundle(installRoot, version: '0.40.1');
+        final installedApp = _createFakeAppBundle(
+          installRoot,
+          version: '0.40.1',
+        );
 
         MacosDmgUpdater.executablePath = () =>
             p.join(installedApp.path, 'Contents', 'MacOS', 'keqdroid');
@@ -341,8 +478,9 @@ void main() {
 
         final stagedApp = capturedArgs![2];
         expect(
-          File(p.join(stagedApp, 'Contents', 'MacOS', 'keqdroid'))
-              .readAsStringSync(),
+          File(
+            p.join(stagedApp, 'Contents', 'MacOS', 'keqdroid'),
+          ).readAsStringSync(),
           'bin-0.40.2',
         );
       },
