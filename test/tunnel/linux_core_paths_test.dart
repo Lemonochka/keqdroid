@@ -108,4 +108,55 @@ void main() {
       expect(File(staged).readAsStringSync(), 'core v2, longer');
     });
   });
+
+  group('findPkexec', () {
+    // На NixOS security.polkit.enable кладёт в sw/bin бинарник без setuid,
+    // который падает с кодом 127; живая обёртка лежит только в /run/wrappers/bin.
+    test('prefers /run/wrappers/bin/pkexec over non-setuid PATH entry', () {
+      final files = {
+        '/run/current-system/sw/bin/pkexec',
+        '/run/wrappers/bin/pkexec',
+      };
+      final found = LinuxCorePaths.findPkexec(
+        pathEnvOverride: '/run/current-system/sw/bin:/usr/bin',
+        fileExistsOverride: files.contains,
+      );
+      expect(found, '/run/wrappers/bin/pkexec');
+    });
+
+    test('finds /run/wrappers/bin/pkexec when session PATH is stripped', () {
+      final files = {'/run/wrappers/bin/pkexec'};
+      final found = LinuxCorePaths.findPkexec(
+        pathEnvOverride: '',
+        fileExistsOverride: files.contains,
+      );
+      expect(found, '/run/wrappers/bin/pkexec');
+    });
+
+    test('uses PATH entry on standard FHS systems', () {
+      final files = {'/custom/bin/pkexec', '/usr/bin/pkexec'};
+      final found = LinuxCorePaths.findPkexec(
+        pathEnvOverride: ':/custom/bin:/usr/bin:',
+        fileExistsOverride: files.contains,
+      );
+      expect(found, '/custom/bin/pkexec');
+    });
+
+    test('falls back to /usr/bin/pkexec when PATH is empty', () {
+      final files = {'/usr/bin/pkexec'};
+      final found = LinuxCorePaths.findPkexec(
+        pathEnvOverride: '',
+        fileExistsOverride: files.contains,
+      );
+      expect(found, '/usr/bin/pkexec');
+    });
+
+    test('returns null when polkit is absent everywhere', () {
+      final found = LinuxCorePaths.findPkexec(
+        pathEnvOverride: '/usr/bin:/bin',
+        fileExistsOverride: (_) => false,
+      );
+      expect(found, isNull);
+    });
+  });
 }

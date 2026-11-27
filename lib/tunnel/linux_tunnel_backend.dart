@@ -590,7 +590,8 @@ $run''';
   static Future<bool> installPasswordlessTun() async {
     if (!Platform.isLinux) return false;
     try {
-      final res = await Process.run('pkexec', [
+      final pkexec = LinuxCorePaths.findPkexec() ?? 'pkexec';
+      final res = await Process.run(pkexec, [
         'sh',
         '-c',
         await _installScript(runAfter: false),
@@ -623,7 +624,8 @@ $run''';
   static Future<bool> removePasswordlessTun() async {
     if (!Platform.isLinux) return false;
     try {
-      final res = await Process.run('pkexec', ['sh', '-c', _removeScript]);
+      final pkexec = LinuxCorePaths.findPkexec() ?? 'pkexec';
+      final res = await Process.run(pkexec, ['sh', '-c', _removeScript]);
       if (res.exitCode != 0) return false;
       final marker = await _passwordlessOffMarker();
       await marker.parent.create(recursive: true);
@@ -803,17 +805,24 @@ $run''';
       asRoot: asRoot,
       passwordless: usePasswordless,
     );
-    if (launch.viaPkexec && LinuxCorePaths.findPkexec() == null) {
-      throw const VpnStartException(
-        'TUN mode needs root through pkexec, and polkit is not installed. '
-        'Install polkit with an authentication agent, run the app as root '
-        '(sudo), or use Proxy mode.',
-      );
+    final String executable;
+    if (launch.viaPkexec) {
+      final pkexec = LinuxCorePaths.findPkexec();
+      if (pkexec == null) {
+        throw const VpnStartException(
+          'TUN mode needs root through pkexec, and polkit is not installed. '
+          'Install polkit with an authentication agent, run the app as root '
+          '(sudo), or use Proxy mode.',
+        );
+      }
+      executable = pkexec;
+    } else {
+      executable = launch.executable;
     }
     final Process process;
     try {
       process = await Process.start(
-        launch.executable,
+        executable,
         launch.args,
         workingDirectory: _sessionDir!.path,
         mode: ProcessStartMode.normal,
@@ -1187,7 +1196,8 @@ $run''';
     } catch (_) {
       // обёртка не вышла вовремя: добиваем, чтобы root-ядро не держало TUN (может спросить пароль)
       try {
-        await Process.run('pkexec', ['pkill', '-TERM', '-x', coreName]);
+        final pkexec = LinuxCorePaths.findPkexec() ?? 'pkexec';
+        await Process.run(pkexec, ['pkill', '-TERM', '-x', coreName]);
       } catch (_) {}
       try {
         proc.kill(ProcessSignal.sigkill);

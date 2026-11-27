@@ -94,6 +94,7 @@ x86_64, дистрибутивы уровня Ubuntu 22.04 и Debian 12 или �
 | `.deb` | Debian, Ubuntu, Mint |
 | `.rpm` | Fedora, openSUSE |
 | `PKGBUILD` | Arch: соберите командой `makepkg -si` в папке с ним |
+| `github:Lemonochka/keqdroid/nix` | NixOS: подключите `inputs.keqdroid.nixosModules.default` и задайте `programs.keqdroid.enable = true` |
 | `.AppImage` | любой дистрибутив, без установки |
 | `.tar.gz` | любой дистрибутив: распакуйте и запустите |
 
@@ -104,6 +105,8 @@ x86_64, дистрибутивы уровня Ubuntu 22.04 и Debian 12 или �
 В режиме Прокси приложение прописывает системный прокси в настройках GNOME и KDE. Firefox берёт его оттуда в любом окружении рабочего стола. В других окружениях адрес `127.0.0.1` и порт нужно указать в программах вручную.
 
 Для режима TUN нужен root: при подключении приложение запросит пароль через `pkexec`. Если в «Разрешения» включить «TUN без пароля», приложение один раз установит правило polkit, и пароль больше спрашиваться не будет.
+
+В NixOS модуль `programs.keqdroid` сам включает polkit и обёртку `pkexec` (для работы только через Прокси задайте `programs.keqdroid.tun.enable = false`). В Hyprland, Sway, niri и river отдельно запустите агент аутентификации polkit. Переключатель «TUN без пароля» пишет правило в `/etc/polkit-1/rules.d`, поэтому не работает при `system.etc.overlay.mutable = false`.
 
 ### Трей и автозапуск
 
