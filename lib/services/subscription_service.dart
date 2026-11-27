@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 
 import '../utils/local_vpn_proxy.dart';
@@ -143,11 +145,17 @@ class UpdateResult {
   });
 }
 
+class _ResponseTooLargeException extends SubscriptionFetchException {
+  const _ResponseTooLargeException(String url)
+    : super('Response too large (>10MB)', url: url);
+}
+
 class SubscriptionService {
   final StorageService _storage;
   final Dio _dio;
 
   final LocalProxyPortResolver? _localProxyPort;
+  final HttpClient Function() _httpClientFactory;
   String? _cachedHwid;
   String? _cachedDeviceModel;
   static const MethodChannel _platform = MethodChannel('keqdroid_vpn_channel');
@@ -178,7 +186,9 @@ class SubscriptionService {
     this._storage, {
     Dio? dio,
     LocalProxyPortResolver? localProxyPort,
+    HttpClient Function()? httpClientFactory,
   }) : _localProxyPort = localProxyPort,
+       _httpClientFactory = httpClientFactory ?? HttpClient.new,
        _dio = dio ?? _buildDio(localProxyPort: localProxyPort);
 
   // при включённом VPN только через локальный инбаунд: пакет приложения исключён из TUN
@@ -203,6 +213,12 @@ class SubscriptionService {
   }
 
   static const _maxBodyLength = 10 * 1024 * 1024;
+
+  static void _throwIfBodyTooLarge(String body, {required String url}) {
+    if (body.length > _maxBodyLength) {
+      throw _ResponseTooLargeException(url);
+    }
+  }
 
   static const _blockedHostnames = {
     'metadata.google.internal',
@@ -440,12 +456,7 @@ class SubscriptionService {
       }
 
       final body = response.data ?? '';
-      if (body.length > _maxBodyLength) {
-        throw SubscriptionFetchException(
-          'Response too large (>10MB)',
-          url: url,
-        );
-      }
+      _throwIfBodyTooLarge(body, url: url);
       final contentType =
           response.headers.value('content-type')?.toLowerCase() ?? '';
 
@@ -630,12 +641,13 @@ class SubscriptionService {
 
     final raw = response.data;
     final body = raw is String ? raw : (raw?.toString() ?? '');
+    _throwIfBodyTooLarge(body, url: e.requestOptions.uri.toString());
     if (body.trim().isEmpty) {
       return null;
     }
 
     try {
-      final configs = SubscriptionBodyParser.parseBody(body);
+      final configs = await _parseBodyOffThread(body);
       if (configs.isEmpty) {
         return null;
       }
@@ -648,7 +660,7 @@ class SubscriptionService {
         usedUserAgent: null,
         profile: _parseProfileHeaders(response.headers).withBody(body),
         routing: _routingOf(response.headers, body),
-        clashTemplate: _templateOf(body),
+        clashTemplate: await _templateOffThread(body),
       );
     } on Object {
       return null;
@@ -675,9 +687,7 @@ class SubscriptionService {
     _throwIfRemnawaveHwidHeadersIndicateError(response.headers, url: url);
 
     final body = response.data ?? '';
-    if (body.length > _maxBodyLength) {
-      throw SubscriptionFetchException('Response too large (>10MB)', url: url);
-    }
+    _throwIfBodyTooLarge(body, url: url);
 
     List<String> configs;
     try {
@@ -699,7 +709,7 @@ class SubscriptionService {
       usedUserAgent: response.requestOptions.headers['User-Agent'] as String?,
       profile: _parseProfileHeaders(response.headers).withBody(body),
       routing: _routingOf(response.headers, body),
-      clashTemplate: _templateOf(body),
+      clashTemplate: await _templateOffThread(body),
     );
   }
 
@@ -719,7 +729,8 @@ class SubscriptionService {
     for (final candidate in candidates) {
       HttpClient? client;
       try {
-        client = HttpClient()..connectionTimeout = const Duration(seconds: 15);
+        client = _httpClientFactory()
+          ..connectionTimeout = const Duration(seconds: 15);
         // свой клиент мимо dio, прокси ему отдельно, иначе уйдёт напрямую мимо туннеля
         final resolveProxy = _localProxyPort;
         if (resolveProxy != null) {
@@ -750,11 +761,12 @@ class SubscriptionService {
           dioLikeHeaders,
           url: candidate,
         );
-        final bytes = await resp.fold<List<int>>(<int>[], (acc, chunk) {
-          acc.addAll(chunk);
-          return acc;
-        });
-        final body = _decodeHttpBody(bytes, dioLikeHeaders);
+        final bytes = await _readBodyBytes(resp, url: candidate);
+        final body = await _decodeHttpBody(
+          bytes,
+          dioLikeHeaders,
+          url: candidate,
+        );
         if (body.trim().isEmpty) continue;
         final contentType =
             (resp.headers.contentType?.mimeType ??
@@ -807,8 +819,10 @@ class SubscriptionService {
           usedUserAgent: null,
           profile: _parseProfileHeaders(dioLikeHeaders).withBody(body),
           routing: _routingOf(dioLikeHeaders, body),
-          clashTemplate: _templateOf(body),
+          clashTemplate: await _templateOffThread(body),
         );
+      } on _ResponseTooLargeException {
+        rethrow;
       } on Object catch (e, st) {
         if (e is FormatException) {
           lastFormatError = e;
@@ -829,18 +843,47 @@ class SubscriptionService {
     return null;
   }
 
-  static String _decodeHttpBody(List<int> bytes, Headers headers) {
+  static Future<List<int>> _readBodyBytes(
+    Stream<List<int>> body, {
+    required String url,
+  }) async {
+    final bytes = BytesBuilder();
+    await for (final chunk in body) {
+      if (bytes.length + chunk.length > _maxBodyLength) {
+        throw _ResponseTooLargeException(url);
+      }
+      bytes.add(chunk);
+    }
+    return bytes.takeBytes();
+  }
+
+  static Future<String> _decodeHttpBody(
+    List<int> bytes,
+    Headers headers, {
+    required String url,
+  }) async {
     if (bytes.isEmpty) return '';
     final encoding = (headers.value('content-encoding') ?? '').toLowerCase();
     var data = bytes;
     try {
       if (encoding.contains('gzip')) {
-        data = gzip.decode(data);
+        data = await _readBodyBytes(
+          gzip.decoder.bind(Stream.value(data)),
+          url: url,
+        );
       } else if (encoding.contains('deflate')) {
-        data = zlib.decode(data);
+        data = await _readBodyBytes(
+          zlib.decoder.bind(Stream.value(data)),
+          url: url,
+        );
       } else if (data.length >= 2 && data[0] == 0x1f && data[1] == 0x8b) {
-        data = gzip.decode(data);
+        data = await _readBodyBytes(
+          gzip.decoder.bind(Stream.value(data)),
+          url: url,
+        );
       }
+    } on _ResponseTooLargeException {
+      rethrow;
     } on Object catch (e) {
       AppLogger.instance.debug('Subscription body not decompressed', error: e);
     }
@@ -1218,13 +1261,17 @@ class SubscriptionService {
           ),
         );
         if (resp.statusCode != 200) continue;
-        final body = (resp.data ?? '').trimLeft();
+        final body = resp.data ?? '';
+        _throwIfBodyTooLarge(body, url: url);
+        final trimmed = body.trimLeft();
         final type = (resp.headers.value('content-type') ?? '').toLowerCase();
         final isHtml =
             type.contains('text/html') ||
-            body.startsWith('<!doctype html') ||
-            body.startsWith('<html');
+            trimmed.startsWith('<!doctype html') ||
+            trimmed.startsWith('<html');
         if (!isHtml) return resp;
+      } on _ResponseTooLargeException {
+        rethrow;
       } on Object catch (e) {
         AppLogger.instance.debug(
           'Subscription fetch with UA $ua failed',
@@ -1243,16 +1290,6 @@ class SubscriptionService {
 
   static String? _encodeTemplate(String body) =>
       ClashTemplate.fromBody(body)?.encode();
-
-  // шаблон довесок к серверам: его ошибка не должна ронять обновление подписки
-  static String? _templateOf(String body) {
-    try {
-      return _encodeTemplate(body);
-    } catch (e) {
-      AppLogger.instance.warn('Clash template not parsed: $e');
-      return null;
-    }
-  }
 
   static Future<String?> _templateOffThread(String body) async {
     if (!CustomClashConfig.looksLikeClash(body)) return null;
@@ -1288,7 +1325,9 @@ class SubscriptionService {
         try {
           final resp = await _dio.get<String>(u, cancelToken: cancelToken);
           if (resp.statusCode != 200) continue;
-          final body = (resp.data ?? '').trim();
+          final rawBody = resp.data ?? '';
+          _throwIfBodyTooLarge(rawBody, url: u);
+          final body = rawBody.trim();
           if (body.isEmpty) continue;
 
           final ctype = (resp.headers.value('content-type') ?? '')
