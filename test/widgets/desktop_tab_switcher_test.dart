@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -435,6 +436,23 @@ void main() {
         expect(painted.where((i) => i != 2), isEmpty);
       },
     );
+
+    testWidgets('пока двигают мышь, прогрев ждёт покоя', (tester) async {
+      await pump(tester, 0);
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      addTearDown(mouse.removePointer);
+      await mouse.addPointer(location: const Offset(20, 20));
+      for (var t = 0; t < 3600; t += 200) {
+        await mouse.moveTo(Offset(20 + t / 100, 20));
+        await tester.pump(const Duration(milliseconds: 200));
+      }
+      expect(painted.where((i) => i != 0), isEmpty);
+
+      for (var t = 0; t < 2800; t += 100) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(painted, containsAll([1, 2]));
+    });
   });
 
   testWidgets('с выключенными анимациями системы вкладка меняется сразу', (

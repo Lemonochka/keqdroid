@@ -5,6 +5,8 @@ part of '../servers_tab.dart';
 class ConnectRehearsal extends ConsumerStatefulWidget {
   const ConnectRehearsal({super.key, required this.onDone});
 
+  static const pointerId = 0x7ffffff0;
+
   final VoidCallback onDone;
 
   @override
@@ -26,7 +28,7 @@ class _RehearsalVpn extends VpnStateNotifier {
 }
 
 class _ConnectRehearsalState extends ConsumerState<ConnectRehearsal> {
-  static const _pointer = 0x7ffffff0;
+  static const _pointer = ConnectRehearsal.pointerId;
 
   final _clock = PacedClock()..repeat();
   final _plaque = GlobalKey();

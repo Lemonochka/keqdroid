@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
 
@@ -86,16 +89,27 @@ class SubscriptionAccentService {
     final asset = theme.still;
     if (asset == null) return null;
 
+    // ColorScheme.fromImageProvider в SDK декодирует входной провайдер в полный размер и читает все пиксели с GPU
+    final ImageProvider<Object> base =
+        theme.id.startsWith(SubscriptionCardTheme.filePrefix)
+        ? FileImage(File(asset))
+        : AssetImage(asset);
+    final thumb = ResizeImage(
+      base,
+      width: 112,
+      height: 112,
+      policy: ResizeImagePolicy.fit,
+    );
     try {
       final fromImage = await ColorScheme.fromImageProvider(
-        provider: theme.id.startsWith(SubscriptionCardTheme.filePrefix)
-            ? SubscriptionCardTheme.coverImage(asset)
-            : AssetImage(asset),
+        provider: thumb,
         brightness: scheme.brightness,
       );
       return fromImage.primary;
     } catch (_) {
       return null;
+    } finally {
+      unawaited(thumb.evict());
     }
   }
 }

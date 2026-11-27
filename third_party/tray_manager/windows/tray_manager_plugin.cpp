@@ -92,8 +92,8 @@ class TrayManagerPlugin : public flutter::Plugin {
   std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> g_converter;
 
   flutter::PluginRegistrarWindows* registrar;
-  NOTIFYICONDATA nid;
-  NOTIFYICONIDENTIFIER niif;
+  NOTIFYICONDATA nid = {};
+  NOTIFYICONIDENTIFIER niif = {};
   // do create pop-up menu only once.
   HMENU hMenu = CreatePopupMenu();
   bool tray_icon_setted = false;
@@ -172,6 +172,10 @@ TrayManagerPlugin::TrayManagerPlugin(flutter::PluginRegistrarWindows* registrar)
 
 TrayManagerPlugin::~TrayManagerPlugin() {
   registrar->UnregisterTopLevelWindowProcDelegate(window_proc_id);
+  if (hMenu != nullptr) {
+    ::DestroyMenu(hMenu);
+    hMenu = nullptr;
+  }
   // keqdroid patch: своё окно-владелец меню живёт ровно столько же.
   DestroyMenuOwnerWindow();
 }
@@ -182,8 +186,8 @@ void TrayManagerPlugin::_CreateMenu(HMENU menu, flutter::EncodableMap args) {
 
   int count = GetMenuItemCount(menu);
   for (int i = 0; i < count; i++) {
-    // always remove at 0 because they shift every time
-    RemoveMenu(menu, 0, MF_BYPOSITION);
+    // keqdroid patch: RemoveMenu отцеплял подменю без уничтожения, утекали HMENU
+    DeleteMenu(menu, 0, MF_BYPOSITION);
   }
 
   for (flutter::EncodableValue item_value : items) {

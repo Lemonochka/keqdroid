@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -42,7 +43,11 @@ class _DesktopTabSwitcherState extends State<DesktopTabSwitcher>
   int _dir = 1;
   late final _t = AnimationController.unbounded(vsync: this, value: 1);
 
+  static const _idle = Duration(milliseconds: 1500);
+
   Timer? _warmTimer;
+  Timer? _input;
+  bool _pointerListening = false;
   // стопка одного кадра прогрева снизу вверх, null когда прогрева нет
   List<_Under>? _scene;
 
@@ -50,16 +55,36 @@ class _DesktopTabSwitcherState extends State<DesktopTabSwitcher>
   void initState() {
     super.initState();
     final after = widget.warmUpAfter;
-    if (after != null) _warmTimer = Timer(after, _warmUp);
+    if (after != null) {
+      _pointerListening = true;
+      GestureBinding.instance.pointerRouter.addGlobalRoute(_onPointer);
+      _warmTimer = Timer(after, _warmUp);
+    }
+  }
+
+  void _onPointer(PointerEvent event) {
+    _input?.cancel();
+    _input = Timer(_idle, () => _input = null);
+  }
+
+  void _stopPointerListen() {
+    if (!_pointerListening) return;
+    _pointerListening = false;
+    _input?.cancel();
+    _input = null;
+    GestureBinding.instance.pointerRouter.removeGlobalRoute(_onPointer);
   }
 
   void _warmUp() {
     _warmTimer = null;
     if (!mounted) return;
-    if (_under.isNotEmpty || !SchedulerBinding.instance.framesEnabled) {
+    if (_under.isNotEmpty ||
+        _input != null ||
+        !SchedulerBinding.instance.framesEnabled) {
       _warmTimer = Timer(const Duration(seconds: 1), _warmUp);
       return;
     }
+    _stopPointerListen();
     final current = _to;
     final hidden = [
       for (var i = 0; i < widget.children.length; i++)
@@ -178,6 +203,7 @@ class _DesktopTabSwitcherState extends State<DesktopTabSwitcher>
   @override
   void dispose() {
     _warmTimer?.cancel();
+    _stopPointerListen();
     _t.dispose();
     super.dispose();
   }

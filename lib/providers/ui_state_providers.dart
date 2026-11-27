@@ -75,8 +75,10 @@ class VpnServerSwitchInProgressNotifier extends Notifier<bool> {
 }
 
 class DesktopWindowVisibleNotifier extends Notifier<bool> {
+  static bool initialValue = true;
+
   @override
-  bool build() => true;
+  bool build() => initialValue;
 
   void set(bool value) => state = value;
 }

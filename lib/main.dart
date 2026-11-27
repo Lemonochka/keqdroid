@@ -28,6 +28,7 @@ import 'package:keqdroid/services/macos_background_service.dart';
 import 'package:keqdroid/services/memory_watch.dart';
 import 'package:keqdroid/services/storage_service.dart';
 import 'package:keqdroid/services/update_service.dart';
+import 'package:keqdroid/services/windows_desktop_service.dart';
 import 'package:keqdroid/services/windows_prefs_store.dart';
 import 'package:keqdroid/tunnel/linux_tunnel_backend.dart';
 import 'package:keqdroid/tunnel/macos_tunnel_backend.dart';
@@ -72,6 +73,8 @@ Future<void> main(List<String> args) async {
         }
       } else if (Platform.isWindows) {
         await PlatformBootstrap.initialize();
+        DesktopWindowVisibleNotifier.initialValue =
+            !await WindowsDesktopService.isHiddenInTray();
       } else if (Platform.isLinux || Platform.isMacOS) {
         await DesktopBackgroundService.init();
         if (Platform.isLinux) {

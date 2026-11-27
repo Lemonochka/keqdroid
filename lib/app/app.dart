@@ -599,6 +599,9 @@ class _VisibilityTickerGate extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.listen<bool>(desktopUiVisibleProvider, (_, uiVisible) {
+      if (!uiVisible) PaintingBinding.instance.imageCache.clear();
+    });
     // в трее размер окна прежний и репетиция собирает шейдеры, а у свёрнутого на панель окно 0x0
     final lifecycleVisible = ref.watch(appLifecycleVisibleProvider);
     final visible =

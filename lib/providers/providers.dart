@@ -196,7 +196,7 @@ final vpnEngineProvider = Provider<VpnEngine>((ref) {
   // трей на Windows прячет окно, а движок сообщает о нём как об inactive,
   // поэтому видимость берём ещё и из нативной части
   var lifecycleForeground = true;
-  var trayVisible = true;
+  var trayVisible = ref.read(desktopWindowVisibleProvider);
   void applyPolling() {
     final enabled = lifecycleForeground && trayVisible;
     final reason = enabled
@@ -204,6 +204,8 @@ final vpnEngineProvider = Provider<VpnEngine>((ref) {
         : (!trayVisible ? 'hidden to tray' : 'window minimized');
     engine.setTrafficStatsPollingEnabled(enabled, reason: reason);
   }
+
+  if (!trayVisible) applyPolling();
 
   final lifecycle = AppLifecycleListener(
     onStateChange: (state) {

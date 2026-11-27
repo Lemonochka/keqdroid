@@ -39,6 +39,10 @@ class WindowsTrayMenu with TrayListener {
 
   DateTime? _menuClosedAt;
 
+  Object? _lastMenuSignature;
+  Locale? _cachedLocale;
+  AppLocalizations? _cachedL10n;
+
   Future<void> init() async {
     trayManager.addListener(this);
     _ref.listen(
@@ -115,10 +119,15 @@ class WindowsTrayMenu with TrayListener {
     if (_menuOpen) return;
     _menuOpen = true;
     try {
-      await trayManager.setContextMenu(await _buildMenu());
+      final sig = _menuSignature();
+      if (sig != _lastMenuSignature) {
+        await trayManager.setContextMenu(await _buildMenu());
+        _lastMenuSignature = sig;
+      }
       // TrackPopupMenu модален, вернёмся после закрытия (патч пакета: third_party/tray_manager/PATCH.md)
       await trayManager.popUpContextMenu();
     } catch (e, st) {
+      _lastMenuSignature = null;
       AppLogger.instance.warn(
         'Tray menu popup failed',
         error: e,
@@ -128,6 +137,28 @@ class WindowsTrayMenu with TrayListener {
       _menuOpen = false;
       _menuClosedAt = DateTime.now();
     }
+  }
+
+  Object _menuSignature() {
+    final settings =
+        _ref.read(settingsNotifierProvider).value ?? const AppSettings();
+    final serversState = _ref.read(serversProvider);
+    final status =
+        _ref.read(vpnStateProvider).value?.status ?? VpnStatus.disconnected;
+    final subs = _ref.read(subscriptionsProvider).value ?? const [];
+    final subsTag = Object.hashAll([
+      for (final s in subs) Object.hash(s.id, s.name),
+    ]);
+    return (
+      status,
+      _busy,
+      settings.connectionModeEnum,
+      localeFromSettings(settings),
+      PlatformDispatcher.instance.locale,
+      serversState.shape,
+      serversState.activeServerId,
+      subsTag,
+    );
   }
 
   Future<Menu> _buildMenu() async {
@@ -418,13 +449,21 @@ class WindowsTrayMenu with TrayListener {
     final settings =
         _ref.read(settingsNotifierProvider).value ?? const AppSettings();
     final chosen = localeFromSettings(settings);
-    if (chosen != null) return AppLocalizations.delegate.load(chosen);
-    final system = PlatformDispatcher.instance.locale;
-    final match = AppLocalizations.supportedLocales.firstWhere(
-      (l) => l.languageCode == system.languageCode,
-      orElse: () => const Locale('en'),
-    );
-    return AppLocalizations.delegate.load(match);
+    final Locale target;
+    if (chosen != null) {
+      target = chosen;
+    } else {
+      final system = PlatformDispatcher.instance.locale;
+      target = AppLocalizations.supportedLocales.firstWhere(
+        (l) => l.languageCode == system.languageCode,
+        orElse: () => const Locale('en'),
+      );
+    }
+    if (_cachedLocale == target && _cachedL10n != null) return _cachedL10n!;
+    final loaded = await AppLocalizations.delegate.load(target);
+    _cachedLocale = target;
+    _cachedL10n = loaded;
+    return loaded;
   }
 }
 

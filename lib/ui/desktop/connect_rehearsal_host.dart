@@ -34,18 +34,34 @@ class _ConnectRehearsalHostState extends ConsumerState<ConnectRehearsalHost> {
   Timer? _timer;
   Timer? _input;
   OverlayEntry? _entry;
+  bool _listening = false;
 
   @override
   void initState() {
     super.initState();
     if (!widget.enabled) return;
+    _listening = true;
     GestureBinding.instance.pointerRouter.addGlobalRoute(_onPointer);
     _timer = Timer(widget.startAfter, _tryStart);
   }
 
   void _onPointer(PointerEvent event) {
+    if (event.pointer == ConnectRehearsal.pointerId) return;
+    if (_entry != null &&
+        (event is PointerDownEvent || event is PointerScrollEvent)) {
+      _stop();
+      return;
+    }
     _input?.cancel();
     _input = Timer(_idle, () => _input = null);
+  }
+
+  void _unlisten() {
+    if (!_listening) return;
+    _listening = false;
+    _input?.cancel();
+    _input = null;
+    GestureBinding.instance.pointerRouter.removeGlobalRoute(_onPointer);
   }
 
   void _tryStart() {
@@ -53,8 +69,13 @@ class _ConnectRehearsalHostState extends ConsumerState<ConnectRehearsalHost> {
     if (!mounted) return;
     final status =
         ref.read(vpnStateProvider).value?.status ?? VpnStatus.disconnected;
-    if (status != VpnStatus.disconnected) return;
-    if (_input != null || !ref.read(appLifecycleVisibleProvider)) {
+    if (status != VpnStatus.disconnected) {
+      _unlisten();
+      return;
+    }
+    if (_input != null ||
+        !ref.read(appLifecycleVisibleProvider) ||
+        !ref.read(desktopWindowVisibleProvider)) {
       _timer = Timer(const Duration(seconds: 1), _tryStart);
       return;
     }
@@ -69,6 +90,7 @@ class _ConnectRehearsalHostState extends ConsumerState<ConnectRehearsalHost> {
   void _stop() {
     _timer?.cancel();
     _timer = null;
+    _unlisten();
     if (!mounted || _entry == null) return;
     ref.read(connectRehearsalProvider.notifier).set(false);
     setState(() => _entry = null);
@@ -77,10 +99,7 @@ class _ConnectRehearsalHostState extends ConsumerState<ConnectRehearsalHost> {
   @override
   void dispose() {
     _timer?.cancel();
-    _input?.cancel();
-    if (widget.enabled) {
-      GestureBinding.instance.pointerRouter.removeGlobalRoute(_onPointer);
-    }
+    _unlisten();
     super.dispose();
   }
 

@@ -77,12 +77,17 @@ class SubscriptionCardTheme {
   // первый кадр видео рядом с ним: по нему цвет акцента и превью, и его видно, пока видео грузится
   static String posterFor(String videoPath) => '$videoPath.png';
 
+  static const maxCoverDimension = 1280;
+
   // фото 4000 px с телефона занимает 53 МБ в пикселях, а на AMD картинка стоила в 5-6 раз больше (проба 30.10.2026);
-  // карточка не шире 920 dp, и крупнее 2048 декодер работал бы впустую
-  static ImageProvider coverImage(String path) => ResizeImage(
+  // карточка не шире 920 dp, единый предел 1280 (как у CardVideo) не плодит дубли текстур между панелью и списком
+  static ImageProvider coverImage(
+    String path, {
+    int maxDimension = maxCoverDimension,
+  }) => ResizeImage(
     FileImage(File(path)),
-    width: 2048,
-    height: 2048,
+    width: maxDimension,
+    height: maxDimension,
     policy: ResizeImagePolicy.fit,
   );
 
@@ -98,6 +103,7 @@ class SubscriptionCardTheme {
     BuildContext context, {
     required CardVeil veil,
     Widget? overlay,
+    int maxDimension = maxCoverDimension,
   }) {
     final scheme = Theme.of(context).colorScheme;
     final asset = this.asset;
@@ -107,6 +113,7 @@ class SubscriptionCardTheme {
         scheme: scheme,
         veil: veil,
         overlay: overlay,
+        maxDimension: maxDimension,
       );
     }
     final art = this.art;
@@ -167,12 +174,14 @@ class _ImageBackground extends StatelessWidget {
     required this.scheme,
     required this.veil,
     this.overlay,
+    required this.maxDimension,
   });
 
   final String asset;
   final ColorScheme scheme;
   final CardVeil veil;
   final Widget? overlay;
+  final int maxDimension;
 
   @override
   Widget build(BuildContext context) {
@@ -194,7 +203,10 @@ class _ImageBackground extends StatelessWidget {
       fit: StackFit.expand,
       children: [
         Image(
-          image: SubscriptionCardTheme.coverImage(asset),
+          image: SubscriptionCardTheme.coverImage(
+            asset,
+            maxDimension: maxDimension,
+          ),
           fit: BoxFit.cover,
           errorBuilder: (_, _, _) => const SizedBox.shrink(),
         ),

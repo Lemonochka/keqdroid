@@ -248,4 +248,23 @@ void main() {
     await _advance(tester, 7500);
     expect(_rehearsal, findsNothing);
   });
+
+  testWidgets('в трее ждёт открытия окна, а клик посреди репетиции гасит её', (
+    tester,
+  ) async {
+    final root = await _pump(tester);
+    root.read(desktopWindowVisibleProvider.notifier).set(false);
+    await _advance(tester, 2500);
+    expect(_rehearsal, findsNothing);
+    expect(root.read(connectRehearsalProvider), isFalse);
+
+    root.read(desktopWindowVisibleProvider.notifier).set(true);
+    await _advance(tester, 1500);
+    expect(_rehearsal, findsOneWidget);
+
+    await tester.tapAt(const Offset(100, 100));
+    await tester.pump();
+    expect(_rehearsal, findsNothing);
+    expect(root.read(connectRehearsalProvider), isFalse);
+  });
 }

@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/models/subscription_card_theme.dart';
+import 'package:keqdroid/services/subscription_accent_service.dart';
 
 Future<String> _png(Directory dir, int width, int height) async {
   final recorder = ui.PictureRecorder();
@@ -49,16 +50,16 @@ void main() {
   });
 
   testWidgets(
-    'фото с телефона декодируется не крупнее 2048 и с теми же пропорциями',
+    'фото с телефона декодируется не крупнее 1280 и с теми же пропорциями',
     (tester) async {
       final size = await tester.runAsync(
         () async => _decoded(await _png(dir, 4000, 2000)),
       );
-      expect(size, const ui.Size(2048, 1024));
+      expect(size, const ui.Size(1280, 640));
     },
   );
 
-  testWidgets('фон карточки держит фото с телефона не крупнее 2048', (
+  testWidgets('фон карточки держит фото с телефона не крупнее 1280', (
     tester,
   ) async {
     final path = await tester.runAsync(() => _png(dir, 4000, 2000));
@@ -82,8 +83,62 @@ void main() {
       );
       await tester.pump();
     }
-    expect(tester.widget<RawImage>(raw).image!.width, lessThanOrEqualTo(2048));
+    expect(tester.widget<RawImage>(raw).image!.width, lessThanOrEqualTo(1280));
   });
+
+  testWidgets('боковая обложка может запросить меньший предел декодирования', (
+    tester,
+  ) async {
+    final path = await tester.runAsync(() => _png(dir, 4000, 2000));
+    final name = path!.split(Platform.pathSeparator).last;
+    final theme = SubscriptionCardTheme.file(name, dir.path);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => SizedBox(
+            width: 220,
+            height: 120,
+            child: theme.background(
+              context,
+              veil: CardVeil.none,
+              maxDimension: 512,
+            ),
+          ),
+        ),
+      ),
+    );
+    final raw = find.byType(RawImage);
+    for (var i = 0; i < 50 && tester.widget<RawImage>(raw).image == null; i++) {
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 20)),
+      );
+      await tester.pump();
+    }
+    expect(tester.widget<RawImage>(raw).image!.width, 512);
+  });
+
+  testWidgets(
+    'подбор цвета акцента не оставляет обложку в кэше полноразмерных картинок',
+    (tester) async {
+      final path = await tester.runAsync(() => _png(dir, 3000, 1500));
+      final name = path!.split(Platform.pathSeparator).last;
+      SubscriptionCardTheme.customDirectory = dir.path;
+      SubscriptionCardTheme.customFiles = {name};
+      addTearDown(() {
+        SubscriptionCardTheme.customDirectory = null;
+        SubscriptionCardTheme.customFiles = null;
+      });
+      PaintingBinding.instance.imageCache.clear();
+      final accent = await tester.runAsync(
+        () => SubscriptionAccentService.resolve(
+          themeId: '${SubscriptionCardTheme.filePrefix}$name',
+          scheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        ),
+      );
+      expect(accent, isNotNull);
+      expect(PaintingBinding.instance.imageCache.currentSizeBytes, 0);
+    },
+  );
 
   testWidgets('обложка меньше предела остаётся в своём размере', (
     tester,
