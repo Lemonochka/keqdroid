@@ -300,7 +300,7 @@ class LinuxCorePaths {
     final exists =
         fileExistsOverride ?? (String path) => File(path).existsSync();
     for (final dir in pathEnv.split(':')) {
-      final candidate = p.join(dir.trim(), name);
+      final candidate = p.posix.join(dir.trim(), name);
       if (exists(candidate)) return candidate;
     }
     return null;

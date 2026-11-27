@@ -831,7 +831,7 @@ $run''';
       // только message: $e затащил бы сюда команду целиком
       throw VpnStartException(
         'Could not launch $label with elevated privileges through '
-        '${launch.executable}: ${e.message}',
+        '$executable: ${e.message}',
       );
     }
     onStarted(process);
