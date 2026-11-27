@@ -97,6 +97,70 @@ void main() {
       expect(inbounds.map((i) => i['port']), [3001, 3002]);
     });
 
+    test('доменные DNS-серверы соседних проб не теряются при склейке', () {
+      final probeA = jsonEncode({
+        'dns': {
+          'servers': [
+            'https+local://1.1.1.1/dns-query',
+            {
+              'address': 'localhost',
+              'domains': ['domain:local'],
+            },
+          ],
+          'queryStrategy': 'UseIPv4',
+        },
+        'inbounds': [
+          {'tag': 'in', 'port': 1, 'listen': '127.0.0.1', 'protocol': 'http'},
+        ],
+        'outbounds': [
+          {'tag': 'proxy', 'protocol': 'freedom'},
+        ],
+        'routing': {
+          'domainStrategy': 'AsIs',
+          'rules': const <Map<String, dynamic>>[],
+        },
+      });
+      final probeB = jsonEncode({
+        'dns': {
+          'servers': [
+            {
+              'address': 'tcp+local://77.88.8.8:53',
+              'domains': ['full:edge.example.net'],
+              'skipFallback': true,
+            },
+            'https+local://1.1.1.1/dns-query',
+          ],
+          'queryStrategy': 'UseIPv4',
+        },
+        'inbounds': [
+          {'tag': 'in', 'port': 1, 'listen': '127.0.0.1', 'protocol': 'http'},
+        ],
+        'outbounds': [
+          {'tag': 'proxy', 'protocol': 'freedom'},
+        ],
+        'routing': {
+          'domainStrategy': 'AsIs',
+          'rules': const <Map<String, dynamic>>[],
+        },
+      });
+      final combined =
+          jsonDecode(
+                MultiPingConfig.mergeXray([
+                  (id: 'a', configJson: probeA, port: 3101),
+                  (id: 'b', configJson: probeB, port: 3102),
+                ]),
+              )
+              as Map<String, dynamic>;
+      final servers = (combined['dns'] as Map)['servers'] as List;
+      expect(servers.first, {
+        'address': 'tcp+local://77.88.8.8:53',
+        'domains': ['full:edge.example.net'],
+        'skipFallback': true,
+      });
+      expect(servers[1], 'https+local://1.1.1.1/dns-query');
+      expect((servers.last as Map)['address'], 'localhost');
+    });
+
     test('теги аутбаундов разведены', () {
       final tags = [
         for (final o in (merged['outbounds'] as List)) (o as Map)['tag'],

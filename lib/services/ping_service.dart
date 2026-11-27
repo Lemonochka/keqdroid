@@ -16,6 +16,8 @@ import '../tunnel/macos_tunnel_backend.dart';
 import '../tunnel/vpn_backend.dart';
 import '../tunnel/windows_tunnel_backend.dart';
 import '../utils/config_gen.dart';
+import '../utils/custom_clash_config.dart';
+import '../utils/custom_xray_config.dart';
 import '../utils/desktop_tun.dart';
 import '../utils/hysteria_uri.dart';
 import '../utils/mihomo_config_gen.dart';
@@ -24,6 +26,12 @@ import '../utils/pooled.dart';
 import '../utils/vpn_core_support.dart';
 
 enum PingType { tcp, url, speed, icmp }
+
+typedef _MultiCandidate = ({
+  String probeId,
+  ServerItem server,
+  String? exitTag,
+});
 
 enum PingLatencyQuality { good, fair, poor }
 
@@ -572,7 +580,29 @@ class PingService {
   static const multiPingBatches = 3;
 
   static bool mergeableForMultiPing(String serverConfig) =>
-      detectServerFormat(serverConfig) != ServerFormat.unknown;
+      switch (detectServerFormat(serverConfig)) {
+        ServerFormat.unknown => false,
+        ServerFormat.clashYaml =>
+          CustomClashConfig.tryParse(
+                serverConfig.trim(),
+              )?.routeNodes(MihomoConfigGen.proxyName) !=
+              null,
+        _ => true,
+      };
+
+  static List<String?> _pingExitCandidates(
+    VpnBackend core,
+    String serverConfig,
+  ) {
+    if (core != VpnBackend.xray ||
+        !CustomXrayConfig.looksLikeJson(serverConfig)) {
+      return const <String?>[null];
+    }
+    final custom = CustomXrayConfig.tryParse(serverConfig.trim());
+    if (custom == null) return const <String?>[null];
+    final tags = custom.pingExitTags();
+    return tags.isEmpty ? const <String?>[null] : tags;
+  }
 
   static Iterable<List<T>> _chunked<T>(List<T> items, int size) sync* {
     for (var i = 0; i < items.length; i += size) {
@@ -580,7 +610,6 @@ class PingService {
     }
   }
 
-  // ядро не говорит, какой аутбаунд ему не понравился, поэтому делим пополам
   static Future<List<PingResult>> _pingUrlMulti(
     List<ServerItem> servers,
     AppSettings settings, {
@@ -609,15 +638,143 @@ class PingService {
       return [result];
     }
 
+    final exitsByServer = <String, List<String?>>{
+      for (final s in servers) s.id: _pingExitCandidates(core, s.config),
+    };
+    final pass1 = <_MultiCandidate>[
+      for (final s in servers)
+        (probeId: s.id, server: s, exitTag: exitsByServer[s.id]!.first),
+    ];
+    final pass1Results = await _runMultiCandidates(
+      pass1,
+      settings,
+      core: core,
+      testUrl: testUrl,
+      timeoutMs: timeoutMs,
+      ips: ips,
+      takenPorts: takenPorts,
+      outboundInterface: outboundInterface,
+      onResult: onResult,
+      emitImmediate: (c, r) =>
+          r.success || exitsByServer[c.server.id]!.length <= 1,
+    );
+
+    final finalByServer = <String, PingResult>{
+      for (final s in servers) s.id: ?pass1Results[s.id],
+    };
+
+    final needFallback = <ServerItem>[
+      for (final s in servers)
+        if (!(finalByServer[s.id]?.success ?? false) &&
+            exitsByServer[s.id]!.length > 1)
+          s,
+    ];
+    if (needFallback.isNotEmpty) {
+      final fallbackCandidates = <_MultiCandidate>[
+        for (final s in needFallback)
+          for (var i = 1; i < exitsByServer[s.id]!.length; i++)
+            (
+              probeId: '${s.id}#$i',
+              server: s,
+              exitTag: exitsByServer[s.id]![i],
+            ),
+      ];
+      final fallbackResults = <String, PingResult>{};
+      for (final chunk in _chunked(fallbackCandidates, multiPingChunk)) {
+        fallbackResults.addAll(
+          await _runMultiCandidates(
+            chunk,
+            settings,
+            core: core,
+            testUrl: testUrl,
+            timeoutMs: timeoutMs,
+            ips: ips,
+            takenPorts: takenPorts,
+            outboundInterface: outboundInterface,
+          ),
+        );
+      }
+      for (final s in needFallback) {
+        PingResult? bestAlive;
+        for (var i = 1; i < exitsByServer[s.id]!.length; i++) {
+          final r = fallbackResults['${s.id}#$i'];
+          if (r == null || !r.success) continue;
+          if (bestAlive == null ||
+              (r.latencyMs ?? 999999) < (bestAlive.latencyMs ?? 999999)) {
+            bestAlive = r;
+          }
+        }
+        final chosen =
+            bestAlive ??
+            finalByServer[s.id] ??
+            PingResult(
+              serverId: s.id,
+              serverName: s.displayName,
+              success: false,
+              error: 'no result',
+              pingType: PingType.url,
+            );
+        finalByServer[s.id] = chosen;
+        onResult?.call(chosen);
+      }
+    }
+
+    return [
+      for (final s in servers)
+        finalByServer[s.id] ??
+            PingResult(
+              serverId: s.id,
+              serverName: s.displayName,
+              success: false,
+              error: 'no result',
+              pingType: PingType.url,
+            ),
+    ];
+  }
+
+  // ядро не говорит, какой аутбаунд ему не понравился, поэтому делим пополам
+  static Future<Map<String, PingResult>> _runMultiCandidates(
+    List<_MultiCandidate> candidates,
+    AppSettings settings, {
+    required VpnBackend core,
+    required String testUrl,
+    required int timeoutMs,
+    required Map<String, String> ips,
+    required Set<int> takenPorts,
+    required String? outboundInterface,
+    void Function(PingResult)? onResult,
+    bool Function(_MultiCandidate, PingResult)? emitImmediate,
+  }) async {
+    if (candidates.isEmpty) return const {};
+    if (candidates.length == 1) {
+      final only = candidates.single;
+      final result = await _pingUrlSingleCandidate(
+        only.server,
+        settings,
+        core: core,
+        testUrl: testUrl,
+        timeoutMs: timeoutMs,
+        resolvedIp: ips[only.server.id],
+        takenPorts: takenPorts,
+        outboundInterface: outboundInterface,
+        customOutboundTag: only.exitTag,
+      );
+      if (emitImmediate != null && emitImmediate(only, result)) {
+        onResult?.call(result);
+      }
+      return {only.probeId: result};
+    }
+
     final probes = <PingProbe>[];
-    final measured = <ServerItem>[];
-    final failed = <PingResult>[];
-    for (final server in servers) {
+    final measured = <_MultiCandidate>[];
+    final out = <String, PingResult>{};
+    for (final candidate in candidates) {
+      final server = candidate.server;
       final port = await _freePort(avoid: takenPorts);
       takenPorts.add(port);
       try {
         probes.add((
-          id: server.id,
+          id: candidate.probeId,
           configJson: _pingConfigFor(
             core,
             server.config,
@@ -625,10 +782,11 @@ class PingService {
             socksPort: port,
             resolvedServerIp: ips[server.id],
             outboundInterface: outboundInterface,
+            customOutboundTag: candidate.exitTag,
           ),
           port: port,
         ));
-        measured.add(server);
+        measured.add(candidate);
       } catch (e) {
         final result = PingResult(
           serverId: server.id,
@@ -637,13 +795,15 @@ class PingService {
           error: e.toString(),
           pingType: PingType.url,
         );
-        onResult?.call(result);
-        failed.add(result);
+        if (emitImmediate != null && emitImmediate(candidate, result)) {
+          onResult?.call(result);
+        }
+        out[candidate.probeId] = result;
       }
     }
-    if (probes.isEmpty) return failed;
+    if (probes.isEmpty) return out;
 
-    final byId = {for (final server in measured) server.id: server};
+    final byProbeId = {for (final c in measured) c.probeId: c};
     PingResult toResult(
       ServerItem server,
       bool success,
@@ -673,14 +833,20 @@ class PingService {
         testUrl: testUrl,
         timeoutMs: timeoutMs,
         keepAlive: settings.pingKeepAlive,
-        onEach: onResult == null
+        onEach: (onResult == null || emitImmediate == null)
             ? null
             : (item) {
-                final server = byId[item.id];
-                if (server == null || !reported.add(item.id)) return;
-                onResult(
-                  toResult(server, item.success, item.latencyMs, item.error),
+                final candidate = byProbeId[item.id];
+                if (candidate == null) return;
+                final result = toResult(
+                  candidate.server,
+                  item.success,
+                  item.latencyMs,
+                  item.error,
                 );
+                if (!emitImmediate(candidate, result)) return;
+                if (!reported.add(item.id)) return;
+                onResult(result);
               },
       );
     } catch (_) {
@@ -689,7 +855,7 @@ class PingService {
 
     if (raw == null || raw.length != probes.length) {
       final half = measured.length ~/ 2;
-      final left = await _pingUrlMulti(
+      final left = await _runMultiCandidates(
         measured.sublist(0, half),
         settings,
         core: core,
@@ -699,9 +865,9 @@ class PingService {
         takenPorts: takenPorts,
         outboundInterface: outboundInterface,
         onResult: onResult,
-        templateServers: templateServers,
+        emitImmediate: emitImmediate,
       );
-      final right = await _pingUrlMulti(
+      final right = await _runMultiCandidates(
         measured.sublist(half),
         settings,
         core: core,
@@ -711,20 +877,29 @@ class PingService {
         takenPorts: takenPorts,
         outboundInterface: outboundInterface,
         onResult: onResult,
-        templateServers: templateServers,
+        emitImmediate: emitImmediate,
       );
-      return [...failed, ...left, ...right];
+      return {...out, ...left, ...right};
     }
 
-    final results = <PingResult>[];
     for (final item in raw) {
-      final server = byId[item.id];
-      if (server == null) continue;
-      final result = toResult(server, item.success, item.latencyMs, item.error);
-      if (!reported.contains(item.id)) onResult?.call(result);
-      results.add(result);
+      final candidate = byProbeId[item.id];
+      if (candidate == null) continue;
+      final result = toResult(
+        candidate.server,
+        item.success,
+        item.latencyMs,
+        item.error,
+      );
+      if (onResult != null &&
+          emitImmediate != null &&
+          emitImmediate(candidate, result) &&
+          !reported.contains(item.id)) {
+        onResult(result);
+      }
+      out[item.id] = result;
     }
-    return [...failed, ...results];
+    return out;
   }
 
   // сервер, взятый шаблоном подписки, подключение исполнит на mihomo: мерить тем же ядром
@@ -751,6 +926,7 @@ class PingService {
     required int socksPort,
     String? resolvedServerIp,
     required String? outboundInterface,
+    String? customOutboundTag,
   }) => core == VpnBackend.mihomo
       ? MihomoConfigGen.generatePingConfig(
           serverConfig,
@@ -766,6 +942,7 @@ class PingService {
           resolvedServerIp: resolvedServerIp,
           httpInbound: !Platform.isAndroid,
           outboundInterface: outboundInterface,
+          customOutboundTag: customOutboundTag,
         );
 
   // в TUN туннель нюхает SNI раньше правила своих процессов и подменяет адрес REALITY на маску, и замер сервера
@@ -857,15 +1034,42 @@ class PingService {
     required String? outboundInterface,
     bool viaTemplate = false,
   }) async {
+    final core = pingCoreFor(server.config, settings, viaTemplate: viaTemplate);
+    final candidates = _pingExitCandidates(core, server.config);
+    PingResult? firstFailure;
+    for (final exitTag in candidates) {
+      final r = await _pingUrlSingleCandidate(
+        server,
+        settings,
+        core: core,
+        testUrl: testUrl,
+        timeoutMs: timeoutMs,
+        resolvedIp: resolvedIp,
+        takenPorts: takenPorts,
+        outboundInterface: outboundInterface,
+        customOutboundTag: exitTag,
+      );
+      if (r.success) return r;
+      firstFailure ??= r;
+    }
+    return firstFailure!;
+  }
+
+  static Future<PingResult> _pingUrlSingleCandidate(
+    ServerItem server,
+    AppSettings settings, {
+    required VpnBackend core,
+    required String testUrl,
+    required int timeoutMs,
+    String? resolvedIp,
+    Set<int>? takenPorts,
+    required String? outboundInterface,
+    String? customOutboundTag,
+  }) async {
     // порт на каждый замер: с общим проба уходила в чужое ядро и мерила не тот сервер
     final socksPort = await _freePort(avoid: takenPorts);
     // внутри try: исключение генератора иначе роняло бы всю пачку
     try {
-      final core = pingCoreFor(
-        server.config,
-        settings,
-        viaTemplate: viaTemplate,
-      );
       final config = _pingConfigFor(
         core,
         server.config,
@@ -873,6 +1077,7 @@ class PingService {
         socksPort: socksPort,
         resolvedServerIp: resolvedIp,
         outboundInterface: outboundInterface,
+        customOutboundTag: customOutboundTag,
       );
       final raw = await _engine.xrayUrlTest(
         xrayConfig: config,
@@ -960,45 +1165,57 @@ class PingService {
     final outboundInterface = await _tunBypassInterface(settings);
 
     for (final s in servers) {
-      final socksPort = await _freePort();
-      PingResult result;
-      try {
-        final core = pingCoreFor(
-          s.config,
-          settings,
-          viaTemplate: templateServers.contains(s.id),
-        );
-        final config = _pingConfigFor(
-          core,
-          s.config,
-          settings,
-          socksPort: socksPort,
-          resolvedServerIp: ips[s.id],
-          outboundInterface: outboundInterface,
-        );
-        final raw = await _engine.xraySpeedTest(
-          xrayConfig: config,
-          socksPort: socksPort,
-          core: core,
-          timeoutMs: timeoutMs,
-        );
-        result = PingResult(
-          serverId: s.id,
-          serverName: s.displayName,
-          latencyMs: raw.kbps,
-          success: raw.success,
-          error: raw.error,
-          pingType: PingType.speed,
-        );
-      } catch (e) {
-        result = PingResult(
-          serverId: s.id,
-          serverName: s.displayName,
-          success: false,
-          error: e.toString(),
-          pingType: PingType.speed,
-        );
+      final core = pingCoreFor(
+        s.config,
+        settings,
+        viaTemplate: templateServers.contains(s.id),
+      );
+      final candidates = _pingExitCandidates(core, s.config);
+      PingResult? firstFailure;
+      PingResult? succeeded;
+      for (final exitTag in candidates) {
+        final socksPort = await _freePort();
+        PingResult attempt;
+        try {
+          final config = _pingConfigFor(
+            core,
+            s.config,
+            settings,
+            socksPort: socksPort,
+            resolvedServerIp: ips[s.id],
+            outboundInterface: outboundInterface,
+            customOutboundTag: exitTag,
+          );
+          final raw = await _engine.xraySpeedTest(
+            xrayConfig: config,
+            socksPort: socksPort,
+            core: core,
+            timeoutMs: timeoutMs,
+          );
+          attempt = PingResult(
+            serverId: s.id,
+            serverName: s.displayName,
+            latencyMs: raw.kbps,
+            success: raw.success,
+            error: raw.error,
+            pingType: PingType.speed,
+          );
+        } catch (e) {
+          attempt = PingResult(
+            serverId: s.id,
+            serverName: s.displayName,
+            success: false,
+            error: e.toString(),
+            pingType: PingType.speed,
+          );
+        }
+        if (attempt.success) {
+          succeeded = attempt;
+          break;
+        }
+        firstFailure ??= attempt;
       }
+      final result = succeeded ?? firstFailure!;
       results.add(result);
       onResult?.call(result);
     }
@@ -1019,18 +1236,38 @@ class PingService {
 
   static Future<Map<String, String>> _resolveServerIps(
     List<ServerItem> servers,
+  ) => _resolveDeduplicatedIps(servers, (s) async {
+    final host = s.address.trim();
+    if (host.isEmpty || host == '0.0.0.0' || host == '::') return null;
+    if (InternetAddress.tryParse(host) != null) return host;
+    try {
+      final addresses = await InternetAddress.lookup(
+        host,
+      ).timeout(const Duration(seconds: 3));
+      if (addresses.isNotEmpty) return addresses.first.address;
+    } catch (_) {}
+    return null;
+  });
+
+  // десятки параллельных getaddrinfo на мёртвых доменах забивают пул потоков Dart VM, и живые ловят таймаут
+  static Future<Map<String, String>> _resolveDeduplicatedIps(
+    List<ServerItem> servers,
+    Future<String?> Function(ServerItem server) lookup,
   ) async {
+    final byHost = <String, List<ServerItem>>{};
+    for (final s in servers) {
+      final host = s.address.trim();
+      if (host.isEmpty || host == '0.0.0.0' || host == '::') continue;
+      byHost.putIfAbsent(host, () => []).add(s);
+    }
     final out = <String, String>{};
-    await Future.wait(
-      servers.map((s) async {
-        try {
-          final addresses = await InternetAddress.lookup(
-            s.address,
-          ).timeout(const Duration(seconds: 3));
-          if (addresses.isNotEmpty) out[s.id] = addresses.first.address;
-        } catch (_) {}
-      }),
-    );
+    await mapPooled(byHost.entries.toList(), 8, (entry) async {
+      final ip = await lookup(entry.value.first);
+      if (ip == null || ip.isEmpty) return;
+      for (final s in entry.value) {
+        out[s.id] = ip;
+      }
+    });
     return out;
   }
 
@@ -1255,16 +1492,9 @@ class PingService {
         .toList();
 
     if (speedServers.isNotEmpty) {
-      Map<String, String>? ips;
-      if (resolveServerIp != null) {
-        ips = {};
-        await Future.wait(
-          speedServers.map((s) async {
-            final ip = await resolveServerIp(s);
-            if (ip != null) ips![s.id] = ip;
-          }),
-        );
-      }
+      final ips = resolveServerIp != null
+          ? await _resolveDeduplicatedIps(speedServers, resolveServerIp)
+          : null;
       final speedResults = await pingSpeedBatch(
         speedServers,
         settings,
@@ -1279,16 +1509,9 @@ class PingService {
     }
 
     if (urlServers.isNotEmpty) {
-      Map<String, String>? ips;
-      if (resolveServerIp != null) {
-        ips = {};
-        await Future.wait(
-          urlServers.map((s) async {
-            final ip = await resolveServerIp(s);
-            if (ip != null) ips![s.id] = ip;
-          }),
-        );
-      }
+      final ips = resolveServerIp != null
+          ? await _resolveDeduplicatedIps(urlServers, resolveServerIp)
+          : null;
       final urlResults = await pingUrlBatch(
         urlServers,
         settings,

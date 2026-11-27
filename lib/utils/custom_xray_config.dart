@@ -310,6 +310,155 @@ class CustomXrayConfig {
     return (address: '', port: 0);
   }
 
+  List<String> get allServerAddresses {
+    final seen = <String>{};
+    for (final outbound in _outboundsOf(json)) {
+      final protocol = outbound['protocol']?.toString().toLowerCase() ?? '';
+      if (_localOutboundProtocols.contains(protocol)) continue;
+      for (final ep in _allEndpointsOf(outbound)) {
+        if (ep.address.isNotEmpty) seen.add(ep.address);
+      }
+    }
+    return seen.toList();
+  }
+
+  // в пинге burstObservatory ещё не успел опросить узлы и leastLoad сваливается на мёртвый fallbackTag;
+  // разбираем selector и штрафы costs сами (weight.go), чтобы мерить живые выходы в порядке приоритета
+  List<String> pingExitTags({int maxCandidates = 6}) {
+    final outbounds = _outboundsOf(_deepCopy(json));
+    _ensurePrimaryTag(outbounds);
+    final nonLocalTags = <String>[];
+    final localTags = <String>{};
+    for (final o in outbounds) {
+      final tag = o['tag']?.toString().trim() ?? '';
+      if (tag.isEmpty) continue;
+      final proto = o['protocol']?.toString().toLowerCase() ?? '';
+      if (_localOutboundProtocols.contains(proto)) {
+        localTags.add(tag);
+      } else if (!nonLocalTags.contains(tag)) {
+        nonLocalTags.add(tag);
+      }
+    }
+
+    final routing = json['routing'];
+    if (routing is Map) {
+      final routingMap = _asStringMap(routing);
+      final catchAll = _rulesOf(routingMap)?.where(_isCatchAll).firstOrNull;
+      if (catchAll != null) {
+        final balancerTag = catchAll['balancerTag']?.toString().trim() ?? '';
+        if (balancerTag.isNotEmpty) {
+          final resolved = _resolveBalancerTags(
+            routingMap,
+            balancerTag,
+            nonLocalTags,
+          );
+          if (resolved.isNotEmpty) {
+            return resolved.take(maxCandidates).toList();
+          }
+        }
+        final outboundTag = catchAll['outboundTag']?.toString().trim() ?? '';
+        if (outboundTag.isNotEmpty &&
+            !localTags.contains(outboundTag) &&
+            nonLocalTags.contains(outboundTag)) {
+          return [outboundTag];
+        }
+      }
+    }
+    return [primaryOutboundTag];
+  }
+
+  static List<String> _resolveBalancerTags(
+    Map<String, dynamic> routing,
+    String balancerTag,
+    List<String> nonLocalTags,
+  ) {
+    final balancers = routing['balancers'];
+    if (balancers is! List) return const [];
+    Map<String, dynamic>? balancer;
+    for (final raw in balancers) {
+      if (raw is! Map) continue;
+      final map = _asStringMap(raw);
+      if (map['tag']?.toString().trim() == balancerTag) {
+        balancer = map;
+        break;
+      }
+    }
+    if (balancer == null) return const [];
+
+    final rawSelector = balancer['selector'];
+    final selectors = <String>[
+      if (rawSelector is List)
+        for (final item in rawSelector)
+          if (item != null && item.toString().isNotEmpty) item.toString(),
+    ];
+    final matched = <String>[
+      for (final tag in nonLocalTags)
+        if (selectors.any(tag.startsWith)) tag,
+    ];
+    if (matched.length > 1) {
+      final weights = _balancerWeights(balancer, matched);
+      final indexed = matched.indexed.toList()
+        ..sort((a, b) {
+          final byWeight = weights[a.$2]!.compareTo(weights[b.$2]!);
+          return byWeight != 0 ? byWeight : a.$1.compareTo(b.$1);
+        });
+      matched
+        ..clear()
+        ..addAll(indexed.map((e) => e.$2));
+    }
+    final fallback = balancer['fallbackTag']?.toString().trim() ?? '';
+    if (fallback.isNotEmpty &&
+        nonLocalTags.contains(fallback) &&
+        !matched.contains(fallback)) {
+      matched.add(fallback);
+    }
+    return matched;
+  }
+
+  static final _weightNumber = RegExp(r'\d+(\.\d+)?');
+
+  static Map<String, double> _balancerWeights(
+    Map<String, dynamic> balancer,
+    List<String> tags,
+  ) {
+    final strategy = balancer['strategy'];
+    final settings = strategy is Map ? strategy['settings'] : null;
+    final costs = settings is Map ? settings['costs'] : null;
+    if (costs is! List || costs.isEmpty) {
+      return {for (final tag in tags) tag: 1.0};
+    }
+    double weightOf(String tag) {
+      for (final raw in costs) {
+        if (raw is! Map) continue;
+        final find = raw['match']?.toString() ?? '';
+        if (find.isEmpty) continue;
+        final isRegexp = raw['regexp'] == true;
+        String matched = '';
+        if (!isRegexp) {
+          if (tag.contains(find)) matched = find;
+        } else {
+          try {
+            matched = RegExp(find).firstMatch(tag)?.group(0) ?? '';
+          } on FormatException {
+            matched = '';
+          }
+        }
+        if (matched.isEmpty) continue;
+        final rawVal = raw['value'];
+        final val = rawVal is num
+            ? rawVal.toDouble()
+            : double.tryParse(rawVal?.toString() ?? '') ?? 0.0;
+        if (val > 0) return val;
+        final numStr = _weightNumber.firstMatch(matched)?.group(0);
+        if (numStr == null) return 1.0;
+        return double.tryParse(numStr) ?? 1.0;
+      }
+      return 1.0;
+    }
+
+    return {for (final tag in tags) tag: weightOf(tag)};
+  }
+
   String get address => endpoint.address;
   int get port => endpoint.port;
 
@@ -330,6 +479,83 @@ class CustomXrayConfig {
     };
   }
 
+  // доменные резолверы автора (например 77.88.8.8 на мобильном белом списке) в пинге обязаны идти +local:
+  // без +local запрос к DNS попадёт в роутер и уйдёт в ещё не поднятый прокси; geosite/geoip убираем, в пинге нет geoIndex
+  List<Map<String, dynamic>> get authorPingDnsServers {
+    final raw = json['dns'];
+    if (raw is! Map) return const [];
+    final servers = raw['servers'];
+    if (servers is! List || servers.isEmpty) return const [];
+    final out = <Map<String, dynamic>>[];
+    for (final server in servers) {
+      if (server is! Map) continue;
+      final map = _asStringMap(server);
+      final rawDomains = map['domains'];
+      if (rawDomains is! List || rawDomains.isEmpty) continue;
+      final domains = <String>[
+        for (final item in rawDomains)
+          if (_isPlainDnsRuleToken(item)) item.toString().trim(),
+      ];
+      if (domains.isEmpty) continue;
+      final localAddr = _toLocalDnsAddress(
+        map['address']?.toString().trim() ?? '',
+        int.tryParse(map['port']?.toString() ?? ''),
+      );
+      if (localAddr == null) continue;
+      var lostIpFilter = false;
+      final cleaned = <String, dynamic>{
+        'address': localAddr,
+        'domains': domains,
+        if (map['skipFallback'] == true) 'skipFallback': true,
+      };
+      for (final field in const ['expectIPs', 'expectedIPs']) {
+        final rawIps = map[field];
+        if (rawIps is! List) continue;
+        final ips = <String>[
+          for (final item in rawIps)
+            if (_isPlainDnsRuleToken(item)) item.toString().trim(),
+        ];
+        if (ips.isEmpty && rawIps.isNotEmpty) {
+          lostIpFilter = true;
+          break;
+        }
+        if (ips.isNotEmpty) cleaned[field] = ips;
+      }
+      if (!lostIpFilter) out.add(cleaned);
+    }
+    return out;
+  }
+
+  static bool _isPlainDnsRuleToken(Object? raw) {
+    final token = raw?.toString().trim() ?? '';
+    if (token.isEmpty) return false;
+    final lower = token.toLowerCase();
+    return !lower.startsWith('geosite:') &&
+        !lower.startsWith('geoip:') &&
+        !lower.startsWith('ext:');
+  }
+
+  static String? _toLocalDnsAddress(String address, int? port) {
+    if (address.isEmpty) return null;
+    final lower = address.toLowerCase();
+    if (lower.startsWith('tcp+local://') ||
+        lower.startsWith('https+local://') ||
+        lower.startsWith('h2c+local://') ||
+        lower.startsWith('quic+local://')) {
+      return address;
+    }
+    if (lower.startsWith('tcp://')) {
+      return 'tcp+local://${address.substring('tcp://'.length)}';
+    }
+    if (lower.startsWith('https://')) {
+      return 'https+local://${address.substring('https://'.length)}';
+    }
+    if (lower.startsWith('h2c://')) {
+      return 'h2c+local://${address.substring('h2c://'.length)}';
+    }
+    return _publicDnsEndpoint(address, port, local: true);
+  }
+
   // UDP-53 автора едет через его узел, а узел без UDP глотает запрос молча: по 4 с на сервер на каждое имя,
   // сайт открывался 16-25 с (стенд 20.11). тот же резолвер по TCP так не застревает
   static Object? _overTcp(Object? server) {
@@ -348,7 +574,11 @@ class CustomXrayConfig {
     return {..._asStringMap(server), 'address': endpoint}..remove('port');
   }
 
-  static String? _publicDnsEndpoint(String address, int? port) {
+  static String? _publicDnsEndpoint(
+    String address,
+    int? port, {
+    bool local = false,
+  }) {
     var host = address;
     var p = port ?? 53;
     if (address.startsWith('[')) {
@@ -371,7 +601,8 @@ class CustomXrayConfig {
     }
     final ip = _parseIp(host);
     if (ip == null || _isLocalIp(ip)) return null;
-    return ip.length == 4 ? 'tcp://$host:$p' : 'tcp://[$host]:$p';
+    final scheme = local ? 'tcp+local' : 'tcp';
+    return ip.length == 4 ? '$scheme://$host:$p' : '$scheme://[$host]:$p';
   }
 
   static List<int>? _parseIp(String host) {
@@ -503,6 +734,7 @@ class CustomXrayConfig {
   Map<String, dynamic> buildPingConfig({
     required List<Map<String, dynamic>> inbounds,
     required List<Map<String, dynamic>> rules,
+    Map<String, dynamic>? dns,
   }) {
     final outbounds = [
       for (final o in _outboundsOf(_deepCopy(json))) _withoutReverse(o),
@@ -511,10 +743,15 @@ class CustomXrayConfig {
     _ensurePrimaryTag(outbounds);
     final out = <String, dynamic>{
       'log': {'loglevel': 'none'},
-      'dns': {
-        'servers': ['8.8.8.8', '1.1.1.1'],
-        'queryStrategy': 'UseIPv4',
-      },
+      'dns':
+          dns ??
+          {
+            'servers': [
+              'https+local://1.1.1.1/dns-query',
+              'https+local://8.8.8.8/dns-query',
+            ],
+            'queryStrategy': 'UseIPv4',
+          },
       'inbounds': inbounds,
       'outbounds': outbounds,
       'routing': {'domainStrategy': 'AsIs', 'rules': rules},
@@ -654,9 +891,13 @@ class CustomXrayConfig {
 
   static ({String address, int port})? _endpointOf(
     Map<String, dynamic> outbound,
-  ) {
+  ) => _allEndpointsOf(outbound).firstOrNull;
+
+  static Iterable<({String address, int port})> _allEndpointsOf(
+    Map<String, dynamic> outbound,
+  ) sync* {
     final settings = outbound['settings'];
-    if (settings is! Map) return null;
+    if (settings is! Map) return;
     final s = _asStringMap(settings);
 
     for (final key in const ['vnext', 'servers']) {
@@ -665,12 +906,12 @@ class CustomXrayConfig {
       for (final item in list) {
         if (item is! Map) continue;
         final entry = _endpointFields(_asStringMap(item));
-        if (entry != null) return entry;
+        if (entry != null) yield entry;
       }
     }
 
     final flat = _endpointFields(s);
-    if (flat != null) return flat;
+    if (flat != null) yield flat;
 
     final peers = s['peers'];
     if (peers is List) {
@@ -678,10 +919,9 @@ class CustomXrayConfig {
         if (peer is! Map) continue;
         final endpoint = _asStringMap(peer)['endpoint']?.toString() ?? '';
         final split = _splitHostPort(endpoint);
-        if (split != null) return split;
+        if (split != null) yield split;
       }
     }
-    return null;
   }
 
   static ({String address, int port})? _endpointFields(

@@ -452,6 +452,120 @@ class CustomClashConfig {
     );
   }
 
+  // конфиги с include-all и exclude-filter нельзя переименовать для общей пачки, но в одиночном замере ядро соберёт их само
+  Map<String, dynamic>? buildStandalonePingConfig({
+    required Map<String, dynamic> inbound,
+    required Map<String, dynamic> dns,
+    String? outboundInterface,
+  }) {
+    if (usesProviders || proxies.isEmpty) return null;
+    final target = primaryTarget;
+    if (target == 'DIRECT') return null;
+
+    bool hasProviderUse(Map<Object?, Object?> group) {
+      final use = group['use'];
+      return use != null &&
+          use != false &&
+          !(use is List && use.isEmpty) &&
+          !const {'', '0', 'false'}.contains(use.toString().toLowerCase());
+    }
+
+    final stubNames = <String>{
+      for (final p in proxies)
+        if (_isStubProxyAddress(serverOf(p).address) &&
+            (p['name']?.toString() ?? '').isNotEmpty)
+          p['name'].toString(),
+    };
+    final known = <String>{
+      ..._builtinTargets,
+      for (final p in proxies)
+        if ((p['name']?.toString() ?? '').isNotEmpty) p['name'].toString(),
+    };
+    final rawGroups = map['proxy-groups'];
+    final groups = <Map<String, dynamic>>[];
+    if (rawGroups is List) {
+      for (final g in rawGroups) {
+        if (g is! Map) continue;
+        if (hasProviderUse(g)) return null;
+        final copy = (jsonDecode(jsonEncode(g)) as Map).cast<String, dynamic>();
+        final name = copy['name']?.toString() ?? '';
+        if (name.isEmpty) return null;
+        // заглушку 127.0.0.1 в proxies ставят на случай пустого filter, но parser.go кладёт её нулевым узлом
+        // раньше include-all-proxies, и быстрый пинг бьётся об неё до первого url-test; в empty-fallback она сработает только пустой группе
+        final includesAll =
+            copy['include-all'] == true || copy['include-all-proxies'] == true;
+        final members = copy['proxies'];
+        if (includesAll && stubNames.isNotEmpty && members is List) {
+          final realMembers = [
+            for (final m in members)
+              if (!stubNames.contains(m.toString())) m,
+          ];
+          final firstStub = members
+              .map((m) => m.toString())
+              .where(stubNames.contains)
+              .firstOrNull;
+          if (firstStub != null) {
+            if (realMembers.isEmpty) {
+              copy.remove('proxies');
+            } else {
+              copy['proxies'] = realMembers;
+            }
+            if ((copy['empty-fallback']?.toString() ?? '').isEmpty) {
+              copy['empty-fallback'] = firstStub;
+            }
+          }
+        }
+        known.add(name);
+        groups.add(copy);
+      }
+    }
+    for (final p in proxies) {
+      final via = p['dialer-proxy']?.toString() ?? '';
+      if (via.isNotEmpty && !known.contains(via)) return null;
+    }
+    for (final g in groups) {
+      final members = g['proxies'];
+      if (members is List) {
+        for (final m in members) {
+          if (!known.contains(m.toString())) return null;
+        }
+      } else if (!_coreFillsGroup(g)) {
+        return null;
+      }
+      final fallback = g['empty-fallback']?.toString() ?? '';
+      if (fallback.isNotEmpty && !known.contains(fallback)) return null;
+    }
+
+    final out = <String, dynamic>{
+      ...inbound,
+      'bind-address': '127.0.0.1',
+      'allow-lan': false,
+      'ipv6': false,
+      'mode': 'rule',
+      'log-level': 'silent',
+      'find-process-mode': 'off',
+      'geo-auto-update': false,
+      'interface-name': ?outboundInterface,
+      'dns': dns,
+      'proxies': [
+        for (final p in proxies)
+          (jsonDecode(jsonEncode(p)) as Map).cast<String, dynamic>(),
+      ],
+      if (groups.isNotEmpty) 'proxy-groups': groups,
+      'rules': ['MATCH,$target'],
+    };
+    return _aliasCommaTargets(_aliasTrimmedTarget(out));
+  }
+
+  static bool _isStubProxyAddress(String address) {
+    final lower = address.trim().toLowerCase();
+    return lower == '127.0.0.1' ||
+        lower == '0.0.0.0' ||
+        lower == 'localhost' ||
+        lower == '::1' ||
+        lower == '::';
+  }
+
   ({String address, int port}) get endpoint {
     for (final proxy in proxies) {
       final server = serverOf(proxy);

@@ -560,6 +560,14 @@ class MihomoConfigGen {
         : null;
     final nodes = clash?.routeNodes(proxyName);
     if (clash != null && nodes == null) {
+      final standalone = clash.buildStandalonePingConfig(
+        inbound: <String, dynamic>{
+          if (httpInbound) 'port': socksPort else 'socks-port': socksPort,
+        },
+        dns: _pingDns(),
+        outboundInterface: outboundInterface,
+      );
+      if (standalone != null) return jsonEncode(standalone);
       throw ArgumentError(
         clash.usesProviders
             ? 'mihomo: this Clash config takes its servers from proxy-providers, '
@@ -2030,7 +2038,8 @@ class MihomoConfigGen {
 
   static const closedTunIpv6Rule = 'AND,((IN-TYPE,TUN),(IP-CIDR6,::/0)),REJECT';
 
-  static const visionQuicRejectRule = 'AND,((NETWORK,udp),(DST-PORT,443)),REJECT';
+  static const visionQuicRejectRule =
+      'AND,((NETWORK,udp),(DST-PORT,443)),REJECT';
 
   static bool _visionRejectsQuic(List<Map<String, dynamic>> proxies) {
     if (proxies.isEmpty) return false;

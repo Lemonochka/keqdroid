@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/models/app_settings.dart';
 import 'package:keqdroid/models/server_item.dart';
@@ -240,4 +242,174 @@ proxies:
       expect(backend.multiSizes.first, 4);
     },
   );
+
+  test(
+    'Clash с include-all-proxies идёт в одиночный замер, чтобы не затянуть чужие узлы пачки',
+    () {
+      const includeAllClash = '''
+proxies:
+  - name: n1
+    type: vless
+    server: d.example.com
+    port: 443
+    uuid: bfd62637-6d18-49ea-b726-82274f5dda83
+proxy-groups:
+  - name: Select
+    type: select
+    include-all-proxies: true
+rules:
+  - MATCH,Select
+''';
+      expect(PingService.mergeableForMultiPing(includeAllClash), isFalse);
+    },
+  );
+
+  test(
+    'балансировщик в готовом JSON пробует лучший выход в первой пачке и добирает запасной во второй без ложного отказа в onResult',
+    () async {
+      final calls = <List<String>>[];
+      final backend = _BalancerProbeBackend(
+        aliveOutboundPrefixes: {'proxy-3', 'auto-2'},
+        onMultiCall: calls.add,
+      );
+      PingService.debugMultiPingSupported = true;
+      PingService.debugEngine = VpnEngine.withBackend(backend);
+      addTearDown(() {
+        PingService.debugMultiPingSupported = null;
+        PingService.debugEngine = null;
+      });
+
+      const penalizedBridgeJson = '''
+{
+  "routing": {
+    "balancers": [
+      {
+        "tag": "Home_Balancer",
+        "selector": ["proxy"],
+        "strategy": {"type": "leastLoad", "settings": {"costs": [{"match": "^proxy(-2)?\$", "value": 1000000, "regexp": true}]}},
+        "fallbackTag": "proxy"
+      }
+    ],
+    "rules": [{"type": "field", "network": "tcp,udp", "balancerTag": "Home_Balancer"}]
+  },
+  "outbounds": [
+    {"tag": "proxy", "protocol": "vless", "settings": {"vnext": [{"address": "198.51.100.10", "port": 443, "users": [{"id": "bfd62637-6d18-49ea-b726-82274f5dda83"}]}]}},
+    {"tag": "proxy-2", "protocol": "vless", "settings": {"vnext": [{"address": "198.51.100.11", "port": 443, "users": [{"id": "bfd62637-6d18-49ea-b726-82274f5dda83"}]}]}},
+    {"tag": "proxy-3", "protocol": "vless", "settings": {"vnext": [{"address": "198.51.100.12", "port": 443, "users": [{"id": "bfd62637-6d18-49ea-b726-82274f5dda83"}]}]}}
+  ]
+}
+''';
+      const unpenalizedAutoJson = '''
+{
+  "routing": {
+    "balancers": [
+      {
+        "tag": "Super_Balancer",
+        "selector": ["auto"],
+        "strategy": {"type": "leastLoad"},
+        "fallbackTag": "auto-1"
+      }
+    ],
+    "rules": [{"type": "field", "network": "tcp,udp", "balancerTag": "Super_Balancer"}]
+  },
+  "outbounds": [
+    {"tag": "auto-1", "protocol": "vless", "settings": {"vnext": [{"address": "198.51.100.21", "port": 443, "users": [{"id": "bfd62637-6d18-49ea-b726-82274f5dda83"}]}]}},
+    {"tag": "auto-2", "protocol": "vless", "settings": {"vnext": [{"address": "198.51.100.22", "port": 443, "users": [{"id": "bfd62637-6d18-49ea-b726-82274f5dda83"}]}]}},
+    {"tag": "auto-3", "protocol": "vless", "settings": {"vnext": [{"address": "198.51.100.23", "port": 443, "users": [{"id": "bfd62637-6d18-49ea-b726-82274f5dda83"}]}]}}
+  ]
+}
+''';
+
+      final emitted = <PingResult>[];
+      final results = await PingService.pingUrlBatch(
+        [
+          ServerItem(
+            id: 'home',
+            config: penalizedBridgeJson,
+            type: ServerItemType.subscription,
+            subscriptionId: 's',
+          ),
+          ServerItem(
+            id: 'super',
+            config: unpenalizedAutoJson,
+            type: ServerItemType.subscription,
+            subscriptionId: 's',
+          ),
+        ],
+        const AppSettings(),
+        resolvedIps: const {'home': '198.51.100.10', 'super': '198.51.100.21'},
+        onResult: emitted.add,
+      );
+
+      expect(
+        {for (final r in results) r.serverId: r.success},
+        {'home': true, 'super': true},
+      );
+      // onResult вызывается по разу на сервер и без промежуточного false у super
+      expect(emitted.map((r) => (r.serverId, r.success)).toList(), [
+        ('home', true),
+        ('super', true),
+      ]);
+      // Первая пачка проверила оба сервера, вторая — только запасные выходы super
+      expect(calls, [
+        ['home', 'super'],
+        ['super#1', 'super#2'],
+      ]);
+    },
+  );
+}
+
+class _BalancerProbeBackend extends FakeTunnelBackend {
+  _BalancerProbeBackend({
+    required this.aliveOutboundPrefixes,
+    required this.onMultiCall,
+  });
+
+  final Set<String> aliveOutboundPrefixes;
+  final void Function(List<String> probeIds) onMultiCall;
+
+  @override
+  Future<List<_Probe>?> xrayUrlTestMulti({
+    required String config,
+    required List<(String id, int port)> probes,
+    VpnBackend core = VpnBackend.xray,
+    String testUrl = 'https://connectivitycheck.gstatic.com/generate_204',
+    int timeoutMs = 15000,
+    bool keepAlive = true,
+    int concurrency = 16,
+    UrlTestProgress? onEach,
+  }) async {
+    onMultiCall([for (final p in probes) p.$1]);
+    final decoded = jsonDecode(config) as Map<String, dynamic>;
+    final inbounds = (decoded['inbounds'] as List).cast<Map<String, dynamic>>();
+    final rules = ((decoded['routing'] as Map)['rules'] as List)
+        .cast<Map<String, dynamic>>();
+    final tagByPort = <int, String>{
+      for (final i in inbounds) i['port'] as int: i['tag'] as String,
+    };
+
+    final out = <_Probe>[];
+    for (final (id, port) in probes) {
+      final inTag = tagByPort[port];
+      final catchAll = rules.lastWhere(
+        (r) =>
+            (r['inboundTag'] as List?)?.contains(inTag) == true &&
+            r['network'] == 'tcp,udp',
+      );
+      final outTag = catchAll['outboundTag'] as String;
+      final alive = aliveOutboundPrefixes.any(
+        (prefix) => RegExp('^${RegExp.escape(prefix)}-\\d+\$').hasMatch(outTag),
+      );
+      final probe = (
+        id: id,
+        success: alive,
+        latencyMs: alive ? 55 : null,
+        error: alive ? '' : 'Timeout',
+        httpStatus: alive ? 204 : null,
+      );
+      onEach?.call(probe);
+      out.add(probe);
+    }
+    return out;
+  }
 }

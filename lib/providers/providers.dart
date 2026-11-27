@@ -100,10 +100,13 @@ part 'template_groups_provider.dart';
 part 'vpn_state_provider.dart';
 
 Future<String?> _resolveFirstAddress(String host) async {
+  final trimmed = host.trim();
+  if (trimmed.isEmpty || trimmed == '0.0.0.0' || trimmed == '::') return null;
+  if (InternetAddress.tryParse(trimmed) != null) return trimmed;
   try {
     final addresses = await InternetAddress.lookup(
-      host,
-    ).timeout(const Duration(seconds: 5));
+      trimmed,
+    ).timeout(const Duration(seconds: 3));
     if (addresses.isNotEmpty) return addresses.first.address;
   } catch (e) {
     AppLogger.instance.debug('Server address not resolved', error: e);

@@ -756,4 +756,53 @@ proxies:
       );
     });
   });
+
+  group('пинг профиля с include-all-proxies', () {
+    const includeAllYaml = '''
+proxies:
+  - name: "⛔ нет серверов"
+    type: socks5
+    server: 127.0.0.1
+    port: 1
+  - name: "🇳🇱 NL-1"
+    type: vless
+    server: nl.example
+    port: 443
+    uuid: 716e3485-d4f9-4471-9660-fb4b0b838100
+proxy-groups:
+  - name: "🚀 Select"
+    type: select
+    include-all-proxies: true
+    proxies: ["♻️ Auto"]
+  - name: "♻️ Auto"
+    type: url-test
+    proxies: ["⛔ нет серверов"]
+    include-all-proxies: true
+    filter: "🇳🇱"
+rules:
+  - MATCH,🚀 Select
+''';
+
+    test(
+      'собирается одиночным конфигом и уводит заглушку 127.0.0.1 в empty-fallback',
+      () {
+        final raw = MihomoConfigGen.generatePingConfig(
+          includeAllYaml,
+          const AppSettings(),
+          socksPort: 28160,
+          httpInbound: true,
+        );
+        final config = jsonDecode(raw) as Map<String, dynamic>;
+        expect(config['port'], 28160);
+        expect(config['rules'], ['MATCH,🚀 Select']);
+        expect((config['proxies'] as List), hasLength(2));
+        final groups = (config['proxy-groups'] as List)
+            .cast<Map<String, dynamic>>();
+        expect(groups, hasLength(2));
+        final auto = groups.firstWhere((g) => g['name'] == '♻️ Auto');
+        expect(auto.containsKey('proxies'), isFalse);
+        expect(auto['empty-fallback'], '⛔ нет серверов');
+      },
+    );
+  });
 }

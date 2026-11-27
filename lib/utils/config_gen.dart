@@ -107,6 +107,7 @@ class ConfigGeneratorV2 {
     String? resolvedServerIp,
     bool httpInbound = false,
     String? outboundInterface,
+    String? customOutboundTag,
   }) {
     final config = _buildXrayConfig(
       input,
@@ -114,10 +115,10 @@ class ConfigGeneratorV2 {
       resolvedServerIp: resolvedServerIp,
       pingSocksPort: socksPort,
       pingHttpInbound: httpInbound,
+      customPingExitTag: customOutboundTag,
     );
     if (outboundInterface != null) {
       _bindToInterface(config, outboundInterface);
-      // у готового JSON тут был простой 8.8.8.8, а его ядро отправило бы в тот же ещё не найденный сервер
       config['dns'] = _pingDns();
     }
     return jsonEncode(config);
@@ -292,6 +293,7 @@ class ConfigGeneratorV2 {
     String? resolvedServerIp,
     int? pingSocksPort,
     bool pingHttpInbound = false,
+    String? customPingExitTag,
     bool localInboundsNoAuth = false,
     bool nativeTunInbound = false,
     bool tunPassesIpv6 = false,
@@ -339,6 +341,13 @@ class ConfigGeneratorV2 {
         providerExit: settings.ignoreProviderRules
             ? parsedCustom?.providerExit
             : null,
+        pingExitTag:
+            customPingExitTag ?? parsedCustom?.pingExitTags().firstOrNull,
+        allServerAddresses:
+            parsedCustom?.allServerAddresses ?? custom.allServerAddresses,
+        authorPingDnsServers: settings.ignoreProviderDns
+            ? const []
+            : (parsedCustom?.authorPingDnsServers ?? const []),
         resolvedServerIp: resolvedServerIp,
         pingSocksPort: pingSocksPort,
         pingHttpInbound: pingHttpInbound,
@@ -1044,22 +1053,21 @@ class ConfigGeneratorV2 {
   static List<Map<String, dynamic>> _fakeDnsPool(
     Map<String, dynamic> dns, {
     required bool allowIpv6,
-  }) =>
-      switch (dns['queryStrategy']?.toString().toLowerCase()) {
-        'useipv4' => [
-          {'ipPool': kFakeIpRange, 'poolSize': 65535},
-        ],
-        'useipv6' => [
-          {'ipPool': kFakeIpv6Range, 'poolSize': 65535},
-        ],
-        _ when !allowIpv6 => [
-          {'ipPool': kFakeIpRange, 'poolSize': 65535},
-        ],
-        _ => [
-          {'ipPool': kFakeIpRange, 'poolSize': 32768},
-          {'ipPool': kFakeIpv6Range, 'poolSize': 32768},
-        ],
-      };
+  }) => switch (dns['queryStrategy']?.toString().toLowerCase()) {
+    'useipv4' => [
+      {'ipPool': kFakeIpRange, 'poolSize': 65535},
+    ],
+    'useipv6' => [
+      {'ipPool': kFakeIpv6Range, 'poolSize': 65535},
+    ],
+    _ when !allowIpv6 => [
+      {'ipPool': kFakeIpRange, 'poolSize': 65535},
+    ],
+    _ => [
+      {'ipPool': kFakeIpRange, 'poolSize': 32768},
+      {'ipPool': kFakeIpv6Range, 'poolSize': 32768},
+    ],
+  };
 
   // без снифера подменный адрес так и уехал бы на сервер, поэтому тут он включён и при выключенном в настройках
   static Map<String, dynamic> _fakeDnsSniffing(XrayCoreSettings core) {
@@ -1107,6 +1115,9 @@ class ConfigGeneratorV2 {
     CustomXrayConfig custom,
     AppSettings settings, {
     Map<String, String>? providerExit,
+    String? pingExitTag,
+    List<String> allServerAddresses = const [],
+    List<Map<String, dynamic>> authorPingDnsServers = const [],
     String? resolvedServerIp,
     int? pingSocksPort,
     bool pingHttpInbound = false,
@@ -1131,12 +1142,24 @@ class ConfigGeneratorV2 {
       final serverAddress = resolvedServerIp?.trim().isNotEmpty == true
           ? resolvedServerIp!.trim()
           : custom.address;
+      final baseDns = _pingDns();
+      final pingDns = authorPingDnsServers.isEmpty
+          ? baseDns
+          : <String, dynamic>{
+              ...baseDns,
+              'servers': [
+                ...authorPingDnsServers,
+                ...(baseDns['servers'] as List),
+              ],
+            };
       final config = custom.buildPingConfig(
         inbounds: pingInbounds,
+        dns: pingDns,
         rules: _customPingRules(
           serverAddress: serverAddress,
           originalAddress: custom.address,
-          proxyTag: custom.primaryOutboundTag,
+          extraAddresses: allServerAddresses,
+          proxyTag: pingExitTag ?? custom.primaryOutboundTag,
         ),
       );
       config['outbounds'] = [
@@ -1342,11 +1365,7 @@ class ConfigGeneratorV2 {
     ];
 
     final usedTags = <String>{
-      for (final rule in [
-        ...desktopHead,
-        ...bootstrapDnsRules,
-        ...appendRules,
-      ])
+      for (final rule in [...desktopHead, ...bootstrapDnsRules, ...appendRules])
         rule['outboundTag'] as String,
       if (settings.lanSharing) blockTag ?? _customBlockTag,
       if (outsideVpn != null) outsideVpn['outboundTag'] as String,
@@ -1405,10 +1424,7 @@ class ConfigGeneratorV2 {
       if (dns is Map) {
         final fakeDnsMap = _withFakeDns(dns.cast<String, dynamic>());
         config['dns'] = fakeDnsMap;
-        config['fakedns'] = _fakeDnsPool(
-          fakeDnsMap,
-          allowIpv6: tunPassesIpv6,
-        );
+        config['fakedns'] = _fakeDnsPool(fakeDnsMap, allowIpv6: tunPassesIpv6);
       }
     }
 
@@ -1599,11 +1615,14 @@ class ConfigGeneratorV2 {
   static List<Map<String, dynamic>> _customPingRules({
     required String serverAddress,
     required String originalAddress,
+    List<String> extraAddresses = const [],
     required String proxyTag,
   }) {
     final rules = <Map<String, dynamic>>[];
+    final addedIps = <String>{};
+    final addedDomains = <String>{};
     final isServerIp = serverAddress.isNotEmpty && _isIpLiteral(serverAddress);
-    if (isServerIp) {
+    if (isServerIp && addedIps.add(serverAddress)) {
       rules.add({
         'type': 'field',
         'ip': [serverAddress],
@@ -1612,15 +1631,36 @@ class ConfigGeneratorV2 {
     }
     if (originalAddress.isNotEmpty) {
       if (!_isIpLiteral(originalAddress)) {
-        rules.add({
-          'type': 'field',
-          'domain': ['full:$originalAddress'],
-          'outboundTag': _pingDirectTag,
-        });
-      } else if (!isServerIp) {
+        if (addedDomains.add(originalAddress)) {
+          rules.add({
+            'type': 'field',
+            'domain': ['full:$originalAddress'],
+            'outboundTag': _pingDirectTag,
+          });
+        }
+      } else if (!isServerIp && addedIps.add(originalAddress)) {
         rules.add({
           'type': 'field',
           'ip': [originalAddress],
+          'outboundTag': _pingDirectTag,
+        });
+      }
+    }
+    for (final raw in extraAddresses) {
+      final addr = raw.trim();
+      if (addr.isEmpty) continue;
+      if (_isIpLiteral(addr)) {
+        if (addedIps.add(addr)) {
+          rules.add({
+            'type': 'field',
+            'ip': [addr],
+            'outboundTag': _pingDirectTag,
+          });
+        }
+      } else if (addedDomains.add(addr)) {
+        rules.add({
+          'type': 'field',
+          'domain': ['full:$addr'],
           'outboundTag': _pingDirectTag,
         });
       }

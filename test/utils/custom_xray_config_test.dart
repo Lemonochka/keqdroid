@@ -662,6 +662,128 @@ void main() {
         'tag': 'keq-ping-direct',
       });
     });
+
+    test(
+      'DNS в пробе идёт +local: узел с fragment и UseIPv4 не уводит резолв своего домена в сам прокси',
+      () {
+        const fragmentJson = '''
+{
+  "dns": {
+    "servers": [
+      {"address": "77.88.8.8", "domains": ["full:edge.example.net", "geosite:unknown-custom"], "skipFallback": true},
+      "8.8.8.8"
+    ],
+    "queryStrategy": "UseIPv4",
+    "disableFallbackIfMatch": true
+  },
+  "outbounds": [
+    {
+      "tag": "proxy",
+      "protocol": "vless",
+      "settings": {"vnext": [{"address": "edge.example.net", "port": 2087, "users": [{"id": "00000000-0000-4000-8000-000000000001", "encryption": "none"}]}]},
+      "streamSettings": {"network": "tcp", "security": "tls", "sockopt": {"dialerProxy": "fragment"}}
+    },
+    {
+      "tag": "fragment",
+      "protocol": "freedom",
+      "settings": {"fragment": {"packets": "tlshello", "length": "10-20", "interval": "0"}, "domainStrategy": "UseIPv4"}
+    }
+  ]
+}
+''';
+        final config = _decode(
+          ConfigGeneratorV2.generatePingConfig(
+            fragmentJson,
+            const AppSettings(),
+            socksPort: 28150,
+          ),
+        );
+        final servers = ((config['dns'] as Map)['servers'] as List);
+        expect(servers.first, {
+          'address': 'tcp+local://77.88.8.8:53',
+          'domains': ['full:edge.example.net'],
+          'skipFallback': true,
+        });
+        expect(servers, contains('https+local://1.1.1.1/dns-query'));
+        expect(servers, isNot(contains('8.8.8.8')));
+        expect(
+          (config['dns'] as Map).containsKey('disableFallbackIfMatch'),
+          isFalse,
+        );
+      },
+    );
+
+    test(
+      'балансировщик со штрафом costs на входных мостах ставит живой выход первым и выводит все адреса мимо прокси',
+      () {
+        const balancerJson = '''
+{
+  "routing": {
+    "balancers": [
+      {
+        "tag": "Home_Balancer",
+        "selector": ["proxy"],
+        "strategy": {
+          "type": "leastLoad",
+          "settings": {
+            "costs": [{"match": "^proxy(-2)?\$", "value": 1000000, "regexp": true}]
+          }
+        },
+        "fallbackTag": "proxy"
+      }
+    ],
+    "rules": [
+      {"type": "field", "network": "tcp,udp", "balancerTag": "Home_Balancer"}
+    ]
+  },
+  "outbounds": [
+    {"tag": "proxy", "protocol": "vless", "settings": {"vnext": [{"address": "198.51.100.10", "port": 20118, "users": [{"id": "00000000-0000-4000-8000-000000000001", "encryption": "none"}]}]}},
+    {"tag": "proxy-2", "protocol": "vless", "settings": {"vnext": [{"address": "198.51.100.11", "port": 20118, "users": [{"id": "00000000-0000-4000-8000-000000000001", "encryption": "none"}]}]}},
+    {"tag": "proxy-3", "protocol": "vless", "settings": {"vnext": [{"address": "alive.example.net", "port": 443, "users": [{"id": "00000000-0000-4000-8000-000000000001", "encryption": "none"}]}]}},
+    {"tag": "direct", "protocol": "freedom"}
+  ]
+}
+''';
+        final parsed = CustomXrayConfig.tryParse(balancerJson)!;
+        expect(parsed.pingExitTags(), ['proxy-3', 'proxy', 'proxy-2']);
+        expect(parsed.allServerAddresses, [
+          '198.51.100.10',
+          '198.51.100.11',
+          'alive.example.net',
+        ]);
+
+        for (final ignoreRules in [false, true]) {
+          final ping = _decode(
+            ConfigGeneratorV2.generatePingConfig(
+              balancerJson,
+              AppSettings(ignoreProviderRules: ignoreRules),
+              socksPort: 28150,
+            ),
+          );
+          final rules = _rules(ping);
+          expect(rules.last['outboundTag'], 'proxy-3');
+          expect(
+            rules.any(
+              (r) =>
+                  r['outboundTag'] == 'keq-ping-direct' &&
+                  (r['domain'] as List?)?.contains('full:alive.example.net') ==
+                      true,
+            ),
+            isTrue,
+          );
+        }
+
+        final fallbackPing = _decode(
+          ConfigGeneratorV2.generatePingConfig(
+            balancerJson,
+            const AppSettings(),
+            socksPort: 28151,
+            customOutboundTag: 'proxy-2',
+          ),
+        );
+        expect(_rules(fallbackPing).last['outboundTag'], 'proxy-2');
+      },
+    );
   });
 
   group('чужой конфиг не получает доступа к устройству', () {

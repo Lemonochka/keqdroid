@@ -118,7 +118,11 @@ class EphemeralXrayPing {
 
   static Future<void> _attachCoreProcess(int pid) async {
     if (Platform.isWindows) {
-      await WindowsDesktopService.attachCoreProcess(pid);
+      try {
+        await WindowsDesktopService.attachCoreProcess(pid);
+      } on Object {
+        // в dart-тестах нет ServicesBinding и платформенного канала
+      }
     }
   }
 

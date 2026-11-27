@@ -17,7 +17,7 @@ abstract final class MultiPingConfig {
       final config = jsonDecode(probe.configJson) as Map<String, dynamic>;
       final suffix = '-$i';
 
-      dns ??= config['dns'] as Map<String, dynamic>?;
+      dns = _mergeXrayDns(dns, config['dns']);
       final routing = config['routing'] as Map<String, dynamic>?;
       if (i == 0 && routing?['domainStrategy'] is String) {
         domainStrategy = routing!['domainStrategy'] as String;
@@ -85,6 +85,62 @@ abstract final class MultiPingConfig {
       'outbounds': outbounds,
       'routing': {'domainStrategy': domainStrategy, 'rules': rules},
     });
+  }
+
+  static Map<String, dynamic>? _mergeXrayDns(
+    Map<String, dynamic>? current,
+    Object? nextRaw,
+  ) {
+    if (nextRaw is! Map) return current;
+    final next = Map<String, dynamic>.from(nextRaw);
+    if (current == null) return next;
+    final currentServers = current['servers'];
+    final nextServers = next['servers'];
+    if (currentServers is! List || nextServers is! List) return current;
+
+    String keyOf(Object? server) => jsonEncode(server);
+    bool isDomainScoped(Object? server) =>
+        server is Map &&
+        server['domains'] != null &&
+        server['address']?.toString().trim().toLowerCase() != 'localhost';
+
+    final seen = <String>{for (final s in currentServers) keyOf(s)};
+    final scopedExtra = <Object?>[];
+    final generalExtra = <Object?>[];
+    for (final s in nextServers) {
+      if (!seen.add(keyOf(s))) continue;
+      if (isDomainScoped(s)) {
+        scopedExtra.add(s);
+      } else {
+        generalExtra.add(s);
+      }
+    }
+    if (scopedExtra.isEmpty && generalExtra.isEmpty) return current;
+
+    final head = <Object?>[];
+    final tail = <Object?>[];
+    for (final s in currentServers) {
+      if (isDomainScoped(s)) {
+        head.add(s);
+      } else {
+        tail.add(s);
+      }
+    }
+    int localhostIdx = tail.indexWhere(
+      (s) =>
+          s is Map &&
+          s['address']?.toString().trim().toLowerCase() == 'localhost',
+    );
+    final mergedServers = localhostIdx >= 0
+        ? [
+            ...head,
+            ...scopedExtra,
+            ...tail.sublist(0, localhostIdx),
+            ...generalExtra,
+            ...tail.sublist(localhostIdx),
+          ]
+        : [...head, ...scopedExtra, ...tail, ...generalExtra];
+    return <String, dynamic>{...current, 'servers': mergedServers};
   }
 
   static void _renameDialerProxies(Object? node, Map<String, String> renamed) {
