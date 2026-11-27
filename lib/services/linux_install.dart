@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:open_filex/open_filex.dart';
 import 'package:path/path.dart' as p;
 
+import '../tunnel/linux_core_paths.dart';
 import 'linux_appimage_updater.dart';
 
 enum LinuxInstallKind { appImage, deb, rpm, pacman, portable, readOnly }
@@ -104,6 +105,13 @@ class LinuxInstall {
       // Апдейтер уже проверил SHA-256 по подписанному SHA256SUMS, digest не трогаем
       : ['rpm', '-U', '--nosignature', package];
 
+  @visibleForTesting
+  static String? Function() pkexecPath = () => LinuxCorePaths.findPkexec();
+
+  @visibleForTesting
+  static Future<ProcessResult> Function(String, List<String>) runProcess =
+      (exe, args) => Process.run(exe, args);
+
   // apt-get доставит зависимости, а rpm есть и у dnf, и у zypper с одинаковыми флагами
   static Future<bool> installPackage(
     String package, {
@@ -117,7 +125,7 @@ class LinuxInstall {
     final command = packageInstallCommand(package);
     final ProcessResult result;
     try {
-      result = await Process.run('pkexec', command);
+      result = await runProcess(pkexecPath() ?? 'pkexec', command);
     } on ProcessException {
       await OpenFilex.open(package);
       return false;

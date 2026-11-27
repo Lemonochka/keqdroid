@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/services/linux_install.dart';
 
@@ -82,6 +84,33 @@ void main() {
       expect(LinuxInstall.packageInstallBlocker('/tmp/k.rpm'), isNull);
       LinuxInstall.imageBasedSystem = () => true;
       expect(LinuxInstall.packageInstallBlocker('/tmp/k.deb'), isNull);
+    });
+  });
+
+  group('package install elevation', () {
+    final realPkexecPath = LinuxInstall.pkexecPath;
+    final realRunProcess = LinuxInstall.runProcess;
+
+    tearDown(() {
+      LinuxInstall.pkexecPath = realPkexecPath;
+      LinuxInstall.runProcess = realRunProcess;
+    });
+
+    test('uses the same resolved pkexec as the TUN backend', () async {
+      LinuxInstall.pkexecPath = () => '/run/wrappers/bin/pkexec';
+      String? executable;
+      List<String>? arguments;
+      LinuxInstall.runProcess = (exe, args) async {
+        executable = exe;
+        arguments = args;
+        return ProcessResult(0, 126, '', '');
+      };
+
+      final installed = await LinuxInstall.installPackage('/tmp/k.deb');
+
+      expect(installed, isFalse);
+      expect(executable, '/run/wrappers/bin/pkexec');
+      expect(arguments, ['apt-get', 'install', '-y', '/tmp/k.deb']);
     });
   });
 }
