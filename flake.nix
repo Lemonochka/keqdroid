@@ -4,18 +4,40 @@
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
   outputs =
-    { nixpkgs, ... }:
+    { self, nixpkgs }:
     let
-      pkgs = nixpkgs.legacyPackages.x86_64-linux;
+      system = "x86_64-linux";
+      pkgs = nixpkgs.legacyPackages.${system};
+      inherit (nixpkgs) lib;
       keqdroid = pkgs.callPackage ./nix/package.nix { };
     in
     {
-      packages.x86_64-linux = {
+      packages.${system} = {
         inherit keqdroid;
         default = keqdroid;
       };
-      overlays.default = final: prev: {
-        keqdroid = final.callPackage ./nix/package.nix { };
+
+      apps.${system} = {
+        keqdroid = {
+          type = "app";
+          program = lib.getExe keqdroid;
+          meta = keqdroid.meta;
+        };
+        default = self.apps.${system}.keqdroid;
       };
+
+      overlays = {
+        keqdroid = final: _prev: {
+          keqdroid = final.callPackage ./nix/package.nix { };
+        };
+        default = self.overlays.keqdroid;
+      };
+
+      nixosModules = {
+        keqdroid = import ./nix/module.nix;
+        default = self.nixosModules.keqdroid;
+      };
+
+      formatter.${system} = pkgs.nixfmt-tree;
     };
 }

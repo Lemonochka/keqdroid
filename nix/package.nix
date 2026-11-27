@@ -6,18 +6,23 @@
   copyDesktopItems,
   makeDesktopItem,
   wrapGAppsHook3,
+  glib,
   gsettings-desktop-schemas,
   gtk3,
   libepoxy,
   libx11,
+  xdg-utils,
 }:
+let
+  source = lib.importJSON ./source.json;
+in
 stdenv.mkDerivation (finalAttrs: {
   pname = "keqdroid";
-  version = "0.40.1";
+  inherit (source) version;
 
   src = fetchurl {
-    url = "https://github.com/Lemonochka/keqdroid/releases/download/v${finalAttrs.version}/keqdroid-${finalAttrs.version}-linux-x64.tar.gz";
-    hash = "sha256-991g5DoRM3dYqsYjTvgulXUXgQ7iYHEy3Jy1QvZGLXQ=";
+    url = "https://github.com/${source.owner}/${source.repo}/releases/download/v${finalAttrs.version}/keqdroid-${finalAttrs.version}-linux-x64.tar.gz";
+    inherit (source) hash;
   };
 
   nativeBuildInputs = [
@@ -25,6 +30,7 @@ stdenv.mkDerivation (finalAttrs: {
     copyDesktopItems
     wrapGAppsHook3
   ];
+
   buildInputs = [
     gsettings-desktop-schemas
     gtk3
@@ -42,9 +48,22 @@ stdenv.mkDerivation (finalAttrs: {
     cp -r . $out/lib/keqdroid
     ln -s $out/lib/keqdroid/keqdroid $out/bin/keqdroid
     for name in keqdroid com.keqdroid.keqdroid; do
-      install -Dm644 data/flutter_assets/assets/icon.png $out/share/icons/hicolor/256x256/apps/$name.png
+      install -Dm644 data/flutter_assets/assets/icon.png \
+        $out/share/icons/hicolor/256x256/apps/$name.png
     done
     runHook postInstall
+  '';
+
+  preFixup = ''
+    gappsWrapperArgs+=(
+      --prefix PATH : /run/wrappers/bin
+      --suffix PATH : ${
+        lib.makeBinPath [
+          glib
+          xdg-utils
+        ]
+      }
+    )
   '';
 
   desktopItems = [
@@ -72,7 +91,8 @@ stdenv.mkDerivation (finalAttrs: {
 
   meta = {
     description = "Proxy/VPN client on Xray-core and mihomo";
-    homepage = "https://github.com/Lemonochka/keqdroid";
+    homepage = "https://github.com/${source.owner}/${source.repo}";
+    changelog = "https://github.com/${source.owner}/${source.repo}/releases/tag/v${finalAttrs.version}";
     license = with lib.licenses; [
       agpl3Only
       gpl3Only
