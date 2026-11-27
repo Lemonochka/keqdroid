@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/tunnel/linux_elevation.dart';
 
@@ -74,9 +76,15 @@ void main() {
     expect(launch.executable, 'sh');
   });
 
-  test('на не-Linux root не мерещится', () {
-    // Тесты гоняются под Windows: procfs нет, и ответ обязан быть отрицательным, иначе
-    // логика выбора ушла бы в ветку без pkexec на ровном месте.
-    expect(runningAsRoot(), isFalse);
-  });
+  test(
+    'на не-Linux root не мерещится',
+    () {
+      // Без procfs ответ обязан быть отрицательным, иначе логика выбора ушла бы
+      // в ветку без pkexec на ровном месте.
+      expect(runningAsRoot(), isFalse);
+    },
+    skip: Platform.isLinux && runningAsRoot()
+        ? 'non-Linux fallback cannot be exercised in a root Linux process'
+        : false,
+  );
 }

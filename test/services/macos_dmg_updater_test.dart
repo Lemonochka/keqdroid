@@ -379,12 +379,10 @@ void main() {
     );
   });
 
-  group('real macOS integration', () {
+  group('platform integration', () {
     test(
       'updater shell script waits for PID, atomically swaps .app, and cleans up',
       () async {
-        if (!Platform.isMacOS) return;
-
         final apps = Directory(p.join(tmp.path, 'Apps'))..createSync();
         final target = _createFakeAppBundle(apps, version: '0.40.1');
         final staged = _createFakeAppBundle(
@@ -395,14 +393,12 @@ void main() {
         final script = File(p.join(tmp.path, 'swap.sh'))
           ..writeAsStringSync(MacosDmgUpdater.updaterScript(relaunch: false));
 
-        // Spawn a short-lived process to simulate the exiting app PID.
         final sleeper = await Process.start('/bin/sleep', ['0.3']);
-        final res = await Process.run('/bin/sh', [
-          script.path,
-          '${sleeper.pid}',
-          staged.path,
-          target.path,
-        ]);
+        final res = await Process.run(
+          '/bin/sh',
+          [script.path, '${sleeper.pid}', staged.path, target.path],
+          environment: {'TMPDIR': tmp.path},
+        );
 
         expect(res.exitCode, 0, reason: '${res.stderr}');
         expect(
@@ -415,13 +411,62 @@ void main() {
         expect(script.existsSync(), isFalse);
         expect(apps.listSync().where((e) => e.path.contains('.old.')), isEmpty);
       },
+      skip: Platform.isWindows ? 'requires a POSIX shell' : false,
+    );
+
+    test(
+      'updater shell script restores the previous app when the swap fails',
+      () async {
+        final apps = Directory(p.join(tmp.path, 'Apps'))..createSync();
+        final target = _createFakeAppBundle(apps, version: '0.40.1');
+        final staged = _createFakeAppBundle(
+          apps,
+          name: '.keqdroid_update_test.app',
+          version: '0.40.2',
+        );
+        final script = File(p.join(tmp.path, 'swap.sh'))
+          ..writeAsStringSync(MacosDmgUpdater.updaterScript(relaunch: false));
+        final fakeBin = Directory(p.join(tmp.path, 'bin'))..createSync();
+        final mvCount = File(p.join(tmp.path, 'mv-count'));
+        final fakeMv = File(p.join(fakeBin.path, 'mv'))
+          ..writeAsStringSync(r'''#!/bin/sh
+count=0
+if [ -f "$KEQ_MV_COUNT" ]; then count=$(cat "$KEQ_MV_COUNT"); fi
+count=$((count + 1))
+printf '%s\n' "$count" > "$KEQ_MV_COUNT"
+if [ "$count" -eq 2 ]; then exit 1; fi
+exec /bin/mv "$@"
+''');
+        await Process.run('/bin/chmod', ['+x', fakeMv.path]);
+
+        final sleeper = await Process.start('/bin/sleep', ['0.3']);
+        final res = await Process.run(
+          '/bin/sh',
+          [script.path, '${sleeper.pid}', staged.path, target.path],
+          environment: {
+            'PATH': '${fakeBin.path}:/usr/bin:/bin',
+            'KEQ_MV_COUNT': mvCount.path,
+            'TMPDIR': tmp.path,
+          },
+        );
+
+        expect(res.exitCode, 0, reason: '${res.stderr}');
+        expect(
+          File(
+            p.join(target.path, 'Contents', 'MacOS', 'keqdroid'),
+          ).readAsStringSync(),
+          'bin-0.40.1',
+        );
+        expect(staged.existsSync(), isFalse);
+        expect(script.existsSync(), isFalse);
+        expect(apps.listSync().where((e) => e.path.contains('.old.')), isEmpty);
+      },
+      skip: Platform.isWindows ? 'requires a POSIX shell' : false,
     );
 
     test(
       'mounts a real UDZO DMG silently via hdiutil and stages via ditto',
       () async {
-        if (!Platform.isMacOS) return;
-
         final srcFolder = Directory(p.join(tmp.path, 'dmg_src'))..createSync();
         final sourceApp = _createFakeAppBundle(srcFolder, version: '0.40.2');
         final sourceExe = p.join(
@@ -484,6 +529,7 @@ void main() {
           'bin-0.40.2',
         );
       },
+      skip: !Platform.isMacOS ? 'requires macOS DMG tools' : false,
     );
   });
 }
