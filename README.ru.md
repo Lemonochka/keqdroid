@@ -7,7 +7,7 @@
 [![Лицензия](https://img.shields.io/badge/license-AGPL--3.0-blue)](LICENSE)
 [![Telegram](https://img.shields.io/badge/Telegram-chat-26A5E4?logo=telegram&logoColor=white)](https://t.me/keqdroid)
 
-[English](README.md) | Русский
+[English](README.md) | Русский | [Türkçe](README.tr.md)
 
 keqdroid не предоставляет серверы. Для работы нужна подписка или конфигурация сервера от выбранного вами провайдера. Ответственность за соблюдение законов вашей страны лежит на вас.
 
