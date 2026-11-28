@@ -7,7 +7,7 @@ Proxy and VPN client for Android, Android TV, Windows, Linux and macOS, built on
 [![License](https://img.shields.io/badge/license-AGPL--3.0-blue)](LICENSE)
 [![Telegram](https://img.shields.io/badge/Telegram-chat-26A5E4?logo=telegram&logoColor=white)](https://t.me/keqdroid)
 
-English | [Русский](README.ru.md)
+English | [Русский](README.ru.md) | [Türkçe](README.tr.md)
 
 keqdroid does not provide servers. It requires a subscription or a server configuration from a provider of your choice. You are responsible for complying with the laws of your country.
 
